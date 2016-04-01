@@ -30,7 +30,10 @@ recommended that `GOPATH` is set to a directory in your home directory such as
 - Run the following command to obtain dcrstakepool, all dependencies, and install it:
 
 ```bash
-$ go get -u github.com/decred/dcrstakepool-private/...
+$ cd $GOPATH/src/github.com/decred
+$ git clone git@github.com:decred/dcrstakepool-private.git dcrstakepool
+$ cd dcrstakepool
+$ go get -u ./...
 ```
 
 - dcrstakepool (and utilities) will now be installed in either ```$GOROOT/bin``` or
@@ -118,6 +121,10 @@ $ cp -p config.toml.sample config.toml
 ```
 
 - Run dcrstakepool
+```bash
+$ cd $GOPATH/src/github.com/decred/dcrstakepool
+$ ./dcrstakepool
+```
 
 ## Operations
 
