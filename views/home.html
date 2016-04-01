@@ -1,0 +1,22 @@
+{{define "home"}}
+<div class="page-header" align="center" id="confirmtitle"><h1 style="color: #ffffff";>Decred Stake Pool</h1></div>
+<div class="panel panel-default">
+	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
+		<h4 class="panel-title">Overview</h4>
+	</div>
+	<div class="panel-body" style="background-color: #333; color: #ffffff;">
+	<p><span style="font-size: x-large;">A stake pool is used to delegate your voting powers to a third party (the pool). The pool <b>cannot</b> steal your funds.</span></p>
+
+	<br><p><span style="font-size: large;">Participating in a stake pool is perfect for people who wish to take part in Decred's proof of stake voting but can't due to:</span></p>
+
+	<p><ul>
+		<li><span style="font-size: large;">Not wanting to keep a constantly unlocked wallet</span></li>
+		<li><span style="font-size: large;">Lack of a reliable/low latency Internet connection</span></li>
+	</ul></p>
+
+	<br><p><span style="font-size: large;">The source code for this project will be posted at a later date on <a href="https://github.com/decred">GitHub</a>.
+
+	{{if not .User}}<div class="center-block col-md-4 text-center" style="float: none;"><br><p><a class="btn btn-primary btn-lg" href="/signup" role="button">Sign Up</a></p></div>{{end}}
+</div>
+</div>
+{{end}}

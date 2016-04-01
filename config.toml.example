@@ -1,0 +1,19 @@
+[general]
+public_path   = "public"
+template_path = "views"
+
+[cookie]
+mac_secret = "secret string which has over 256-bit entropy"
+secure     = false
+
+[database]
+user     = "stakepool"
+password = ""
+hostname = "localhost"
+port     = "3306"
+database = "stakepool"
+
+[csrf]
+key    = "csrf_token"
+cookie = "XSRF-TOKEN"
+header = "X-XSRF-TOKEN"
