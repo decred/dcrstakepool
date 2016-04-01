@@ -29,12 +29,12 @@ var (
 func main() {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
-	tcfg, _, err := loadConfig()
+	/*tcfg, _, err := loadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load config: %v", err)
 		os.Exit(1)
 	}
-	cfg = tcfg
+	cfg = tcfg*/
 	dcrstakepoolLog.Infof("Version %s", version())
 
 	filename := flag.String("config", "config.toml", "Path to configuration file")
