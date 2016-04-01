@@ -132,7 +132,7 @@ $ dcrstakepool
 
 - dcrstakepool will create the stakepool.Users table automatically if it doesn't exist
 
-- dcrstakepool attempts to connect to all of the wallet servers on startup and or error out if it cannot do so
+- dcrstakepool attempts to connect to all of the wallet servers on startup or error out if it cannot do so
 
 - dcrstakepool takes a user's pubkey, validates it, calls getnewaddress on all the wallet servers, then createmultisig, and finally importscript.  If any of these RPCs fail or returns inconsistent results, the RPC client built-in to dcrstakepool will shut down and will not operate until it has been restarted.  Wallets should be verified to be in sync before restarting.
 
