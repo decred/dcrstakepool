@@ -123,7 +123,7 @@ $ cp -p config.toml.sample config.toml
 - Run dcrstakepool
 ```bash
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
-$ ./dcrstakepool
+$ dcrstakepool
 ```
 
 ## Operations
