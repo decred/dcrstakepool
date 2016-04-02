@@ -937,7 +937,8 @@ func newWalletSvrManager() (*walletSvrManager, error) {
 
 		client, err := dcrrpcclient.New(connCfg, nil)
 		if err != nil {
-			log.Infof("couldn't connect to RPC server #%v: %v", scfg.Id, err)
+			fmt.Printf("couldn't connect to RPC server #%v: %v", scfg.Host, err)
+			log.Infof("couldn't connect to RPC server #%v: %v", scfg.Host, err)
 			return nil, fmt.Errorf("RPC server connection failure on start")
 		}
 		localServers[i] = client
