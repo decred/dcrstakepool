@@ -162,6 +162,7 @@ done
 
 ## TODO
 
+- improve logging (doesn't work 100% correctly)
 - vendor goji
 - fix flags conflict between goji/dcrstakepool
 - finish unified config file
