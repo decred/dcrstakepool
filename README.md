@@ -61,10 +61,10 @@ These instructions assume you are familiar with dcrd/dcrwallet.
 $ dcrwallet --create
 ```
 
-- Start dcrwallet with debug on (this prints the position of the address index which is useful if getnewaddress fails and the wallets get de-synced)
+- Start dcrwallet with stake mining enabled and debug on (this prints the position of the address index which is useful if getnewaddress fails and the wallets get de-synced)
 
 ```bash
-$ dcrwallet -d debug
+$ dcrwallet --enablestakemining -d debug
 ```
 
 - Unlock the wallet
