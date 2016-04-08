@@ -936,10 +936,13 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 			return err
 		}
 		if !wi.DaemonConnected {
-			return fmt.Errorf("wallet on svr %s not connected", i)
+			return fmt.Errorf("wallet on svr %d not connected", i)
+		}
+		if !wi.StakeMining {
+			return fmt.Errorf("wallet on svr %d not stakemining", i)
 		}
 		if !wi.Unlocked {
-			return fmt.Errorf("wallet on svr %s not unlocked", i)
+			return fmt.Errorf("wallet on svr %d not unlocked", i)
 		}
 	}
 
@@ -991,7 +994,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 
 	// Synchronize the address indexes if needed, then synchronize the
 	// redeemscripts. Ignore the errors when importing scripts and
-	// assume it'll just skip reimportation if it already has th
+	// assume it'll just skip reimportation if it already has it
 	for i := range wsm.servers {
 		// Sync address indexes.
 		if addrIdxExts[i] < bestAddrIdxExt {
