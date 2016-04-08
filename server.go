@@ -112,6 +112,5 @@ func main() {
 		application.Close()
 	})
 	goji.Abandon(middleware.Logger)
-	flag.Set("bind", ":8000")
 	goji.Serve()
 }
