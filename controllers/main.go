@@ -63,6 +63,16 @@ func (controller *MainController) RPCIsStopped() bool {
 	return controller.rpcServers.IsStopped()
 }
 
+// handlePotentialFatalError
+func (controller *MainController) handlePotentialFatalError(fn string, err error) {
+	cnErr, ok := err.(connectionError)
+	if ok {
+		log.Infof("RPC %s failed on connection error: %v", fn, cnErr)
+	}
+	controller.RPCStop()
+	log.Infof("RPC %s failed: %v", fn, err)
+}
+
 // Address page route
 func (controller *MainController) Address(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
@@ -137,8 +147,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 	pooladdress, err := controller.rpcServers.GetNewAddress()
 	if err != nil {
-		controller.RPCStop()
-		log.Infof("RPC GetNewAddress failed: %v", err)
+		controller.handlePotentialFatalError("GetNewAddress", err)
 		return "/error", http.StatusSeeOther
 	}
 
@@ -147,16 +156,14 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 	poolValidateAddress, err := controller.rpcServers.ValidateAddress(pooladdress)
 	if err != nil {
-		controller.RPCStop()
-		log.Infof("RPC ValidateAddress failed: %v", err)
+		controller.handlePotentialFatalError("ValidateAddress pooladdress", err)
 		return "/error", http.StatusSeeOther
 	}
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
 	p, err := dcrutil.DecodeAddress(poolPubKeyAddr, controller.params)
 	if err != nil {
-		controller.RPCStop()
-		log.Infof("Validating poolPubKeyAddr failed: %v", err)
+		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
 		return "/error", http.StatusSeeOther
 	}
 
@@ -165,8 +172,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 	createMultiSig, err := controller.rpcServers.CreateMultisig(1, []dcrutil.Address{p, u})
 	if err != nil {
-		controller.RPCStop()
-		log.Infof("RPC CreateMultisig failed: %v", err)
+		controller.handlePotentialFatalError("CreateMultisig", err)
 		return "/error", http.StatusSeeOther
 	}
 
@@ -175,14 +181,12 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
-		controller.RPCStop()
-		log.Infof("DecodeString failed: %v", err)
+		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
 		return "/error", http.StatusSeeOther
 	}
 	err = controller.rpcServers.ImportScript(serializedScript)
 	if err != nil {
-		controller.RPCStop()
-		log.Infof("RPC ImportScript failed: %v", err)
+		controller.handlePotentialFatalError("ImportScript", err)
 		return "/error", http.StatusSeeOther
 	}
 
@@ -537,9 +541,7 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 			if err == ErrSetVoteBitsCoolDown {
 				return "/error?r=/tickets&rl=1", http.StatusSeeOther
 			}
-
-			log.Infof("RPC SetTicketVoteBits failed; %v", err)
-			controller.rpcServers.Stop()
+			controller.handlePotentialFatalError("SetTicketVoteBits", err)
 			return "/error?r=/tickets", http.StatusSeeOther
 		}
 	}
