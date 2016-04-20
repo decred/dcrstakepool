@@ -16,10 +16,11 @@ type User struct {
 	Email           string
 	Username        string
 	Password        []byte
-	Multisigaddress string
-	Multisigscript  string
-	Poolpubkeyaddr  string
-	Userpubkeyaddr  string
+	MultiSigAddress string
+	MultiSigScript  string
+	PoolPubKeyAddr  string
+	UserPubKeyAddr  string
+	UserFeeAddr     string
 }
 
 func (user *User) HashPassword(password string) {
@@ -53,17 +54,18 @@ func InsertUser(dbMap *gorp.DbMap, user *User) error {
 	return dbMap.Insert(user)
 }
 
-func UpdateUserById(dbMap *gorp.DbMap, id int64, msa string, mss string, ppka string, upka string) (user *User) {
+func UpdateUserById(dbMap *gorp.DbMap, id int64, msa string, mss string, ppka string, upka string, ufa string) (user *User) {
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 
 	if err != nil {
 		glog.Warningf("Can't get user by id: %v", err)
 	}
 
-	user.Multisigaddress = msa
-	user.Multisigscript = mss
-	user.Poolpubkeyaddr = ppka
-	user.Userpubkeyaddr = upka
+	user.MultiSigAddress = msa
+	user.MultiSigScript = mss
+	user.PoolPubKeyAddr = ppka
+	user.UserPubKeyAddr = upka
+	user.UserFeeAddr = ufa
 
 	_, err = dbMap.Update(user)
 

@@ -6,7 +6,6 @@
 package main
 
 import (
-	//"errors"
 	"fmt"
 	"net"
 	"os"
@@ -15,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	//"time"
 
 	flags "github.com/btcsuite/go-flags"
 	"github.com/decred/dcrutil"
@@ -69,6 +67,8 @@ type config struct {
 	DBName           string   `long:"dbname" description:"Name of database"`
 	RecaptchaSecret  string   `long:"recaptchasecret" description:"Recaptcha Secret"`
 	RecaptchaSitekey string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
+	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
+	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service on
@@ -352,6 +352,7 @@ func loadConfig() (*config, []string, error) {
 
 	// Count number of network flags passed; assign active network params
 	// while we're at it
+	activeNetParams = &mainNetParams
 	if cfg.TestNet {
 		numNets++
 		activeNetParams = &testNetParams

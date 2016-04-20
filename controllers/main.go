@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"sort"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrutil"
+	"github.com/decred/dcrutil/hdkeychain"
+	"github.com/decred/dcrwallet/waddrmgr"
 
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/models"
@@ -20,32 +23,69 @@ import (
 	"github.com/zenazn/goji/web"
 )
 
+// DisableSubmissions
 var DisableSubmissions = true
 
+// disapproveBlockMask
 const disapproveBlockMask = 0x0000
+
+// approveBlockMask
 const approveBlockMask = 0x0001
 
 // MainController
 type MainController struct {
 	system.Controller
 
+	extPub     *hdkeychain.ExtendedKey
+	poolFees   dcrutil.Amount
 	params     *chaincfg.Params
 	rpcServers *walletSvrManager
 }
 
 // NewMainController
-func NewMainController(params *chaincfg.Params) (*MainController, error) {
+func NewMainController(params *chaincfg.Params, extPubStr string,
+	poolFees float64) (*MainController, error) {
+	// Parse the extended public key and the pool fees.
+	key, err := hdkeychain.NewKeyFromString(extPubStr)
+	if err != nil {
+		return nil, err
+	}
+
+	fees, err := dcrutil.NewAmount(poolFees)
+	if err != nil {
+		return nil, err
+	}
+
 	rpcs, err := newWalletSvrManager()
 	if err != nil {
 		return nil, err
 	}
 
 	mc := &MainController{
+		extPub:     key,
+		poolFees:   fees,
 		params:     params,
 		rpcServers: rpcs,
 	}
 
 	return mc, nil
+}
+
+// FeeAddressForUserID generates a unique payout address per used ID for
+// fees for an individual pool user.
+func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
+	error) {
+	if uint32(uid+1) > waddrmgr.MaxAddressesPerAccount {
+		return nil, fmt.Errorf("bad uid index %v", uid)
+	}
+
+	addrs, err := waddrmgr.AddressesDerivedFromExtPub(uint32(uid), uint32(uid+1),
+		controller.extPub, waddrmgr.ExternalBranch, controller.params)
+	if err != nil {
+		return nil, err
+	}
+
+	return addrs[0], nil
 }
 
 // RPCStart
@@ -113,7 +153,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	dbMap := controller.GetDbMap(c)
 	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
-	if len(user.Userpubkeyaddr) > 0 {
+	if len(user.UserPubKeyAddr) > 0 {
 		session.AddFlash("Stake pool is currently limited to one address per account", "address")
 		return controller.Address(c, r)
 	}
@@ -190,7 +230,16 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return "/error", http.StatusSeeOther
 	}
 
-	models.UpdateUserById(dbMap, session.Values["UserId"].(int64), createMultiSig.Address, createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr)
+	uid64 := session.Values["UserId"].(int64)
+	userFeeAddr, err := controller.FeeAddressForUserID(int(uid64))
+	if err != nil {
+		log.Warnf("unexpected error deriving pool addr: %s", err.Error())
+		return "/error", http.StatusSeeOther
+	}
+
+	models.UpdateUserById(dbMap, uid64, createMultiSig.Address,
+		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
+		userFeeAddr.EncodeAddress())
 
 	return "/tickets", http.StatusSeeOther
 }
@@ -264,7 +313,7 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 	}
 
 	if DisableSubmissions && controller.params.Name == "mainnet" {
-		if len(user.Userpubkeyaddr) == 0 {
+		if len(user.UserPubKeyAddr) == 0 {
 			session.AddFlash("Stake pool is currently oversubscribed", "auth")
 			c.Env["IsDisabled"] = true
 			return controller.SignIn(c, r)
@@ -273,7 +322,7 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 
 	session.Values["UserId"] = user.Id
 
-	if user.Multisigaddress == "" {
+	if user.MultiSigAddress == "" {
 		return "/address", http.StatusSeeOther
 	} else {
 		return "/tickets", http.StatusSeeOther
@@ -425,15 +474,15 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	dbMap := controller.GetDbMap(c)
 	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
 
-	if user.Multisigaddress == "" {
+	if user.MultiSigAddress == "" {
 		c.Env["Error"] = "No multisig data has been generated"
 		log.Info("Multisigaddress empty")
 	}
 
-	ms, err := dcrutil.DecodeAddress(user.Multisigaddress, controller.params)
+	ms, err := dcrutil.DecodeAddress(user.MultiSigAddress, controller.params)
 	if err != nil {
 		c.Env["Error"] = "Invalid multisig data in database"
-		log.Infof("Invalid address %v in database: %v", user.Multisigaddress, err)
+		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
 	}
 
 	var widgets = controller.Parse(t, "tickets", c.Env)
@@ -507,14 +556,14 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 	dbMap := controller.GetDbMap(c)
 	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
 
-	if user.Multisigaddress == "" {
+	if user.MultiSigAddress == "" {
 		log.Info("Multisigaddress empty")
 		return "/error?r=/tickets", http.StatusSeeOther
 	}
 
-	ms, err := dcrutil.DecodeAddress(user.Multisigaddress, controller.params)
+	ms, err := dcrutil.DecodeAddress(user.MultiSigAddress, controller.params)
 	if err != nil {
-		log.Infof("Invalid address %v in database: %v", user.Multisigaddress, err)
+		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
 		return "/error?r=/tickets", http.StatusSeeOther
 	}
 

@@ -9,7 +9,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/gorilla/context"
 
-	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/system"
 
@@ -19,9 +18,6 @@ import (
 	"github.com/zenazn/goji/web/middleware"
 )
 
-// chainParams is the Decred network the pool uses.
-var chainParams = &chaincfg.TestNetParams
-
 var (
 	cfg *config
 )
@@ -29,13 +25,13 @@ var (
 func main() {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
-	/*tcfg, _, err := loadConfig()
+	loadedCfg, _, err := loadConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to load config: %v", err)
 		os.Exit(1)
 	}
-	cfg = tcfg*/
-	dcrstakepoolLog.Infof("Version %s", version())
+	cfg = loadedCfg
+	dcrstakepoolLog.Infof("Version: %s", version())
+	dcrstakepoolLog.Infof("Network: %s", activeNetParams.Params.Name)
 
 	filename := flag.String("config", "config.toml", "Path to configuration file")
 
@@ -50,7 +46,8 @@ func main() {
 	// Setup static files
 	static := web.New()
 	publicPath := application.Config.Get("general.public_path").(string)
-	static.Get("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir(publicPath))))
+	static.Get("/assets/*", http.StripPrefix("/assets/",
+		http.FileServer(http.Dir(publicPath))))
 
 	http.Handle("/assets/", static)
 
@@ -63,11 +60,14 @@ func main() {
 	goji.Use(application.ApplyCsrfProtection)
 	goji.Use(context.ClearHandler)
 
-	controller, err := controllers.NewMainController(chainParams)
+	controller, err := controllers.NewMainController(activeNetParams.Params,
+		cfg.ColdWalletExtPub, cfg.PoolFees)
 	if err != nil {
 		application.Close()
-		dcrstakepoolLog.Errorf("Failed to initialize the main controller: %v", err)
-		fmt.Fprintf(os.Stderr, "Failed to initialize the main controller: %v", err)
+		dcrstakepoolLog.Errorf("Failed to initialize the main controller: %v",
+			err)
+		fmt.Fprintf(os.Stderr, "Fatal error in controller init: %v",
+			err)
 		os.Exit(1)
 	}
 	controller.RPCStart()
