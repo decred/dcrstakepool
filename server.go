@@ -100,11 +100,6 @@ func main() {
 	// Status
 	goji.Get("/status", application.Route(controller, "Status"))
 
-	// Stresstest
-	if chainParams.Name == "testnet" {
-		goji.Get("/stresstest", application.Route(controller, "Stresstest"))
-	}
-
 	// Tickets routes
 	goji.Get("/tickets", application.Route(controller, "Tickets"))
 	goji.Post("/tickets", application.Route(controller, "TicketsPost"))
@@ -117,6 +112,5 @@ func main() {
 		application.Close()
 	})
 	goji.Abandon(middleware.Logger)
-	flag.Set("bind", ":8000")
 	goji.Serve()
 }

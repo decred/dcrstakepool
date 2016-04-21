@@ -167,6 +167,11 @@ done
 - fix flags conflict between goji/dcrstakepool
 - finish unified config file
 
+## IRC
+
+- irc.freenode.net
+- channel #decred-stakepool (requires registered nickname and an invite -- to get an invite PM jolan on forum/freenode after registering with NickServ)
+
 ## Issue Tracker
 
 The [integrated github issue tracker](https://github.com/decred/dcrstakepool-private/issues)
