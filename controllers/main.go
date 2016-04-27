@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
-	"sort"
 
 	"github.com/golang/glog"
 
@@ -497,19 +496,17 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
-	tix, err := controller.rpcServers.TicketsForAddress(ms)
+	spui, err := controller.rpcServers.StakePoolUserInfo(ms)
 	if err != nil {
-		log.Infof("RPC TicketsForAddress failed: %v", err)
+		log.Infof("RPC StakePoolUserInfo failed: %v", err)
 		return "/error?r=/tickets", http.StatusSeeOther
 	}
 
-	if len(tix.Tickets) > 0 {
+	if len(spui.Tickets) > 0 {
 		var tickethashes []*chainhash.Hash
 
-		sort.Strings(tix.Tickets)
-
-		for _, ticket := range tix.Tickets {
-			th, err := chainhash.NewHashFromStr(ticket)
+		for _, ticket := range spui.Tickets {
+			th, err := chainhash.NewHashFromStr(ticket.Ticket)
 			if err != nil {
 				log.Infof("NewHashFromStr failed for %v", ticket)
 				return "/error?r=/tickets", http.StatusSeeOther
@@ -523,8 +520,9 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 			return "/error?r=/tickets", http.StatusSeeOther
 		}
 
-		for idx, ticket := range tix.Tickets {
-			ticketinfo[idx] = TicketInfo{ticket, gtvb.VoteBitsList[idx].VoteBits}
+		for idx, ticket := range spui.Tickets {
+			ticketinfo[idx] = TicketInfo{ticket.Ticket,
+				gtvb.VoteBitsList[idx].VoteBits}
 		}
 	}
 
@@ -570,17 +568,17 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
-	tix, err := controller.rpcServers.TicketsForAddress(ms)
+	spui, err := controller.rpcServers.StakePoolUserInfo(ms)
 	if err != nil {
-		log.Infof("RPC TicketsForAddress failed: %v", err)
+		log.Infof("RPC StakePoolUserInfo failed: %v", err)
 		return "/error?r=/tickets", http.StatusSeeOther
 	}
 
-	for _, ticket := range tix.Tickets {
+	for _, ticket := range spui.Tickets {
 		if controller.RPCIsStopped() {
 			return "/error", http.StatusSeeOther
 		}
-		th, err := chainhash.NewHashFromStr(ticket)
+		th, err := chainhash.NewHashFromStr(ticket.Ticket)
 		if err != nil {
 			log.Infof("NewHashFromStr failed for %v", ticket)
 			return "/error?r=/tickets", http.StatusSeeOther
