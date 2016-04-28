@@ -11,6 +11,7 @@ import (
 
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/waddrmgr"
@@ -496,10 +497,14 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
-	spui, err := controller.rpcServers.StakePoolUserInfo(ms)
+
+	spui := new(dcrjson.StakePoolUserInfo)
+	spui, err = controller.rpcServers.StakePoolUserInfo(ms)
 	if err != nil {
+		// Log the error, but do not return. Consider reporting
+		// the error to the user on the page. A blank tickets
+		// page will be displayed in the meantime.
 		log.Infof("RPC StakePoolUserInfo failed: %v", err)
-		return "/error?r=/tickets", http.StatusSeeOther
 	}
 
 	if len(spui.Tickets) > 0 {
