@@ -37,7 +37,7 @@ type MainController struct {
 	system.Controller
 
 	extPub     *hdkeychain.ExtendedKey
-	poolFees   dcrutil.Amount
+	poolFees   float64
 	params     *chaincfg.Params
 	rpcServers *walletSvrManager
 }
@@ -51,11 +51,6 @@ func NewMainController(params *chaincfg.Params, extPubStr string,
 		return nil, err
 	}
 
-	fees, err := dcrutil.NewAmount(poolFees)
-	if err != nil {
-		return nil, err
-	}
-
 	rpcs, err := newWalletSvrManager()
 	if err != nil {
 		return nil, err
@@ -63,7 +58,7 @@ func NewMainController(params *chaincfg.Params, extPubStr string,
 
 	mc := &MainController{
 		extPub:     key,
-		poolFees:   fees,
+		poolFees:   poolFees,
 		params:     params,
 		rpcServers: rpcs,
 	}
@@ -469,6 +464,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	c.Env["IsTickets"] = true
 	c.Env["Network"] = controller.params.Name
+	c.Env["PoolFees"] = controller.poolFees
 	c.Env["Title"] = "Decred Stake Pool - Tickets"
 
 	dbMap := controller.GetDbMap(c)
@@ -507,7 +503,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		log.Infof("RPC StakePoolUserInfo failed: %v", err)
 	}
 
-	if len(spui.Tickets) > 0 {
+	if spui != nil && len(spui.Tickets) > 0 {
 		var tickethashes []*chainhash.Hash
 
 		for _, ticket := range spui.Tickets {

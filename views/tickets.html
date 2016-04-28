@@ -107,13 +107,15 @@
 			<p><span style="font-size: larger;"><b>Option A</b></span></p>
 			<p><span style="font-size: larger;">Start a wallet with funds available and the following flags:</span></p>
 			<p><span style="font-size: larger;">--enablestakemining</span></p>
+			<p><span style="font-size: larger;">--pooladdress={{ .User.UserFeeAddr }}</span></p>
+			<p><span style="font-size: larger;">--poolfees={{ .PoolFees }}</span></p>
 			<p><span style="font-size: larger;">--ticketaddress={{ .User.MultiSigAddress }}</span></p>
 			<p><span style="font-size: larger;">Unlock the wallet and it will automatically purchase stake tickets delegated to the pool address. For more information about these flags, please go <a href="https://wiki.decred.org/Solo_Stake_Mining">here</a>.</span></p>
 
 			<p><span style="font-size: larger;"><b>Option B</b></span></p>
 			<p><span style="font-size: larger;">Start a wallet with funds available and manually purchase tickets with the following command using <b>dcrctl</b>:</span></p>
-			<p><span style="font-size: larger;">dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf pooladdress</span></p>
-			<div class="cmd"><pre>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 20 1 {{ .User.MultiSigAddress }}</pre></div>
+			<p><span style="font-size: larger;">dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</span></p>
+			<div class="cmd"><pre>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 20 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre></div>
 			<p><span style="font-size: larger;">Will purchase a ticket delegated to the pool using the default account only if the current network price for a ticket is less than 20.0 coins.</span></p>
 		</div>
 	</div>
