@@ -498,7 +498,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		return "/error", http.StatusSeeOther
 	}
 
-	spui := new(dcrjson.StakePoolUserInfo)
+	spui := new(dcrjson.StakePoolUserInfoResult)
 	spui, err = controller.rpcServers.StakePoolUserInfo(ms)
 	if err != nil {
 		// Log the error, but do not return. Consider reporting
