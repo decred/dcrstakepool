@@ -32,6 +32,7 @@ const (
 	getTxOutFn
 	getStakeInfoFn
 	connectedFn
+	stakePoolUserInfoFn
 )
 
 var (
@@ -189,6 +190,18 @@ type connectedMsg struct {
 	reply chan connectedResponse
 }
 
+// stakePoolUserInfoResponse
+type stakePoolUserInfoResponse struct {
+	userInfo *dcrjson.StakePoolUserInfoResult
+	err      error
+}
+
+// stakePoolUserInfoMsg
+type stakePoolUserInfoMsg struct {
+	userAddr dcrutil.Address
+	reply    chan stakePoolUserInfoResponse
+}
+
 // connectionError is an error relating to the connection,
 // so that connection failures can be handled without
 // crashing the server.
@@ -244,6 +257,10 @@ out:
 			case connectedMsg:
 				resp := w.executeInSequence(connectedFn, msg)
 				respTyped := resp.(*connectedResponse)
+				msg.reply <- *respTyped
+			case stakePoolUserInfoMsg:
+				resp := w.executeInSequence(stakePoolUserInfoFn, msg)
+				respTyped := resp.(*stakePoolUserInfoResponse)
 				msg.reply <- *respTyped
 			default:
 				log.Infof("Invalid message type in wallet RPC "+
@@ -592,6 +609,24 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 
 		resp.err = nil
 		return resp
+
+	case stakePoolUserInfoFn:
+		spuim := msg.(stakePoolUserInfoMsg)
+		resp := new(stakePoolUserInfoResponse)
+		spuirs := make([]*dcrjson.StakePoolUserInfoResult, w.serversLen,
+			w.serversLen)
+		for i, s := range w.servers {
+			spuir, err := s.StakePoolUserInfo(spuim.userAddr)
+			if err != nil {
+				log.Infof("stakePoolUserInfoFn failure on server %v: %v", i, err)
+				resp.err = err
+				return resp
+			}
+			spuirs[i] = spuir
+		}
+
+		resp.userInfo = spuirs[0]
+		return resp
 	}
 
 	return nil
@@ -802,6 +837,21 @@ func (w *walletSvrManager) GetTxOut(hash *chainhash.Hash, idx uint32) (*dcrjson.
 	}
 	response := <-reply
 	return response.txOut, response.err
+}
+
+// StakePoolUserInfo gets the stake pool user information for a given user.
+//
+// This can race depending on what wallet is currently processing, so failures
+// from this function should NOT cause fatal errors on the web server like the
+// other RPC client calls.
+func (w *walletSvrManager) StakePoolUserInfo(userAddr dcrutil.Address) (*dcrjson.StakePoolUserInfoResult, error) {
+	reply := make(chan stakePoolUserInfoResponse)
+	w.msgChan <- stakePoolUserInfoMsg{
+		userAddr: userAddr,
+		reply:    reply,
+	}
+	response := <-reply
+	return response.userInfo, response.err
 }
 
 // getStakeInfo returns the cached current stake statistics about the wallet if

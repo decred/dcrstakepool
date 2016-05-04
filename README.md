@@ -53,7 +53,29 @@ These instructions assume you are familiar with dcrd/dcrwallet.
 
 - Run dcrd instances and let them fully sync
 
-#### dcrwallet
+#### Stake pool fees/cold wallet
+
+- Setup a new wallet for receiving payment for stake pool fees.  **This should be completely separate from the stake pool infrastructure.**
+
+```bash
+$ dcrwallet --create
+$ dcrwallet
+````
+
+- Get the master pubkey for the account you wish to use. This will be needed to configure dcrwallet and dcrstakepool.
+
+```bash
+$ dcrctl --wallet createnewaccount teststakepoolfees
+$ dcrctl --wallet getmasterpubkey teststakepoolfees
+```
+
+- Mark 10000 addresses in use for the account so the wallet will recognize transactions to those addresses. Fees from UserId 1 will go to address 1, UserId 2 to address 2, and so on.
+
+```bash
+$ dcrctl --wallet accountsyncaddressindex teststakepoolfees 0 10000
+```
+
+#### Stake pool voting wallets
 
 - Create the wallets.  All wallets should have the same seed.  **Backup the seed for disaster recovery!**
 
@@ -61,16 +83,10 @@ These instructions assume you are familiar with dcrd/dcrwallet.
 $ dcrwallet --create
 ```
 
-- Start dcrwallet with stake mining enabled and debug on (this prints the position of the address index which is useful if getnewaddress fails and the wallets get de-synced)
+- Start a properly configured dcrwallet and unlock it. See sample-dcrwallet.conf.
 
 ```bash
-$ dcrwallet --enablestakemining -d debug
-```
-
-- Unlock the wallet
-
-```bash
-$ dcrctl --wallet walletpassphrase pass 0
+$ dcrwallet
 ```
 
 #### MySQL
@@ -83,7 +99,7 @@ $ dcrctl --wallet walletpassphrase pass 0
 $ mysql -uroot -ppassword
 
 MySQL> CREATE USER 'stakepool'@'localhost' IDENTIFIED BY 'password';
-MySQL> GRANT ALL PRIVILEGES ON *.* TO '%' WITH GRANT OPTION;
+MySQL> GRANT ALL PRIVILEGES ON *.* TO 'stakepool'@'localhost' WITH GRANT OPTION;
 MySQL> FLUSH PRIVILEGES;
 MySQL> CREATE DATABASE stakepool;
 ```
@@ -115,9 +131,14 @@ $ scp walletserver3:~/.dcrwallet/rpc.cert wallet3.cert
 
 - add recaptcha secret to controllers/main.go and recaptcha sitekey to views/auth/signup.html or disable captcha if you don't want it
 
-- copy sample config and edit appropriately
+- Copy old-style sample config and edit appropriately
 ```bash
 $ cp -p config.toml.sample config.toml
+```
+
+- Copy new-style sample config and edit appropriately
+```bash
+$ cp -p sample-dcrstakepool.conf dcrstakepool.conf
 ```
 
 - Run dcrstakepool
