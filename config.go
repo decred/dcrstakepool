@@ -339,13 +339,13 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	if cfg.DBPass == "" {
+	/*if cfg.DBPass == "" {
 		str := "%s: database password isn't set"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
-	}
+	}*/
 
 	// Multiple networks can't be selected simultaneously.
 	numNets := 0

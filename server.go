@@ -61,7 +61,8 @@ func main() {
 	goji.Use(context.ClearHandler)
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.ColdWalletExtPub, cfg.PoolFees)
+		cfg.ColdWalletExtPub, cfg.PoolFees, cfg.RecaptchaSecret,
+		cfg.RecaptchaSitekey)
 	if err != nil {
 		application.Close()
 		dcrstakepoolLog.Errorf("Failed to initialize the main controller: %v",

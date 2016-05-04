@@ -36,15 +36,18 @@ const approveBlockMask = 0x0001
 type MainController struct {
 	system.Controller
 
-	extPub     *hdkeychain.ExtendedKey
-	poolFees   float64
-	params     *chaincfg.Params
-	rpcServers *walletSvrManager
+	extPub           *hdkeychain.ExtendedKey
+	poolFees         float64
+	params           *chaincfg.Params
+	rpcServers       *walletSvrManager
+	recaptchaSecret  string
+	recaptchaSiteKey string
 }
 
 // NewMainController
 func NewMainController(params *chaincfg.Params, extPubStr string,
-	poolFees float64) (*MainController, error) {
+	poolFees float64, recaptchaSecret string,
+	recaptchaSiteKey string) (*MainController, error) {
 	// Parse the extended public key and the pool fees.
 	key, err := hdkeychain.NewKeyFromString(extPubStr)
 	if err != nil {
@@ -57,10 +60,12 @@ func NewMainController(params *chaincfg.Params, extPubStr string,
 	}
 
 	mc := &MainController{
-		extPub:     key,
-		poolFees:   poolFees,
-		params:     params,
-		rpcServers: rpcs,
+		extPub:           key,
+		poolFees:         poolFees,
+		params:           params,
+		recaptchaSecret:  recaptchaSecret,
+		recaptchaSiteKey: recaptchaSiteKey,
+		rpcServers:       rpcs,
 	}
 
 	return mc, nil
@@ -336,6 +341,7 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 	}
 
 	c.Env["Flash"] = session.Flashes("auth")
+	c.Env["RecaptchaSiteKey"] = controller.recaptchaSiteKey
 
 	var widgets = controller.Parse(t, "auth/signup", c.Env)
 
@@ -353,7 +359,7 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	}
 
 	re := recaptcha.R{
-		Secret: "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe",
+		Secret: controller.recaptchaSecret,
 	}
 
 	email, password := r.FormValue("email"), r.FormValue("password")
