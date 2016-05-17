@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	defaultClosePoolMsg     = "Stake pool is currently oversubscribed"
+	defaultClosePoolMsg     = "This stake pool has reached 5% of network votes and registration has been closed to protect the de-centralization of the network.  Please find a different stake pool to use."
 	defaultConfigFilename   = "dcrstakepool.conf"
 	defaultDataDirname      = "data"
 	defaultLogLevel         = "info"

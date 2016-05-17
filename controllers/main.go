@@ -33,9 +33,9 @@ const approveBlockMask = 0x0001
 type MainController struct {
 	system.Controller
 
+	closePool        bool
+	closePoolMsg     string
 	extPub           *hdkeychain.ExtendedKey
-	poolClosed       bool
-	poolClosedMsg    string
 	poolFees         float64
 	params           *chaincfg.Params
 	rpcServers       *walletSvrManager
@@ -60,6 +60,8 @@ func NewMainController(params *chaincfg.Params, closePool bool,
 	}
 
 	mc := &MainController{
+		closePool:        closePool,
+		closePoolMsg:     closePoolMsg,
 		extPub:           key,
 		poolFees:         poolFees,
 		params:           params,
@@ -142,8 +144,8 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	session := controller.GetSession(c)
 
 	// User may have a session so error out here as well
-	if controller.poolClosed {
-		session.AddFlash(controller.poolClosedMsg, "address")
+	if controller.closePool {
+		session.AddFlash(controller.closePoolMsg, "address")
 		return controller.Address(c, r)
 	}
 
@@ -268,6 +270,11 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 
 // Home page route
 func (controller *MainController) Index(c web.C, r *http.Request) (string, int) {
+	if controller.closePool {
+		c.Env["IsClosed"] = true
+		c.Env["ClosePoolMsg"] = controller.closePoolMsg
+	}
+
 	t := controller.GetTemplate(c)
 
 	widgets := helpers.Parse(t, "home", c.Env)
@@ -312,11 +319,11 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 		return controller.SignIn(c, r)
 	}
 
-	if controller.poolClosed && controller.params.Name == "mainnet" {
+	if controller.closePool {
 		if len(user.UserPubKeyAddr) == 0 {
-			session.AddFlash(controller.poolClosedMsg, "auth")
+			session.AddFlash(controller.closePoolMsg, "auth")
 			c.Env["IsClosed"] = true
-			c.Env["ClosePoolMsg"] = controller.poolClosedMsg
+			c.Env["ClosePoolMsg"] = controller.closePoolMsg
 			return controller.SignIn(c, r)
 		}
 	}
@@ -337,9 +344,9 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 
 	// With that kind of flags template can "figure out" what route is being rendered
 	c.Env["IsSignUp"] = true
-	if controller.poolClosed {
+	if controller.closePool {
 		c.Env["IsClosed"] = true
-		c.Env["ClosePoolMsg"] = controller.poolClosedMsg
+		c.Env["ClosePoolMsg"] = controller.closePoolMsg
 	}
 
 	c.Env["Flash"] = session.Flashes("auth")
@@ -355,7 +362,7 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 
 // Sign Up form submit route. Registers new user or shows Sign Up route with appropriate messages set in session
 func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, int) {
-	if controller.poolClosed {
+	if controller.closePool {
 		log.Infof("attempt to signup while registration disabled")
 		return "/error?r=/signup", http.StatusSeeOther
 	}

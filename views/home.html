@@ -1,4 +1,5 @@
 {{define "home"}}
+{{if .IsClosed }}<div class="alert alert-danger">{{.ClosePoolMsg}}</div>{{end}}
 <div class="page-header" align="center" id="confirmtitle"><h1 style="color: #ffffff";>Decred Stake Pool</h1></div>
 <div class="panel panel-default">
 	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
