@@ -449,6 +449,34 @@ func loadConfig() (*config, []string, error) {
 		cfg.WEBListeners = normalizeAddresses(cfg.WEBListeners,
 			activeNetParams.webPort)*/
 
+	if len(cfg.WalletHosts) == 0 {
+		str := "%s: wallethosts is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.WalletCerts) == 0 {
+		str := "%s: walletcerts is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.WalletUsers) == 0 {
+		str := "%s: walletusers is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.WalletPasswords) == 0 {
+		str := "%s: walletpasswords is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
 	// Convert comma separated list into a slice
 	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
 	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
