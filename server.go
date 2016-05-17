@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	
+
 	"github.com/golang/glog"
 	"github.com/gorilla/context"
 
@@ -59,7 +59,7 @@ func main() {
 			if sig == syscall.SIGUSR1 {
 				application.LoadTemplates()
 				dcrstakepoolLog.Infof("LoadTemplates() executed.")
-				fmt.Fprintf(os.Stdout, "LoadTemplates() executed.\n")		
+				fmt.Fprintf(os.Stdout, "LoadTemplates() executed.\n")
 			}
 		}
 	}()
@@ -82,8 +82,8 @@ func main() {
 	goji.Use(context.ClearHandler)
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.ColdWalletExtPub, cfg.PoolFees, cfg.RecaptchaSecret,
-		cfg.RecaptchaSitekey)
+		cfg.ClosePool, cfg.ClosePoolMsg, cfg.ColdWalletExtPub, cfg.PoolFees,
+		cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.WalletServers)
 	if err != nil {
 		application.Close()
 		dcrstakepoolLog.Errorf("Failed to initialize the main controller: %v",

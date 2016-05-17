@@ -3,7 +3,6 @@ package controllers
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrstakepool"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrwallet/waddrmgr"
 )
@@ -1079,12 +1079,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 
 // newWalletSvrManager returns a new decred wallet server manager.
 // Use Start to begin processing asynchronous block and inv updates.
-func newWalletSvrManager() (*walletSvrManager, error) {
-	var serverCfgs []ServerCfg
-	err := json.Unmarshal(serverPoolCfg, &serverCfgs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config json: %v", err.Error())
-	}
+func newWalletSvrManager(serverCfgs *main.ServerCfg) (*walletSvrManager, error) {
 
 	localServers := make([]*dcrrpcclient.Client, len(serverCfgs), len(serverCfgs))
 	for i, scfg := range serverCfgs {

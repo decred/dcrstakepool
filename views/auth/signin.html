@@ -9,7 +9,7 @@
 			{{range .Flash}}
 				<div class="alert alert-danger">{{.}}</div><p>
 			{{end}}
-			{{if .IsDisabled }}<div class="alert alert-danger">The stake pool has reached 5% of network votes and registration has been closed to protect the de-centralization of the network. <a href="https://forum.decred.org/threads/call-to-action-hosting-stake-pools.1321/">Launching more pools is in progress</a>.</div>{{end}}
+			{{if .IsClosed }}<div class="alert alert-danger">{{.ClosePoolMsg}}</div>{{end}}
 			<div class="form-group">
 				<label class="col-md-4 control-label" for="email">Email</label>  
 				<div class="col-md-6">

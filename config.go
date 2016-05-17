@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	defaultClosePoolMsg     = "Stake pool is currently oversubscribed"
 	defaultConfigFilename   = "dcrstakepool.conf"
 	defaultDataDirname      = "data"
 	defaultLogLevel         = "info"
@@ -48,27 +49,41 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	ShowVersion      bool     `short:"V" long:"version" description:"Display version information and exit"`
-	ConfigFile       string   `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir          string   `short:"b" long:"datadir" description:"Directory to store data"`
-	LogDir           string   `long:"logdir" description:"Directory to log output."`
-	Listeners        []string `long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 9108, testnet: 19108)"`
-	TestNet          bool     `long:"testnet" description:"Use the test network"`
-	SimNet           bool     `long:"simnet" description:"Use the simulation test network"`
-	Profile          string   `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	CPUProfile       string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	MemProfile       string   `long:"memprofile" description:"Write mem profile to the specified file"`
-	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	WEBListeners     []string `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 9109, testnet: 19109)"`
-	DBHost           string   `long:"dbhost" description:"Hostname for database connection"`
-	DBUser           string   `long:"dbuser" description:"Username for database connection"`
-	DBPass           string   `long:"dbpass" description:"Password for database connection"`
-	DBPort           int16    `long:"dbport" description:"Port for database connection"`
-	DBName           string   `long:"dbname" description:"Name of database"`
-	RecaptchaSecret  string   `long:"recaptchasecret" description:"Recaptcha Secret"`
-	RecaptchaSitekey string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
-	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
-	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
+	ShowVersion         bool     `short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile          string   `short:"C" long:"configfile" description:"Path to configuration file"`
+	DataDir             string   `short:"b" long:"datadir" description:"Directory to store data"`
+	LogDir              string   `long:"logdir" description:"Directory to log output."`
+	Listeners           []string `long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 9108, testnet: 19108)"`
+	TestNet             bool     `long:"testnet" description:"Use the test network"`
+	SimNet              bool     `long:"simnet" description:"Use the simulation test network"`
+	Profile             string   `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	CPUProfile          string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	MemProfile          string   `long:"memprofile" description:"Write mem profile to the specified file"`
+	DebugLevel          string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	ColdWalletExtPub    string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
+	ClosePool           bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
+	ClosePoolMsg        string   `long:"closepoolmsg" description:"Message to display when closepool is set (default: Stake pool is currently oversubscribed)"`
+	DBHost              string   `long:"dbhost" description:"Hostname for database connection"`
+	DBUser              string   `long:"dbuser" description:"Username for database connection"`
+	DBPass              string   `long:"dbpass" description:"Password for database connection"`
+	DBPort              int16    `long:"dbport" description:"Port for database connection"`
+	DBName              string   `long:"dbname" description:"Name of database"`
+	RecaptchaSecret     string   `long:"recaptchasecret" description:"Recaptcha Secret"`
+	RecaptchaSitekey    string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
+	PoolFees            float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
+	StakepoolClosingMsg string   `long:"stakepoolclosingmsg" description:"String"`
+	WalletHost          []string `long:"wallethost" description:"Hostname for wallet server"`
+	WalletUser          []string `long:"walletuser" description:"Username for wallet server"`
+	WalletPass          []string `long:"walletpass" description:"Pasword for wallet server"`
+	WalletCert          []string `long:"walletcert" description:"Certificate path for wallet server"`
+	WalletServers       []ServerCfg
+}
+
+type ServerCfg struct {
+	Host string
+	User string
+	Pass string
+	Cert string
 }
 
 // serviceOptions defines the configuration options for the daemon as a service on
@@ -243,6 +258,8 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
+		ClosePool:        false,
+		ClosePoolMsg:     defaultClosePoolMsg,
 		ConfigFile:       defaultConfigFile,
 		DebugLevel:       defaultLogLevel,
 		DataDir:          defaultDataDir,
@@ -424,21 +441,76 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
-	// Default to listen on localhost only.
-	addrs, err := net.LookupHost("localhost")
-	if err != nil {
+	/*
+		// Default to listen on localhost only.
+		addrs, err := net.LookupHost("localhost")
+		if err != nil {
+			return nil, nil, err
+		}
+		cfg.WEBListeners = make([]string, 0, len(addrs))
+		for _, addr := range addrs {
+			addr = net.JoinHostPort(addr, activeNetParams.webPort)
+			cfg.WEBListeners = append(cfg.WEBListeners, addr)
+		}
+
+		// Add default port to all rpc listener addresses if needed and remove
+		// duplicate addresses.
+		cfg.WEBListeners = normalizeAddresses(cfg.WEBListeners,
+			activeNetParams.webPort)*/
+
+	if len(cfg.WalletHost) < 2 {
+		str := "%s: you must specify at least 2 wallethosts"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
-	cfg.WEBListeners = make([]string, 0, len(addrs))
-	for _, addr := range addrs {
-		addr = net.JoinHostPort(addr, activeNetParams.webPort)
-		cfg.WEBListeners = append(cfg.WEBListeners, addr)
+
+	if len(cfg.WalletHost) != len(cfg.WalletUser) {
+		str := "%s: wallet configuration mismatch (walletuser and wallethost counts differ)"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
 	}
 
-	// Add default port to all rpc listener addresses if needed and remove
-	// duplicate addresses.
-	cfg.WEBListeners = normalizeAddresses(cfg.WEBListeners,
-		activeNetParams.webPort)
+	if len(cfg.WalletHost) != len(cfg.WalletPass) {
+		str := "%s: wallet configuration mismatch (walletpass and wallethost counts differ)"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.WalletHost) != len(cfg.WalletCert) {
+		str := "%s: wallet configuration mismatch (walletcert and wallethost counts differ)"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	cfg.WalletHost = normalizeAddresses(cfg.WalletHost, activeNetParams.WalletRPCServerPort)
+
+	for idx := range cfg.WalletCert {
+		if _, err := os.Stat(cfg.WalletCert[idx]); os.IsNotExist(err) {
+			if _, err := os.Stat(filepath.Join(dcrstakepoolHomeDir, cfg.WalletCert[idx])); os.IsNotExist(err) {
+				str := "%s: walletcert " + cfg.WalletCert[idx] + " and " +
+					filepath.Join(dcrstakepoolHomeDir, cfg.WalletCert[idx]) + " don't exist"
+				err := fmt.Errorf(str, funcName)
+				fmt.Fprintln(os.Stderr, err)
+				return nil, nil, err
+			}
+
+			cfg.WalletCert[idx] = filepath.Join(dcrstakepoolHomeDir, cfg.WalletCert[idx])
+		}
+	}
+
+	for idx := range cfg.WalletHost {
+		cfg.WalletServers = append(cfg.WalletServers,
+			ServerCfg{
+				Host: cfg.WalletHost[idx],
+				User: cfg.WalletUser[idx],
+				Pass: cfg.WalletPass[idx],
+				Cert: cfg.WalletCert[idx],
+			})
+	}
 
 	// Warn about missing config file only after all other configuration is
 	// done.  This prevents the warning on help messages and invalid
