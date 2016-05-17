@@ -49,41 +49,32 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	ShowVersion         bool     `short:"V" long:"version" description:"Display version information and exit"`
-	ConfigFile          string   `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir             string   `short:"b" long:"datadir" description:"Directory to store data"`
-	LogDir              string   `long:"logdir" description:"Directory to log output."`
-	Listeners           []string `long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 9108, testnet: 19108)"`
-	TestNet             bool     `long:"testnet" description:"Use the test network"`
-	SimNet              bool     `long:"simnet" description:"Use the simulation test network"`
-	Profile             string   `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	CPUProfile          string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	MemProfile          string   `long:"memprofile" description:"Write mem profile to the specified file"`
-	DebugLevel          string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	ColdWalletExtPub    string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
-	ClosePool           bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
-	ClosePoolMsg        string   `long:"closepoolmsg" description:"Message to display when closepool is set (default: Stake pool is currently oversubscribed)"`
-	DBHost              string   `long:"dbhost" description:"Hostname for database connection"`
-	DBUser              string   `long:"dbuser" description:"Username for database connection"`
-	DBPass              string   `long:"dbpass" description:"Password for database connection"`
-	DBPort              int16    `long:"dbport" description:"Port for database connection"`
-	DBName              string   `long:"dbname" description:"Name of database"`
-	RecaptchaSecret     string   `long:"recaptchasecret" description:"Recaptcha Secret"`
-	RecaptchaSitekey    string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
-	PoolFees            float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
-	StakepoolClosingMsg string   `long:"stakepoolclosingmsg" description:"String"`
-	WalletHost          []string `long:"wallethost" description:"Hostname for wallet server"`
-	WalletUser          []string `long:"walletuser" description:"Username for wallet server"`
-	WalletPass          []string `long:"walletpass" description:"Pasword for wallet server"`
-	WalletCert          []string `long:"walletcert" description:"Certificate path for wallet server"`
-	WalletServers       []ServerCfg
-}
-
-type ServerCfg struct {
-	Host string
-	User string
-	Pass string
-	Cert string
+	ShowVersion      bool     `short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile       string   `short:"C" long:"configfile" description:"Path to configuration file"`
+	DataDir          string   `short:"b" long:"datadir" description:"Directory to store data"`
+	LogDir           string   `long:"logdir" description:"Directory to log output."`
+	Listeners        []string `long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 9108, testnet: 19108)"`
+	TestNet          bool     `long:"testnet" description:"Use the test network"`
+	SimNet           bool     `long:"simnet" description:"Use the simulation test network"`
+	Profile          string   `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	CPUProfile       string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	MemProfile       string   `long:"memprofile" description:"Write mem profile to the specified file"`
+	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
+	ClosePool        bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
+	ClosePoolMsg     string   `long:"closepoolmsg" description:"Message to display when closepool is set (default: Stake pool is currently oversubscribed)"`
+	DBHost           string   `long:"dbhost" description:"Hostname for database connection"`
+	DBUser           string   `long:"dbuser" description:"Username for database connection"`
+	DBPass           string   `long:"dbpass" description:"Password for database connection"`
+	DBPort           int16    `long:"dbport" description:"Port for database connection"`
+	DBName           string   `long:"dbname" description:"Name of database"`
+	RecaptchaSecret  string   `long:"recaptchasecret" description:"Recaptcha Secret"`
+	RecaptchaSitekey string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
+	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
+	WalletHosts      []string `long:"wallethosts" description:"Hostname for wallet server"`
+	WalletUsers      []string `long:"walletusers" description:"Username for wallet server"`
+	WalletPasswords  []string `long:"walletpasswords" description:"Pasword for wallet server"`
+	WalletCerts      []string `long:"walletcerts" description:"Certificate path for wallet server"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service on
@@ -458,58 +449,55 @@ func loadConfig() (*config, []string, error) {
 		cfg.WEBListeners = normalizeAddresses(cfg.WEBListeners,
 			activeNetParams.webPort)*/
 
-	if len(cfg.WalletHost) < 2 {
+	// Convert comma separated list into a slice
+	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
+	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
+	cfg.WalletPasswords = strings.Split(cfg.WalletPasswords[0], ",")
+	cfg.WalletCerts = strings.Split(cfg.WalletCerts[0], ",")
+
+	// Add default wallet port for the active network if there's no port specified
+	cfg.WalletHosts = normalizeAddresses(cfg.WalletHosts, activeNetParams.WalletRPCServerPort)
+
+	if len(cfg.WalletHosts) < 2 {
 		str := "%s: you must specify at least 2 wallethosts"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	if len(cfg.WalletHost) != len(cfg.WalletUser) {
-		str := "%s: wallet configuration mismatch (walletuser and wallethost counts differ)"
+	if len(cfg.WalletHosts) != len(cfg.WalletUsers) {
+		str := "%s: wallet configuration mismatch (walletusers and wallethosts counts differ)"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	if len(cfg.WalletHost) != len(cfg.WalletPass) {
-		str := "%s: wallet configuration mismatch (walletpass and wallethost counts differ)"
+	if len(cfg.WalletHosts) != len(cfg.WalletPasswords) {
+		str := "%s: wallet configuration mismatch (walletpasswords and wallethosts counts differ)"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	if len(cfg.WalletHost) != len(cfg.WalletCert) {
-		str := "%s: wallet configuration mismatch (walletcert and wallethost counts differ)"
+	if len(cfg.WalletHosts) != len(cfg.WalletCerts) {
+		str := "%s: wallet configuration mismatch (walletcerts and wallethosts counts differ)"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	cfg.WalletHost = normalizeAddresses(cfg.WalletHost, activeNetParams.WalletRPCServerPort)
-
-	for idx := range cfg.WalletCert {
-		if _, err := os.Stat(cfg.WalletCert[idx]); os.IsNotExist(err) {
-			if _, err := os.Stat(filepath.Join(dcrstakepoolHomeDir, cfg.WalletCert[idx])); os.IsNotExist(err) {
-				str := "%s: walletcert " + cfg.WalletCert[idx] + " and " +
-					filepath.Join(dcrstakepoolHomeDir, cfg.WalletCert[idx]) + " don't exist"
+	for idx := range cfg.WalletCerts {
+		if _, err := os.Stat(cfg.WalletCerts[idx]); os.IsNotExist(err) {
+			if _, err := os.Stat(filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])); os.IsNotExist(err) {
+				str := "%s: walletcert " + cfg.WalletCerts[idx] + " and " +
+					filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx]) + " don't exist"
 				err := fmt.Errorf(str, funcName)
 				fmt.Fprintln(os.Stderr, err)
 				return nil, nil, err
 			}
 
-			cfg.WalletCert[idx] = filepath.Join(dcrstakepoolHomeDir, cfg.WalletCert[idx])
+			cfg.WalletCerts[idx] = filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])
 		}
-	}
-
-	for idx := range cfg.WalletHost {
-		cfg.WalletServers = append(cfg.WalletServers,
-			ServerCfg{
-				Host: cfg.WalletHost[idx],
-				User: cfg.WalletUser[idx],
-				Pass: cfg.WalletPass[idx],
-				Cert: cfg.WalletCert[idx],
-			})
 	}
 
 	// Warn about missing config file only after all other configuration is

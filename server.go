@@ -83,7 +83,8 @@ func main() {
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
 		cfg.ClosePool, cfg.ClosePoolMsg, cfg.ColdWalletExtPub, cfg.PoolFees,
-		cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.WalletServers)
+		cfg.RecaptchaSecret, cfg.RecaptchaSitekey,
+		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords)
 	if err != nil {
 		application.Close()
 		dcrstakepoolLog.Errorf("Failed to initialize the main controller: %v",

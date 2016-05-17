@@ -12,7 +12,6 @@ import (
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
-	"github.com/decred/dcrstakepool"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/waddrmgr"
@@ -45,16 +44,17 @@ type MainController struct {
 }
 
 // NewMainController
-func NewMainController(params *chaincfg.Params, closePool bool, closePoolMsg string,
-	extPubStr string, poolFees float64, recaptchaSecret string,
-	recaptchaSiteKey string, walletServers *main.ServerCfg) (*MainController, error) {
+func NewMainController(params *chaincfg.Params, closePool bool,
+	closePoolMsg string, extPubStr string, poolFees float64,
+	recaptchaSecret string, recaptchaSiteKey string, walletHosts []string,
+	walletCerts []string, walletUsers []string, walletPasswords []string) (*MainController, error) {
 	// Parse the extended public key and the pool fees.
 	key, err := hdkeychain.NewKeyFromString(extPubStr)
 	if err != nil {
 		return nil, err
 	}
 
-	rpcs, err := newWalletSvrManager()
+	rpcs, err := newWalletSvrManager(walletHosts, walletCerts, walletUsers, walletPasswords)
 	if err != nil {
 		return nil, err
 	}
@@ -312,11 +312,11 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 		return controller.SignIn(c, r)
 	}
 
-	if controller.PoolClosed && controller.params.Name == "mainnet" {
+	if controller.poolClosed && controller.params.Name == "mainnet" {
 		if len(user.UserPubKeyAddr) == 0 {
-			session.AddFlash(controller.PoolClosedMsg, "auth")
+			session.AddFlash(controller.poolClosedMsg, "auth")
 			c.Env["IsClosed"] = true
-			c.Env["ClosePoolMsg"] = controller.PoolClosedMsg
+			c.Env["ClosePoolMsg"] = controller.poolClosedMsg
 			return controller.SignIn(c, r)
 		}
 	}
@@ -339,7 +339,7 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 	c.Env["IsSignUp"] = true
 	if controller.poolClosed {
 		c.Env["IsClosed"] = true
-		c.Env["ClosePoolMsg"] = controller.PoolClosedMsg
+		c.Env["ClosePoolMsg"] = controller.poolClosedMsg
 	}
 
 	c.Env["Flash"] = session.Flashes("auth")
