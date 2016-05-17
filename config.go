@@ -30,6 +30,7 @@ const (
 	defaultDBName           = "stakepool"
 	defaultDBPort           = 3306
 	defaultDBUser           = "stakepool"
+	defaultPoolFees         = 5
 	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
 	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
 )
@@ -259,6 +260,7 @@ func loadConfig() (*config, []string, error) {
 		DBName:           defaultDBName,
 		DBPort:           defaultDBPort,
 		DBUser:           defaultDBUser,
+		PoolFees:         defaultPoolFees,
 		RecaptchaSecret:  defaultRecaptchaSecret,
 		RecaptchaSitekey: defaultRecaptchaSitekey,
 	}
