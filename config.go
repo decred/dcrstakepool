@@ -451,6 +451,13 @@ func loadConfig() (*config, []string, error) {
 		cfg.WEBListeners = normalizeAddresses(cfg.WEBListeners,
 			activeNetParams.webPort)*/
 
+	if len(cfg.ColdWalletExtPub) == 0 {
+		str := "%s: coldwalletextpub is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
 	if len(cfg.WalletHosts) == 0 {
 		str := "%s: wallethosts is not set in config"
 		err := fmt.Errorf(str, funcName)
