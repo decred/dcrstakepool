@@ -2,6 +2,7 @@
 public_path   = "public"
 template_path = "views"
 
+; Can use "openssl rand -hex 32" to generate this if you wish
 [cookie]
 mac_secret = "secret string which has over 256-bit entropy"
 secure     = false

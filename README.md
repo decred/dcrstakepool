@@ -110,16 +110,6 @@ MySQL> CREATE DATABASE stakepool;
 
 #### dcrstakepool
 
-- Register a recaptcha key for your domain at https://www.google.com/recaptcha/admin
-
-- Generate a secret for cookie authentication
-
-```bash
-$ openssl rand -hex 32
-```
-
-- add wallet server information to controllers/config.go
-
 - Create the .dcrstakepool directory and copy dcrwallet certs to it
 ```bash
 $ mkdir ~/.dcrstakepool
@@ -128,8 +118,6 @@ $ scp walletserver1:~/.dcrwallet/rpc.cert wallet1.cert
 $ scp walletserver2:~/.dcrwallet/rpc.cert wallet2.cert
 $ scp walletserver3:~/.dcrwallet/rpc.cert wallet3.cert
 ```
-
-- add recaptcha secret to controllers/main.go and recaptcha sitekey to views/auth/signup.html or disable captcha if you don't want it
 
 - Copy old-style sample config and edit appropriately
 ```bash
@@ -141,7 +129,7 @@ $ cp -p config.toml.sample config.toml
 $ cp -p sample-dcrstakepool.conf dcrstakepool.conf
 ```
 
-- Run dcrstakepool
+- Run the dcrstakepool binary from the dcrstakepool directory
 ```bash
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ dcrstakepool
