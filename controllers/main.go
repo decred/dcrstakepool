@@ -481,7 +481,6 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 
 // Tickets page route
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
-	// will probably add spentby, spentbyheight in the future
 	type TicketInfoHistoric struct {
 		Ticket        string
 		SpentByHeight uint32
