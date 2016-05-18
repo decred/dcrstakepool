@@ -11,6 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/gorilla/context"
 
+	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/system"
 
@@ -63,6 +64,8 @@ func main() {
 			}
 		}
 	}()
+
+	dcrrpcclient.UseLogger(dcrstakepoolLog)
 
 	// Setup static files
 	static := web.New()
