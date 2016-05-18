@@ -3,7 +3,6 @@ package controllers
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"sync"
@@ -1079,31 +1078,26 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 
 // newWalletSvrManager returns a new decred wallet server manager.
 // Use Start to begin processing asynchronous block and inv updates.
-func newWalletSvrManager() (*walletSvrManager, error) {
-	var serverCfgs []ServerCfg
-	err := json.Unmarshal(serverPoolCfg, &serverCfgs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config json: %v", err.Error())
-	}
+func newWalletSvrManager(walletHosts []string, walletCerts []string, walletUsers []string, walletPasswords []string) (*walletSvrManager, error) {
 
-	localServers := make([]*dcrrpcclient.Client, len(serverCfgs), len(serverCfgs))
-	for i, scfg := range serverCfgs {
-		certs, err := ioutil.ReadFile(scfg.Cert)
+	localServers := make([]*dcrrpcclient.Client, len(walletHosts), len(walletHosts))
+	for i := range walletHosts {
+		certs, err := ioutil.ReadFile(walletCerts[i])
 		if err != nil {
 			log.Errorf("Error %v", err)
 		}
 		connCfg := &dcrrpcclient.ConnConfig{
-			Host:         scfg.Host,
+			Host:         walletHosts[i],
 			Endpoint:     "ws",
-			User:         scfg.User,
-			Pass:         scfg.Pass,
+			User:         walletUsers[i],
+			Pass:         walletPasswords[i],
 			Certificates: certs,
 		}
 
 		client, err := dcrrpcclient.New(connCfg, nil)
 		if err != nil {
-			fmt.Printf("couldn't connect to RPC server #%v: %v", scfg.Host, err)
-			log.Infof("couldn't connect to RPC server #%v: %v", scfg.Host, err)
+			fmt.Printf("couldn't connect to RPC server #%v: %v", walletHosts[i], err)
+			log.Infof("couldn't connect to RPC server #%v: %v", walletHosts[i], err)
 			return nil, fmt.Errorf("RPC server connection failure on start")
 		}
 		localServers[i] = client
@@ -1118,7 +1112,7 @@ func newWalletSvrManager() (*walletSvrManager, error) {
 		quit:                   make(chan struct{}),
 	}
 
-	err = walletSvrsSync(&wsm)
+	err := walletSvrsSync(&wsm)
 	if err != nil {
 		return nil, err
 	}

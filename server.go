@@ -7,10 +7,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	
+
 	"github.com/golang/glog"
 	"github.com/gorilla/context"
 
+	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/system"
 
@@ -59,10 +60,12 @@ func main() {
 			if sig == syscall.SIGUSR1 {
 				application.LoadTemplates()
 				dcrstakepoolLog.Infof("LoadTemplates() executed.")
-				fmt.Fprintf(os.Stdout, "LoadTemplates() executed.\n")		
+				fmt.Fprintf(os.Stdout, "LoadTemplates() executed.\n")
 			}
 		}
 	}()
+
+	dcrrpcclient.UseLogger(dcrstakepoolLog)
 
 	// Setup static files
 	static := web.New()
@@ -82,8 +85,9 @@ func main() {
 	goji.Use(context.ClearHandler)
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.ColdWalletExtPub, cfg.PoolFees, cfg.RecaptchaSecret,
-		cfg.RecaptchaSitekey)
+		cfg.ClosePool, cfg.ClosePoolMsg, cfg.ColdWalletExtPub, cfg.PoolFees,
+		cfg.RecaptchaSecret, cfg.RecaptchaSitekey,
+		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords)
 	if err != nil {
 		application.Close()
 		dcrstakepoolLog.Errorf("Failed to initialize the main controller: %v",

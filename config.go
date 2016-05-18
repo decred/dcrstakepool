@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	defaultClosePoolMsg     = "This stake pool has reached 5% of network votes and registration has been closed to protect the de-centralization of the network.  Please find a different stake pool to use."
 	defaultConfigFilename   = "dcrstakepool.conf"
 	defaultDataDirname      = "data"
 	defaultLogLevel         = "info"
@@ -29,6 +30,9 @@ const (
 	defaultDBName           = "stakepool"
 	defaultDBPort           = 3306
 	defaultDBUser           = "stakepool"
+	defaultPoolEmail        = "admin@example.com"
+	defaultPoolFees         = 7.5
+	defaultPoolLink         = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
 	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
 	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
 )
@@ -59,7 +63,9 @@ type config struct {
 	CPUProfile       string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
 	MemProfile       string   `long:"memprofile" description:"Write mem profile to the specified file"`
 	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	WEBListeners     []string `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 9109, testnet: 19109)"`
+	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
+	ClosePool        bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
+	ClosePoolMsg     string   `long:"closepoolmsg" description:"Message to display when closepool is set (default: Stake pool is currently oversubscribed)"`
 	DBHost           string   `long:"dbhost" description:"Hostname for database connection"`
 	DBUser           string   `long:"dbuser" description:"Username for database connection"`
 	DBPass           string   `long:"dbpass" description:"Password for database connection"`
@@ -67,8 +73,13 @@ type config struct {
 	DBName           string   `long:"dbname" description:"Name of database"`
 	RecaptchaSecret  string   `long:"recaptchasecret" description:"Recaptcha Secret"`
 	RecaptchaSitekey string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
-	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
+	PoolEmail        string   `long:"poolemail" description:"Email address to for support inquiries"`
 	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
+	PoolLink         string   `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
+	WalletHosts      []string `long:"wallethosts" description:"Hostname for wallet server"`
+	WalletUsers      []string `long:"walletusers" description:"Username for wallet server"`
+	WalletPasswords  []string `long:"walletpasswords" description:"Pasword for wallet server"`
+	WalletCerts      []string `long:"walletcerts" description:"Certificate path for wallet server"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service on
@@ -243,6 +254,8 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
+		ClosePool:        false,
+		ClosePoolMsg:     defaultClosePoolMsg,
 		ConfigFile:       defaultConfigFile,
 		DebugLevel:       defaultLogLevel,
 		DataDir:          defaultDataDir,
@@ -251,6 +264,9 @@ func loadConfig() (*config, []string, error) {
 		DBName:           defaultDBName,
 		DBPort:           defaultDBPort,
 		DBUser:           defaultDBUser,
+		PoolFees:         defaultPoolFees,
+		PoolEmail:        defaultPoolEmail,
+		PoolLink:         defaultPoolLink,
 		RecaptchaSecret:  defaultRecaptchaSecret,
 		RecaptchaSitekey: defaultRecaptchaSitekey,
 	}
@@ -424,21 +440,108 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
-	// Default to listen on localhost only.
-	addrs, err := net.LookupHost("localhost")
-	if err != nil {
+	/*
+		// Default to listen on localhost only.
+		addrs, err := net.LookupHost("localhost")
+		if err != nil {
+			return nil, nil, err
+		}
+		cfg.WEBListeners = make([]string, 0, len(addrs))
+		for _, addr := range addrs {
+			addr = net.JoinHostPort(addr, activeNetParams.webPort)
+			cfg.WEBListeners = append(cfg.WEBListeners, addr)
+		}
+
+		// Add default port to all rpc listener addresses if needed and remove
+		// duplicate addresses.
+		cfg.WEBListeners = normalizeAddresses(cfg.WEBListeners,
+			activeNetParams.webPort)*/
+
+	if len(cfg.ColdWalletExtPub) == 0 {
+		str := "%s: coldwalletextpub is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
-	cfg.WEBListeners = make([]string, 0, len(addrs))
-	for _, addr := range addrs {
-		addr = net.JoinHostPort(addr, activeNetParams.webPort)
-		cfg.WEBListeners = append(cfg.WEBListeners, addr)
+
+	if len(cfg.WalletHosts) == 0 {
+		str := "%s: wallethosts is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
 	}
 
-	// Add default port to all rpc listener addresses if needed and remove
-	// duplicate addresses.
-	cfg.WEBListeners = normalizeAddresses(cfg.WEBListeners,
-		activeNetParams.webPort)
+	if len(cfg.WalletCerts) == 0 {
+		str := "%s: walletcerts is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.WalletUsers) == 0 {
+		str := "%s: walletusers is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.WalletPasswords) == 0 {
+		str := "%s: walletpasswords is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	// Convert comma separated list into a slice
+	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
+	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
+	cfg.WalletPasswords = strings.Split(cfg.WalletPasswords[0], ",")
+	cfg.WalletCerts = strings.Split(cfg.WalletCerts[0], ",")
+
+	// Add default wallet port for the active network if there's no port specified
+	cfg.WalletHosts = normalizeAddresses(cfg.WalletHosts, activeNetParams.WalletRPCServerPort)
+
+	if len(cfg.WalletHosts) < 2 {
+		str := "%s: you must specify at least 2 wallethosts"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.WalletHosts) != len(cfg.WalletUsers) {
+		str := "%s: wallet configuration mismatch (walletusers and wallethosts counts differ)"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.WalletHosts) != len(cfg.WalletPasswords) {
+		str := "%s: wallet configuration mismatch (walletpasswords and wallethosts counts differ)"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.WalletHosts) != len(cfg.WalletCerts) {
+		str := "%s: wallet configuration mismatch (walletcerts and wallethosts counts differ)"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	for idx := range cfg.WalletCerts {
+		if _, err := os.Stat(cfg.WalletCerts[idx]); os.IsNotExist(err) {
+			if _, err := os.Stat(filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])); os.IsNotExist(err) {
+				str := "%s: walletcert " + cfg.WalletCerts[idx] + " and " +
+					filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx]) + " don't exist"
+				err := fmt.Errorf(str, funcName)
+				fmt.Fprintln(os.Stderr, err)
+				return nil, nil, err
+			}
+
+			cfg.WalletCerts[idx] = filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])
+		}
+	}
 
 	// Warn about missing config file only after all other configuration is
 	// done.  This prevents the warning on help messages and invalid
