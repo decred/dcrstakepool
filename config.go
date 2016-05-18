@@ -30,7 +30,9 @@ const (
 	defaultDBName           = "stakepool"
 	defaultDBPort           = 3306
 	defaultDBUser           = "stakepool"
+	defaultPoolEmail        = "admin@example.com"
 	defaultPoolFees         = 7.5
+	defaultPoolLink         = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
 	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
 	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
 )
@@ -71,7 +73,9 @@ type config struct {
 	DBName           string   `long:"dbname" description:"Name of database"`
 	RecaptchaSecret  string   `long:"recaptchasecret" description:"Recaptcha Secret"`
 	RecaptchaSitekey string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
+	PoolEmail        string   `long:"poolemail" description:"Email address to for support inquiries"`
 	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
+	PoolLink         string   `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
 	WalletHosts      []string `long:"wallethosts" description:"Hostname for wallet server"`
 	WalletUsers      []string `long:"walletusers" description:"Username for wallet server"`
 	WalletPasswords  []string `long:"walletpasswords" description:"Pasword for wallet server"`
@@ -261,6 +265,8 @@ func loadConfig() (*config, []string, error) {
 		DBPort:           defaultDBPort,
 		DBUser:           defaultDBUser,
 		PoolFees:         defaultPoolFees,
+		PoolEmail:        defaultPoolEmail,
+		PoolLink:         defaultPoolLink,
 		RecaptchaSecret:  defaultRecaptchaSecret,
 		RecaptchaSitekey: defaultRecaptchaSitekey,
 	}
