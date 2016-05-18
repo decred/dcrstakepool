@@ -126,9 +126,12 @@ function voteData() {
     <script src="/assets/js/dataTables.bootstrap-1.10.11.min.js"></script>
     <script type="text/javascript">
 $(document).ready(function() {
-    var table = $('#tickets').DataTable({
+    $('.datatable').DataTable({
         "ordering": false
     });
+    $('.datatablesort').DataTable({
+        "order": [[ 1, "desc"]]
+    })
     $('[data-toggle="tooltip"]').tooltip();
     $('#poolcontrol').change(function() {
         if ($(this).is(":checked")) {

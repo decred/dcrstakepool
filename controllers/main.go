@@ -36,7 +36,9 @@ type MainController struct {
 	closePool        bool
 	closePoolMsg     string
 	extPub           *hdkeychain.ExtendedKey
+	poolEmail        string
 	poolFees         float64
+	poolLink         string
 	params           *chaincfg.Params
 	rpcServers       *walletSvrManager
 	recaptchaSecret  string
@@ -45,9 +47,10 @@ type MainController struct {
 
 // NewMainController
 func NewMainController(params *chaincfg.Params, closePool bool,
-	closePoolMsg string, extPubStr string, poolFees float64,
-	recaptchaSecret string, recaptchaSiteKey string, walletHosts []string,
-	walletCerts []string, walletUsers []string, walletPasswords []string) (*MainController, error) {
+	closePoolMsg string, extPubStr string, poolEmail string, poolFees float64,
+	poolLink string, recaptchaSecret string, recaptchaSiteKey string,
+	walletHosts []string, walletCerts []string, walletUsers []string,
+	walletPasswords []string) (*MainController, error) {
 	// Parse the extended public key and the pool fees.
 	key, err := hdkeychain.NewKeyFromString(extPubStr)
 	if err != nil {
@@ -63,7 +66,9 @@ func NewMainController(params *chaincfg.Params, closePool bool,
 		closePool:        closePool,
 		closePoolMsg:     closePoolMsg,
 		extPub:           key,
+		poolEmail:        poolEmail,
 		poolFees:         poolFees,
+		poolLink:         poolLink,
 		params:           params,
 		recaptchaSecret:  recaptchaSecret,
 		recaptchaSiteKey: recaptchaSiteKey,
@@ -274,6 +279,10 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 		c.Env["IsClosed"] = true
 		c.Env["ClosePoolMsg"] = controller.closePoolMsg
 	}
+	c.Env["Network"] = controller.params.Name
+	c.Env["PoolEmail"] = controller.poolEmail
+	c.Env["PoolFees"] = controller.poolFees
+	c.Env["PoolLink"] = controller.poolLink
 
 	t := controller.GetTemplate(c)
 
@@ -430,6 +439,14 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 		return "/error?r=/stats", http.StatusSeeOther
 	}
 
+	c.Env["Network"] = controller.params.Name
+	if controller.closePool {
+		c.Env["PoolStatus"] = "Closed"
+	} else {
+		c.Env["PoolStatus"] = "Open"
+	}
+	c.Env["PoolEmail"] = controller.poolEmail
+	c.Env["PoolFees"] = controller.poolFees
 	c.Env["StakeInfo"] = gsi
 	c.Env["UserCount"] = usercount
 
@@ -464,11 +481,26 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 
 // Tickets page route
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
-	type TicketInfo struct {
-		Ticket   string
-		VoteBits uint16
+	type TicketInfoHistoric struct {
+		Ticket        string
+		SpentByHeight uint32
+		TicketHeight  uint32
 	}
-	ticketinfo := map[int]TicketInfo{}
+
+	type TicketInfoInvalid struct {
+		Ticket string
+	}
+
+	type TicketInfoLive struct {
+		Ticket       string
+		TicketHeight uint32
+		VoteBits     uint16
+	}
+
+	ticketInfoInvalid := map[int]TicketInfoInvalid{}
+	ticketInfoLive := map[int]TicketInfoLive{}
+	ticketInfoMissed := map[int]TicketInfoHistoric{}
+	ticketInfoVoted := map[int]TicketInfoHistoric{}
 
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
@@ -530,6 +562,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 			tickethashes = append(tickethashes, th)
 		}
 
+		// TODO: only get votebits for live tickets
 		gtvb, err := controller.rpcServers.GetTicketsVoteBits(tickethashes)
 		if err != nil {
 			log.Infof("GetTicketsVoteBits failed %v", err)
@@ -537,12 +570,37 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		}
 
 		for idx, ticket := range spui.Tickets {
-			ticketinfo[idx] = TicketInfo{ticket.Ticket,
-				gtvb.VoteBitsList[idx].VoteBits}
+			switch {
+			case ticket.Status == "live":
+				ticketInfoLive[idx] = TicketInfoLive{
+					Ticket:       ticket.Ticket,
+					TicketHeight: ticket.TicketHeight,
+					VoteBits:     gtvb.VoteBitsList[idx].VoteBits,
+				}
+			case ticket.Status == "missed":
+				ticketInfoMissed[idx] = TicketInfoHistoric{
+					Ticket:        ticket.Ticket,
+					SpentByHeight: ticket.SpentByHeight,
+					TicketHeight:  ticket.TicketHeight,
+				}
+			case ticket.Status == "voted":
+				ticketInfoVoted[idx] = TicketInfoHistoric{
+					Ticket:        ticket.Ticket,
+					SpentByHeight: ticket.SpentByHeight,
+					TicketHeight:  ticket.TicketHeight,
+				}
+			}
+		}
+
+		for idx, ticket := range spui.InvalidTickets {
+			ticketInfoInvalid[idx] = TicketInfoInvalid{ticket}
 		}
 	}
 
-	c.Env["Tickets"] = ticketinfo
+	c.Env["TicketsInvalid"] = ticketInfoInvalid
+	c.Env["TicketsLive"] = ticketInfoLive
+	c.Env["TicketsMissed"] = ticketInfoMissed
+	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets = controller.Parse(t, "tickets", c.Env)
 	c.Env["Content"] = template.HTML(widgets)
 
