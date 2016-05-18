@@ -31,10 +31,10 @@
 </div>
 <div class="panel panel-default">
 	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">Raw Stats</h4>
+		<h4 class="panel-title">Stats &amp; Status</h4>
 	</div>
 	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-	<table class="table table-condensed" id="rawstats">
+	<table class="table table-condensed" id="status">
 		<tr><td><span style="font-size: larger;">Immature:</span></td><td><span id="Immature">{{ .StakeInfo.Immature }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Live:</span></td><td><span id="Live">{{ .StakeInfo.Live }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Voted:</span></td><td><span id="Voted">{{ .StakeInfo.Voted }}</span></td></tr>
@@ -48,6 +48,10 @@
 		<tr><td><span style="font-size: larger;">Difficulty:</span></td><td><span id="Difficulty">{{ .StakeInfo.Difficulty }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">TotalSubsidy:</span></td><td><span id="TotalSubsidy">{{ .StakeInfo.TotalSubsidy }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">User Count:</span></td><td><span id="UserCount">{{ .UserCount }}</span></td></tr>
+		<tr><td><span style="font-size: larger;">Network:</span></td><td><span id="Network">{{ .Network }}</span></td></tr>
+		<tr><td><span style="font-size: larger;">Pool Fees:</span></td><td><span id="PoolFees">{{ .PoolFees }}</span></td></tr>
+		<tr><td><span style="font-size: larger;">Pool Status:</span></td><td><span id="PoolStatus">{{ .PoolStatus }}</span></td></tr>
+		<tr><td><span style="font-size: larger;">Pool Email:</span></td><td><span id="PoolEmail">{{ .PoolEmail }}</span></td></tr>
 	</table>
 </div>
 </div>

@@ -15,7 +15,14 @@
 		<li><span style="font-size: large;">Lack of a reliable/low latency Internet connection</span></li>
 	</ul></p>
 
-	<br><p><span style="font-size: large;">The source code for this project will be posted at a later date on <a href="https://github.com/decred">GitHub</a>.
+	<br><p><span style="font-size: large;">The source code for this project will be posted at a later date on <a href="https://github.com/decred/dcrstakepool">GitHub</a>.
+
+	<p><span style="font-size: x-large;"><b><u>Pool Information</u></b></span></li>
+
+	<p><span style="font-size: x-large;"><b>Network:</b> {{.Network}}</span>
+	<br><span style="font-size: x-large;"><b>Pool Fees:</b> {{.PoolFees}}%</span>
+	<br><span style="font-size: x-large;"><b>Support Email:</b> {{.PoolEmail}}</span>
+	<br><span style="font-size: x-large;"><b>Support Link:</b> <a href="{{.PoolLink}}">{{.PoolLink}}</a></span></p>
 
 	{{if not .User}}<div class="center-block col-md-4 text-center" style="float: none;"><br><p><a class="btn btn-primary btn-lg" href="/signup" role="button">Sign Up</a></p></div>{{end}}
 </div>
