@@ -430,6 +430,12 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 		return "/error?r=/stats", http.StatusSeeOther
 	}
 
+	usercountactive, err := dbMap.SelectInt("SELECT COUNT(*) FROM Users WHERE MultiSigAddress <> ''")
+	if err != nil {
+		log.Infof("user count query failed")
+		return "/error?r=/stats", http.StatusSeeOther
+	}
+
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
@@ -449,6 +455,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	c.Env["PoolFees"] = controller.poolFees
 	c.Env["StakeInfo"] = gsi
 	c.Env["UserCount"] = usercount
+	c.Env["UserCountActive"] = usercountactive
 
 	var widgets = controller.Parse(t, "stats", c.Env)
 	c.Env["Content"] = template.HTML(widgets)

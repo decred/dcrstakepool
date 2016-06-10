@@ -1,30 +1,20 @@
 {{define "stats"}}
-<div class="panel panel-default" id="votepanel">
+<div class="col-md-6 panel panel-default" id="votepanel" style="padding: 0;">
 	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
 		<h4 class="panel-title">Pool Votes</h4>
 	</div>
 	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-		<div class="center-block col-md-6" style="float: none;" id="votechart">
+		<div class="center-block col-md-12" style="float: none;" id="votechart">
 			<svg></svg>
 		</div>
 	</div>
 </div>
-<div class="panel panel-default" id="ticketpanel">
+<div class="col-md-6 panel panel-default" id="ticketpanel" style="padding: 0;">
 	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
 		<h4 class="panel-title">Pool Tickets</h4>
 	</div>
 	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-		<div class="center-block col-md-6" style="float: none;" id="ticketchart">
-			<svg></svg>
-		</div>
-	</div>
-</div>
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">Stakepool vs Network Proportion</h4>
-	</div>
-	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-		<div class="center-block col-md-6" style="float: none;" id="poolchart">
+		<div class="center-block col-md-12" style="float: none;" id="ticketchart">
 			<svg></svg>
 		</div>
 	</div>
@@ -43,11 +33,13 @@
 		<tr><td><span style="font-size: larger;">ProportionMissed:</span></td><td><span id="ProportionMissed">{{ .StakeInfo.ProportionMissed }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Pool Size:</span></td><td><span id="PoolSize">{{ .StakeInfo.PoolSize }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">AllMempoolTix:</span></td><td><span id="AllMempoolTix">{{ .StakeInfo.AllMempoolTix }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">OwnMempoolTix:</span></td><td><span id="OwnMempoolTix">{{ .StakeInfo.OwnMempoolTix }}</span></td></tr>
+		<!-- disabled due to https://github.com/decred/dcrwallet/issues/251
+			<tr><td><span style="font-size: larger;">OwnMempoolTix:</span></td><td><span id="OwnMempoolTix">{{ .StakeInfo.OwnMempoolTix }}</span></td></tr>-->
 		<tr><td><span style="font-size: larger;">ProportionLive:</span></td><td><span id="ProportionLive">{{ .StakeInfo.ProportionLive }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Difficulty:</span></td><td><span id="Difficulty">{{ .StakeInfo.Difficulty }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">TotalSubsidy:</span></td><td><span id="TotalSubsidy">{{ .StakeInfo.TotalSubsidy }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">User Count:</span></td><td><span id="UserCount">{{ .UserCount }}</span></td></tr>
+		<tr><td><span style="font-size: larger;">Total User Count:</span></td><td><span id="UserCount">{{ .UserCount }}</span></td></tr>
+		<tr><td><span style="font-size: larger;">Active User Count:</span></td><td><span id="UserCountActive">{{ .UserCountActive }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Network:</span></td><td><span id="Network">{{ .Network }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Pool Fees:</span></td><td><span id="PoolFees">{{ .PoolFees }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Pool Status:</span></td><td><span id="PoolStatus">{{ .PoolStatus }}</span></td></tr>
