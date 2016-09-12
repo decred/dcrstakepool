@@ -483,6 +483,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
 	type TicketInfoHistoric struct {
 		Ticket        string
+		SpentBy       string
 		SpentByHeight uint32
 		TicketHeight  uint32
 	}
@@ -586,6 +587,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 			case ticket.Status == "voted":
 				ticketInfoVoted[idx] = TicketInfoHistoric{
 					Ticket:        ticket.Ticket,
+					SpentBy:       ticket.SpentBy,
 					SpentByHeight: ticket.SpentByHeight,
 					TicketHeight:  ticket.TicketHeight,
 				}

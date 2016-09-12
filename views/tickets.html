@@ -159,7 +159,7 @@
 			<tbody>
 			{{ range $i, $data := .TicketsVoted }}<tr>
 				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
-				<td>{{$data.SpentByHeight}}</td>
+				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.SpentBy}}">{{$data.SpentByHeight}}</a></td>
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
 			</tbody>
