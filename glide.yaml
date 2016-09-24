@@ -15,6 +15,7 @@ import:
   - txscript
   - wire
 - package: github.com/decred/dcrrpcclient
+  version: b0a8d313e5b89d0673a6e3e4df87540200b48f3f
 - package: github.com/decred/dcrutil
   subpackages:
   - hdkeychain

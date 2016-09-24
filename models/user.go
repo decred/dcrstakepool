@@ -95,6 +95,7 @@ func InsertEmailChange(dbMap *gorp.DbMap, emailChange *EmailChange) error {
 	return dbMap.Insert(emailChange)
 }
 
+// InsertUser inserts a user into the DB
 func InsertUser(dbMap *gorp.DbMap, user *User) error {
 	return dbMap.Insert(user)
 }
@@ -103,18 +104,24 @@ func InsertPasswordReset(dbMap *gorp.DbMap, passwordReset *PasswordReset) error 
 	return dbMap.Insert(passwordReset)
 }
 
-func UpdateUserById(dbMap *gorp.DbMap, id int64, msa string, mss string, ppka string, upka string, ufa string, height int64) (user *User) {
+// UpdateUserByID updates a user, specified by id, in the DB with a new
+// multiSigAddr, multiSigScript, multiSigScript, pool pubkey address,
+// user pub key address, and fee address.  Unchanged are the user's ID, email,
+// username and password.
+func UpdateUserByID(dbMap *gorp.DbMap, id int64, multiSigAddr string,
+	multiSigScript string, poolPubKeyAddr string, userPubKeyAddr string,
+	userFeeAddr string) (user *User) {
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 
 	if err != nil {
 		glog.Warningf("Can't get user by id: %v", err)
 	}
 
-	user.MultiSigAddress = msa
-	user.MultiSigScript = mss
-	user.PoolPubKeyAddr = ppka
-	user.UserPubKeyAddr = upka
-	user.UserFeeAddr = ufa
+	user.MultiSigAddress = multiSigAddr
+	user.MultiSigScript = multiSigScript
+	user.PoolPubKeyAddr = poolPubKeyAddr
+	user.UserPubKeyAddr = userPubKeyAddr
+	user.UserFeeAddr = userFeeAddr
 	user.HeightRegistered = height
 
 	_, err = dbMap.Update(user)
@@ -122,6 +129,8 @@ func UpdateUserById(dbMap *gorp.DbMap, id int64, msa string, mss string, ppka st
 	if err != nil {
 		glog.Warningf("Couldn't update user: %v", err)
 	}
+	
+	// return updated User
 	return
 }
 
