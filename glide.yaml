@@ -4,6 +4,7 @@ import:
 - package: github.com/btcsuite/go-flags
 - package: github.com/btcsuite/seelog
 - package: github.com/decred/dcrd
+  version: v0.4.0
   subpackages:
   - addrmgr
   - blockchain
@@ -15,7 +16,7 @@ import:
   - txscript
   - wire
 - package: github.com/decred/dcrrpcclient
-  version: b0a8d313e5b89d0673a6e3e4df87540200b48f3f
+  version: f3c620d63cb02aec0c1152a72d3c8669b92a2fb5
 - package: github.com/decred/dcrutil
   subpackages:
   - hdkeychain
