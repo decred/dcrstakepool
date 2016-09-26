@@ -1581,7 +1581,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		}
 
 		// Only get votebits for live tickets
-		liveTicketHashes, err := w.GetLiveUserTickets(multisig)
+		liveTicketHashes, err := w.GetUnspentUserTickets(multisig)
 		if err != nil {
 			return "/error?r=/tickets", http.StatusSeeOther
 		}
