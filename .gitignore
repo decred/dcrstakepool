@@ -2,3 +2,5 @@
 config.toml
 dcrstakepool
 vendor
+.vscode/
+config.go*
