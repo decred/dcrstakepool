@@ -1177,7 +1177,7 @@ func (w *walletSvrManager) SyncVoteBits() error {
 	if err != nil {
 		return err
 	}
-	if int(gsi.Live) != numLiveTickets {
+	if int(gsi.Live+gsi.Immature) != numLiveTickets {
 		return fmt.Errorf("Number of live tickets inconsistent: %v, %v",
 			gsi.Live, numLiveTickets)
 	}
@@ -1231,6 +1231,8 @@ func (w *walletSvrManager) SyncTicketsVoteBits(tickets []*chainhash.Hash) error 
 	votebitsPerServer := make([]map[chainhash.Hash]uint16, w.serversLen)
 
 	for i, cl := range w.servers {
+		votebitsPerServer[i] = make(map[chainhash.Hash]uint16)
+
 		votebits, err := cl.GetTicketsVoteBits(tickets)
 		if err != nil {
 			return err

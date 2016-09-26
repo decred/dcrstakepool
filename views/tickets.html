@@ -2,6 +2,9 @@
 {{if .Error}}
 	<div class="alert alert-danger">{{.Error}}</div><p>
 {{end}}
+{{range .Flash}}
+	<div class="alert alert-danger">{{.}}</div>
+{{end}}
 <div class="panel panel-default">
 	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
 		<h4 class="panel-title">
