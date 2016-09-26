@@ -1139,13 +1139,13 @@ func (w *walletSvrManager) CheckServers() error {
 			return err
 		}
 		if !wi.DaemonConnected {
-			return fmt.Errorf("wallet on svr %d not connected", i)
+			return fmt.Errorf("Wallet on svr %d not connected\n", i)
 		}
 		if !wi.StakeMining {
-			return fmt.Errorf("wallet on svr %d not stakemining", i)
+			return fmt.Errorf("Wallet on svr %d not stakemining.\n", i)
 		}
 		if !wi.Unlocked {
-			return fmt.Errorf("wallet on svr %d not unlocked", i)
+			return fmt.Errorf("Wallet on svr %d not unlocked.\n", i)
 		}
 	}
 
