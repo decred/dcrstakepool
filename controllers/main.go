@@ -1594,7 +1594,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 				go w.SyncTicketsVoteBits(tickethashes)
 				responseHeaderMap["Retry-After"] = "60"
 				// Render page with messgae to try again later
-				session.AddFlash("Ticket data resyncing.  Please try again later.", "tickets")
+				session.AddFlash("Detected mismatching vote bits.  Ticket data resyncing.  Please try again later.", "tickets")
 				c.Env["Flash"] = session.Flashes("tickets")
 				c.Env["Content"] = template.HTML(controller.Parse(t, "tickets", c.Env))
 				// Return with a 503 error indicating when to retry
