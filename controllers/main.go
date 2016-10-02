@@ -16,7 +16,6 @@ import (
 	"html/template"
 
 	"github.com/decred/dcrd/chaincfg"
-	"github.com/decred/dcrd/chaincfg/chainhash"
 	// "github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
@@ -551,7 +550,7 @@ func (controller *MainController) RPCIsStopped() bool {
 }
 
 // handlePotentialFatalError is used to respond to wallet RPC manager errors byte
-// logging the error message adn stopping the RPC manager.
+// logging the error message and stopping the RPC manager.
 func (controller *MainController) handlePotentialFatalError(fn string, err error) {
 	cnErr, ok := err.(connectionError)
 	if ok {
@@ -1482,9 +1481,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	responseHeaderMap := make(map[string]string)
 	c.Env["ResponseHeaderMap"] = responseHeaderMap
-
-	// testing, testing
-	responseHeaderMap["X-1337h4x0r"] = "chappjc"
+	// map is a reference type so responseHeaderMap may be modified
 
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
@@ -1517,8 +1514,10 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
 	}
 
-	// Attempt a "TryLock" so the page won't block
 	w := controller.rpcServers
+	// TODO: Tell the user if there is a cool-down
+
+	// Attempt a "TryLock" so the page won't block
 
 	// select {
 	// case <-w.ticketTryLock:
@@ -1534,8 +1533,8 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		responseHeaderMap["Retry-After"] = "60"
 		// Render page with messgae to try again later
 		//c.Env["Content"] = template.HTML("Ticket data resyncing.  Please try again later.")
-		session.AddFlash("Ticket data resyncing.  Please try again later.", "tickets")
-		c.Env["Flash"] = session.Flashes("tickets")
+		session.AddFlash("Ticket data now resyncing. Please try again later.", "tickets-warning")
+		c.Env["FlashWarn"] = session.Flashes("tickets-warning")
 		c.Env["Content"] = template.HTML(controller.Parse(t, "tickets", c.Env))
 		return controller.Parse(t, "main", c.Env), http.StatusOK
 	}
@@ -1568,20 +1567,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	// If the user has tickets, get their info
 	if spui != nil && len(spui.Tickets) > 0 {
-		// Retrieve ticket hashes
-		var tickethashes []*chainhash.Hash
-
-		for _, ticket := range spui.Tickets {
-			th, err := chainhash.NewHashFromStr(ticket.Ticket)
-			// This may not be a fatal error. TODO: Inform user to try again.
-			if err != nil {
-				log.Infof("NewHashFromStr failed for %v", ticket)
-				return "/error?r=/tickets", http.StatusSeeOther
-			}
-			tickethashes = append(tickethashes, th)
-		}
-
-		// Only get votebits for live tickets
+		// Only get or set votebits for live tickets
 		liveTicketHashes, err := w.GetUnspentUserTickets(multisig)
 		if err != nil {
 			return "/error?r=/tickets", http.StatusSeeOther
@@ -1591,10 +1577,12 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		if err != nil {
 			if err.Error() == "non equivalent votebits returned" {
 				// Launch a goroutine to repair these tickets vote bits
-				go w.SyncTicketsVoteBits(tickethashes)
+				go w.SyncTicketsVoteBits(liveTicketHashes)
 				responseHeaderMap["Retry-After"] = "60"
 				// Render page with messgae to try again later
-				session.AddFlash("Detected mismatching vote bits.  Ticket data resyncing.  Please try again later.", "tickets")
+				session.AddFlash("Detected mismatching vote bits.  "+
+					"Ticket data is now resyncing.  Please try again after a "+
+					"few minutes.", "tickets")
 				c.Env["Flash"] = session.Flashes("tickets")
 				c.Env["Content"] = template.HTML(controller.Parse(t, "tickets", c.Env))
 				// Return with a 503 error indicating when to retry
@@ -1665,6 +1653,7 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 
 	chooseallow := r.FormValue("chooseallow")
 	// votebitsmanual := r.FormValue("votebitsmanual")
+
 	var voteBits = uint16(0)
 
 	if chooseallow == "2" {
@@ -1707,47 +1696,53 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
-	spui, err := w.StakePoolUserInfo(multisig)
-	if err != nil {
-		log.Infof("RPC StakePoolUserInfo failed: %v", err)
-		return "/error?r=/tickets", http.StatusSeeOther
-	}
 
 	outPath := "/tickets"
 	status := http.StatusSeeOther
 
 	// Set this off in a goroutine
-	go func() (string, int) {
+	// TODO: error on channel
+	go func() {
 		// write lock
 		w.ticketDataLock.Lock()
 		defer w.ticketDataLock.Unlock()
 
+		var err error
+		defer func() { w.setVoteBitsResyncChan <- err }()
+
 		if !atomic.CompareAndSwapInt32(&w.ticketDataBlocker, 0, 1) {
-			return outPath, status
+			return
 		}
 		defer atomic.StoreInt32(&w.ticketDataBlocker, 0)
 
-		for _, ticket := range spui.Tickets {
+		// Only get or set votebits for live tickets
+		liveTicketHashes, err := w.GetUnspentUserTickets(multisig)
+		if err != nil {
+			return
+		}
+
+		log.Infof("Started setting of vote bits for %d tickets.",
+			len(liveTicketHashes))
+
+		for _, ticket := range liveTicketHashes {
 			if controller.RPCIsStopped() {
-				return "/error", http.StatusSeeOther
+				return
 			}
-			th, err := chainhash.NewHashFromStr(ticket.Ticket)
-			if err != nil {
-				log.Infof("NewHashFromStr failed for %v", ticket)
-				outPath = "/error?r=/tickets"
-				status = http.StatusSeeOther
-				continue
-			}
-			err = controller.rpcServers.SetTicketVoteBits(th, voteBits)
+
+			err = controller.rpcServers.SetTicketVoteBits(ticket, voteBits)
 			if err != nil {
 				if err == ErrSetVoteBitsCoolDown {
-					return "/error?r=/tickets&rl=1", http.StatusSeeOther
+					return
 				}
 				controller.handlePotentialFatalError("SetTicketVoteBits", err)
-				return "/error?r=/tickets", http.StatusSeeOther
+				return
 			}
 		}
-		return outPath, status
+
+		log.Infof("Completed setting of vote bits for %d tickets.",
+			len(liveTicketHashes))
+
+		return
 	}()
 
 	// Like a timeout, give the sync some time to process, otherwise /tickets

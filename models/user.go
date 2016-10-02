@@ -129,7 +129,7 @@ func UpdateUserByID(dbMap *gorp.DbMap, id int64, multiSigAddr string,
 	if err != nil {
 		glog.Warningf("Couldn't update user: %v", err)
 	}
-	
+
 	// return updated User
 	return
 }
