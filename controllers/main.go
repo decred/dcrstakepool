@@ -1646,7 +1646,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string, int) {
 	w := controller.rpcServers
 
-	// If already processing let /ticktets handle this
+	// If already processing let /tickets handle this
 	if atomic.LoadInt32(&w.ticketDataBlocker) != 0 {
 		return "/tickets", http.StatusSeeOther
 	}
