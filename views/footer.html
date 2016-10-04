@@ -2,7 +2,7 @@
 	<div id="footer" class="footer">
 		<div class="container-fluid">
 			<br>
-			<p class="text-muted"><a href="https://github.com/decred/">Decred Developers</a> | 2016
+			<p class="text-muted">&#60;&#47;&#62; <a href="https://github.com/decred/">Decred Developers</a> | 2016
 		</div>
 	</div>
 
@@ -62,37 +62,7 @@ $(document).ready(function() {
     if ($("#Immature").text() < 1 && $("#Live").text() < 1) {
       $("#ticketpanel").hide();
     }
-
-    nv.addGraph(function() {
-        var chart = nv.models.pieChart()
-          .x(function(d) { return d.label })
-          .y(function(d) { return d.value })
-          .showLabels(true);
-
-        d3.select("#poolchart svg")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("transform", "translate(" + (width / 2 - radius) + "," + (height / 2 - radius) + ")")
-            .datum(poolData())
-            .transition().duration(350)
-            .call(chart);
-
-        return chart;
-    });
 });
-
-function poolData() {
-  return  [
-      { 
-        "label": "Stakepool Ticket Pool Size",
-        "value" : $("#Live").text(),
-      },
-      { 
-        "label": "Network Ticket Pool Size",
-        "value" : $("#PoolSize").text() - $("#Live").text(),
-      }
-    ];
-}
 
 function ticketData() {
   return  [
