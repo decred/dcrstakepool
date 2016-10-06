@@ -1189,11 +1189,13 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 // Tickets form submit route
 func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string, int) {
-	chooseallow, poolcontrol := r.FormValue("chooseallow"), r.FormValue("poolcontrol")
+	chooseallow := r.FormValue("chooseallow")
 	// votebitsmanual := r.FormValue("votebitsmanual")
 	var voteBits = uint16(0)
 
-	if poolcontrol == "1" {
+	if chooseallow == "2" {
+		// pool policy and approve
+		// TODO: set policy somewhere else and make it available to /tickets page
 		voteBits = uint16(1)
 		voteBits |= approveBlockMask
 	} else {
