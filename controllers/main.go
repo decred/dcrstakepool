@@ -1,9 +1,13 @@
 package controllers
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"net/smtp"
+	"strings"
+	"time"
 
 	"github.com/golang/glog"
 
@@ -33,6 +37,7 @@ const approveBlockMask = 0x0001
 type MainController struct {
 	system.Controller
 
+	baseURL          string
 	closePool        bool
 	closePoolMsg     string
 	extPub           *hdkeychain.ExtendedKey
@@ -43,12 +48,23 @@ type MainController struct {
 	rpcServers       *walletSvrManager
 	recaptchaSecret  string
 	recaptchaSiteKey string
+	smtpFrom         string
+	smtpHost         string
+	smtpUsername     string
+	smtpPassword     string
+}
+
+func randToken() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
 }
 
 // NewMainController
-func NewMainController(params *chaincfg.Params, closePool bool,
+func NewMainController(params *chaincfg.Params, baseURL string, closePool bool,
 	closePoolMsg string, extPubStr string, poolEmail string, poolFees float64,
 	poolLink string, recaptchaSecret string, recaptchaSiteKey string,
+	smtpFrom string, smtpHost string, smtpUsername string, smtpPassword string,
 	walletHosts []string, walletCerts []string, walletUsers []string,
 	walletPasswords []string) (*MainController, error) {
 	// Parse the extended public key and the pool fees.
@@ -63,6 +79,7 @@ func NewMainController(params *chaincfg.Params, closePool bool,
 	}
 
 	mc := &MainController{
+		baseURL:          baseURL,
 		closePool:        closePool,
 		closePoolMsg:     closePoolMsg,
 		extPub:           key,
@@ -73,9 +90,40 @@ func NewMainController(params *chaincfg.Params, closePool bool,
 		recaptchaSecret:  recaptchaSecret,
 		recaptchaSiteKey: recaptchaSiteKey,
 		rpcServers:       rpcs,
+		smtpFrom:         smtpFrom,
+		smtpHost:         smtpHost,
+		smtpUsername:     smtpUsername,
+		smtpPassword:     smtpPassword,
 	}
 
 	return mc, nil
+}
+
+func (controller *MainController) SendMail(emailaddress string, subject string, body string) error {
+
+	hostname := controller.smtpHost
+
+	if strings.Contains(controller.smtpHost, ":") {
+		parts := strings.Split(controller.smtpHost, ":")
+		hostname = parts[0]
+	}
+
+	// Set up authentication information.
+	auth := smtp.PlainAuth("", controller.smtpUsername, controller.smtpPassword, hostname)
+
+	// Connect to the server, authenticate, set the sender and recipient,
+	// and send the email all in one step.
+	to := []string{emailaddress}
+	msg := []byte("To: " + emailaddress + "\r\n" +
+		"From: " + controller.smtpFrom + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"\r\n" +
+		body + "\r\n")
+	err := smtp.SendMail(controller.smtpHost, auth, controller.smtpFrom, to, msg)
+	if err != nil {
+		log.Errorf("Error sending email to %v", err)
+	}
+	return err
 }
 
 // FeeAddressForUserID generates a unique payout address per used ID for
@@ -295,6 +343,166 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	c.Env["Content"] = template.HTML(widgets)
 
 	return helpers.Parse(t, "main", c.Env), http.StatusOK
+}
+
+// PasswordReset renders the password reset page
+func (controller *MainController) PasswordReset(c web.C, r *http.Request) (string, int) {
+	t := controller.GetTemplate(c)
+	session := controller.GetSession(c)
+	c.Env["FlashError"] = session.Flashes("passwordreseterror")
+	c.Env["FlashSuccess"] = session.Flashes("passwordresetsuccess")
+
+	widgets := controller.Parse(t, "passwordreset", c.Env)
+	c.Env["IsPasswordReset"] = true
+	c.Env["Title"] = "Decred Stake Pool - Password Reset"
+	c.Env["Content"] = template.HTML(widgets)
+
+	return controller.Parse(t, "main", c.Env), http.StatusOK
+}
+
+// PasswordResetPost handles the posted password reset form
+func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (string, int) {
+	email := r.FormValue("email")
+	session := controller.GetSession(c)
+	dbMap := controller.GetDbMap(c)
+
+	user, err := helpers.EmailExists(dbMap, email)
+
+	if err != nil {
+		session.AddFlash("Invalid Email", "passwordreseterror")
+	} else {
+		t := time.Now()
+		expires := t.Add(time.Hour * 1)
+
+		token := randToken()
+		passReset := &models.PasswordReset{
+			UserId:  user.Id,
+			Token:   token,
+			Created: t.Unix(),
+			Expires: expires.Unix(),
+		}
+
+		if err := models.InsertPasswordReset(dbMap, passReset); err != nil {
+			session.AddFlash("Unable to add reset token to database", "passwordreseterror")
+			log.Errorf("Unable to add reset token to database: %v", err)
+			return controller.PasswordReset(c, r)
+		}
+
+		remoteIP := r.RemoteAddr
+		if strings.Contains(remoteIP, ":") {
+			parts := strings.Split(remoteIP, ":")
+			remoteIP = parts[0]
+		}
+
+		body := "A request to reset your password was made from IP address: " +
+			remoteIP + "\r\n\n" +
+			"If you made this request, follow the link below:\r\n\n" +
+			controller.baseURL + "/passwordupdate?t=" + token + "\r\n\n" +
+			"The above link expires an hour after this email was sent.\r\n\n" +
+			"If you did not make this request, you may safely ignore this " +
+			"email.\r\n" + "However, you may want to look into how this " +
+			"happened.\r\n"
+		err := controller.SendMail(user.Email, "Stake pool password reset", body)
+		if err != nil {
+			session.AddFlash("Unable to send email reset", "passwordreseterror")
+			fmt.Printf("err %v", err)
+		} else {
+			session.AddFlash("Password reset email sent", "passwordresetsuccess")
+		}
+	}
+
+	return controller.PasswordReset(c, r)
+}
+
+// PasswordUpdate renders the password update page
+func (controller *MainController) PasswordUpdate(c web.C, r *http.Request) (string, int) {
+	t := controller.GetTemplate(c)
+	session := controller.GetSession(c)
+	dbMap := controller.GetDbMap(c)
+
+	// validate that the token is set and not expired
+	token := r.URL.Query().Get("t")
+
+	if token != "" {
+		passwordReset, err := helpers.TokenExists(dbMap, token)
+		if err != nil {
+			session.AddFlash("Password update token not valid", "passwordupdateerror")
+		} else {
+			if passwordReset.Expires-time.Now().Unix() <= 0 {
+				session.AddFlash("Password update token has expired", "passwordupdateerror")
+			}
+		}
+	} else {
+		session.AddFlash("No password update token present", "passwordupdateerror")
+	}
+
+	c.Env["FlashError"] = session.Flashes("passwordupdateerror")
+	c.Env["FlashSuccess"] = session.Flashes("passwordupdatesuccess")
+
+	widgets := controller.Parse(t, "passwordupdate", c.Env)
+	c.Env["IsPasswordUpdate"] = true
+	c.Env["Title"] = "Decred Stake Pool - Password Update"
+	c.Env["Content"] = template.HTML(widgets)
+
+	return controller.Parse(t, "main", c.Env), http.StatusOK
+}
+
+// PasswordUpdatePost handles updating passwords
+func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (string, int) {
+	session := controller.GetSession(c)
+	dbMap := controller.GetDbMap(c)
+
+	// validate that the token is set and not expired
+	token := r.URL.Query().Get("t")
+
+	if token == "" {
+		log.Infof("token blank")
+		session.AddFlash("No password update token present", "passwordupdateerror")
+		return controller.PasswordUpdate(c, r)
+	}
+
+	passwordReset, err := helpers.TokenExists(dbMap, token)
+	if err != nil {
+		log.Infof("error updating password %v", err)
+		session.AddFlash("Password update token not valid", "passwordupdateerror")
+		return controller.PasswordUpdate(c, r)
+	}
+
+	if passwordReset.Expires-time.Now().Unix() <= 0 {
+		log.Infof("error updating password %v", err)
+		session.AddFlash("Password update token has expired", "passwordupdateerror")
+		return controller.PasswordUpdate(c, r)
+	}
+
+	password := r.FormValue("password")
+	if password == "" {
+		log.Infof("error updating password %v", err)
+		session.AddFlash("Password is blank", "passwordupdateerror")
+		return controller.PasswordUpdate(c, r)
+	}
+
+	user, err := helpers.UserIDExists(dbMap, passwordReset.UserId)
+	if err != nil {
+		log.Infof("error updating password %v", err)
+		session.AddFlash("Unable to find UserId", "passwordupdateerror")
+		return controller.PasswordUpdate(c, r)
+	}
+
+	user.HashPassword(password)
+	_, err = helpers.UpdateUserPasswordById(dbMap, passwordReset.UserId, user.Password)
+	if err != nil {
+		log.Errorf("error updating password %v", err)
+		session.AddFlash("Unable to update password", "passwordupdateerror")
+		return controller.PasswordUpdate(c, r)
+	}
+
+	err = helpers.TokenDelete(dbMap, token)
+	if err != nil {
+		log.Errorf("error deleting token %v", err)
+	}
+
+	session.AddFlash("Password successfully updated", "passwordupdatesuccess")
+	return controller.PasswordUpdate(c, r)
 }
 
 // Sign in route
