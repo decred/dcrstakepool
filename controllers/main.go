@@ -270,7 +270,13 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		controller.handlePotentialFatalError("CreateMultisig", err)
 		return "/error", http.StatusSeeOther
 	}
-
+	if controller.RPCIsStopped() {
+		return "/error", http.StatusSeeOther
+	}
+	stakeInfo, err := controller.rpcServers.GetStakeInfo()
+	if err != nil {
+		controller.handlePotentialFatalError("GetStakeInfo", err)
+	}
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
@@ -279,7 +285,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
 		return "/error", http.StatusSeeOther
 	}
-	err = controller.rpcServers.ImportScript(serializedScript)
+	err = controller.rpcServers.ImportScript(serializedScript, int(stakeInfo.BlockHeight))
 	if err != nil {
 		controller.handlePotentialFatalError("ImportScript", err)
 		return "/error", http.StatusSeeOther
