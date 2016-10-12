@@ -280,6 +280,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
+
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
@@ -300,7 +301,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	models.UpdateUserById(dbMap, uid64, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
-		userFeeAddr.EncodeAddress())
+		userFeeAddr.EncodeAddress(), stakeInfo.BlockHeight)
 
 	return "/tickets", http.StatusSeeOther
 }

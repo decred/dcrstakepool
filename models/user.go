@@ -20,15 +20,16 @@ type PasswordReset struct {
 }
 
 type User struct {
-	Id              int64 `db:"UserId"`
-	Email           string
-	Username        string
-	Password        []byte
-	MultiSigAddress string
-	MultiSigScript  string
-	PoolPubKeyAddr  string
-	UserPubKeyAddr  string
-	UserFeeAddr     string
+	Id               int64 `db:"UserId"`
+	Email            string
+	Username         string
+	Password         []byte
+	MultiSigAddress  string
+	MultiSigScript   string
+	PoolPubKeyAddr   string
+	UserPubKeyAddr   string
+	UserFeeAddr      string
+	HeightRegistered int64
 }
 
 func (user *User) HashPassword(password string) {
@@ -66,7 +67,7 @@ func InsertPasswordReset(dbMap *gorp.DbMap, passwordReset *PasswordReset) error 
 	return dbMap.Insert(passwordReset)
 }
 
-func UpdateUserById(dbMap *gorp.DbMap, id int64, msa string, mss string, ppka string, upka string, ufa string) (user *User) {
+func UpdateUserById(dbMap *gorp.DbMap, id int64, msa string, mss string, ppka string, upka string, ufa string, height int64) (user *User) {
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 
 	if err != nil {
@@ -78,6 +79,7 @@ func UpdateUserById(dbMap *gorp.DbMap, id int64, msa string, mss string, ppka st
 	user.PoolPubKeyAddr = ppka
 	user.UserPubKeyAddr = upka
 	user.UserFeeAddr = ufa
+	user.HeightRegistered = height
 
 	_, err = dbMap.Update(user)
 
