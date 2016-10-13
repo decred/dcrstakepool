@@ -270,6 +270,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		controller.handlePotentialFatalError("CreateMultisig", err)
 		return "/error", http.StatusSeeOther
 	}
+
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
@@ -277,10 +278,10 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	if err != nil {
 		controller.handlePotentialFatalError("GetStakeInfo", err)
 	}
+
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
-
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
