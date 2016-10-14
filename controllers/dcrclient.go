@@ -1180,6 +1180,17 @@ func (w *walletSvrManager) CheckWalletsReady() error {
 	return nil
 }
 
+func getMinedTickets(cl *dcrrpcclient.Client, th []*chainhash.Hash) []*chainhash.Hash {
+	var ticketHashesMined []*chainhash.Hash
+	for _, th := range th {
+		res, err := cl.GetRawTransactionVerbose(th)
+		if err == nil && res.Confirmations > 0 {
+			ticketHashesMined = append(ticketHashesMined, th)
+		}
+	}
+	return ticketHashesMined
+}
+
 // SyncVoteBits ensures that the wallet servers are all in sync with each
 // other in terms of vote bits.  Call on creation.
 func (w *walletSvrManager) SyncVoteBits() error {
@@ -1195,7 +1206,10 @@ func (w *walletSvrManager) SyncVoteBits() error {
 	if err != nil {
 		return err
 	}
-	numLiveTickets := len(ticketHashes)
+	ticketHashesMined := getMinedTickets(w.servers[0], ticketHashes)
+	numLiveTickets := len(ticketHashesMined)
+	log.Infof("Excluding %d unmined tickets in votebits sync.",
+		len(ticketHashes) - numLiveTickets)
 
 	// gsi, err := w.servers[0].GetStakeInfo()
 	// if err != nil {
@@ -1207,6 +1221,7 @@ func (w *walletSvrManager) SyncVoteBits() error {
 	// }
 
 	// Check number of tickets
+	
 	for i, cl := range w.servers {
 		if i == 0 {
 			continue
@@ -1218,14 +1233,16 @@ func (w *walletSvrManager) SyncVoteBits() error {
 			return err
 		}
 
-		if numLiveTickets != len(ticketHashes) {
+		thMined := getMinedTickets(w.servers[0], ticketHashes)
+
+		if numLiveTickets != len(thMined) {
 			log.Errorf("Non-equivalent number of tickets on servers %v, %v "+
-				" (%v, %v)", 0, i, numLiveTickets, len(ticketHashes))
+				" (%v, %v)", 0, i, numLiveTickets, len(thMined))
 			return fmt.Errorf("non equivalent num elements returned")
 		}
 	}
 
-	return w.SyncTicketsVoteBits(ticketHashes)
+	return w.SyncTicketsVoteBits(ticketHashesMined)
 }
 
 // SyncTicketsVoteBits ensures that the wallet servers are all in sync with each
@@ -1262,7 +1279,7 @@ func (w *walletSvrManager) SyncTicketsVoteBits(tickets []*chainhash.Hash) error 
 
 		votebits, err := cl.GetTicketsVoteBits(tickets)
 		if err != nil {
-			return err
+			return fmt.Errorf("GetTicketsVoteBits failed: %v", err)
 		}
 
 		vbl := votebits.VoteBitsList

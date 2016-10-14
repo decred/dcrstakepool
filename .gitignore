@@ -2,6 +2,7 @@ config.toml
 dcrstakepool
 vendor
 .vscode/
-stock/
-votebitssync/
 controllers/config.go*
+testing/
+*.orig
+
