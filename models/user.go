@@ -110,6 +110,29 @@ func GetDbMap(user, password, hostname, port, database string) *gorp.DbMap {
 	err = dbMap.CreateTablesIfNotExists()
 	checkErr(err, "Create tables failed")
 
+	// The ORM, Gorp, doesn't support migrations so we just add new columns
+	// that weren't present in the original schema so admins can upgrade
+	// without manual intervention.
+
+	// 1) stakepool v0.0.1 -> v0.0.2: add HeightRegistered so importscript
+	//    doesn't take as long
+	// The stake pool code was released to stake pool operators on Friday,
+	// April 1st 2016.  The last mainnet block on Mar 31st of 15346 is used
+	// as a safe default to ensure no tickets are missed. This could be
+	// adjusted upwards since most pools were on testnet for a long time.
+
+	// Determine if the HeightRegistered column exists
+	s, err := dbMap.SelectStr("SELECT column_name FROM information_schema.columns " +
+		"WHERE table_schema = '" + database +
+		"' AND table_name = 'Users' AND column_name = 'HeightRegistered'")
+	if s == "" {
+		// HeightRegistered column doesn't exist so add it
+		_, err = dbMap.Exec("ALTER TABLE Users ADD COLUMN `HeightRegistered` bigint(20) NULL AFTER `UserFeeAddr`")
+		checkErr(err, "adding new column HeightRegistered failed")
+		// set height to 15346 for all users who submitted a script
+		_, err = dbMap.Exec("UPDATE Users SET HeightRegistered = 15346 WHERE MultiSigAddress <> ''")
+		checkErr(err, "setting HeightRegistered default value failed")
+	}
 	return dbMap
 }
 
