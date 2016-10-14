@@ -274,9 +274,9 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
-	stakeInfo, err := controller.rpcServers.GetStakeInfo()
+	_, bestBlockHeight, err := controller.rpcServers.GetBestBlock()
 	if err != nil {
-		controller.handlePotentialFatalError("GetStakeInfo", err)
+		controller.handlePotentialFatalError("GetBestBlock", err)
 	}
 
 	if controller.RPCIsStopped() {
@@ -287,7 +287,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
 		return "/error", http.StatusSeeOther
 	}
-	err = controller.rpcServers.ImportScript(serializedScript, int(stakeInfo.BlockHeight))
+	err = controller.rpcServers.ImportScript(serializedScript, int(bestBlockHeight))
 	if err != nil {
 		controller.handlePotentialFatalError("ImportScript", err)
 		return "/error", http.StatusSeeOther
@@ -302,7 +302,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	models.UpdateUserById(dbMap, uid64, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
-		userFeeAddr.EncodeAddress(), stakeInfo.BlockHeight)
+		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
 	return "/tickets", http.StatusSeeOther
 }
