@@ -173,7 +173,7 @@ $ cp -p sample-dcrstakepool.conf dcrstakepool.conf
 The easiest way to run the stakepool code is to run it directly from the root of
 the source tree:
 
-```
+```bash
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ go build
 $ ./dcrstakepool
@@ -181,9 +181,9 @@ $ ./dcrstakepool
 
 If you wish to run dcrstakepool from a different directory you will need to:
 
-1) Copy **config.toml** to the same directory you will be running **dcrstakepool**
+- Copy **config.toml** to the same directory you will be running **dcrstakepool**
    from
-2) Either copy **public** and **views** to the same directory or specify
+- Either copy **public** and **views** to the same directory or specify
    absolute paths in **config.toml**
 
 ## Operations
