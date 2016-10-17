@@ -32,6 +32,7 @@ const (
 	getStakeInfoFn
 	connectedFn
 	stakePoolUserInfoFn
+	getBestBlockFn
 )
 
 var (
@@ -103,6 +104,7 @@ type importScriptResponse struct {
 
 // importScriptMsg
 type importScriptMsg struct {
+	height int
 	script []byte
 	reply  chan importScriptResponse
 }
@@ -201,6 +203,18 @@ type stakePoolUserInfoMsg struct {
 	reply    chan stakePoolUserInfoResponse
 }
 
+// getBestBlockResponse
+type getBestBlockResponse struct {
+	bestBlockHash   *chainhash.Hash
+	bestBlockHeight int64
+	err             error
+}
+
+// getBestBlockMsg
+type getBestBlockMsg struct {
+	reply chan getBestBlockResponse
+}
+
 // connectionError is an error relating to the connection,
 // so that connection failures can be handled without
 // crashing the server.
@@ -260,6 +274,10 @@ out:
 			case stakePoolUserInfoMsg:
 				resp := w.executeInSequence(stakePoolUserInfoFn, msg)
 				respTyped := resp.(*stakePoolUserInfoResponse)
+				msg.reply <- *respTyped
+			case getBestBlockMsg:
+				resp := w.executeInSequence(getBestBlockFn, msg)
+				respTyped := resp.(*getBestBlockResponse)
 				msg.reply <- *respTyped
 			default:
 				log.Infof("Invalid message type in wallet RPC "+
@@ -372,7 +390,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(importScriptResponse)
 		isErrors := make([]error, w.serversLen, w.serversLen)
 		for i, s := range w.servers {
-			err := s.ImportScript(ism.script)
+			err := s.ImportScriptRescanFrom(ism.script, true, ism.height)
 			isErrors[i] = err
 		}
 
@@ -626,6 +644,21 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 
 		resp.userInfo = spuirs[0]
 		return resp
+	case getBestBlockFn:
+		resp := new(getBestBlockResponse)
+		for i, s := range w.servers {
+			hash, height, err := s.GetBestBlock()
+			if err != nil {
+				log.Infof("getBestBlockFn failure on server %v: %v", i, err)
+				resp.err = err
+				return resp
+			}
+			resp.bestBlockHeight = height
+			resp.bestBlockHash = hash
+			return resp
+		}
+		return resp
+
 	}
 
 	return nil
@@ -704,7 +737,7 @@ func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*d
 //
 // This should return equivalent results from all wallet RPCs. If this encounters
 // a failure, it should be considered fatal.
-func (w *walletSvrManager) ImportScript(script []byte) error {
+func (w *walletSvrManager) ImportScript(script []byte, height int) error {
 	// Assert that all servers are online.
 	err := w.connected()
 	if err != nil {
@@ -713,6 +746,7 @@ func (w *walletSvrManager) ImportScript(script []byte) error {
 
 	reply := make(chan importScriptResponse)
 	w.msgChan <- importScriptMsg{
+		height: height,
 		script: script,
 		reply:  reply,
 	}
@@ -851,6 +885,17 @@ func (w *walletSvrManager) StakePoolUserInfo(userAddr dcrutil.Address) (*dcrjson
 	}
 	response := <-reply
 	return response.userInfo, response.err
+}
+
+// GetBestBlock gets the current best block according the first wallet asked
+func (w *walletSvrManager) GetBestBlock() (*chainhash.Hash, int64, error) {
+	reply := make(chan getBestBlockResponse)
+	w.msgChan <- getBestBlockMsg{
+		reply: reply,
+	}
+	response := <-reply
+
+	return response.bestBlockHash, response.bestBlockHeight, response.err
 }
 
 // getStakeInfo returns the cached current stake statistics about the wallet if
@@ -1065,7 +1110,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
-				err := wsm.servers[i].ImportScript(v)
+				err := wsm.servers[i].ImportScriptRescanFrom(v, true, 0)
 				if err != nil {
 					return err
 				}
