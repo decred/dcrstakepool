@@ -11,6 +11,14 @@ import (
 	"gopkg.in/gorp.v1"
 )
 
+type PasswordReset struct {
+	Id      int64 `db:"PasswordResetID"`
+	UserId  int64
+	Token   string
+	Created int64
+	Expires int64
+}
+
 type User struct {
 	Id              int64 `db:"UserId"`
 	Email           string
@@ -54,6 +62,10 @@ func InsertUser(dbMap *gorp.DbMap, user *User) error {
 	return dbMap.Insert(user)
 }
 
+func InsertPasswordReset(dbMap *gorp.DbMap, passwordReset *PasswordReset) error {
+	return dbMap.Insert(passwordReset)
+}
+
 func UpdateUserById(dbMap *gorp.DbMap, id int64, msa string, mss string, ppka string, upka string, ufa string) (user *User) {
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 
@@ -85,9 +97,11 @@ func GetDbMap(user, password, hostname, port, database string) *gorp.DbMap {
 	// construct a gorp DbMap
 	dbMap := &gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8MB4"}}
 
-	// add a table, setting the table name to 'posts' and
+	// add a table, setting the table name to Users and
 	// specifying that the Id property is an auto incrementing PK
 	dbMap.AddTableWithName(User{}, "Users").SetKeys(true, "Id")
+
+	dbMap.AddTableWithName(PasswordReset{}, "PasswordReset").SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts

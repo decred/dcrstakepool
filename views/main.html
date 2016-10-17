@@ -31,6 +31,8 @@
 				</ul>
 				{{else}}
 				<ul class="nav navbar-nav navbar-right">
+					{{if .IsPasswordReset }}<li class="active"><a href="/passwordreset">Password Reset</a></li>{{end}}
+					{{if .IsPasswordUpdate }}<li class="active"><a href="/passwordupdate">Password Update</a></li>{{end}}
 					<li {{if .IsSignIn }}class="active"{{end}}><a href="/signin">Sign In</a></li>
 					<li {{if .IsSignUp }}class="active"{{end}}><a href="/signup">Sign Up</a></li>
 				</ul>

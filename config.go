@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	defaultClosePoolMsg     = "This stake pool has reached 5% of network votes and registration has been closed to protect the de-centralization of the network.  Please find a different stake pool to use."
+	defaultBaseURL          = "http://127.0.0.1:8000"
+	defaultClosePoolMsg     = "The stake pool is temporarily closed to new signups."
 	defaultConfigFilename   = "dcrstakepool.conf"
 	defaultDataDirname      = "data"
 	defaultLogLevel         = "info"
@@ -35,6 +36,7 @@ const (
 	defaultPoolLink         = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
 	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
 	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+	defaultSMTPHost         = "localhost:25"
 )
 
 var (
@@ -63,6 +65,7 @@ type config struct {
 	CPUProfile       string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
 	MemProfile       string   `long:"memprofile" description:"Write mem profile to the specified file"`
 	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	BaseURL          string   `long:"baseurl" description:"BaseURL to use when sending links via email"`
 	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
 	ClosePool        bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
 	ClosePoolMsg     string   `long:"closepoolmsg" description:"Message to display when closepool is set (default: Stake pool is currently oversubscribed)"`
@@ -76,6 +79,10 @@ type config struct {
 	PoolEmail        string   `long:"poolemail" description:"Email address to for support inquiries"`
 	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
 	PoolLink         string   `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
+	SMTPFrom         string   `long:"smtpfrom" description:"From address to use on outbound mail"`
+	SMTPHost         string   `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
+	SMTPUsername     string   `long:"smtpusername" description:"SMTP username for authentication if required"`
+	SMTPPassword     string   `long:"smtppassword" description:"SMTP password for authentication if required"`
 	WalletHosts      []string `long:"wallethosts" description:"Hostname for wallet server"`
 	WalletUsers      []string `long:"walletusers" description:"Username for wallet server"`
 	WalletPasswords  []string `long:"walletpasswords" description:"Pasword for wallet server"`
@@ -254,6 +261,7 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
+		BaseURL:          defaultBaseURL,
 		ClosePool:        false,
 		ClosePoolMsg:     defaultClosePoolMsg,
 		ConfigFile:       defaultConfigFile,
@@ -269,6 +277,7 @@ func loadConfig() (*config, []string, error) {
 		PoolLink:         defaultPoolLink,
 		RecaptchaSecret:  defaultRecaptchaSecret,
 		RecaptchaSitekey: defaultRecaptchaSitekey,
+		SMTPHost:         defaultSMTPHost,
 	}
 
 	// Service options which are only added on Windows.

@@ -85,9 +85,10 @@ func main() {
 	goji.Use(context.ClearHandler)
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.ClosePool, cfg.ClosePoolMsg, cfg.ColdWalletExtPub,
+		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, cfg.ColdWalletExtPub,
 		cfg.PoolEmail, cfg.PoolFees, cfg.PoolLink,
 		cfg.RecaptchaSecret, cfg.RecaptchaSitekey,
+		cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
 		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords)
 	if err != nil {
 		application.Close()
@@ -112,6 +113,14 @@ func main() {
 
 	// Error page
 	goji.Get("/error", application.Route(controller, "Error"))
+
+	// Password Reset routes
+	goji.Get("/passwordreset", application.Route(controller, "PasswordReset"))
+	goji.Post("/passwordreset", application.Route(controller, "PasswordResetPost"))
+
+	// Password Update routes
+	goji.Get("/passwordupdate", application.Route(controller, "PasswordUpdate"))
+	goji.Post("/passwordupdate", application.Route(controller, "PasswordUpdatePost"))
 
 	// Sign In routes
 	goji.Get("/signin", application.Route(controller, "SignIn"))
