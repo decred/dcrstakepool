@@ -3,9 +3,29 @@ dcrstakepool
 
 dcrstakepool is a minimalist web application which provides a method for allowing users to purchase tickets and have a pool of wallet servers redeem and vote on the user's behalf.
 
+## Version History
+
+- 0.0.2 - Minor improvements/feature addition
+  * The importscript RPC is now called with the current block height at the
+    time of user registration. Previously, importscript triggered a rescan
+    for transactions from the genesis block.  Since the user just registered,
+    there won't be any transactions present.  A new HeightRegistered column
+    is automatically added to the Users table.  A default value of 15346 is
+    used for existing users who already had a multisigscript generated.
+    This can be adjusted to a more reasonable value for you pool by running
+    the following MySQL query:
+    ```UPDATE Users SET HeightRegistered = NEWVALUE WHERE HeightRegistered = 15346;```
+  * Users may now reset their password by specifying an email address and
+    clicking a link that they will receive via email.  You will need to
+    add a proper configuration for your mail server for it to work properly.
+    The various SMTP options can be seen in **sample-dcrstakepool.conf**.
+  * User instructions on the address and ticket pages were updated.
+  * SpentBy link added to the voted tickets display.
+- 0.0.1 - Initial release for mainnet operations
+
 ## Requirements
 
-- [Go](http://golang.org) 1.5.3 or newer.
+- [Go](http://golang.org) 1.6.3 or newer.
 - MySQL
 - Nginx or other web server to proxy to dcrstakepool
 
@@ -15,14 +35,10 @@ dcrstakepool is a minimalist web application which provides a method for allowin
 
 Building or updating from source requires the following build dependencies:
 
-- **Go 1.5 or 1.6**
+- **Go 1.6 or 1.7**
 
   Installation instructions can be found here: http://golang.org/doc/install.
   It is recommended to add `$GOPATH/bin` to your `PATH` at this point.
-
-  **Note:** If you are using Go 1.5, you must manually enable the vendor
-    experiment by setting the `GO15VENDOREXPERIMENT` environment variable to
-    `1`.  This step is not required for Go 1.6.
 
 - **Glide**
 
@@ -50,7 +66,18 @@ $ glide install
 ```bash
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ go build
-$ ./dcrstakepool
+```
+
+## Updating
+
+To update an existing source tree, pull the latest changes and install the
+matching dependencies:
+
+```bash
+$ cd $GOPATH/src/github.com/decred/dcrstakepool
+$ git pull
+$ glide install
+$ go build
 ```
 
 ## Setup
@@ -141,12 +168,23 @@ $ cp -p config.toml.sample config.toml
 $ cp -p sample-dcrstakepool.conf dcrstakepool.conf
 ```
 
-- Build and run the dcrstakepool binary from the dcrstakepool directory
-```bash
+## Running
+
+The easiest way to run the stakepool code is to run it directly from the root of
+the source tree:
+
+```
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ go build
 $ ./dcrstakepool
 ```
+
+If you wish to run dcrstakepool from a different directory you will need to:
+
+1) Copy **config.toml** to the same directory you will be running **dcrstakepool**
+   from
+2) Either copy **public** and **views** to the same directory or specify
+   absolute paths in **config.toml**
 
 ## Operations
 
@@ -181,13 +219,6 @@ done
 ```
 
 - If servers get desynced but are otherwise running okay, call getnewaddress/listscripts/importscript until they're re-synced.  See doc.go for some example shell commands.
-
-## TODO
-
-- improve logging (doesn't work 100% correctly)
-- vendor goji
-- fix flags conflict between goji/dcrstakepool
-- finish unified config file
 
 ## IRC
 
