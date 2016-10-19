@@ -1,0 +1,18 @@
+{{define "emailupdate"}}
+<div class="panel panel-default">
+	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
+		<h4 class="panel-title">Email Update</h4>
+	</div>
+	<div class="panel-body" style="background-color: #333; color: #ffffff;">
+	{{range .FlashSuccess}}
+		<div class="alert alert-success">{{.}}</div><p>
+	{{end}}
+	{{range .FlashError}}
+		<div class="alert alert-danger">{{.}}</div><p>
+	{{end}}
+	{{if .FlashSuccess}}
+		<p><span style="font-size: larger;">You may now <a href="/signin">sign in</a> with your new email address.</span></p>
+	{{end}}
+	</div>
+</div>
+{{end}}

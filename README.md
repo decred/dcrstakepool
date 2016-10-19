@@ -4,7 +4,16 @@ dcrstakepool
 dcrstakepool is a minimalist web application which provides a method for allowing users to purchase tickets and have a pool of wallet servers redeem and vote on the user's behalf.
 
 ## Version History
-
+- 0.0.3 - More expected/basic web application functionality added.
+  * SMTPHost now defaults to an empty string so a stake pool can be used for
+    development or testing purposes without a configured mail server.  The
+    contents of the emails are sent through the logger so links can still be
+    followed.
+  * Upon sign up, users now have an email sent with a validation link.
+    They will not be able to sign in until they verify.
+  * New settings page that allows users to change their email address/password.
+  * Bug fix to HeightRegistered migration for users who signed up but never
+    submitted an address would not be able to login.
 - 0.0.2 - Minor improvements/feature addition
   * The importscript RPC is now called with the current block height at the
     time of user registration. Previously, importscript triggered a rescan
