@@ -3,6 +3,7 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"sync"
@@ -1157,7 +1158,11 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 
 	// add all scripts from db
 	for _, v := range multiSigScripts {
-		allRedeemScripts[chainhash.HashFuncH([]byte(v.MultiSigScript))] = &ScriptHeight{[]byte(v.MultiSigScript), int(v.HeightRegistered)}
+		byteScript, err := hex.DecodeString(v.MultiSigScript)
+		if err != nil {
+			return nil
+		}
+		allRedeemScripts[chainhash.HashFuncH([]byte(v.MultiSigScript))] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
 	}
 	// Go through each server and see who is synced to the longest
 	// address indexes and and the most redeemscripts.
@@ -1199,7 +1204,6 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 	desynced := false
 	for i := range wsm.servers {
 		// Sync address indexes.
-		log.Infof("checking syncness for server %v: serverExtIdx %v bestExtIdx %v", i, addrIdxExts[i], bestAddrIdxExt)
 		if addrIdxExts[i] < bestAddrIdxExt {
 			err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
 				waddrmgr.ExternalBranch, bestAddrIdxExt)
@@ -1208,7 +1212,6 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 			}
 			desynced = true
 		}
-		log.Infof("checking syncness for server %v: serverInIdx %v bestIntIdx %v", i, addrIdxExts[i], bestAddrIdxExt)
 		if addrIdxInts[i] < bestAddrIdxInt {
 			err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
 				waddrmgr.InternalBranch, bestAddrIdxInt)
@@ -1218,7 +1221,6 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 			desynced = true
 		}
 
-		//log.Infof("checking syncness for server %v: serverInIdx %v bestIntIdx %v", i, addrIdxExts[i], bestAddrIdxExt)
 		// Sync redeemscripts.
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
