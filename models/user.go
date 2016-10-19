@@ -110,7 +110,7 @@ func InsertPasswordReset(dbMap *gorp.DbMap, passwordReset *PasswordReset) error 
 // username and password.
 func UpdateUserByID(dbMap *gorp.DbMap, id int64, multiSigAddr string,
 	multiSigScript string, poolPubKeyAddr string, userPubKeyAddr string,
-	userFeeAddr string) (user *User) {
+	userFeeAddr string, height int64) (user *User) {
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 
 	if err != nil {

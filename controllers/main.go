@@ -11,6 +11,7 @@ import (
 	"net/smtp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"html/template"
