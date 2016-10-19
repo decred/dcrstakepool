@@ -14,6 +14,8 @@ import (
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrwallet/waddrmgr"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // functionName
@@ -639,9 +641,14 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				resp.err = err
 				return resp
 			}
+			spew.Dump(spuir)
 			spuirs[i] = spuir
 		}
-
+		if !checkForSyncness(spuirs) {
+			log.Infof("They are out of sync!")
+			w.syncTickets(spuirs)
+			// resync ticket func
+		}
 		resp.userInfo = spuirs[0]
 		return resp
 	case getBestBlockFn:
@@ -673,6 +680,58 @@ func (w *walletSvrManager) connected() error {
 	}
 	response := <-reply
 	return response.err
+}
+
+func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult) error {
+	for i := 0; i < len(spuirs)-1; i++ {
+		for _, validTicket := range spuirs[i].Tickets {
+			for _, invalidTicket := range spuirs[i+1].InvalidTickets {
+				if validTicket.Ticket == invalidTicket {
+					hash, err := chainhash.NewHashFromStr(validTicket.Ticket)
+					if err != nil {
+						return err
+					}
+					tx, err := w.fetchTransaction(hash)
+					if err != nil {
+						return err
+					}
+
+					log.Infof("adding formally invalid ticket %v to %v", hash, i)
+					err = w.servers[i+1].AddTicket(tx)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
+	for z, v := range spuirs {
+		if &spuirs[0] == &v {
+			log.Infof("they match address! %v", z)
+			return true
+		}
+		if len(spuirs[0].Tickets) != len(v.Tickets) || len(spuirs[0].InvalidTickets) != len(v.InvalidTickets) {
+			log.Infof("they dont match lens! %v", z)
+			return false
+		}
+		for i, v1 := range v.Tickets {
+			if spuirs[0].Tickets[i] != v1 {
+				log.Infof("they dont match ticket specifics! %v", z)
+				return false
+			}
+		}
+		for k, v2 := range v.InvalidTickets {
+			if spuirs[0].InvalidTickets[k] != v2 {
+				log.Infof("they dont match invalid ticket specifics! %v", z)
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // GetNewAddress
@@ -1132,6 +1191,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 	desynced := false
 	for i := range wsm.servers {
 		// Sync address indexes.
+		log.Infof("checking syncness for server %v: serverExtIdx %v bestExtIdx %v", i, addrIdxExts[i], bestAddrIdxExt)
 		if addrIdxExts[i] < bestAddrIdxExt {
 			err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
 				waddrmgr.ExternalBranch, bestAddrIdxExt)
@@ -1140,6 +1200,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 			}
 			desynced = true
 		}
+		log.Infof("checking syncness for server %v: serverInIdx %v bestIntIdx %v", i, addrIdxExts[i], bestAddrIdxExt)
 		if addrIdxInts[i] < bestAddrIdxInt {
 			err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
 				waddrmgr.InternalBranch, bestAddrIdxInt)
@@ -1149,6 +1210,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 			desynced = true
 		}
 
+		//log.Infof("checking syncness for server %v: serverInIdx %v bestIntIdx %v", i, addrIdxExts[i], bestAddrIdxExt)
 		// Sync redeemscripts.
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
@@ -1166,6 +1228,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 	// some tickets. Scan for the tickets now and try to import any
 	// that another wallet may be missing.
 	if desynced {
+		log.Infof("desynced")
 		ticketsPerServer := make([]map[[chainhash.HashSize]byte]struct{},
 			wsm.serversLen)
 		allTickets := make(map[[chainhash.HashSize]byte]struct{})
@@ -1198,6 +1261,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 						return err
 					}
 
+					log.Infof("adding ticket %v to %v", h, i)
 					err = wsm.servers[i].AddTicket(tx)
 					if err != nil {
 						return err
