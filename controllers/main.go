@@ -156,8 +156,7 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("%v", multisigScripts)
-	err = walletSvrsSync(controller.rpcServers)
+	err = walletSvrsSync(controller.rpcServers, multisigScripts)
 	if err != nil {
 		return err
 	}

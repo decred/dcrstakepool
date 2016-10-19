@@ -12,6 +12,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrwallet/waddrmgr"
 
@@ -1125,7 +1126,7 @@ func (w *walletSvrManager) fetchTransaction(txHash *chainhash.Hash) (*dcrutil.Tx
 
 // walletSvrsSync ensures that the wallet servers are all in sync with each
 // other in terms of redeemscripts and address indexes.
-func walletSvrsSync(wsm *walletSvrManager) error {
+func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error {
 	if wsm.serversLen == 1 {
 		return nil
 	}
@@ -1139,16 +1140,25 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 		}
 	}
 
+	type ScriptHeight struct {
+		Script []byte
+		Height int
+	}
+
 	// Fetch the address indexes and redeem scripts from
 	// each server.
 	addrIdxExts := make([]int, wsm.serversLen)
 	var bestAddrIdxExt int
 	addrIdxInts := make([]int, wsm.serversLen)
 	var bestAddrIdxInt int
-	redeemScriptsPerServer := make([]map[[chainhash.HashSize]byte][]byte,
+	redeemScriptsPerServer := make([]map[[chainhash.HashSize]byte]*ScriptHeight,
 		wsm.serversLen)
-	allRedeemScripts := make(map[[chainhash.HashSize]byte][]byte)
+	allRedeemScripts := make(map[[chainhash.HashSize]byte]*ScriptHeight)
 
+	// add all scripts from db
+	for _, v := range multiSigScripts {
+		allRedeemScripts[chainhash.HashFuncH([]byte(v.MultiSigScript))] = &ScriptHeight{[]byte(v.MultiSigScript), int(v.HeightRegistered)}
+	}
 	// Go through each server and see who is synced to the longest
 	// address indexes and and the most redeemscripts.
 	for i := range wsm.servers {
@@ -1176,12 +1186,10 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 			bestAddrIdxInt = addrIdxInt
 		}
 
-		redeemScriptsPerServer[i] = make(map[[chainhash.HashSize]byte][]byte)
+		redeemScriptsPerServer[i] = make(map[[chainhash.HashSize]byte]*ScriptHeight)
 		for j := range redeemScripts {
-			redeemScriptsPerServer[i][chainhash.HashFuncH(redeemScripts[j])] =
-				redeemScripts[j]
-			allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])] =
-				redeemScripts[j]
+			redeemScriptsPerServer[i][chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
+			allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
 		}
 	}
 
@@ -1215,7 +1223,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
-				err := wsm.servers[i].ImportScriptRescanFrom(v, true, 0)
+				err := wsm.servers[i].ImportScriptRescanFrom(v.Script, true, v.Height)
 				if err != nil {
 					return err
 				}
