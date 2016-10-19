@@ -104,6 +104,15 @@ func UpdateUserById(dbMap *gorp.DbMap, id int64, msa string, mss string, ppka st
 	return
 }
 
+func GetAllCurrentMultiSigScripts(dbMap *gorp.DbMap) ([]string, error) {
+	var multiSigs []string
+	_, err := dbMap.Select(&multiSigs, "SELECT MultiSigScript FROM Users")
+	if err != nil {
+		return nil, err
+	}
+	return multiSigs, nil
+}
+
 func GetDbMap(user, password, hostname, port, database string) *gorp.DbMap {
 	// connect to db using standard Go database/sql API
 	// use whatever database/sql driver you wish

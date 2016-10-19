@@ -1310,11 +1310,6 @@ func newWalletSvrManager(walletHosts []string, walletCerts []string, walletUsers
 		quit:                   make(chan struct{}),
 	}
 
-	err := walletSvrsSync(&wsm)
-	if err != nil {
-		return nil, err
-	}
-
 	// Set the timer to automatically require a new set of stake information
 	// on startup.
 	wsm.cachedStakeInfoTimer = time.Now().Add(-cacheTimerStakeInfo)

@@ -23,6 +23,7 @@ import (
 	"github.com/decred/dcrstakepool/system"
 	"github.com/haisum/recaptcha"
 	"github.com/zenazn/goji/web"
+	"gopkg.in/gorp.v1"
 )
 
 // disapproveBlockMask
@@ -147,6 +148,20 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 	}
 
 	return addrs[0], nil
+}
+
+// RPCStart
+func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
+	multisigScripts, err := models.GetAllCurrentMultiSigScripts(dbMap)
+	if err != nil {
+		return err
+	}
+	log.Infof("%v", multisigScripts)
+	err = walletSvrsSync(controller.rpcServers)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // RPCStart

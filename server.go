@@ -98,6 +98,17 @@ func main() {
 			err)
 		os.Exit(1)
 	}
+
+	err = controller.RPCSync(application.DbMap)
+	if err != nil {
+		application.Close()
+		dcrstakepoolLog.Errorf("Failed to sync the wallets: %v",
+			err)
+		fmt.Fprintf(os.Stderr, "Fatal error in rpc sync: %v",
+			err)
+		os.Exit(1)
+	}
+
 	controller.RPCStart()
 
 	// Couple of files - in the real world you would use nginx to serve them.
