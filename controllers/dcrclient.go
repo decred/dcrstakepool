@@ -17,6 +17,7 @@ import (
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrwallet/waddrmgr"
+	"github.com/decred/dcrd/blockchain/stake"
 )
 
 // functionName
@@ -158,6 +159,18 @@ type setTicketVoteBitsMsg struct {
 	hash     *chainhash.Hash
 	voteBits uint16
 	reply    chan setTicketVoteBitsResponse
+}
+
+// setTicketsVoteBitsResponse
+type setTicketsVoteBitsResponse struct {
+	err error
+}
+
+// setTicketsVoteBitsMsg
+type setTicketsVoteBitsMsg struct {
+	hashes    []*chainhash.Hash
+	votesBits []stake.VoteBits
+	reply     chan setTicketsVoteBitsResponse
 }
 
 // getTxOutResponse
@@ -962,6 +975,44 @@ func (w *walletSvrManager) SetTicketVoteBits(hash *chainhash.Hash, voteBits uint
 
 	// If the set was successful, reset the timer.
 	w.setVoteBitsCoolDownMap[*hash] = time.Now()
+
+	response := <-reply
+	return response.err
+}
+
+// SetTicketsVoteBits
+//
+// This should return equivalent results from all wallet RPCs. If this
+// encounters a failure, it should be considered fatal.
+func (w *walletSvrManager) SetTicketsVoteBits(hashes []*chainhash.Hash, votesBits []stake.VoteBits) error {
+	// Assert that all servers are online.
+	err := w.connected()
+	if err != nil {
+		return connectionError(err)
+	}
+
+	w.setVoteBitsCoolDownMutex.Lock()
+	defer w.setVoteBitsCoolDownMutex.Unlock()
+
+	// Throttle how often the user is allowed to change their stake
+	// vote bits.
+	// TODO: handle this better
+	vbSetTime, ok := w.setVoteBitsCoolDownMap[*hashes[0]]
+	if ok {
+		if time.Now().Sub(vbSetTime) < allowTimerSetVoteBits {
+			return ErrSetVoteBitsCoolDown
+		}
+	}
+
+	reply := make(chan setTicketsVoteBitsResponse)
+	w.msgChan <- setTicketsVoteBitsMsg{
+		hashes:     hashes,
+		votesBits: votesBits,
+		reply:    reply,
+	}
+
+	// If the set was successful, reset the timer.
+	w.setVoteBitsCoolDownMap[*hashes[0]] = time.Now()
 
 	response := <-reply
 	return response.err

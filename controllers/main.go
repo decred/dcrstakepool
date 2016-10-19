@@ -26,6 +26,7 @@ import (
 	"github.com/decred/dcrstakepool/system"
 	"github.com/haisum/recaptcha"
 	"github.com/zenazn/goji/web"
+	"github.com/decred/dcrd/blockchain/stake"
 	"gopkg.in/gorp.v1"
 )
 
@@ -1724,19 +1725,19 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 		log.Infof("Started setting of vote bits for %d tickets.",
 			len(liveTicketHashes))
 
-		for _, ticket := range liveTicketHashes {
-			if controller.RPCIsStopped() {
-				return
-			}
+		vbs := make([]stake.VoteBits, len(liveTicketHashes))
+		for i := 0; i<len(liveTicketHashes); i++ {
+			vbs[i] = stake.VoteBits{Bits: voteBits}
+			//vbs[i].Bits = voteBits
+		}
 
-			err = controller.rpcServers.SetTicketVoteBits(ticket, voteBits)
-			if err != nil {
-				if err == ErrSetVoteBitsCoolDown {
-					return
-				}
-				controller.handlePotentialFatalError("SetTicketVoteBits", err)
+		err = controller.rpcServers.SetTicketsVoteBits(liveTicketHashes, vbs)
+		if err != nil {
+			if err == ErrSetVoteBitsCoolDown {
 				return
 			}
+			controller.handlePotentialFatalError("SetTicketVoteBits", err)
+			return
 		}
 
 		log.Infof("Completed setting of vote bits for %d tickets.",
