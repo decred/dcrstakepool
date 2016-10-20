@@ -1160,7 +1160,8 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 	for _, v := range multiSigScripts {
 		byteScript, err := hex.DecodeString(v.MultiSigScript)
 		if err != nil {
-			return nil
+			log.Warnf("skipping script %s due to err %v", v.MultiSigScript, err)
+			continue
 		}
 		allRedeemScripts[chainhash.HashFuncH([]byte(v.MultiSigScript))] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
 	}
