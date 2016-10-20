@@ -711,25 +711,26 @@ func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult
 }
 
 func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
-	for z, v := range spuirs {
-		if &spuirs[0] == &v {
-			log.Infof("they match address! %v", z)
-			return true
-		}
-		if len(spuirs[0].Tickets) != len(v.Tickets) || len(spuirs[0].InvalidTickets) != len(v.InvalidTickets) {
-			log.Infof("they dont match lens! %v", z)
-			return false
-		}
-		for i, v1 := range v.Tickets {
-			if spuirs[0].Tickets[i] != v1 {
-				log.Infof("they dont match ticket specifics! %v", z)
+	for i := 0; i < len(spuirs); i++ {
+		for k := 0; k < len(spuirs); k++ {
+			if &spuirs[i] == &spuirs[k] {
+				continue
+			}
+			if len(spuirs[i].Tickets) != len(spuirs[k].Tickets) {
 				return false
 			}
-		}
-		for k, v2 := range v.InvalidTickets {
-			if spuirs[0].InvalidTickets[k] != v2 {
-				log.Infof("they dont match invalid ticket specifics! %v", z)
+			if len(spuirs[i].InvalidTickets) != len(spuirs[k].InvalidTickets) {
 				return false
+			}
+			for y := range spuirs[i].Tickets {
+				if spuirs[i].Tickets[y] != spuirs[k].Tickets[y] {
+					return false
+				}
+			}
+			for z := range spuirs[i].InvalidTickets {
+				if spuirs[i].InvalidTickets[z] != spuirs[k].InvalidTickets[z] {
+					return false
+				}
 			}
 		}
 	}
