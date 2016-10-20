@@ -1020,23 +1020,63 @@ func (w *walletSvrManager) IsStopped() bool {
 	return w.shutdown == 1
 }
 
+// checkIfWalletConnected checks to see if the passed wallet's client is connected
+// and if the wallet is unlocked.
+func checkIfWalletConnected(client *dcrrpcclient.Client) error {
+	wi, err := client.WalletInfo()
+	if err != nil {
+		return err
+	}
+	if !wi.DaemonConnected {
+		return fmt.Errorf("wallet not connected")
+	}
+	if !wi.StakeMining {
+		return fmt.Errorf("wallet not stakemining")
+	}
+	if !wi.Unlocked {
+		return fmt.Errorf("wallet not unlocked")
+	}
+
+	return nil
+}
+
+// fetchTransaction cycles through all servers and attempts to review a
+// transaction. It returns a not found error if the transaction is
+// missing.
+func (w *walletSvrManager) fetchTransaction(txHash *chainhash.Hash) (*dcrutil.Tx,
+	error) {
+	var tx *dcrutil.Tx
+	var err error
+	for i := range w.servers {
+		tx, err = w.servers[i].GetRawTransaction(txHash)
+		if err != nil {
+			continue
+		}
+
+		break
+	}
+
+	if tx == nil {
+		return nil, fmt.Errorf("couldn't find transaction on any server or " +
+			"server failure")
+	}
+
+	return tx, nil
+}
+
 // walletSvrsSync ensures that the wallet servers are all in sync with each
 // other in terms of redeemscripts and address indexes.
 func walletSvrsSync(wsm *walletSvrManager) error {
+	if wsm.serversLen == 1 {
+		return nil
+	}
+
 	// Check for connectivity and if unlocked.
 	for i := range wsm.servers {
-		wi, err := wsm.servers[i].WalletInfo()
+		err := checkIfWalletConnected(wsm.servers[i])
 		if err != nil {
-			return err
-		}
-		if !wi.DaemonConnected {
-			return fmt.Errorf("wallet on svr %d not connected", i)
-		}
-		if !wi.StakeMining {
-			return fmt.Errorf("wallet on svr %d not stakemining", i)
-		}
-		if !wi.Unlocked {
-			return fmt.Errorf("wallet on svr %d not unlocked", i)
+			return fmt.Errorf("failure on startup sync: %s",
+				err.Error())
 		}
 	}
 
@@ -1067,9 +1107,9 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 		if err != nil {
 			return err
 		}
+
 		addrIdxExts[i] = addrIdxExt
 		addrIdxInts[i] = addrIdxInt
-
 		if addrIdxExt > bestAddrIdxExt {
 			bestAddrIdxExt = addrIdxExt
 		}
@@ -1088,7 +1128,8 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 
 	// Synchronize the address indexes if needed, then synchronize the
 	// redeemscripts. Ignore the errors when importing scripts and
-	// assume it'll just skip reimportation if it already has it
+	// assume it'll just skip reimportation if it already has it.
+	desynced := false
 	for i := range wsm.servers {
 		// Sync address indexes.
 		if addrIdxExts[i] < bestAddrIdxExt {
@@ -1097,6 +1138,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 			if err != nil {
 				return err
 			}
+			desynced = true
 		}
 		if addrIdxInts[i] < bestAddrIdxInt {
 			err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
@@ -1104,6 +1146,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 			if err != nil {
 				return err
 			}
+			desynced = true
 		}
 
 		// Sync redeemscripts.
@@ -1113,6 +1156,52 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 				err := wsm.servers[i].ImportScriptRescanFrom(v, true, 0)
 				if err != nil {
 					return err
+				}
+				desynced = true
+			}
+		}
+	}
+
+	// If we had to sync the address indexes, we might be missing
+	// some tickets. Scan for the tickets now and try to import any
+	// that another wallet may be missing.
+	if desynced {
+		ticketsPerServer := make([]map[[chainhash.HashSize]byte]struct{},
+			wsm.serversLen)
+		allTickets := make(map[[chainhash.HashSize]byte]struct{})
+
+		// Get the tickets and popular the maps.
+		for i := range wsm.servers {
+			ticketsServer, err := wsm.servers[i].GetTickets(true)
+			if err != nil {
+				return err
+			}
+
+			ticketsPerServer[i] = make(map[[chainhash.HashSize]byte]struct{})
+			for j := range ticketsServer {
+				ticketHash := ticketsServer[j]
+				ticketsPerServer[i][*ticketHash] = struct{}{}
+				allTickets[*ticketHash] = struct{}{}
+			}
+		}
+
+		// Look up the tickets and insert them into the servers
+		// that are missing them.
+		// TODO Don't look up more than once (cache)
+		for i := range wsm.servers {
+			for ticketHash, _ := range allTickets {
+				_, ok := ticketsPerServer[i][ticketHash]
+				if !ok {
+					h := chainhash.Hash(ticketHash)
+					tx, err := wsm.fetchTransaction(&h)
+					if err != nil {
+						return err
+					}
+
+					err = wsm.servers[i].AddTicket(tx)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
