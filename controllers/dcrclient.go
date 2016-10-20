@@ -1153,9 +1153,9 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 	var bestAddrIdxExt int
 	addrIdxInts := make([]int, wsm.serversLen)
 	var bestAddrIdxInt int
-	redeemScriptsPerServer := make([]map[[chainhash.HashSize]byte]*ScriptHeight,
+	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
 		wsm.serversLen)
-	allRedeemScripts := make(map[[chainhash.HashSize]byte]*ScriptHeight)
+	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
 
 	// add all scripts from db
 	for _, v := range multiSigScripts {
@@ -1193,7 +1193,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 			bestAddrIdxInt = addrIdxInt
 		}
 
-		redeemScriptsPerServer[i] = make(map[[chainhash.HashSize]byte]*ScriptHeight)
+		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
 		for j := range redeemScripts {
 			redeemScriptsPerServer[i][chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
 			allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
@@ -1241,9 +1241,9 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 	// that another wallet may be missing.
 	if desynced {
 		log.Infof("desynced")
-		ticketsPerServer := make([]map[[chainhash.HashSize]byte]struct{},
+		ticketsPerServer := make([]map[chainhash.Hash]struct{},
 			wsm.serversLen)
-		allTickets := make(map[[chainhash.HashSize]byte]struct{})
+		allTickets := make(map[chainhash.Hash]struct{})
 
 		// Get the tickets and popular the maps.
 		for i := range wsm.servers {
@@ -1252,7 +1252,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 				return err
 			}
 
-			ticketsPerServer[i] = make(map[[chainhash.HashSize]byte]struct{})
+			ticketsPerServer[i] = make(map[chainhash.Hash]struct{})
 			for j := range ticketsServer {
 				ticketHash := ticketsServer[j]
 				ticketsPerServer[i][*ticketHash] = struct{}{}
