@@ -1,0 +1,84 @@
+{{define "settings"}}
+<div class="panel panel-default">
+	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
+		<h4 class="panel-title">Settings</h4>
+	</div>
+	<div class="panel-body" style="background-color: #333; color: #ffffff;">
+		<div class="alert alert-info">You may change your email address or password below.</div>
+		{{if .SMTPDisabled }}<div class="alert alert-danger">Mail server not configured.  You will not receive an email change verification link.</div>{{end}}
+		{{range .FlashSuccess}}
+			<div class="alert alert-success">{{.}}</div><p>
+		{{end}}
+		{{range .FlashError}}
+			<div class="alert alert-danger">{{.}}</div><p>
+		{{end}}
+		<form class="form-horizontal" method="post">
+		<fieldset>
+			<div class="form-group">
+				<label class="col-md-4 control-label" for="email">New Email Address</label>  
+				<div class="col-md-6">
+					<input id="email" name="email" type="email" placeholder="New Email Address" class="form-control input-md" required>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label class="col-md-4 control-label" for="emailpassword">Password</label>
+				<div class="col-md-6">
+					<input id="emailpassword" name="password" type="password" placeholder="Password" class="form-control input-md" required>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label class="col-md-4 control-label" for=""></label>
+				<div class="col-md-6">
+					<div class="g-recaptcha" data-sitekey="{{.RecaptchaSiteKey}}" data-theme="dark"></div>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label class="col-md-4 control-label" for="updateemail"></label>
+				<div class="col-md-4">
+					<button id="updateemail" name="updateEmail" value="true" class="btn btn-primary">Update Email</button>
+				</div>
+			</div>
+		</fieldset>
+		<input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+		</form>
+
+		<div class="form-group">&nbsp;</div>
+
+		<form class="form-horizontal" method="post">
+			<fieldset>
+			<div class="form-group">
+				<label class="col-md-4 control-label" for="curpassword">Current Password</label>
+				<div class="col-md-6">
+					<input id="curpassword" name="password" type="password" placeholder="Current Password" class="form-control input-md" required>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label class="col-md-4 control-label" for="newpassword">New Password</label>
+				<div class="col-md-6">
+					<input id="newpassword" name="newpassword" type="password" placeholder="New Password" class="form-control input-md" required>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label class="col-md-4 control-label" for="newpasswordrepeat">Repeat New Password</label>
+				<div class="col-md-6">
+					<input id="newpasswordrepeat" name="newpasswordrepeat" type="password" placeholder="Repeat New Password" class="form-control input-md" required>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label class="col-md-4 control-label" for="updatepassword"></label>
+				<div class="col-md-4">
+					<button id="updatepassword" name="updatePassword" value="true" class="btn btn-primary">Update Password</button>
+				</div>
+			</div>
+		</fieldset>
+    	<input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+		</form>
+	</div>
+</div>
+{{end}}

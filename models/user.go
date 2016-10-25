@@ -11,6 +11,15 @@ import (
 	"gopkg.in/gorp.v1"
 )
 
+type EmailChange struct {
+	Id       int64 `db:"EmailChangeID"`
+	UserId   int64
+	NewEmail string
+	Token    string
+	Created  int64
+	Expires  int64
+}
+
 type PasswordReset struct {
 	Id      int64 `db:"PasswordResetID"`
 	UserId  int64
@@ -30,6 +39,8 @@ type User struct {
 	UserPubKeyAddr   string
 	UserFeeAddr      string
 	HeightRegistered int64
+	EmailVerified    int64
+	EmailToken       string
 }
 
 func (user *User) HashPassword(password string) {
@@ -57,6 +68,10 @@ func GetUserById(dbMap *gorp.DbMap, id int64) (user *User) {
 		glog.Warningf("Can't get user by id: %v", err)
 	}
 	return
+}
+
+func InsertEmailChange(dbMap *gorp.DbMap, emailChange *EmailChange) error {
+	return dbMap.Insert(emailChange)
 }
 
 func InsertUser(dbMap *gorp.DbMap, user *User) error {
@@ -99,10 +114,10 @@ func GetDbMap(user, password, hostname, port, database string) *gorp.DbMap {
 	// construct a gorp DbMap
 	dbMap := &gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8MB4"}}
 
-	// add a table, setting the table name to Users and
-	// specifying that the Id property is an auto incrementing PK
+	// add a table, setting the table name and specifying that
+	// the Id property is an auto incrementing primary key
+	dbMap.AddTableWithName(EmailChange{}, "EmailChange").SetKeys(true, "Id")
 	dbMap.AddTableWithName(User{}, "Users").SetKeys(true, "Id")
-
 	dbMap.AddTableWithName(PasswordReset{}, "PasswordReset").SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
@@ -114,26 +129,55 @@ func GetDbMap(user, password, hostname, port, database string) *gorp.DbMap {
 	// that weren't present in the original schema so admins can upgrade
 	// without manual intervention.
 
-	// 1) stakepool v0.0.1 -> v0.0.2: add HeightRegistered so importscript
-	//    doesn't take as long
+	// stakepool v0.0.1 -> v0.0.2
+	// add HeightRegistered so dcrwallet doesn't scan from the genesis block
+	// for transactions that won't exist.
 	// The stake pool code was released to stake pool operators on Friday,
 	// April 1st 2016.  The last mainnet block on Mar 31st of 15346 is used
 	// as a safe default to ensure no tickets are missed. This could be
 	// adjusted upwards since most pools were on testnet for a long time.
+	addColumn(dbMap, database, "Users", "HeightRegistered", "bigint(20) NULL",
+		"UserFeeAddr",
+		"UPDATE Users SET HeightRegistered = 15346 WHERE MultiSigAddress <> ''")
 
-	// Determine if the HeightRegistered column exists
-	s, err := dbMap.SelectStr("SELECT column_name FROM information_schema.columns " +
-		"WHERE table_schema = '" + database +
-		"' AND table_name = 'Users' AND column_name = 'HeightRegistered'")
-	if s == "" {
-		// HeightRegistered column doesn't exist so add it
-		_, err = dbMap.Exec("ALTER TABLE Users ADD COLUMN `HeightRegistered` bigint(20) NULL AFTER `UserFeeAddr`")
-		checkErr(err, "adding new column HeightRegistered failed")
-		// set height to 15346 for all users who submitted a script
-		_, err = dbMap.Exec("UPDATE Users SET HeightRegistered = 15346 WHERE MultiSigAddress <> ''")
-		checkErr(err, "setting HeightRegistered default value failed")
-	}
+	// stakepool v0.0.2 -> v0.0.3
+
+	// bug fix for previous -- users who hadn't submitted a script won't be
+	// able to login because Gorp can't handle NULL values
+	_, err = dbMap.Exec("UPDATE Users SET HeightRegistered = 0 WHERE HeightRegistered IS NULL")
+	checkErr(err, "setting HeightRegistered to 0 failed")
+
+	// add EmailVerified, EmailToken so new users' email addresses can be
+	// verified.  We consider users who already registered to be grandfathered
+	// in and use 2 to reflect that.  1 is verified, 0 is unverified.
+	addColumn(dbMap, database, "Users", "EmailVerified", "bigint(20) NULL",
+		"HeightRegistered",
+		"UPDATE Users SET EmailVerified = 2")
+	// Set an empty token for grandfathered accounts
+	addColumn(dbMap, database, "Users", "EmailToken", "varchar(255) NULL",
+		"EmailVerified",
+		"UPDATE Users SET EmailToken = ''")
+
 	return dbMap
+}
+
+// addColumn checks if a column exists and adds it if it doesn't
+func addColumn(dbMap *gorp.DbMap, db string, table string, columnToAdd string,
+	dataSpec string, colAfter string, defaultQry string) {
+	s, err := dbMap.SelectStr("SELECT column_name FROM " +
+		"information_schema.columns WHERE table_schema = '" + db +
+		"' AND table_name = '" + table + "' AND column_name = '" +
+		columnToAdd + "'")
+	checkErr(err, "checking whether column"+columnToAdd+" exists failed")
+	if s == "" {
+		_, err = dbMap.Exec("ALTER TABLE Users ADD COLUMN `" +
+			columnToAdd + "` " + dataSpec + " AFTER `" + colAfter + "`")
+		checkErr(err, "adding new column "+columnToAdd+" failed")
+		if defaultQry != "" {
+			_, err = dbMap.Exec(defaultQry)
+			checkErr(err, defaultQry+" failed")
+		}
+	}
 }
 
 func checkErr(err error, msg string) {

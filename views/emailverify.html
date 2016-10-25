@@ -1,0 +1,20 @@
+{{define "emailverify"}}
+<div class="panel panel-default">
+	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
+		<h4 class="panel-title">Email Verification</h4>
+	</div>
+	<div class="panel-body" style="background-color: #333; color: #ffffff;">
+		<fieldset>
+			{{range .FlashError}}
+				<div class="alert alert-danger">{{.}}</div><p>
+			{{end}}
+			{{range .FlashSuccess}}
+				<div class="alert alert-success">{{.}}</div><p>
+			{{end}}
+			{{if .FlashSuccess}}
+                <p><span style="font-size: larger;">You may now <a href="/signin">sign in</a>.</span></p>
+        	{{end}}
+		</fieldset>
+	</div>
+</div>
+{{end}}

@@ -36,7 +36,7 @@ const (
 	defaultPoolLink         = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
 	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
 	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
-	defaultSMTPHost         = "localhost:25"
+	defaultSMTPHost         = ""
 )
 
 var (
@@ -272,8 +272,8 @@ func loadConfig() (*config, []string, error) {
 		DBName:           defaultDBName,
 		DBPort:           defaultDBPort,
 		DBUser:           defaultDBUser,
-		PoolFees:         defaultPoolFees,
 		PoolEmail:        defaultPoolEmail,
+		PoolFees:         defaultPoolFees,
 		PoolLink:         defaultPoolLink,
 		RecaptchaSecret:  defaultRecaptchaSecret,
 		RecaptchaSitekey: defaultRecaptchaSitekey,

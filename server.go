@@ -111,6 +111,12 @@ func main() {
 	goji.Get("/address", application.Route(controller, "Address"))
 	goji.Post("/address", application.Route(controller, "AddressPost"))
 
+	// Email change/update confirmation
+	goji.Get("/emailupdate", application.Route(controller, "EmailUpdate"))
+
+	// Email verification
+	goji.Get("/emailverify", application.Route(controller, "EmailVerify"))
+
 	// Error page
 	goji.Get("/error", application.Route(controller, "Error"))
 
@@ -121,6 +127,10 @@ func main() {
 	// Password Update routes
 	goji.Get("/passwordupdate", application.Route(controller, "PasswordUpdate"))
 	goji.Post("/passwordupdate", application.Route(controller, "PasswordUpdatePost"))
+
+	// Settings routes
+	goji.Get("/settings", application.Route(controller, "Settings"))
+	goji.Post("/settings", application.Route(controller, "SettingsPost"))
 
 	// Sign In routes
 	goji.Get("/signin", application.Route(controller, "SignIn"))
