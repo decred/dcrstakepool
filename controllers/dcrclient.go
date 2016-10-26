@@ -16,8 +16,6 @@ import (
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrwallet/waddrmgr"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 // functionName
@@ -643,7 +641,6 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				resp.err = err
 				return resp
 			}
-			spew.Dump(spuir)
 			spuirs[i] = spuir
 		}
 		if !checkForSyncness(spuirs) {
