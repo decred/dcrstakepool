@@ -727,13 +727,23 @@ func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
 				continue
 			}
 			if len(spuirs[i].Tickets) != len(spuirs[k].Tickets) {
-				log.Infof("valid tickets len don't match! server %v has %v server %v has %v", i, len(spuirs[i].Tickets), k, len(spuirs[k].Tickets))
+				log.Infof("valid tickets len don't match! server %v has %v "+
+					"server %v has %v", i, len(spuirs[i].Tickets), k,
+					len(spuirs[k].Tickets))
 				return false
 			}
 			if len(spuirs[i].InvalidTickets) != len(spuirs[k].InvalidTickets) {
-				log.Infof("invalid tickets len don't match! server %v has %v server %v has %v", i, len(spuirs[i].Tickets), k, len(spuirs[k].Tickets))
+				log.Infof("invalid tickets len don't match! server %v has %v "+
+					"server %v has %v", i, len(spuirs[i].Tickets), k,
+					len(spuirs[k].Tickets))
 				return false
 			}
+			/* TODO
+			// for now we are going to just consider the situation where the
+			// lengths of invalid/valid tickets differ.  When we have
+			// better infrastructure in stakepool wallets to update pool
+			// ticket status we can dig deeper into the scenarios and
+			// how best to resolve them.
 			for y := range spuirs[i].Tickets {
 				found := false
 				for z := range spuirs[k].Tickets {
@@ -760,6 +770,7 @@ func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
 					return false
 				}
 			}
+			*/
 		}
 	}
 	return true
