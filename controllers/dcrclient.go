@@ -644,9 +644,8 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			spuirs[i] = spuir
 		}
 		if !checkForSyncness(spuirs) {
-			log.Infof("They are out of sync!")
+			log.Infof("StakePoolUserInfo across wallets are not synced.  Attempting to sync now")
 			w.syncTickets(spuirs)
-			// resync ticket func
 		}
 		resp.userInfo = spuirs[0]
 		return resp
@@ -681,6 +680,10 @@ func (w *walletSvrManager) connected() error {
 	return response.err
 }
 
+// syncTickets is called when checkForSyncness has returned false and the wallets
+// PoolTickets need to be synced due to manual addtickets, or a status is off.
+// If a ticket is seen to be valid in 1 wallet and invalid in another, we use
+// addticket rpc command to add that ticket to the invalid wallet
 func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult) error {
 	for i := 0; i < len(spuirs)-1; i++ {
 		for _, validTicket := range spuirs[i].Tickets {
@@ -707,6 +710,11 @@ func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult
 	return nil
 }
 
+// checkForSyncness is a helper function to iterate through results
+// of StakePoolUserInfo requests from all the wallets and ensure
+// that each share the others PoolTickets and have the same
+// valid/invalid lists.  If any thing is deemed off then syncTickets
+// call is made.
 func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
 	for i := 0; i < len(spuirs); i++ {
 		for k := 0; k < len(spuirs); k++ {
