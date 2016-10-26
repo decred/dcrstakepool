@@ -87,6 +87,7 @@ type config struct {
 	WalletUsers      []string `long:"walletusers" description:"Username for wallet server"`
 	WalletPasswords  []string `long:"walletpasswords" description:"Pasword for wallet server"`
 	WalletCerts      []string `long:"walletcerts" description:"Certificate path for wallet server"`
+	Version          string
 }
 
 // serviceOptions defines the configuration options for the daemon as a service on
@@ -278,6 +279,7 @@ func loadConfig() (*config, []string, error) {
 		RecaptchaSecret:  defaultRecaptchaSecret,
 		RecaptchaSitekey: defaultRecaptchaSitekey,
 		SMTPHost:         defaultSMTPHost,
+		Version:          version(),
 	}
 
 	// Service options which are only added on Windows.

@@ -70,6 +70,27 @@ func GetUserById(dbMap *gorp.DbMap, id int64) (user *User) {
 	return
 }
 
+// GetUserCount gives a count of all users
+func GetUserCount(dbMap *gorp.DbMap) int64 {
+	userCount, err := dbMap.SelectInt("SELECT COUNT(*) FROM Users")
+	if err != nil {
+		return int64(0)
+	}
+
+	return userCount
+}
+
+// GetUserCountActive gives a count of all users who have submitted an address
+func GetUserCountActive(dbMap *gorp.DbMap) int64 {
+	userCountActive, err := dbMap.SelectInt("SELECT COUNT(*) FROM Users " +
+		"WHERE MultiSigAddress <> ''")
+	if err != nil {
+		return int64(0)
+	}
+
+	return userCountActive
+}
+
 func InsertEmailChange(dbMap *gorp.DbMap, emailChange *EmailChange) error {
 	return dbMap.Insert(emailChange)
 }

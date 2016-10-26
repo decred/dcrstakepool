@@ -87,8 +87,8 @@ func main() {
 	controller, err := controllers.NewMainController(activeNetParams.Params,
 		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, cfg.ColdWalletExtPub,
 		cfg.PoolEmail, cfg.PoolFees, cfg.PoolLink,
-		cfg.RecaptchaSecret, cfg.RecaptchaSitekey,
-		cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
+		cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.SMTPFrom, cfg.SMTPHost,
+		cfg.SMTPUsername, cfg.SMTPPassword, cfg.Version,
 		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords)
 	if err != nil {
 		application.Close()
@@ -121,6 +121,9 @@ func main() {
 	// Address form
 	goji.Get("/address", application.Route(controller, "Address"))
 	goji.Post("/address", application.Route(controller, "AddressPost"))
+
+	// API
+	goji.Handle("/api/*", application.Route(controller, "API"))
 
 	// Email change/update confirmation
 	goji.Get("/emailupdate", application.Route(controller, "EmailUpdate"))
