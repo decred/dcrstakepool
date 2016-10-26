@@ -1229,12 +1229,11 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
-				log.Infof("redeemScript from DB not found on server %v. looking for %v", i, k)
+				log.Infof("RedeemScript from DB not found on server %v. importscript for %v at height", i, v.Script, v.Height)
 				err := wsm.servers[i].ImportScriptRescanFrom(v.Script, true, v.Height)
 				if err != nil {
 					return err
 				}
-				log.Infof("desynced due to redeemScriptNotFound")
 				desynced = true
 			}
 		}
@@ -1244,7 +1243,8 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 	// some tickets. Scan for the tickets now and try to import any
 	// that another wallet may be missing.
 	if desynced {
-		log.Infof("desynced")
+		log.Infof("desynced had been detected, now attempting to " +
+			"resync all tickets acrosss each wallet.")
 		ticketsPerServer := make([]map[chainhash.Hash]struct{},
 			wsm.serversLen)
 		allTickets := make(map[chainhash.Hash]struct{})
@@ -1272,12 +1272,12 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 				_, ok := ticketsPerServer[i][ticketHash]
 				if !ok {
 					h := chainhash.Hash(ticketHash)
+					log.Infof("wallet %v: is missing ticket %v", i, h)
 					tx, err := wsm.fetchTransaction(&h)
 					if err != nil {
 						return err
 					}
 
-					log.Infof("adding ticket %v to %v", h, i)
 					err = wsm.servers[i].AddTicket(tx)
 					if err != nil {
 						return err
