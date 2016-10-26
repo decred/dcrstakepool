@@ -735,14 +735,28 @@ func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
 				return false
 			}
 			for y := range spuirs[i].Tickets {
-				if spuirs[i].Tickets[y] != spuirs[k].Tickets[y] {
-					log.Infof("tickets don't match! %v %v %v %v", i, spuirs[i].Tickets[y], k, spuirs[k].Tickets[y])
+				found := false
+				for z := range spuirs[k].Tickets {
+					if spuirs[i].Tickets[y] == spuirs[k].Tickets[z] {
+						found = true
+						break
+					}
+				}
+				if !found {
+					log.Infof("ticket not found! %v %v", i, spuirs[i].Tickets[y])
 					return false
 				}
 			}
-			for z := range spuirs[i].InvalidTickets {
-				if spuirs[i].InvalidTickets[z] != spuirs[k].InvalidTickets[z] {
-					log.Infof("invalid tickets don't match! %v %v %v %v", i, spuirs[i].Tickets[z], k, spuirs[k].Tickets[z])
+			for y := range spuirs[i].InvalidTickets {
+				found := false
+				for z := range spuirs[k].InvalidTickets {
+					if spuirs[i].InvalidTickets[y] == spuirs[k].InvalidTickets[z] {
+						found = true
+						break
+					}
+				}
+				if !found {
+					log.Infof("invalid ticket not found! %v %v", i, spuirs[i].InvalidTickets[y])
 					return false
 				}
 			}
