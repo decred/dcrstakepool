@@ -1235,7 +1235,10 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
 		for j := range redeemScripts {
 			redeemScriptsPerServer[i][chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
-			allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
+			_, ok := allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])]
+			if !ok {
+				allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
+			}
 		}
 	}
 
