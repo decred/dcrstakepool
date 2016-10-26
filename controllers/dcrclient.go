@@ -1212,6 +1212,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 			if err != nil {
 				return err
 			}
+			log.Infof("Expected external address index for wallet %v is desynced. Got %v Want %v", i, addrIdxExts[i], bestAddrIdxExt)
 			desynced = true
 		}
 		if addrIdxInts[i] < bestAddrIdxInt {
@@ -1220,6 +1221,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 			if err != nil {
 				return err
 			}
+			log.Infof("Expected internal address index for wallet %v is desynced. Got %v Want %v", i, addrIdxInts[i], bestAddrIdxInt)
 			desynced = true
 		}
 
@@ -1227,10 +1229,12 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
+				log.Infof("redeemScript from DB not found on server %v. looking for %v", i, k)
 				err := wsm.servers[i].ImportScriptRescanFrom(v.Script, true, v.Height)
 				if err != nil {
 					return err
 				}
+				log.Infof("desynced due to redeemScriptNotFound")
 				desynced = true
 			}
 		}
