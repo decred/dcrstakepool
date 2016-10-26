@@ -1271,7 +1271,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
-				log.Infof("RedeemScript from DB not found on server %v. importscript for %v at height", i, v.Script, v.Height)
+				log.Infof("RedeemScript from DB not found on server %v. importscript for %x at height %v", i, v.Script, v.Height)
 				err := wsm.servers[i].ImportScriptRescanFrom(v.Script, true, v.Height)
 				if err != nil {
 					return err
