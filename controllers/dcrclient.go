@@ -727,18 +727,22 @@ func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
 				continue
 			}
 			if len(spuirs[i].Tickets) != len(spuirs[k].Tickets) {
+				log.Infof("valid tickets len don't match! server %v has %v server %v has %v", i, len(spuirs[i].Tickets), k, len(spuirs[k].Tickets))
 				return false
 			}
 			if len(spuirs[i].InvalidTickets) != len(spuirs[k].InvalidTickets) {
+				log.Infof("invalid tickets len don't match! server %v has %v server %v has %v", i, len(spuirs[i].Tickets), k, len(spuirs[k].Tickets))
 				return false
 			}
 			for y := range spuirs[i].Tickets {
 				if spuirs[i].Tickets[y] != spuirs[k].Tickets[y] {
+					log.Infof("tickets don't match! %v %v %v %v", i, spuirs[i].Tickets[y], k, spuirs[k].Tickets[y])
 					return false
 				}
 			}
 			for z := range spuirs[i].InvalidTickets {
 				if spuirs[i].InvalidTickets[z] != spuirs[k].InvalidTickets[z] {
+					log.Infof("invalid tickets don't match! %v %v %v %v", i, spuirs[i].Tickets[z], k, spuirs[k].Tickets[z])
 					return false
 				}
 			}
