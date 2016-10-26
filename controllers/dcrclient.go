@@ -685,23 +685,28 @@ func (w *walletSvrManager) connected() error {
 // If a ticket is seen to be valid in 1 wallet and invalid in another, we use
 // addticket rpc command to add that ticket to the invalid wallet
 func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult) error {
-	for i := 0; i < len(spuirs)-1; i++ {
-		for _, validTicket := range spuirs[i].Tickets {
-			for _, invalidTicket := range spuirs[i+1].InvalidTickets {
-				if validTicket.Ticket == invalidTicket {
-					hash, err := chainhash.NewHashFromStr(validTicket.Ticket)
-					if err != nil {
-						return err
-					}
-					tx, err := w.fetchTransaction(hash)
-					if err != nil {
-						return err
-					}
+	for i := 0; i < len(spuirs); i++ {
+		for j := 0; j < len(spuirs); j++ {
+			if i == j {
+				continue
+			}
+			for _, validTicket := range spuirs[i].Tickets {
+				for _, invalidTicket := range spuirs[j].InvalidTickets {
+					if validTicket.Ticket == invalidTicket {
+						hash, err := chainhash.NewHashFromStr(validTicket.Ticket)
+						if err != nil {
+							return err
+						}
+						tx, err := w.fetchTransaction(hash)
+						if err != nil {
+							return err
+						}
 
-					log.Infof("adding formally invalid ticket %v to %v", hash, i)
-					err = w.servers[i+1].AddTicket(tx)
-					if err != nil {
-						return err
+						log.Infof("adding formally invalid ticket %v to %v", hash, i)
+						err = w.servers[j].AddTicket(tx)
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}
