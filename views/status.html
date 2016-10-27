@@ -4,6 +4,44 @@
 		<h4 class="panel-title">Status</h4>
 	</div>
 	<div class="panel-body" style="background-color: #333; color: #ffffff;">
+	{{if not .WalletInfo}}
+	<p><span style="font-size: larger;"><b>Error receiving walletinfo</b></span></p>
+	{{end}}
+	{{if .WalletInfo}}
+	<table id="walletinfo" class="table table-condensed datatablesort">
+		<thead>
+			<tr>
+				<th>Wallet Number</th>
+				<th>Connected</th>
+				<th>DaemonConnected</th>
+				<th>TicketMaxPrice</th>
+				<th>BalanceToMaintain</th>
+				<th>StakeMining</th>
+			</tr>
+		</thead>
+		<tbody>
+		{{ range $i, $data := .WalletInfo }}
+			<tr>
+				{{ if $data.Connected }}
+				<td>{{$i}}</td>
+				<td>{{ $data.Connected }}</td>
+				<td>{{ $data.DaemonConnected }}</td>
+				<td>{{ $data.TicketMaxPrice }}</td>
+				<td>{{ $data.BalanceToMaintain }}</td>
+				<td>{{ $data.StakeMining }}</td> 
+				{{else}}
+				<td>{{$i}}</td>
+				<td>{{ $data.Connected }}</td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+				{{end}}
+			</tr>
+		{{end}}
+		</tbody>
+	</table>
+	{{end}}
 	<p>RPC Status: {{ .RPCStatus }}
 </div>
 </div>

@@ -37,6 +37,7 @@ const (
 	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
 	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
 	defaultSMTPHost         = ""
+	defaultMinServers       = 2
 )
 
 var (
@@ -88,6 +89,8 @@ type config struct {
 	WalletPasswords  []string `long:"walletpasswords" description:"Pasword for wallet server"`
 	WalletCerts      []string `long:"walletcerts" description:"Certificate path for wallet server"`
 	Version          string
+	AdminIPs         []string `long:"adminips" description:"Expected admin host"`
+	MinServers       int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service on
@@ -280,6 +283,7 @@ func loadConfig() (*config, []string, error) {
 		RecaptchaSitekey: defaultRecaptchaSitekey,
 		SMTPHost:         defaultSMTPHost,
 		Version:          version(),
+		MinServers:       defaultMinServers,
 	}
 
 	// Service options which are only added on Windows.
@@ -475,6 +479,13 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	if len(cfg.AdminIPs) == 0 {
+		str := "%s: adminips is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
 	if len(cfg.WalletHosts) == 0 {
 		str := "%s: wallethosts is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -504,6 +515,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Convert comma separated list into a slice
+	cfg.AdminIPs = strings.Split(cfg.AdminIPs[0], ",")
 	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
 	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
 	cfg.WalletPasswords = strings.Split(cfg.WalletPasswords[0], ",")
