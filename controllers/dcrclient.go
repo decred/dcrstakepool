@@ -3,6 +3,7 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrwallet/waddrmgr"
 )
@@ -641,7 +643,10 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 			spuirs[i] = spuir
 		}
-
+		if !checkForSyncness(spuirs) {
+			log.Infof("StakePoolUserInfo across wallets are not synced.  Attempting to sync now")
+			w.syncTickets(spuirs)
+		}
 		resp.userInfo = spuirs[0]
 		return resp
 	case getBestBlockFn:
@@ -673,6 +678,102 @@ func (w *walletSvrManager) connected() error {
 	}
 	response := <-reply
 	return response.err
+}
+
+// syncTickets is called when checkForSyncness has returned false and the wallets
+// PoolTickets need to be synced due to manual addtickets, or a status is off.
+// If a ticket is seen to be valid in 1 wallet and invalid in another, we use
+// addticket rpc command to add that ticket to the invalid wallet
+func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult) error {
+	for i := 0; i < len(spuirs); i++ {
+		for j := 0; j < len(spuirs); j++ {
+			if i == j {
+				continue
+			}
+			for _, validTicket := range spuirs[i].Tickets {
+				for _, invalidTicket := range spuirs[j].InvalidTickets {
+					if validTicket.Ticket == invalidTicket {
+						hash, err := chainhash.NewHashFromStr(validTicket.Ticket)
+						if err != nil {
+							return err
+						}
+						tx, err := w.fetchTransaction(hash)
+						if err != nil {
+							return err
+						}
+
+						log.Infof("adding formally invalid ticket %v to %v", hash, i)
+						err = w.servers[j].AddTicket(tx)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// checkForSyncness is a helper function to iterate through results
+// of StakePoolUserInfo requests from all the wallets and ensure
+// that each share the others PoolTickets and have the same
+// valid/invalid lists.  If any thing is deemed off then syncTickets
+// call is made.
+func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
+	for i := 0; i < len(spuirs); i++ {
+		for k := 0; k < len(spuirs); k++ {
+			if &spuirs[i] == &spuirs[k] {
+				continue
+			}
+			if len(spuirs[i].Tickets) != len(spuirs[k].Tickets) {
+				log.Infof("valid tickets len don't match! server %v has %v "+
+					"server %v has %v", i, len(spuirs[i].Tickets), k,
+					len(spuirs[k].Tickets))
+				return false
+			}
+			if len(spuirs[i].InvalidTickets) != len(spuirs[k].InvalidTickets) {
+				log.Infof("invalid tickets len don't match! server %v has %v "+
+					"server %v has %v", i, len(spuirs[i].Tickets), k,
+					len(spuirs[k].Tickets))
+				return false
+			}
+			/* TODO
+			// for now we are going to just consider the situation where the
+			// lengths of invalid/valid tickets differ.  When we have
+			// better infrastructure in stakepool wallets to update pool
+			// ticket status we can dig deeper into the scenarios and
+			// how best to resolve them.
+			for y := range spuirs[i].Tickets {
+				found := false
+				for z := range spuirs[k].Tickets {
+					if spuirs[i].Tickets[y] == spuirs[k].Tickets[z] {
+						found = true
+						break
+					}
+				}
+				if !found {
+					log.Infof("ticket not found! %v %v", i, spuirs[i].Tickets[y])
+					return false
+				}
+			}
+			for y := range spuirs[i].InvalidTickets {
+				found := false
+				for z := range spuirs[k].InvalidTickets {
+					if spuirs[i].InvalidTickets[y] == spuirs[k].InvalidTickets[z] {
+						found = true
+						break
+					}
+				}
+				if !found {
+					log.Infof("invalid ticket not found! %v %v", i, spuirs[i].InvalidTickets[y])
+					return false
+				}
+			}
+			*/
+		}
+	}
+	return true
 }
 
 // GetNewAddress
@@ -1066,7 +1167,7 @@ func (w *walletSvrManager) fetchTransaction(txHash *chainhash.Hash) (*dcrutil.Tx
 
 // walletSvrsSync ensures that the wallet servers are all in sync with each
 // other in terms of redeemscripts and address indexes.
-func walletSvrsSync(wsm *walletSvrManager) error {
+func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error {
 	if wsm.serversLen == 1 {
 		return nil
 	}
@@ -1080,16 +1181,30 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 		}
 	}
 
+	type ScriptHeight struct {
+		Script []byte
+		Height int
+	}
+
 	// Fetch the address indexes and redeem scripts from
 	// each server.
 	addrIdxExts := make([]int, wsm.serversLen)
 	var bestAddrIdxExt int
 	addrIdxInts := make([]int, wsm.serversLen)
 	var bestAddrIdxInt int
-	redeemScriptsPerServer := make([]map[[chainhash.HashSize]byte][]byte,
+	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
 		wsm.serversLen)
-	allRedeemScripts := make(map[[chainhash.HashSize]byte][]byte)
+	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
 
+	// add all scripts from db
+	for _, v := range multiSigScripts {
+		byteScript, err := hex.DecodeString(v.MultiSigScript)
+		if err != nil {
+			log.Warnf("skipping script %s due to err %v", v.MultiSigScript, err)
+			continue
+		}
+		allRedeemScripts[chainhash.HashFuncH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
+	}
 	// Go through each server and see who is synced to the longest
 	// address indexes and and the most redeemscripts.
 	for i := range wsm.servers {
@@ -1117,12 +1232,13 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 			bestAddrIdxInt = addrIdxInt
 		}
 
-		redeemScriptsPerServer[i] = make(map[[chainhash.HashSize]byte][]byte)
+		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
 		for j := range redeemScripts {
-			redeemScriptsPerServer[i][chainhash.HashFuncH(redeemScripts[j])] =
-				redeemScripts[j]
-			allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])] =
-				redeemScripts[j]
+			redeemScriptsPerServer[i][chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
+			_, ok := allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])]
+			if !ok {
+				allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
+			}
 		}
 	}
 
@@ -1138,6 +1254,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 			if err != nil {
 				return err
 			}
+			log.Infof("Expected external address index for wallet %v is desynced. Got %v Want %v", i, addrIdxExts[i], bestAddrIdxExt)
 			desynced = true
 		}
 		if addrIdxInts[i] < bestAddrIdxInt {
@@ -1146,6 +1263,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 			if err != nil {
 				return err
 			}
+			log.Infof("Expected internal address index for wallet %v is desynced. Got %v Want %v", i, addrIdxInts[i], bestAddrIdxInt)
 			desynced = true
 		}
 
@@ -1153,7 +1271,8 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
-				err := wsm.servers[i].ImportScriptRescanFrom(v, true, 0)
+				log.Infof("RedeemScript from DB not found on server %v. importscript for %x at height %v", i, v.Script, v.Height)
+				err := wsm.servers[i].ImportScriptRescanFrom(v.Script, true, v.Height)
 				if err != nil {
 					return err
 				}
@@ -1166,9 +1285,11 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 	// some tickets. Scan for the tickets now and try to import any
 	// that another wallet may be missing.
 	if desynced {
-		ticketsPerServer := make([]map[[chainhash.HashSize]byte]struct{},
+		log.Infof("desynced had been detected, now attempting to " +
+			"resync all tickets acrosss each wallet.")
+		ticketsPerServer := make([]map[chainhash.Hash]struct{},
 			wsm.serversLen)
-		allTickets := make(map[[chainhash.HashSize]byte]struct{})
+		allTickets := make(map[chainhash.Hash]struct{})
 
 		// Get the tickets and popular the maps.
 		for i := range wsm.servers {
@@ -1177,7 +1298,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 				return err
 			}
 
-			ticketsPerServer[i] = make(map[[chainhash.HashSize]byte]struct{})
+			ticketsPerServer[i] = make(map[chainhash.Hash]struct{})
 			for j := range ticketsServer {
 				ticketHash := ticketsServer[j]
 				ticketsPerServer[i][*ticketHash] = struct{}{}
@@ -1193,6 +1314,7 @@ func walletSvrsSync(wsm *walletSvrManager) error {
 				_, ok := ticketsPerServer[i][ticketHash]
 				if !ok {
 					h := chainhash.Hash(ticketHash)
+					log.Infof("wallet %v: is missing ticket %v", i, h)
 					tx, err := wsm.fetchTransaction(&h)
 					if err != nil {
 						return err
@@ -1244,11 +1366,6 @@ func newWalletSvrManager(walletHosts []string, walletCerts []string, walletUsers
 		setVoteBitsCoolDownMap: make(map[chainhash.Hash]time.Time),
 		msgChan:                make(chan interface{}, 500),
 		quit:                   make(chan struct{}),
-	}
-
-	err := walletSvrsSync(&wsm)
-	if err != nil {
-		return nil, err
 	}
 
 	// Set the timer to automatically require a new set of stake information
