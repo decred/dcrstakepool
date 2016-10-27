@@ -548,7 +548,7 @@ func (controller *MainController) RPCIsStopped() bool {
 	return controller.rpcServers.IsStopped()
 }
 
-// WalletStatus returns current WalletInfo from all rpcServers
+// WalletStatus returns current WalletInfo from all rpcServers.
 func (controller *MainController) WalletStatus() ([]*dcrjson.WalletInfoResult, error) {
 	return controller.rpcServers.WalletStatus()
 }
@@ -1405,6 +1405,8 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 func (controller *MainController) Status(c web.C, r *http.Request) (string, int) {
 	var rpcstatus = "Running"
 
+	// Confirm that the incoming IP address is an approved
+	// admin IP as set in config.
 	remoteIP := r.RemoteAddr
 	if strings.Contains(remoteIP, ":") {
 		parts := strings.Split(remoteIP, ":")
@@ -1415,6 +1417,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 		return "/error", http.StatusSeeOther
 	}
 
+	// Attempt to query wallet statuses
 	walletInfo, err := controller.WalletStatus()
 	if err != nil {
 		// decide when to throw err here
@@ -1431,13 +1434,17 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 		StakeMining       bool
 	}
 	walletPageInfo := make([]WalletInfoPage, len(walletInfo), len(walletInfo))
+	connectedWallets := 0
 	for i, v := range walletInfo {
+		// If something is nil in the slice means it is disconnected.
 		if v == nil {
 			walletPageInfo[i] = WalletInfoPage{
 				Connected: false,
 			}
 			continue
 		}
+		// Wallet has been successfully queried.
+		connectedWallets++
 		walletPageInfo[i] = WalletInfoPage{
 			Connected:         true,
 			DaemonConnected:   v.DaemonConnected,
@@ -1450,12 +1457,25 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 		}
 	}
 
+	// Depending on how many wallets have been detected update RPCStatus.
+	// Admins can then use to monitor this page periodically and check status.
+	switch connectedWallets {
+	case 0:
+		rpcstatus = "Emergency!"
+	case 1:
+		rpcstatus = "Critical"
+	case 2:
+		rpcstatus = "Degraded"
+	}
+
 	t := controller.GetTemplate(c)
 	c.Env["IsStatus"] = true
 	c.Env["Title"] = "Decred Stake Pool - Status"
+
+	// Set info to be used by admins on /status page.
 	c.Env["WalletInfo"] = walletPageInfo
 	c.Env["RPCStatus"] = rpcstatus
-	fmt.Println(walletInfo)
+
 	var widgets = controller.Parse(t, "status", c.Env)
 	c.Env["Content"] = template.HTML(widgets)
 

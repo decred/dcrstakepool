@@ -606,11 +606,10 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		for i, s := range w.servers {
 			wir, err := s.WalletInfo()
 			if err != nil {
+				// Wallet is not responding so we log server connect err.
 				log.Infof("connectedFn failure on server %v: %v", i, err)
 				resp.err = err
 				wirs[i] = nil
-				//	wirs[i] = &dcrjson.WalletInfoResult{}
-				//	return resp
 			}
 			wirs[i] = wir
 		}
@@ -632,6 +631,11 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				return fmt.Errorf("wallet server %v locked", i)
 			}
 		}
+
+		// TODO add infrastructure to decide if a certain number of
+		// wallets up/down is acceptable in the eyes of the admin.
+		// For example, allow for RPC calls to wallet if 2/3 are up,
+		// but err out and disallow if only 1/3 etc
 		resp.walletInfo = wirs
 		return resp
 
