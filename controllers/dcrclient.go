@@ -601,18 +601,24 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	// sure the daemon is connected and the wallet is unlocked.
 	case connectedFn:
 		resp := new(connectedResponse)
+		resp.err = nil
 		wirs := make([]*dcrjson.WalletInfoResult, w.serversLen, w.serversLen)
 		for i, s := range w.servers {
 			wir, err := s.WalletInfo()
 			if err != nil {
 				log.Infof("connectedFn failure on server %v: %v", i, err)
 				resp.err = err
-				return resp
+				wirs[i] = nil
+				//	wirs[i] = &dcrjson.WalletInfoResult{}
+				//	return resp
 			}
 			wirs[i] = wir
 		}
 
 		for i := 0; i < w.serversLen; i++ {
+			if wirs[i] == nil {
+				continue
+			}
 			// Check to make sure we're connected to the daemon.
 			// If we aren't, send a failure.
 			if !wirs[i].DaemonConnected {
@@ -627,7 +633,6 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 		}
 		resp.walletInfo = wirs
-		resp.err = nil
 		return resp
 
 	case stakePoolUserInfoFn:

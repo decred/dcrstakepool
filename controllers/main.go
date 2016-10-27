@@ -1408,14 +1408,44 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 
 	walletInfo, err := controller.WalletStatus()
 	if err != nil {
-		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
+		//	return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
+	}
+
+	type WalletInfoPage struct {
+		Connected         bool
+		DaemonConnected   bool
+		Unlocked          bool
+		TxFee             float64
+		TicketFee         float64
+		TicketMaxPrice    float64
+		BalanceToMaintain float64
+		StakeMining       bool
+	}
+	walletPageInfo := make([]WalletInfoPage, len(walletInfo), len(walletInfo))
+	for i, v := range walletInfo {
+		if v == nil {
+			walletPageInfo[i] = WalletInfoPage{
+				Connected: false,
+			}
+			continue
+		}
+		walletPageInfo[i] = WalletInfoPage{
+			Connected:         true,
+			DaemonConnected:   v.DaemonConnected,
+			Unlocked:          v.Unlocked,
+			TxFee:             v.TxFee,
+			TicketFee:         v.TicketFee,
+			TicketMaxPrice:    v.TicketMaxPrice,
+			BalanceToMaintain: v.BalanceToMaintain,
+			StakeMining:       v.StakeMining,
+		}
 	}
 
 	c.Env["IsStatus"] = true
 	c.Env["Title"] = "Decred Stake Pool - Status"
-	c.Env["WalletInfo"] = walletInfo
+	c.Env["WalletInfo"] = walletPageInfo
 	c.Env["RPCStatus"] = rpcstatus
-
+	fmt.Println(walletInfo)
 	var widgets = controller.Parse(t, "status", c.Env)
 	c.Env["Content"] = template.HTML(widgets)
 
