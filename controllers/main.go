@@ -45,6 +45,7 @@ const signupEmailSubject = "Stake pool email verification"
 type MainController struct {
 	system.Controller
 
+	adminIPs         []string
 	baseURL          string
 	closePool        bool
 	closePoolMsg     string
@@ -70,7 +71,7 @@ func randToken() string {
 }
 
 // NewMainController is the constructor for the entire controller routing.
-func NewMainController(params *chaincfg.Params, baseURL string, closePool bool,
+func NewMainController(params *chaincfg.Params, adminIPs []string, baseURL string, closePool bool,
 	closePoolMsg string, extPubStr string, poolEmail string, poolFees float64,
 	poolLink string, recaptchaSecret string, recaptchaSiteKey string,
 	smtpFrom string, smtpHost string, smtpUsername string, smtpPassword string,
@@ -88,6 +89,7 @@ func NewMainController(params *chaincfg.Params, baseURL string, closePool bool,
 	}
 
 	mc := &MainController{
+		adminIPs:         adminIPs,
 		baseURL:          baseURL,
 		closePool:        closePool,
 		closePoolMsg:     closePoolMsg,
@@ -1256,7 +1258,6 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
-
 	c.Env["IsSignUp"] = true
 	if controller.smtpHost == "" {
 		c.Env["SMTPDisabled"] = true
@@ -1404,11 +1405,19 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 func (controller *MainController) Status(c web.C, r *http.Request) (string, int) {
 	var rpcstatus = "Running"
 
-	t := controller.GetTemplate(c)
+	remoteIP := r.RemoteAddr
+	if strings.Contains(remoteIP, ":") {
+		parts := strings.Split(remoteIP, ":")
+		remoteIP = parts[0]
+	}
+
+	if !stringSliceContains(controller.adminIPs, remoteIP) {
+		return "/error", http.StatusSeeOther
+	}
 
 	walletInfo, err := controller.WalletStatus()
 	if err != nil {
-		//	return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
+		// decide when to throw err here
 	}
 
 	type WalletInfoPage struct {
@@ -1441,6 +1450,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 		}
 	}
 
+	t := controller.GetTemplate(c)
 	c.Env["IsStatus"] = true
 	c.Env["Title"] = "Decred Stake Pool - Status"
 	c.Env["WalletInfo"] = walletPageInfo
@@ -1657,4 +1667,13 @@ func (controller *MainController) Logout(c web.C, r *http.Request) (string, int)
 	session.Values["UserId"] = nil
 
 	return "/", http.StatusSeeOther
+}
+
+func stringSliceContains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
