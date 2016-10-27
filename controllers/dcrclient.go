@@ -1343,11 +1343,12 @@ func newWalletSvrManager(walletHosts []string, walletCerts []string, walletUsers
 			log.Errorf("Error %v", err)
 		}
 		connCfg := &dcrrpcclient.ConnConfig{
-			Host:         walletHosts[i],
-			Endpoint:     "ws",
-			User:         walletUsers[i],
-			Pass:         walletPasswords[i],
-			Certificates: certs,
+			Host:                 walletHosts[i],
+			Endpoint:             "ws",
+			User:                 walletUsers[i],
+			Pass:                 walletPasswords[i],
+			Certificates:         certs,
+			DisableAutoReconnect: true,
 		}
 
 		client, err := dcrrpcclient.New(connCfg, nil)
