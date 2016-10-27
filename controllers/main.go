@@ -546,6 +546,11 @@ func (controller *MainController) RPCIsStopped() bool {
 	return controller.rpcServers.IsStopped()
 }
 
+// WalletStatus returns current WalletInfo from all rpcServers
+func (controller *MainController) WalletStatus() ([]*dcrjson.WalletInfoResult, error) {
+	return controller.rpcServers.WalletStatus()
+}
+
 // handlePotentialFatalError is a helper funtion to do log possibly
 // fatal rpc errors and also stops the servers to avoid any potential
 // further damage.
@@ -1399,13 +1404,16 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 func (controller *MainController) Status(c web.C, r *http.Request) (string, int) {
 	var rpcstatus = "Running"
 
-	if controller.RPCIsStopped() {
-		rpcstatus = "Stopped"
+	t := controller.GetTemplate(c)
+
+	walletInfo, err := controller.WalletStatus()
+	if err != nil {
+		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
 	}
 
-	t := controller.GetTemplate(c)
 	c.Env["IsStatus"] = true
 	c.Env["Title"] = "Decred Stake Pool - Status"
+	c.Env["WalletInfo"] = walletInfo
 	c.Env["RPCStatus"] = rpcstatus
 
 	var widgets = controller.Parse(t, "status", c.Env)

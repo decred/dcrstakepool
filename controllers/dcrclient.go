@@ -185,7 +185,8 @@ type getStakeInfoMsg struct {
 
 // connectedResponse
 type connectedResponse struct {
-	err error
+	walletInfo []*dcrjson.WalletInfoResult
+	err        error
 }
 
 // connectedMsg
@@ -625,7 +626,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				return fmt.Errorf("wallet server %v locked", i)
 			}
 		}
-
+		resp.walletInfo = wirs
 		resp.err = nil
 		return resp
 
@@ -671,13 +672,13 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 
 // ping pings all the servers and makes sure they're online. This should be
 // performed before doing a write.
-func (w *walletSvrManager) connected() error {
+func (w *walletSvrManager) connected() ([]*dcrjson.WalletInfoResult, error) {
 	reply := make(chan connectedResponse)
 	w.msgChan <- connectedMsg{
 		reply: reply,
 	}
 	response := <-reply
-	return response.err
+	return response.walletInfo, response.err
 }
 
 // syncTickets is called when checkForSyncness has returned false and the wallets
@@ -782,7 +783,7 @@ func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
 // a failure, it should be considered fatal.
 func (w *walletSvrManager) GetNewAddress() (dcrutil.Address, error) {
 	// Assert that all servers are online.
-	err := w.connected()
+	_, err := w.connected()
 	if err != nil {
 		return nil, connectionError(err)
 	}
@@ -799,7 +800,7 @@ func (w *walletSvrManager) GetNewAddress() (dcrutil.Address, error) {
 // a failure, it should be considered fatal.
 func (w *walletSvrManager) ValidateAddress(addr dcrutil.Address) (*dcrjson.ValidateAddressWalletResult, error) {
 	// Assert that all servers are online.
-	err := w.connected()
+	_, err := w.connected()
 	if err != nil {
 		return nil, connectionError(err)
 	}
@@ -819,7 +820,7 @@ func (w *walletSvrManager) ValidateAddress(addr dcrutil.Address) (*dcrjson.Valid
 // a failure, it should be considered fatal.
 func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*dcrjson.CreateMultiSigResult, error) {
 	// Assert that all servers are online.
-	err := w.connected()
+	_, err := w.connected()
 	if err != nil {
 		return nil, connectionError(err)
 	}
@@ -840,7 +841,7 @@ func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*d
 // a failure, it should be considered fatal.
 func (w *walletSvrManager) ImportScript(script []byte, height int) error {
 	// Assert that all servers are online.
-	err := w.connected()
+	_, err := w.connected()
 	if err != nil {
 		return connectionError(err)
 	}
@@ -925,7 +926,7 @@ func (w *walletSvrManager) GetTicketsVoteBits(hashes []*chainhash.Hash) (*dcrjso
 // a failure, it should be considered fatal.
 func (w *walletSvrManager) SetTicketVoteBits(hash *chainhash.Hash, voteBits uint16) error {
 	// Assert that all servers are online.
-	err := w.connected()
+	_, err := w.connected()
 	if err != nil {
 		return connectionError(err)
 	}
@@ -1119,6 +1120,11 @@ func (w *walletSvrManager) Stop() error {
 // IsStopped returns whether the shutdown field has been engaged.
 func (w *walletSvrManager) IsStopped() bool {
 	return w.shutdown == 1
+}
+
+// IsStopped
+func (w *walletSvrManager) WalletStatus() ([]*dcrjson.WalletInfoResult, error) {
+	return w.connected()
 }
 
 // checkIfWalletConnected checks to see if the passed wallet's client is connected
