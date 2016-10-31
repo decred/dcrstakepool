@@ -5,16 +5,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
-	"sync/atomic"
-	"time"
 	"net/smtp"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
-
-	"html/template"
 
 	"github.com/decred/dcrd/chaincfg"
 	// "github.com/decred/dcrd/dcrjson"
@@ -22,12 +19,12 @@ import (
 	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/waddrmgr"
 
+	"github.com/decred/dcrd/blockchain/stake"
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/system"
 	"github.com/haisum/recaptcha"
 	"github.com/zenazn/goji/web"
-	"github.com/decred/dcrd/blockchain/stake"
 	"gopkg.in/gorp.v1"
 )
 
@@ -522,16 +519,41 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 	return addrs[0], nil
 }
 
-// RPCStart
+// RPCSync
 func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 	multisigScripts, err := models.GetAllCurrentMultiSigScripts(dbMap)
 	if err != nil {
 		return err
 	}
+
 	err = walletSvrsSync(controller.rpcServers, multisigScripts)
 	if err != nil {
 		return err
 	}
+
+	// TODO: Wait for wallets to sync, or schedule the vote bits sync somehow.
+	// For now, just skip full vote bits sync in favor of on-demand user's vote
+	// bits sync if the wallets are busy at this point.
+
+	// Allow sync to get going before attempting vote bits sync.
+	time.Sleep(2 * time.Second)
+
+	// Look for that -4 message from wallet that says: "the wallet is
+	// currently syncing to the best block, please try again later"
+	err = controller.rpcServers.CheckWalletsReady()
+	if err != nil /*strings.Contains(err.Error(), "try again later")*/ {
+		// If importscript is running, it will take a while.
+		log.Errorf("Wallets are syncing. Unable to initiate votebits sync: %v",
+			err)
+	} else {
+		// Sync vote bits for all tickets owned by the wallet
+		err = controller.rpcServers.SyncVoteBits()
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -1727,7 +1749,7 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 			len(liveTicketHashes))
 
 		vbs := make([]stake.VoteBits, len(liveTicketHashes))
-		for i := 0; i<len(liveTicketHashes); i++ {
+		for i := 0; i < len(liveTicketHashes); i++ {
 			vbs[i] = stake.VoteBits{Bits: voteBits}
 			//vbs[i].Bits = voteBits
 		}
