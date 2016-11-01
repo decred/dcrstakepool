@@ -1441,6 +1441,11 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 			walletPageInfo[i] = WalletInfoPage{
 				Connected: false,
 			}
+			controller.rpcServers.DisconnectWalletRPC(i)
+			err = controller.rpcServers.ReconnectWalletRPC(i)
+			if err != nil {
+				log.Infof("wallet rpc reconnect failed: server %v %v", i, err)
+			}
 			continue
 		}
 		// Wallet has been successfully queried.
