@@ -686,7 +686,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 			spuirs[i] = spuir
 		}
-		if !checkForSyncness(spuirs) {
+		if !w.checkForSyncness(spuirs) {
 			log.Infof("StakePoolUserInfo across wallets are not synced.  Attempting to sync now")
 			w.syncTickets(spuirs)
 		}
@@ -732,6 +732,9 @@ func (w *walletSvrManager) connected() ([]*dcrjson.WalletInfoResult, error) {
 // addticket rpc command to add that ticket to the invalid wallet.
 func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult) error {
 	for i := 0; i < len(spuirs); i++ {
+		if w.servers[i] == nil {
+			continue
+		}
 		for j := 0; j < len(spuirs); j++ {
 			if w.servers[j] == nil {
 				continue
@@ -769,9 +772,15 @@ func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult
 // that each share the others PoolTickets and have the same
 // valid/invalid lists.  If any thing is deemed off then syncTickets
 // call is made.
-func checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
+func (w *walletSvrManager) checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
 	for i := 0; i < len(spuirs); i++ {
+		if w.servers[i] == nil {
+			continue
+		}
 		for k := 0; k < len(spuirs); k++ {
+			if w.servers[k] == nil {
+				continue
+			}
 			if &spuirs[i] == &spuirs[k] {
 				continue
 			}
