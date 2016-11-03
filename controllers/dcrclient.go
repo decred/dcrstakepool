@@ -302,15 +302,20 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case getNewAddressFn:
 		resp := new(getNewAddressResponse)
 		addrs := make([]dcrutil.Address, w.serversLen, w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			addr, err := s.GetNewAddress("default")
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("getNewAddressFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				addrs[i] = nil
+				disconnectCount++
+				continue
 			}
 			addrs[i] = addr
 		}
@@ -328,7 +333,12 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 		}
 
-		resp.address = addrs[0]
+		for i := range addrs {
+			if addrs[i] != nil {
+				resp.address = addrs[i]
+				break
+			}
+		}
 		return resp
 
 	case validateAddressFn:
@@ -336,15 +346,20 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(validateAddressResponse)
 		vawrs := make([]*dcrjson.ValidateAddressWalletResult, w.serversLen,
 			w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			vawr, err := s.ValidateAddress(vam.address)
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("validateAddressFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				vawrs[i] = nil
+				disconnectCount++
+				continue
 			}
 			vawrs[i] = vawr
 		}
@@ -361,7 +376,12 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 		}
 
-		resp.addrInfo = vawrs[0]
+		for i := range vawrs {
+			if vawrs[i] != nil {
+				resp.addrInfo = vawrs[i]
+				break
+			}
+		}
 		return resp
 
 	case createMultisigFn:
@@ -369,15 +389,20 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(createMultisigResponse)
 		cmsrs := make([]*dcrjson.CreateMultiSigResult, w.serversLen,
 			w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			cmsr, err := s.CreateMultisig(cmsm.required, cmsm.addresses)
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("createMultisigFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				cmsrs[i] = nil
+				disconnectCount++
+				continue
 			}
 			cmsrs[i] = cmsr
 		}
@@ -394,7 +419,12 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 		}
 
-		resp.multisigInfo = cmsrs[0]
+		for i := range cmsrs {
+			if cmsrs[i] != nil {
+				resp.multisigInfo = cmsrs[i]
+				break
+			}
+		}
 		return resp
 
 	case importScriptFn:
@@ -441,20 +471,30 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(ticketsForAddressResponse)
 		tfars := make([]*dcrjson.TicketsForAddressResult, w.serversLen,
 			w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			tfar, err := s.TicketsForAddress(tfam.address)
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("ticketsForAddressFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				tfars[i] = nil
+				disconnectCount++
+				continue
 			}
 			tfars[i] = tfar
 		}
 
-		resp.tickets = tfars[0]
+		for i := range tfars {
+			if tfars[i] != nil {
+				resp.tickets = tfars[i]
+				break
+			}
+		}
 		return resp
 
 	case getTicketVoteBitsFn:
@@ -462,15 +502,20 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(getTicketVoteBitsResponse)
 		gtvbrs := make([]*dcrjson.GetTicketVoteBitsResult, w.serversLen,
 			w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			gtvbr, err := s.GetTicketVoteBits(gtvbm.hash)
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("getTicketVoteBitsFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				gtvbrs[i] = nil
+				disconnectCount++
+				continue
 			}
 			gtvbrs[i] = gtvbr
 		}
@@ -487,7 +532,12 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 		}
 
-		resp.voteBits = gtvbrs[0]
+		for i := range gtvbrs {
+			if gtvbrs[i] != nil {
+				resp.voteBits = gtvbrs[i]
+				break
+			}
+		}
 		return resp
 
 	case getTicketsVoteBitsFn:
@@ -495,15 +545,20 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(getTicketsVoteBitsResponse)
 		gtvbrs := make([]*dcrjson.GetTicketsVoteBitsResult, w.serversLen,
 			w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			gtvbr, err := s.GetTicketsVoteBits(gtvbm.hashes)
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("getTicketsVoteBitsFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				gtvbrs[i] = nil
+				disconnectCount++
+				continue
 			}
 			gtvbrs[i] = gtvbr
 		}
@@ -542,7 +597,12 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 		}
 
-		resp.voteBitsList = gtvbrs[0]
+		for i := range gtvbrs {
+			if gtvbrs[i] != nil {
+				resp.voteBitsList = gtvbrs[i]
+				break
+			}
+		}
 		return resp
 
 	case setTicketVoteBitsFn:
@@ -550,10 +610,11 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(setTicketVoteBitsResponse)
 		for i, s := range w.servers {
 			err := s.SetTicketVoteBits(stvbm.hash, stvbm.voteBits)
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("setTicketVoteBitsFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
 			}
 		}
 
@@ -564,15 +625,20 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(getTxOutResponse)
 		gtors := make([]*dcrjson.GetTxOutResult, w.serversLen,
 			w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			gtor, err := s.GetTxOut(gtom.hash, gtom.idx, true)
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("getTxOutFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				gtors[i] = nil
+				disconnectCount++
+				continue
 			}
 			gtors[i] = gtor
 		}
@@ -589,22 +655,32 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 		}
 
-		resp.txOut = gtors[0]
+		for i := range gtors {
+			if gtors[i] != nil {
+				resp.txOut = gtors[i]
+				break
+			}
+		}
 		return resp
 
 	case getStakeInfoFn:
 		resp := new(getStakeInfoResponse)
 		gsirs := make([]*dcrjson.GetStakeInfoResult, w.serversLen,
 			w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			gsir, err := s.GetStakeInfo()
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("getStakeInfoFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				gsirs[i] = nil
+				disconnectCount++
+				continue
 			}
 			gsirs[i] = gsir
 		}
@@ -621,7 +697,12 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			}
 		}
 
-		resp.stakeInfo = gsirs[0]
+		for i := range gsirs {
+			if gsirs[i] != nil {
+				resp.stakeInfo = gsirs[i]
+				break
+			}
+		}
 		return resp
 
 	// connectedFn actually requests walletinfo from the wallet and makes
@@ -630,16 +711,20 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(connectedResponse)
 		resp.err = nil
 		wirs := make([]*dcrjson.WalletInfoResult, w.serversLen, w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			wir, err := s.WalletInfo()
-			if err != nil {
-				// Wallet is not responding so we log server connect err.
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("connectedFn failure on server %v: %v", i, err)
 				resp.err = err
+				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
 				wirs[i] = nil
+				disconnectCount++
+				continue
 			}
 			wirs[i] = wir
 		}
@@ -674,15 +759,20 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(stakePoolUserInfoResponse)
 		spuirs := make([]*dcrjson.StakePoolUserInfoResult, w.serversLen,
 			w.serversLen)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			spuir, err := s.StakePoolUserInfo(spuim.userAddr)
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("stakePoolUserInfoFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				spuirs[i] = nil
+				disconnectCount++
+				continue
 			}
 			spuirs[i] = spuir
 		}
@@ -690,19 +780,29 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			log.Infof("StakePoolUserInfo across wallets are not synced.  Attempting to sync now")
 			w.syncTickets(spuirs)
 		}
-		resp.userInfo = spuirs[0]
+
+		for i := range spuirs {
+			if spuirs[i] != nil {
+				resp.userInfo = spuirs[i]
+				break
+			}
+		}
 		return resp
 	case getBestBlockFn:
 		resp := new(getBestBlockResponse)
+		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
 			}
 			hash, height, err := s.GetBestBlock()
-			if err != nil {
+			if err != nil && err != dcrrpcclient.ErrClientDisconnect {
 				log.Infof("getBestBlockFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
+			} else if err != nil && err == dcrrpcclient.ErrClientDisconnect {
+				disconnectCount++
+				continue
 			}
 			resp.bestBlockHeight = height
 			resp.bestBlockHash = hash
