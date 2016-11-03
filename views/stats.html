@@ -29,6 +29,9 @@
 		<tr><td><span style="font-size: larger;">Live:</span></td><td><span id="Live">{{ .StakeInfo.Live }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Voted:</span></td><td><span id="Voted">{{ .StakeInfo.Voted }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Missed:</span></td><td><span id="Missed">{{ .StakeInfo.Missed }}</span></td></tr>
+		{{if .StakeInfo.Expired}}
+		<tr><td><span style="font-size: larger;">Expired:</span></td><td><span id="Expired">{{ .StakeInfo.Expired }}</span></td></tr>
+		{{end}}
 		<tr><td><span style="font-size: larger;">Revoked:</span></td><td><span id="Revoked">{{ .StakeInfo.Revoked }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">ProportionMissed:</span></td><td><span id="ProportionMissed">{{ .StakeInfo.ProportionMissed }}</span></td></tr>
 		<tr><td><span style="font-size: larger;">Pool Size:</span></td><td><span id="PoolSize">{{ .StakeInfo.PoolSize }}</span></td></tr>

@@ -1,5 +1,5 @@
 hash: b39ac67a1cf2a8ba64fa61f0fe240d7fa7549955a603c55e6876076ba4c5280e
-updated: 2016-10-12T16:37:54.105922294-05:00
+updated: 2016-11-03T14:30:54.541716569-05:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
@@ -14,12 +14,12 @@ imports:
 - name: github.com/btcsuite/golangcrypto
   version: 53f62d9b43e87a6c56975cf862af7edf33a8d0df
   subpackages:
-  - ripemd160
   - nacl/secretbox
-  - scrypt
-  - poly1305
-  - salsa20/salsa
   - pbkdf2
+  - poly1305
+  - ripemd160
+  - salsa20/salsa
+  - scrypt
 - name: github.com/btcsuite/seelog
   version: 313961b101eb55f65ae0f03ddd4e322731763b6c
 - name: github.com/btcsuite/websocket
@@ -27,40 +27,40 @@ imports:
 - name: github.com/decred/blake256
   version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: c796d13e7092a6de50c3d7545a33803f4bd9f479
+  version: e7dcfbc982bae8275c1f24ceb50813ac9f7a7659
   subpackages:
   - addrmgr
   - blockchain
-  - blockchain/stake
-  - chaincfg
-  - chaincfg/chainhash
-  - database
-  - dcrjson
-  - txscript
-  - wire
   - blockchain/internal/dbnamespace
   - blockchain/internal/progresslog
-  - chaincfg/chainec
+  - blockchain/stake
   - blockchain/stake/internal/dbnamespace
   - blockchain/stake/internal/ticketdb
   - blockchain/stake/internal/tickettreap
+  - chaincfg
+  - chaincfg/chainec
+  - chaincfg/chainhash
+  - database
   - dcrec/edwards
   - dcrec/secp256k1
   - dcrec/secp256k1/schnorr
+  - dcrjson
+  - txscript
+  - wire
 - name: github.com/decred/dcrrpcclient
   version: 0f562bb540de12dfd5248aee87063eaa4792705f
 - name: github.com/decred/dcrutil
   version: 0484582bf5503574d824f110e836a8c48aa60c8c
   subpackages:
-  - hdkeychain
   - base58
+  - hdkeychain
 - name: github.com/decred/dcrwallet
   version: 726012471ceb6ed61025395d43d624b37a0417c0
   subpackages:
-  - waddrmgr
   - internal/zero
   - pgpwordlist
   - snacl
+  - waddrmgr
   - walletdb
 - name: github.com/decred/ed25519
   version: b0909d3f798b97a03c9e77023f97a5301a2a7900
@@ -87,14 +87,14 @@ imports:
 - name: github.com/zenazn/goji
   version: 64eb34159fe53473206c2b3e70fe396a639452f2
   subpackages:
+  - bind
   - graceful
+  - graceful/listener
   - web
   - web/middleware
-  - bind
-  - graceful/listener
   - web/mutil
 - name: golang.org/x/crypto
-  version: 4cd25d65a015cc83d41bf3454e6e8d6c116d16da
+  version: 8e06e8ddd9629eb88639aba897641bff8031f1d3
   subpackages:
   - bcrypt
   - blowfish
