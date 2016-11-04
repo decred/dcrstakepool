@@ -8,6 +8,10 @@ body {
 	margin-bottom: 60px;
 }
 
+.panel-body  {
+    word-break: break-all;
+}
+
 .panel-heading a:after {
     font-family:'Glyphicons Halflings';
     content:"\e114";
