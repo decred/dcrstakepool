@@ -3,9 +3,11 @@ package controllers
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/smtp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +34,13 @@ const disapproveBlockMask = 0x0000
 // approveBlockMask
 const approveBlockMask = 0x0001
 
+const signupEmailTemplate = "A request for an account for __URL__\r\n" +
+	"was made from __REMOTEIP__ for this email address.\r\n\n" +
+	"If you made this request, follow the link below:\r\n\n" +
+	"__URL__/emailverify?t=__TOKEN__\r\n\n" +
+	"to verify your email address and finalize registration.\r\n\n"
+const signupEmailSubject = "Stake pool email verification"
+
 // MainController
 type MainController struct {
 	system.Controller
@@ -51,6 +60,7 @@ type MainController struct {
 	smtpHost         string
 	smtpUsername     string
 	smtpPassword     string
+	version          string
 }
 
 func randToken() string {
@@ -64,8 +74,8 @@ func NewMainController(params *chaincfg.Params, baseURL string, closePool bool,
 	closePoolMsg string, extPubStr string, poolEmail string, poolFees float64,
 	poolLink string, recaptchaSecret string, recaptchaSiteKey string,
 	smtpFrom string, smtpHost string, smtpUsername string, smtpPassword string,
-	walletHosts []string, walletCerts []string, walletUsers []string,
-	walletPasswords []string) (*MainController, error) {
+	version string, walletHosts []string, walletCerts []string,
+	walletUsers []string, walletPasswords []string) (*MainController, error) {
 	// Parse the extended public key and the pool fees.
 	key, err := hdkeychain.NewKeyFromString(extPubStr)
 	if err != nil {
@@ -93,9 +103,367 @@ func NewMainController(params *chaincfg.Params, baseURL string, closePool bool,
 		smtpHost:         smtpHost,
 		smtpUsername:     smtpUsername,
 		smtpPassword:     smtpPassword,
+		version:          version,
 	}
 
 	return mc, nil
+}
+
+// API is the main frontend that handles all API requests.
+// XXX This is very hacky.  It can be made more elegant by improving or
+// re-writing the middleware and switching to a more modern framework
+// such as goji2 or something else that utilizes the context package/built-in.
+// This would make it much easier to share code between the web UI and JSON
+// API with less duplication.
+func (controller *MainController) API(c web.C, r *http.Request) (string, int) {
+	// we expect /api/vX.YZ/command
+	URIparts := strings.Split(r.RequestURI, "/")
+	if len(URIparts) != 4 {
+		return "{\"status\": \"error\"," +
+			"\"message\": \"invalid API request\"}\n", http.StatusOK
+	}
+	version := URIparts[2]
+	command := URIparts[3]
+
+	if version != "v0.1" {
+		return "{\"status\": \"error\"," +
+			"\"message\": \"invalid API version\"}\n", http.StatusOK
+	}
+
+	switch r.Method {
+	case "GET":
+		switch command {
+		case "getPurchaseInfo":
+			data, response, err := controller.APIPurchaseInfo(c, r)
+			return APIResponse(data, response, err), http.StatusOK
+		case "startsession":
+			return APIResponse(nil, "session started", nil), http.StatusOK
+		case "stats":
+			data, response, err := controller.APIStats(c, r)
+			return APIResponse(data, response, err), http.StatusOK
+		}
+	case "POST":
+		switch command {
+		case "address":
+			_, response, err := controller.APIAddress(c, r)
+			return APIResponse(nil, response, err), http.StatusOK
+		case "signin":
+			_, response, err := controller.APISignIn(c, r)
+			return APIResponse(nil, response, err), http.StatusOK
+		case "signup":
+			_, response, err := controller.APISignUp(c, r)
+			return APIResponse(nil, response, err), http.StatusOK
+		}
+	}
+
+	return "{\"status\": \"error\"," +
+		"\"message\": \"invalid API command\"}\n", http.StatusOK
+}
+
+// APIAddress is AddressPost API'd a bit
+func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string, string, error) {
+	session := controller.GetSession(c)
+	dbMap := controller.GetDbMap(c)
+
+	if session.Values["UserId"] == nil {
+		return nil, "address error", errors.New("invalid session")
+	}
+
+	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+
+	// User may have a session so error out here as well
+	if controller.closePool {
+		return nil, "pool is closed", errors.New(controller.closePoolMsg)
+	}
+
+	if session.Values["UserId"] == nil {
+		return nil, "address error", errors.New("invalid session")
+	}
+
+	if len(user.UserPubKeyAddr) > 0 {
+		return nil, "address error", errors.New("address already submitted")
+	}
+
+	userPubKeyAddr := r.FormValue("UserPubKeyAddr")
+
+	if len(userPubKeyAddr) < 40 {
+		return nil, "address error", errors.New("address too short")
+	}
+
+	if len(userPubKeyAddr) > 65 {
+		return nil, "address error", errors.New("address too long")
+	}
+
+	u, err := dcrutil.DecodeAddress(userPubKeyAddr, controller.params)
+	if err != nil {
+		return nil, "address error", errors.New("couldn't decode address")
+	}
+
+	_, is := u.(*dcrutil.AddressSecpPubKey)
+	if !is {
+		return nil, "address error", errors.New("incorrect address type")
+	}
+
+	if controller.RPCIsStopped() {
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+	pooladdress, err := controller.rpcServers.GetNewAddress()
+	if err != nil {
+		controller.handlePotentialFatalError("GetNewAddress", err)
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+
+	if controller.RPCIsStopped() {
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+	poolValidateAddress, err := controller.rpcServers.ValidateAddress(pooladdress)
+	if err != nil {
+		controller.handlePotentialFatalError("ValidateAddress pooladdress", err)
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
+
+	p, err := dcrutil.DecodeAddress(poolPubKeyAddr, controller.params)
+	if err != nil {
+		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+
+	if controller.RPCIsStopped() {
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+	createMultiSig, err := controller.rpcServers.CreateMultisig(1, []dcrutil.Address{p, u})
+	if err != nil {
+		controller.handlePotentialFatalError("CreateMultisig", err)
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+
+	if controller.RPCIsStopped() {
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+	_, bestBlockHeight, err := controller.rpcServers.GetBestBlock()
+	if err != nil {
+		controller.handlePotentialFatalError("GetBestBlock", err)
+	}
+
+	if controller.RPCIsStopped() {
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
+	if err != nil {
+		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+	err = controller.rpcServers.ImportScript(serializedScript, int(bestBlockHeight))
+	if err != nil {
+		controller.handlePotentialFatalError("ImportScript", err)
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+
+	uid64 := session.Values["UserId"].(int64)
+	userFeeAddr, err := controller.FeeAddressForUserID(int(uid64))
+	if err != nil {
+		log.Warnf("unexpected error deriving pool addr: %s", err.Error())
+		return nil, "system error", errors.New("unable to process wallet commands")
+	}
+
+	models.UpdateUserById(dbMap, uid64, createMultiSig.Address,
+		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
+		userFeeAddr.EncodeAddress(), bestBlockHeight)
+
+	return nil, "address successfully imported", nil
+}
+
+// APIResponse formats a response
+func APIResponse(data []string, response string, err error) string {
+	if err != nil {
+		return "{\"status\":\"error\"," +
+			"\"message\":\"" + response + " - " + err.Error() + "\"}\n"
+	}
+
+	successResp := "{\"status\":\"success\"," +
+		"\"message\":\"" + response + "\""
+
+	if data != nil {
+		// append the key+value pairs in data
+		successResp = successResp + ",\"data\":{"
+		for i := 0; i < len(data)-1; i = i + 2 {
+			successResp = successResp + "\"" + data[i] + "\":" + "\"" + data[i+1] + "\","
+		}
+		successResp = strings.TrimSuffix(successResp, ",") + "}"
+	}
+
+	successResp = successResp + "}\n"
+
+	return successResp
+}
+
+// APIPurchaseInfo fetches and returns the user's info or an error
+func (controller *MainController) APIPurchaseInfo(c web.C, r *http.Request) ([]string, string, error) {
+	session := controller.GetSession(c)
+	dbMap := controller.GetDbMap(c)
+
+	var purchaseInfo []string
+
+	if session.Values["UserId"] == nil {
+		return nil, "purchaseinfo error", errors.New("invalid session")
+	}
+
+	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+
+	if len(user.UserPubKeyAddr) == 0 {
+		return nil, "purchaseinfo error", errors.New("no address submitted")
+	}
+
+	purchaseInfo = append(purchaseInfo,
+		"pooladdress", user.UserFeeAddr,
+		"poolfees", strconv.FormatFloat(controller.poolFees, 'f', 2, 64),
+		"script", user.MultiSigScript,
+		"ticketaddress", user.MultiSigAddress,
+	)
+
+	return purchaseInfo, "purchaseinfo successfully retrieved", nil
+}
+
+// APISignIn is SignInPost API'd a bit
+func (controller *MainController) APISignIn(c web.C, r *http.Request) ([]string, string, error) {
+	email, password := r.FormValue("email"), r.FormValue("password")
+
+	session := controller.GetSession(c)
+	dbMap := controller.GetDbMap(c)
+
+	user, err := helpers.Login(dbMap, email, password)
+
+	if err != nil {
+		log.Infof("error logging in with email %v password %v err %v", email, password, err)
+		return nil, "auth error", errors.New("invalid email or password")
+	}
+
+	if user.EmailVerified == 0 {
+		return nil, "auth error", errors.New("you must validate your email address")
+	}
+
+	if controller.closePool {
+		if len(user.UserPubKeyAddr) == 0 {
+			return nil, "pool is closed", errors.New(controller.closePoolMsg)
+		}
+	}
+
+	session.Values["UserId"] = user.Id
+
+	return nil, "successfully signed in", nil
+}
+
+// APISignUp is SignUpPost API'd a bit
+func (controller *MainController) APISignUp(c web.C, r *http.Request) ([]string, string, error) {
+	if controller.closePool {
+		log.Infof("attempt to signup while registration disabled")
+		return nil, "pool is closed", errors.New(controller.closePoolMsg)
+	}
+
+	email, password, passwordRepeat := r.FormValue("email"),
+		r.FormValue("password"), r.FormValue("passwordrepeat")
+
+	if !strings.Contains(email, "@") {
+		return nil, "signup error", errors.New("email address is invalid")
+	}
+
+	if password == "" {
+		return nil, "signup error", errors.New("password cannot be empty")
+	}
+
+	if password != passwordRepeat {
+		return nil, "signup error", errors.New("passwords do not match")
+	}
+
+	dbMap := controller.GetDbMap(c)
+	user := models.GetUserByEmail(dbMap, email)
+
+	if user != nil {
+		return nil, "signup error", errors.New("email address already in use")
+	}
+
+	token := randToken()
+	user = &models.User{
+		Username:      email,
+		Email:         email,
+		EmailToken:    token,
+		EmailVerified: 0,
+	}
+	user.HashPassword(password)
+
+	if err := models.InsertUser(dbMap, user); err != nil {
+		return nil, "signup error", errors.New("unable to insert new user into db")
+	}
+
+	remoteIP := r.RemoteAddr
+	if strings.Contains(remoteIP, ":") {
+		parts := strings.Split(remoteIP, ":")
+		remoteIP = parts[0]
+	}
+
+	body := signupEmailTemplate
+	body = strings.Replace(body, "__URL__", controller.baseURL, -1)
+	body = strings.Replace(body, "__REMOTEIP__", remoteIP, -1)
+	body = strings.Replace(body, "__TOKEN__", token, -1)
+
+	err := controller.SendMail(user.Email, signupEmailSubject, body)
+	if err != nil {
+		log.Errorf("error sending verification email %v", err)
+		return nil, "signup error", errors.New("unable to send signup email")
+	}
+
+	return nil, "A verification email has been sent to " + email, nil
+}
+
+// APIStats fetches is Stats() API'd a bit
+func (controller *MainController) APIStats(c web.C, r *http.Request) ([]string, string, error) {
+	var stats []string
+
+	dbMap := controller.GetDbMap(c)
+	userCount := models.GetUserCount(dbMap)
+	userCountActive := models.GetUserCountActive(dbMap)
+
+	if controller.RPCIsStopped() {
+		return nil, "stats error", errors.New("RPC server stopped")
+	}
+	gsi, err := controller.rpcServers.GetStakeInfo()
+	if err != nil {
+		log.Infof("RPC GetStakeInfo failed: %v", err)
+		return nil, "stats error", errors.New("RPC server error")
+	}
+
+	poolStatus := "Unknown"
+	if controller.closePool {
+		poolStatus = "Closed"
+	} else {
+		poolStatus = "Open"
+	}
+
+	stats = append(stats,
+		"AllMempoolTix", fmt.Sprintf("%d", gsi.AllMempoolTix),
+		"BlockHeight", fmt.Sprintf("%d", gsi.BlockHeight),
+		"Difficulty", fmt.Sprintf("%f", gsi.Difficulty),
+		"Immature", fmt.Sprintf("%d", gsi.Immature),
+		"Live", fmt.Sprintf("%d", gsi.Live),
+		"Missed", fmt.Sprintf("%d", gsi.Missed),
+		"OwnMempoolTix", fmt.Sprintf("%d", gsi.OwnMempoolTix),
+		"PoolSize", fmt.Sprintf("%d", gsi.PoolSize),
+		"ProportionLive", fmt.Sprintf("%f", gsi.ProportionLive),
+		"ProportionMissed", fmt.Sprintf("%f", gsi.ProportionMissed),
+		"Revoked", fmt.Sprintf("%d", gsi.Revoked),
+		"TotalSubsidy", fmt.Sprintf("%f", gsi.TotalSubsidy),
+		"Voted", fmt.Sprintf("%d", gsi.Voted),
+		"Network", controller.params.Name,
+		"PoolEmail", controller.poolEmail,
+		"PoolFees", strconv.FormatFloat(controller.poolFees, 'f', 2, 64),
+		"PoolStatus", poolStatus,
+		"UserCount", fmt.Sprintf("%d", userCount),
+		"UserCountActive", fmt.Sprintf("%d", userCountActive),
+		"Version", controller.version,
+	)
+
+	return stats, "stats successfully retrieved", nil
 }
 
 // SendMail sends an email with the passed data using the system's SMTP
@@ -804,7 +1172,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		if err != nil {
 			log.Errorf("error updating password %v", err)
 			session.AddFlash("Unable to update password", "settingsError")
-			return controller.PasswordUpdate(c, r)
+			return controller.Settings(c, r)
 		}
 
 		// send a confirmation email
@@ -922,9 +1290,14 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	email, password, passwordRepeat := r.FormValue("email"),
 		r.FormValue("password"), r.FormValue("passwordrepeat")
 
+	if !strings.Contains(email, "@") {
+		session.AddFlash("email address is invalid", "signupError")
+		return controller.SignUp(c, r)
+	}
+
 	if password == "" {
 		session.AddFlash("password cannot be empty", "signupError")
-		return controller.PasswordUpdate(c, r)
+		return controller.SignUp(c, r)
 	}
 
 	if password != passwordRepeat {
@@ -968,13 +1341,12 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 		remoteIP = parts[0]
 	}
 
-	body := "A request for an account for " + controller.baseURL + "\r\n" +
-		"was made from " + remoteIP + " for this email address.\r\n\n" +
-		"If you made this request, follow the link below:\r\n\n" +
-		controller.baseURL + "/emailverify?t=" + token + "\r\n\n" +
-		"to verify your email address and finalize registration.\r\n\n"
+	body := signupEmailTemplate
+	body = strings.Replace(body, "__URL__", controller.baseURL, -1)
+	body = strings.Replace(body, "__REMOTEIP__", remoteIP, -1)
+	body = strings.Replace(body, "__TOKEN__", token, -1)
 
-	err := controller.SendMail(user.Email, "Stake pool email verification", body)
+	err := controller.SendMail(user.Email, signupEmailSubject, body)
 	if err != nil {
 		session.AddFlash("Unable to send signup email", "signupError")
 		log.Errorf("error sending verification email %v", err)
@@ -995,17 +1367,8 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 
 	dbMap := controller.GetDbMap(c)
 
-	usercount, err := dbMap.SelectInt("SELECT COUNT(*) FROM Users")
-	if err != nil {
-		log.Infof("user count query failed")
-		return "/error?r=/stats", http.StatusSeeOther
-	}
-
-	usercountactive, err := dbMap.SelectInt("SELECT COUNT(*) FROM Users WHERE MultiSigAddress <> ''")
-	if err != nil {
-		log.Infof("user count query failed")
-		return "/error?r=/stats", http.StatusSeeOther
-	}
+	userCount := models.GetUserCount(dbMap)
+	userCountActive := models.GetUserCountActive(dbMap)
 
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
@@ -1025,8 +1388,8 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	c.Env["PoolEmail"] = controller.poolEmail
 	c.Env["PoolFees"] = controller.poolFees
 	c.Env["StakeInfo"] = gsi
-	c.Env["UserCount"] = usercount
-	c.Env["UserCountActive"] = usercountactive
+	c.Env["UserCount"] = userCount
+	c.Env["UserCountActive"] = userCountActive
 
 	var widgets = controller.Parse(t, "stats", c.Env)
 	c.Env["Content"] = template.HTML(widgets)
