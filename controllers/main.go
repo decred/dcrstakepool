@@ -268,7 +268,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, "system error", errors.New("unable to process wallet commands")
 	}
 
-	models.UpdateUserById(dbMap, uid64, createMultiSig.Address,
+	models.UpdateUserByID(dbMap, uid64, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
