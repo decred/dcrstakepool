@@ -32,7 +32,7 @@ const (
 	defaultDBPort           = 3306
 	defaultDBUser           = "stakepool"
 	defaultPoolEmail        = "admin@example.com"
-	defaultPoolFees         = 7.5
+	defaultPoolFees         = 5
 	defaultPoolLink         = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
 	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
 	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
@@ -90,8 +90,8 @@ type config struct {
 	Version          string
 }
 
-// serviceOptions defines the configuration options for the daemon as a service on
-// Windows.
+// serviceOptions defines the configuration options for the daemon as a service
+// on Windows.
 type serviceOptions struct {
 	ServiceCommand string `short:"s" long:"service" description:"Service command {install, remove, start, stop}"`
 }

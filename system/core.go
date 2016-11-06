@@ -108,11 +108,20 @@ func (application *Application) Route(controller interface{}, route string) inte
 			}
 		}
 
+		if respHeader, exists := c.Env["ResponseHeaderMap"]; exists {
+			if hdrMap, ok := respHeader.(map[string]string); ok {
+				for key, val := range hdrMap {
+					w.Header().Set(key, val)
+				}
+			}
+		}
+
 		switch code {
-		case http.StatusOK:
+		case http.StatusOK, http.StatusProcessing, http.StatusServiceUnavailable:
 			if _, exists := c.Env["Content-Type"]; exists {
 				w.Header().Set("Content-Type", c.Env["Content-Type"].(string))
 			}
+			w.WriteHeader(code)
 			io.WriteString(w, body)
 		case http.StatusSeeOther, http.StatusFound:
 			http.Redirect(w, r, body, code)
