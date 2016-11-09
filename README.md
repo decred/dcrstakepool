@@ -65,7 +65,7 @@ install the project.
 - Run the following command to obtain the dcrstakepool code and all dependencies:
 
 ```bash
-$ git clone https://github.com/decred/dcrstakepool-private $GOPATH/src/github.com/decred/dcrstakepool
+$ git clone https://github.com/decred/dcrstakepool $GOPATH/src/github.com/decred/dcrstakepool
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ glide install
 ```
@@ -236,7 +236,7 @@ done
 
 ## Issue Tracker
 
-The [integrated github issue tracker](https://github.com/decred/dcrstakepool-private/issues)
+The [integrated github issue tracker](https://github.com/decred/dcrstakepool/issues)
 is used for this project.
 
 ## License
