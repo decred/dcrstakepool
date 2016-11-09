@@ -232,7 +232,7 @@ done
 ## IRC
 
 - irc.freenode.net
-- channel #decred-stakepool (requires registered nickname and an invite -- to get an invite PM jolan on forum/freenode after registering with NickServ)
+- channel #decred
 
 ## Issue Tracker
 
