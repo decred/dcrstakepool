@@ -711,6 +711,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp := new(connectedResponse)
 		resp.err = nil
 		wirs := make([]*dcrjson.WalletInfoResult, w.serversLen, w.serversLen)
+		resp.walletInfo = wirs
 		disconnectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -751,7 +752,6 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		// wallets up/down is acceptable in the eyes of the admin.
 		// For example, allow for RPC calls to wallet if 2/3 are up,
 		// but err out and disallow if only 1/3 etc
-		resp.walletInfo = wirs
 		return resp
 
 	case stakePoolUserInfoFn:
