@@ -150,7 +150,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 	return addrs[0], nil
 }
 
-// RPCStart
+// RPCSync checks to ensure that the wallets are synced on startup
 func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 	multisigScripts, err := models.GetAllCurrentMultiSigScripts(dbMap)
 	if err != nil {
@@ -163,17 +163,17 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 	return nil
 }
 
-// RPCStart
+// RPCStart starts the connected rpcServers
 func (controller *MainController) RPCStart() {
 	controller.rpcServers.Start()
 }
 
-// RPCStop
+// RPCStop stops the connected rpcServers
 func (controller *MainController) RPCStop() error {
 	return controller.rpcServers.Stop()
 }
 
-// RPCIsStopped
+// RPCIsStopped checks to see if w.shutdown is set or not
 func (controller *MainController) RPCIsStopped() bool {
 	return controller.rpcServers.IsStopped()
 }
@@ -212,7 +212,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Address form submit route
+// AddressPost is address form submit route
 func (controller *MainController) AddressPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 
@@ -457,7 +457,7 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Home page route
+// Index is the home page route
 func (controller *MainController) Index(c web.C, r *http.Request) (string, int) {
 	if controller.closePool {
 		c.Env["IsClosed"] = true
@@ -825,7 +825,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	return controller.Settings(c, r)
 }
 
-// Sign in route
+// SignIn route for basic signing in.
 func (controller *MainController) SignIn(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
@@ -841,8 +841,8 @@ func (controller *MainController) SignIn(c web.C, r *http.Request) (string, int)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Sign In form submit route. Logs user in or sets an appropriate message in
-// session if login was not successful
+// SignInPost is the form submit route. Logs user in or sets an appropriate message in
+// session if login was not successful.
 func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, int) {
 	email, password := r.FormValue("email"), r.FormValue("password")
 
@@ -880,7 +880,7 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 	return "/tickets", http.StatusSeeOther
 }
 
-// Sign up route
+// SignUp page route.
 func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
@@ -906,7 +906,8 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Sign Up form submit route. Registers new user or shows Sign Up route with appropriate messages set in session
+// SignUpPost form submit route. Registers new user or shows Sign Up route with appropriate
+// messages set in session.
 func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, int) {
 	if controller.closePool {
 		log.Infof("attempt to signup while registration disabled")
@@ -982,12 +983,10 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 		session.AddFlash("A verification email has been sent to "+email, "signupSuccess")
 	}
 
-	//session.Values["UserId"] = user.Id
-	//return "/address", http.StatusSeeOther
 	return controller.SignUp(c, r)
 }
 
-// Stats page route
+// Stats page route.
 func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	c.Env["IsStats"] = true
@@ -1034,7 +1033,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Status page route
+// Status page route.
 func (controller *MainController) Status(c web.C, r *http.Request) (string, int) {
 	var rpcstatus = "Running"
 
@@ -1057,7 +1056,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Tickets page route
+// Tickets page route.
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
 	type TicketInfoHistoric struct {
 		Ticket        string
@@ -1141,7 +1140,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 			tickethashes = append(tickethashes, th)
 		}
 
-		// TODO: only get votebits for live tickets
+		// TODO: only get votebits for live tickets.
 		gtvb, err := controller.rpcServers.GetTicketsVoteBits(tickethashes)
 		if err != nil {
 			log.Infof("GetTicketsVoteBits failed %v", err)
@@ -1187,10 +1186,9 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Tickets form submit route
+// TicketsPost form submit route.
 func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string, int) {
 	chooseallow := r.FormValue("chooseallow")
-	// votebitsmanual := r.FormValue("votebitsmanual")
 	var voteBits = uint16(0)
 
 	if chooseallow == "2" {
@@ -1252,7 +1250,7 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 	return "/tickets", http.StatusSeeOther
 }
 
-// This route logs user out
+// Logout this route logs user out.
 func (controller *MainController) Logout(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 
