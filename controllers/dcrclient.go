@@ -295,7 +295,7 @@ out:
 	log.Infof("Wallet RPC handler done")
 }
 
-// executeInSequence
+// executeInSequence is the mainhandler of all the incoming client functions.
 func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) interface{} {
 	switch fn {
 	case getNewAddressFn:
@@ -683,7 +683,7 @@ func (w *walletSvrManager) connected() error {
 // syncTickets is called when checkForSyncness has returned false and the wallets
 // PoolTickets need to be synced due to manual addtickets, or a status is off.
 // If a ticket is seen to be valid in 1 wallet and invalid in another, we use
-// addticket rpc command to add that ticket to the invalid wallet
+// addticket rpc command to add that ticket to the invalid wallet.
 func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult) error {
 	for i := 0; i < len(spuirs); i++ {
 		for j := 0; j < len(spuirs); j++ {
@@ -988,7 +988,7 @@ func (w *walletSvrManager) StakePoolUserInfo(userAddr dcrutil.Address) (*dcrjson
 	return response.userInfo, response.err
 }
 
-// GetBestBlock gets the current best block according the first wallet asked
+// GetBestBlock gets the current best block according the first wallet asked.
 func (w *walletSvrManager) GetBestBlock() (*chainhash.Hash, int64, error) {
 	reply := make(chan getBestBlockResponse)
 	w.msgChan <- getBestBlockMsg{
@@ -1044,7 +1044,7 @@ func (w *walletSvrManager) GetStakeInfo() (*dcrjson.GetStakeInfoResult, error) {
 }
 
 // getTicketsCacheData is a TicketsForAddressResult that also contains a time
-// at which TicketsForAddress was last called. The results should only update
+// at which TicketsForAddress was last called. The results should only update.
 type getTicketsCacheData struct {
 	res   *dcrjson.TicketsForAddressResult
 	timer time.Time
@@ -1116,7 +1116,7 @@ func (w *walletSvrManager) Stop() error {
 	return nil
 }
 
-// IsStopped
+// IsStopped returns whether the shutdown field has been engaged.
 func (w *walletSvrManager) IsStopped() bool {
 	return w.shutdown == 1
 }
