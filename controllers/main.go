@@ -1427,8 +1427,6 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 		Connected         bool
 		DaemonConnected   bool
 		Unlocked          bool
-		TxFee             float64
-		TicketFee         float64
 		TicketMaxPrice    float64
 		BalanceToMaintain float64
 		StakeMining       bool
@@ -1454,8 +1452,6 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 			Connected:         true,
 			DaemonConnected:   v.DaemonConnected,
 			Unlocked:          v.Unlocked,
-			TxFee:             v.TxFee,
-			TicketFee:         v.TicketFee,
 			TicketMaxPrice:    v.TicketMaxPrice,
 			BalanceToMaintain: v.BalanceToMaintain,
 			StakeMining:       v.StakeMining,
