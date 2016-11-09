@@ -65,7 +65,7 @@ install the project.
 - Run the following command to obtain the dcrstakepool code and all dependencies:
 
 ```bash
-$ git clone https://github.com/decred/dcrstakepool-private $GOPATH/src/github.com/decred/dcrstakepool
+$ git clone https://github.com/decred/dcrstakepool $GOPATH/src/github.com/decred/dcrstakepool
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ glide install
 ```
@@ -232,11 +232,11 @@ done
 ## IRC
 
 - irc.freenode.net
-- channel #decred-stakepool (requires registered nickname and an invite -- to get an invite PM jolan on forum/freenode after registering with NickServ)
+- channel #decred
 
 ## Issue Tracker
 
-The [integrated github issue tracker](https://github.com/decred/dcrstakepool-private/issues)
+The [integrated github issue tracker](https://github.com/decred/dcrstakepool/issues)
 is used for this project.
 
 ## License
