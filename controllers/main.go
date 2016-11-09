@@ -1249,7 +1249,7 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 	return "/tickets", http.StatusSeeOther
 }
 
-// Logout this route logs user out.
+// Logout the user.
 func (controller *MainController) Logout(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 
