@@ -5,7 +5,7 @@
 	</div>
 	<div class="panel-body" style="background-color: #333; color: #ffffff;">
 	{{if not .WalletInfo}}
-	<p><span style="font-size: larger;"><b>No live tickets.</b></span></p>
+	<p><span style="font-size: larger;"><b>Error receiving walletinfo</b></span></p>
 	{{end}}
 	{{if .WalletInfo}}
 	<table id="ticketslive" class="table table-condensed datatablesort">
