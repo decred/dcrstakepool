@@ -26,10 +26,10 @@ import (
 	"gopkg.in/gorp.v1"
 )
 
-// disapproveBlockMask
+// disapproveBlockMask checks to see if the votebits have been set to No.
 const disapproveBlockMask = 0x0000
 
-// approveBlockMask
+// approveBlockMask checks to see if votebits have been set to Yes.
 const approveBlockMask = 0x0001
 
 // MainController
@@ -59,7 +59,7 @@ func randToken() string {
 	return fmt.Sprintf("%x", b)
 }
 
-// NewMainController
+// NewMainController is the constructor for the entire controller routing.
 func NewMainController(params *chaincfg.Params, baseURL string, closePool bool,
 	closePoolMsg string, extPubStr string, poolEmail string, poolFees float64,
 	poolLink string, recaptchaSecret string, recaptchaSiteKey string,
@@ -99,7 +99,7 @@ func NewMainController(params *chaincfg.Params, baseURL string, closePool bool,
 }
 
 // SendMail sends an email with the passed data using the system's SMTP
-// configuration
+// configuration.
 func (controller *MainController) SendMail(emailaddress string, subject string, body string) error {
 
 	hostname := controller.smtpHost
@@ -150,7 +150,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 	return addrs[0], nil
 }
 
-// RPCSync checks to ensure that the wallets are synced on startup
+// RPCSync checks to ensure that the wallets are synced on startup.
 func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 	multisigScripts, err := models.GetAllCurrentMultiSigScripts(dbMap)
 	if err != nil {
@@ -163,22 +163,24 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 	return nil
 }
 
-// RPCStart starts the connected rpcServers
+// RPCStart starts the connected rpcServers.
 func (controller *MainController) RPCStart() {
 	controller.rpcServers.Start()
 }
 
-// RPCStop stops the connected rpcServers
+// RPCStop stops the connected rpcServers.
 func (controller *MainController) RPCStop() error {
 	return controller.rpcServers.Stop()
 }
 
-// RPCIsStopped checks to see if w.shutdown is set or not
+// RPCIsStopped checks to see if w.shutdown is set or not.
 func (controller *MainController) RPCIsStopped() bool {
 	return controller.rpcServers.IsStopped()
 }
 
-// handlePotentialFatalError
+// handlePotentialFatalError is a helper funtion to do log possibly
+// fatal rpc errors and also stops the servers to avoid any potential
+// further damage.
 func (controller *MainController) handlePotentialFatalError(fn string, err error) {
 	cnErr, ok := err.(connectionError)
 	if ok {
@@ -188,7 +190,7 @@ func (controller *MainController) handlePotentialFatalError(fn string, err error
 	log.Infof("RPC %s failed: %v", fn, err)
 }
 
-// Address page route
+// Address renders the address page.
 func (controller *MainController) Address(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
@@ -200,9 +202,6 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	c.Env["IsAddress"] = true
 	c.Env["Network"] = controller.params.Name
 
-	//dbMap := controller.GetDbMap(c)
-	//user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
-
 	c.Env["Flash"] = session.Flashes("address")
 	var widgets = controller.Parse(t, "address", c.Env)
 
@@ -212,11 +211,11 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// AddressPost is address form submit route
+// AddressPost is address form submit route.
 func (controller *MainController) AddressPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 
-	// User may have a session so error out here as well
+	// User may have a session so error out here as well.
 	if controller.closePool {
 		session.AddFlash(controller.closePoolMsg, "address")
 		return controller.Address(c, r)
@@ -327,13 +326,13 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	return "/tickets", http.StatusSeeOther
 }
 
-// EmailUpdate validates the passed token and updates the user's email address
+// EmailUpdate validates the passed token and updates the user's email address.
 func (controller *MainController) EmailUpdate(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
-	// validate that the token is set, valid, and not expired
+	// validate that the token is set, valid, and not expired.
 	token := r.URL.Query().Get("t")
 
 	if token != "" {
@@ -393,14 +392,14 @@ func (controller *MainController) EmailUpdate(c web.C, r *http.Request) (string,
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// EmailVerify renders the email verification page
+// EmailVerify renders the email verification page.
 func (controller *MainController) EmailVerify(c web.C, r *http.Request) (string,
 	int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
-	// validate that the token is set and valid
+	// validate that the token is set and valid.
 	token := r.URL.Query().Get("t")
 
 	if token != "" {
@@ -435,7 +434,7 @@ func (controller *MainController) EmailVerify(c web.C, r *http.Request) (string,
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Error page route
+// Error renders the error page.
 func (controller *MainController) Error(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 
@@ -457,7 +456,7 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Index is the home page route
+// Index renders the home page.
 func (controller *MainController) Index(c web.C, r *http.Request) (string, int) {
 	if controller.closePool {
 		c.Env["IsClosed"] = true
@@ -480,7 +479,7 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	return helpers.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// PasswordReset renders the password reset page
+// PasswordReset renders the password reset page.
 func (controller *MainController) PasswordReset(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
@@ -499,7 +498,7 @@ func (controller *MainController) PasswordReset(c web.C, r *http.Request) (strin
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// PasswordResetPost handles the posted password reset form
+// PasswordResetPost handles the posted password reset form.
 func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (string, int) {
 	email := r.FormValue("email")
 	session := controller.GetSession(c)
@@ -564,13 +563,13 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	return controller.PasswordReset(c, r)
 }
 
-// PasswordUpdate renders the password update page
+// PasswordUpdate renders the password update page.
 func (controller *MainController) PasswordUpdate(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
-	// validate that the token is set, valid, and not expired
+	// validate that the token is set, valid, and not expired.
 	token := r.URL.Query().Get("t")
 
 	if token != "" {
@@ -597,12 +596,12 @@ func (controller *MainController) PasswordUpdate(c web.C, r *http.Request) (stri
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// PasswordUpdatePost handles updating passwords
+// PasswordUpdatePost handles updating passwords.
 func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
-	// validate that the token is set and not expired
+	// validate that the token is set and not expired.
 	token := r.URL.Query().Get("t")
 
 	if token == "" {
@@ -661,7 +660,7 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 	return controller.PasswordUpdate(c, r)
 }
 
-// Settings renders the settings page
+// Settings renders the settings page.
 func (controller *MainController) Settings(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
@@ -689,7 +688,7 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// SettingsPost handles changing the user's email address or password
+// SettingsPost handles changing the user's email address or password.
 func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
@@ -807,7 +806,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 			return controller.PasswordUpdate(c, r)
 		}
 
-		// send a confirmation email
+		// send a confirmation email.
 		body := "Your stake pool password for " + controller.baseURL + "\r\n" +
 			"was just changed by IP Address " + remoteIP + "\r\n\n" +
 			"If you did not make this request, please contact the \r\n" +
@@ -825,7 +824,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	return controller.Settings(c, r)
 }
 
-// SignIn route for basic signing in.
+// SignIn renders the signin page.
 func (controller *MainController) SignIn(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
@@ -880,7 +879,7 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 	return "/tickets", http.StatusSeeOther
 }
 
-// SignUp page route.
+// SignUp renders the signup page.
 func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
@@ -986,7 +985,7 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	return controller.SignUp(c, r)
 }
 
-// Stats page route.
+// Stats renders the stats page.
 func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	c.Env["IsStats"] = true
@@ -1033,7 +1032,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Status page route.
+// Status renders the status page.
 func (controller *MainController) Status(c web.C, r *http.Request) (string, int) {
 	var rpcstatus = "Running"
 
@@ -1056,7 +1055,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// Tickets page route.
+// Tickets renders the tickets page.
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
 	type TicketInfoHistoric struct {
 		Ticket        string
@@ -1192,8 +1191,8 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 	var voteBits = uint16(0)
 
 	if chooseallow == "2" {
-		// pool policy and approve
-		// TODO: set policy somewhere else and make it available to /tickets page
+		// pool policy and approve.
+		// TODO: set policy somewhere else and make it available to /tickets page.
 		voteBits = uint16(1)
 		voteBits |= approveBlockMask
 	} else {
