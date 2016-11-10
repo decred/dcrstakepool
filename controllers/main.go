@@ -45,6 +45,7 @@ const signupEmailSubject = "Stake pool email verification"
 type MainController struct {
 	system.Controller
 
+	adminIPs         []string
 	baseURL          string
 	closePool        bool
 	closePoolMsg     string
@@ -70,7 +71,7 @@ func randToken() string {
 }
 
 // NewMainController is the constructor for the entire controller routing.
-func NewMainController(params *chaincfg.Params, baseURL string, closePool bool,
+func NewMainController(params *chaincfg.Params, adminIPs []string, baseURL string, closePool bool,
 	closePoolMsg string, extPubStr string, poolEmail string, poolFees float64,
 	poolLink string, recaptchaSecret string, recaptchaSiteKey string,
 	smtpFrom string, smtpHost string, smtpUsername string, smtpPassword string,
@@ -88,6 +89,7 @@ func NewMainController(params *chaincfg.Params, baseURL string, closePool bool,
 	}
 
 	mc := &MainController{
+		adminIPs:         adminIPs,
 		baseURL:          baseURL,
 		closePool:        closePool,
 		closePoolMsg:     closePoolMsg,
@@ -544,6 +546,11 @@ func (controller *MainController) RPCStop() error {
 // RPCIsStopped checks to see if w.shutdown is set or not.
 func (controller *MainController) RPCIsStopped() bool {
 	return controller.rpcServers.IsStopped()
+}
+
+// WalletStatus returns current WalletInfo from all rpcServers.
+func (controller *MainController) WalletStatus() ([]*dcrjson.WalletInfoResult, error) {
+	return controller.rpcServers.WalletStatus()
 }
 
 // handlePotentialFatalError is a helper funtion to do log possibly
@@ -1251,7 +1258,6 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
-
 	c.Env["IsSignUp"] = true
 	if controller.smtpHost == "" {
 		c.Env["SMTPDisabled"] = true
@@ -1399,13 +1405,76 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 func (controller *MainController) Status(c web.C, r *http.Request) (string, int) {
 	var rpcstatus = "Running"
 
-	if controller.RPCIsStopped() {
-		rpcstatus = "Stopped"
+	// Confirm that the incoming IP address is an approved
+	// admin IP as set in config.
+	remoteIP := r.RemoteAddr
+	if strings.Contains(remoteIP, ":") {
+		parts := strings.Split(remoteIP, ":")
+		remoteIP = parts[0]
+	}
+
+	if !stringSliceContains(controller.adminIPs, remoteIP) {
+		return "/error", http.StatusSeeOther
+	}
+
+	// Attempt to query wallet statuses
+	walletInfo, err := controller.WalletStatus()
+	if err != nil {
+		// decide when to throw err here
+	}
+
+	type WalletInfoPage struct {
+		Connected         bool
+		DaemonConnected   bool
+		Unlocked          bool
+		TicketMaxPrice    float64
+		BalanceToMaintain float64
+		StakeMining       bool
+	}
+	walletPageInfo := make([]WalletInfoPage, len(walletInfo), len(walletInfo))
+	connectedWallets := 0
+	for i, v := range walletInfo {
+		// If something is nil in the slice means it is disconnected.
+		if v == nil {
+			walletPageInfo[i] = WalletInfoPage{
+				Connected: false,
+			}
+			controller.rpcServers.DisconnectWalletRPC(i)
+			err = controller.rpcServers.ReconnectWalletRPC(i)
+			if err != nil {
+				log.Infof("wallet rpc reconnect failed: server %v %v", i, err)
+			}
+			continue
+		}
+		// Wallet has been successfully queried.
+		connectedWallets++
+		walletPageInfo[i] = WalletInfoPage{
+			Connected:         true,
+			DaemonConnected:   v.DaemonConnected,
+			Unlocked:          v.Unlocked,
+			TicketMaxPrice:    v.TicketMaxPrice,
+			BalanceToMaintain: v.BalanceToMaintain,
+			StakeMining:       v.StakeMining,
+		}
+	}
+
+	// Depending on how many wallets have been detected update RPCStatus.
+	// Admins can then use to monitor this page periodically and check status.
+	switch connectedWallets {
+	case 0:
+		rpcstatus = "Emergency!"
+	case 1:
+		rpcstatus = "Critical"
+	case 2:
+		rpcstatus = "Degraded"
 	}
 
 	t := controller.GetTemplate(c)
 	c.Env["IsStatus"] = true
 	c.Env["Title"] = "Decred Stake Pool - Status"
+
+	// Set info to be used by admins on /status page.
+	c.Env["WalletInfo"] = walletPageInfo
 	c.Env["RPCStatus"] = rpcstatus
 
 	var widgets = controller.Parse(t, "status", c.Env)
@@ -1619,4 +1688,13 @@ func (controller *MainController) Logout(c web.C, r *http.Request) (string, int)
 	session.Values["UserId"] = nil
 
 	return "/", http.StatusSeeOther
+}
+
+func stringSliceContains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

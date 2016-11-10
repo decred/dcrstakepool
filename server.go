@@ -85,8 +85,8 @@ func main() {
 	goji.Use(context.ClearHandler)
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, cfg.ColdWalletExtPub,
-		cfg.PoolEmail, cfg.PoolFees, cfg.PoolLink,
+		cfg.AdminIPs, cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg,
+		cfg.ColdWalletExtPub, cfg.PoolEmail, cfg.PoolFees, cfg.PoolLink,
 		cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.SMTPFrom, cfg.SMTPHost,
 		cfg.SMTPUsername, cfg.SMTPPassword, cfg.Version,
 		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords)
