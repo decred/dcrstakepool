@@ -1,5 +1,5 @@
 hash: b39ac67a1cf2a8ba64fa61f0fe240d7fa7549955a603c55e6876076ba4c5280e
-updated: 2016-11-03T14:30:54.541716569-05:00
+updated: 2016-11-11T10:38:33.77628228-06:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
@@ -27,7 +27,7 @@ imports:
 - name: github.com/decred/blake256
   version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: e7dcfbc982bae8275c1f24ceb50813ac9f7a7659
+  version: cd719358d5bed0bb547a0183ae36b1bf76441fca
   subpackages:
   - addrmgr
   - blockchain
@@ -48,14 +48,14 @@ imports:
   - txscript
   - wire
 - name: github.com/decred/dcrrpcclient
-  version: 0f562bb540de12dfd5248aee87063eaa4792705f
+  version: fc4826bb281f5b68af4cf95c20d8664419b4cc08
 - name: github.com/decred/dcrutil
   version: 0484582bf5503574d824f110e836a8c48aa60c8c
   subpackages:
   - base58
   - hdkeychain
 - name: github.com/decred/dcrwallet
-  version: 726012471ceb6ed61025395d43d624b37a0417c0
+  version: 668f78cade887cf6dfa6bfe705e0d63ae21615c8
   subpackages:
   - internal/zero
   - pgpwordlist
@@ -67,25 +67,25 @@ imports:
   subpackages:
   - edwards25519
 - name: github.com/go-sql-driver/mysql
-  version: 7ebe0a500653eeb1859664bed5e48dec1e164e73
+  version: 8f6c67f0228a4a6a962008d6c3d1e694e4532e71
 - name: github.com/go-utils/uslice
   version: 7f8c3df848991b2e38824a7bda55bda1339b651e
 - name: github.com/golang/glog
   version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 - name: github.com/gorilla/context
-  version: a8d44e7d8e4d532b6a27a02dd82abb31cc1b01bd
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/securecookie
-  version: 667fe4e3466a040b780561fe9b51a83a3753eefc
+  version: fa5329f913702981df43dcb2a380bac429c810b5
 - name: github.com/gorilla/sessions
-  version: a4e6dd28f9e9274729417506b9bd0a6c3edb91ce
+  version: ca9ada44574153444b00d3fd9c8559e4cc95f896
 - name: github.com/haisum/recaptcha
   version: 8527d614dbb33cac7cf2433c83ad6d3346761276
 - name: github.com/pelletier/go-buffruneio
   version: df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
 - name: github.com/pelletier/go-toml
-  version: 8e6ab94eec2ae84996ed00ec774b2e15c540d7f9
+  version: 45932ad32dfdd20826f5671da37a5f3ce9f26a8d
 - name: github.com/zenazn/goji
-  version: 64eb34159fe53473206c2b3e70fe396a639452f2
+  version: 4d7077956293261309684d3cf1af673f773c6819
   subpackages:
   - bind
   - graceful
@@ -94,7 +94,7 @@ imports:
   - web/middleware
   - web/mutil
 - name: golang.org/x/crypto
-  version: 8e06e8ddd9629eb88639aba897641bff8031f1d3
+  version: 9477e0b78b9ac3d0b03822fd95422e2fe07627cd
   subpackages:
   - bcrypt
   - blowfish
