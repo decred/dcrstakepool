@@ -130,6 +130,10 @@ func UserIDExists(dbMap *gorp.DbMap, userid int64) (*models.User, error) {
 	return &user, err
 }
 
+// Login looks up a user by email and validates the provided clear text password
+// against the bcrypt hashed password stored in the DB. Returns the *User and an
+// error. On failure *User is nil and error is non-nil. On success, error is
+// nil.
 func Login(dbMap *gorp.DbMap, email string, password string) (*models.User, error) {
 	var user models.User
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE Email = ?", email)

@@ -1,6 +1,8 @@
-.vscode/
 config.toml
 dcrstakepool
 vendor
 .vscode/
-config.go*
+controllers/config.go*
+testing/
+*.orig
+

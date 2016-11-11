@@ -5,21 +5,21 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/smtp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
-	"html/template"
-
 	"github.com/decred/dcrd/chaincfg"
-	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/waddrmgr"
 
+	"github.com/decred/dcrd/blockchain/stake"
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/system"
@@ -41,8 +41,10 @@ const signupEmailTemplate = "A request for an account for __URL__\r\n" +
 	"to verify your email address and finalize registration.\r\n\n"
 const signupEmailSubject = "Stake pool email verification"
 
-// MainController
+// MainController is the wallet RPC controller type.  Its methods include the
+// route handlers.
 type MainController struct {
+	// embed type for c.Env[""] context and ExecuteTemplate helpers
 	system.Controller
 
 	adminIPs         []string
@@ -269,7 +271,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, "system error", errors.New("unable to process wallet commands")
 	}
 
-	models.UpdateUserById(dbMap, uid64, createMultiSig.Address,
+	models.UpdateUserByID(dbMap, uid64, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
@@ -526,10 +528,35 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 	if err != nil {
 		return err
 	}
+
 	err = walletSvrsSync(controller.rpcServers, multisigScripts)
 	if err != nil {
 		return err
 	}
+
+	// TODO: Wait for wallets to sync, or schedule the vote bits sync somehow.
+	// For now, just skip full vote bits sync in favor of on-demand user's vote
+	// bits sync if the wallets are busy at this point.
+
+	// Allow sync to get going before attempting vote bits sync.
+	time.Sleep(2 * time.Second)
+
+	// Look for that -4 message from wallet that says: "the wallet is
+	// currently syncing to the best block, please try again later"
+	err = controller.rpcServers.CheckWalletsReady()
+	if err != nil /*strings.Contains(err.Error(), "try again later")*/ {
+		// If importscript is running, it will take a while.
+		log.Errorf("Wallets are syncing. Unable to initiate votebits sync: %v",
+			err)
+	} else {
+		// Sync vote bits for all tickets owned by the wallet
+		err = controller.rpcServers.SyncVoteBits()
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -578,7 +605,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	c.Env["Network"] = controller.params.Name
 
 	c.Env["Flash"] = session.Flashes("address")
-	var widgets = controller.Parse(t, "address", c.Env)
+	widgets := controller.Parse(t, "address", c.Env)
 
 	c.Env["Title"] = "Decred Stake Pool - Address"
 	c.Env["Content"] = template.HTML(widgets)
@@ -600,6 +627,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return "/", http.StatusSeeOther
 	}
 
+	// Only accept address if user does not already have a PubKeyAddr set.
 	dbMap := controller.GetDbMap(c)
 	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
 	if len(user.UserPubKeyAddr) > 0 {
@@ -619,6 +647,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return controller.Address(c, r)
 	}
 
+	// Get dcrutil.Address for user from pubkey address string
 	u, err := dcrutil.DecodeAddress(userPubKeyAddr, controller.params)
 	if err != nil {
 		session.AddFlash("Couldn't decode address", "address")
@@ -631,6 +660,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return controller.Address(c, r)
 	}
 
+	// Get new address from pool wallets
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
@@ -640,6 +670,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return "/error", http.StatusSeeOther
 	}
 
+	// From new address (pkh), get pubkey address
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
@@ -650,12 +681,14 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
+	// Get back Address from pool's new pubkey address
 	p, err := dcrutil.DecodeAddress(poolPubKeyAddr, controller.params)
 	if err != nil {
 		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
 		return "/error", http.StatusSeeOther
 	}
 
+	// Create the the multisig script. Result includes a P2SH and RedeemScript.
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
@@ -665,6 +698,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return "/error", http.StatusSeeOther
 	}
 
+	// Serialize the RedeemScript (hex string -> []byte)
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
@@ -681,12 +715,15 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
 		return "/error", http.StatusSeeOther
 	}
+
+	// Import the RedeemScript
 	err = controller.rpcServers.ImportScript(serializedScript, int(bestBlockHeight))
 	if err != nil {
 		controller.handlePotentialFatalError("ImportScript", err)
 		return "/error", http.StatusSeeOther
 	}
 
+	// Get the pool fees address for this user
 	uid64 := session.Values["UserId"].(int64)
 	userFeeAddr, err := controller.FeeAddressForUserID(int(uid64))
 	if err != nil {
@@ -694,7 +731,9 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return "/error", http.StatusSeeOther
 	}
 
-	models.UpdateUserById(dbMap, uid64, createMultiSig.Address,
+	// Update the user's DB entry with multisig, user and pool pubkey
+	// addresses, and the fee address
+	models.UpdateUserByID(dbMap, uid64, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
@@ -825,7 +864,7 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 	c.Env["RateLimited"] = r.URL.Query().Get("rl")
 	c.Env["Referer"] = r.URL.Query().Get("r")
 
-	var widgets = controller.Parse(t, "error", c.Env)
+	widgets := controller.Parse(t, "error", c.Env)
 	c.Env["Content"] = template.HTML(widgets)
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -843,9 +882,12 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	c.Env["PoolLink"] = controller.poolLink
 
 	t := controller.GetTemplate(c)
+	//t := c.Env["Template"].(*template.Template)
 
+	// execute the named template with data in c.Env
 	widgets := helpers.Parse(t, "home", c.Env)
 
+	// With that kind of flags template can "figure out" what route is being rendered
 	c.Env["IsIndex"] = true
 
 	c.Env["Title"] = "Decred Stake Pool - Welcome"
@@ -1204,10 +1246,11 @@ func (controller *MainController) SignIn(c web.C, r *http.Request) (string, int)
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 
+	// Tell main.html what route is being rendered
 	c.Env["IsSignIn"] = true
 
 	c.Env["Flash"] = session.Flashes("auth")
-	var widgets = controller.Parse(t, "auth/signin", c.Env)
+	widgets := controller.Parse(t, "auth/signin", c.Env)
 
 	c.Env["Title"] = "Decred Stake Pool - Sign In"
 	c.Env["Content"] = template.HTML(widgets)
@@ -1223,8 +1266,8 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
+	// Validate email and password combination.
 	user, err := helpers.Login(dbMap, email, password)
-
 	if err != nil {
 		log.Infof(email+" login failed %v", err)
 		session.AddFlash("Invalid Email or Password", "auth")
@@ -1236,6 +1279,8 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 		return controller.SignIn(c, r)
 	}
 
+	// If pool is closed and user has not yet provided a pubkey address, do not
+	// allow login.
 	if controller.closePool {
 		if len(user.UserPubKeyAddr) == 0 {
 			session.AddFlash(controller.closePoolMsg, "auth")
@@ -1247,10 +1292,12 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 
 	session.Values["UserId"] = user.Id
 
+	// Go to Address page if multisig script not yet set up.
 	if user.MultiSigAddress == "" {
 		return "/address", http.StatusSeeOther
 	}
 
+	// Go to Tickets page if user already set up.
 	return "/tickets", http.StatusSeeOther
 }
 
@@ -1258,6 +1305,8 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
+
+	// Tell main.html what route is being rendered
 	c.Env["IsSignUp"] = true
 	if controller.smtpHost == "" {
 		c.Env["SMTPDisabled"] = true
@@ -1271,7 +1320,7 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 	c.Env["FlashSuccess"] = session.Flashes("signupSuccess")
 	c.Env["RecaptchaSiteKey"] = controller.recaptchaSiteKey
 
-	var widgets = controller.Parse(t, "auth/signup", c.Env)
+	widgets := controller.Parse(t, "auth/signup", c.Env)
 
 	c.Env["Title"] = "Decred Stake Pool - Sign Up"
 	c.Env["Content"] = template.HTML(widgets)
@@ -1395,7 +1444,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	c.Env["UserCount"] = userCount
 	c.Env["UserCountActive"] = userCountActive
 
-	var widgets = controller.Parse(t, "stats", c.Env)
+	widgets := controller.Parse(t, "stats", c.Env)
 	c.Env["Content"] = template.HTML(widgets)
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -1482,7 +1531,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 	c.Env["WalletInfo"] = walletPageInfo
 	c.Env["RPCStatus"] = rpcstatus
 
-	var widgets = controller.Parse(t, "status", c.Env)
+	widgets := controller.Parse(t, "status", c.Env)
 	c.Env["Content"] = template.HTML(widgets)
 
 	if controller.RPCIsStopped() {
@@ -1516,6 +1565,10 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	ticketInfoMissed := map[int]TicketInfoHistoric{}
 	ticketInfoVoted := map[int]TicketInfoHistoric{}
 
+	responseHeaderMap := make(map[string]string)
+	c.Env["ResponseHeaderMap"] = responseHeaderMap
+	// map is a reference type so responseHeaderMap may be modified
+
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 
@@ -1536,68 +1589,116 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		log.Info("Multisigaddress empty")
 	}
 
-	ms, err := dcrutil.DecodeAddress(user.MultiSigAddress, controller.params)
+	if controller.RPCIsStopped() {
+		return "/error", http.StatusSeeOther
+	}
+
+	// Get P2SH Address
+	multisig, err := dcrutil.DecodeAddress(user.MultiSigAddress, controller.params)
 	if err != nil {
 		c.Env["Error"] = "Invalid multisig data in database"
 		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
 	}
 
-	var widgets = controller.Parse(t, "tickets", c.Env)
+	w := controller.rpcServers
+	// TODO: Tell the user if there is a cool-down
 
-	if err != nil {
-		log.Info("err is set")
-		c.Env["Content"] = template.HTML(widgets)
-		widgets = controller.Parse(t, "tickets", c.Env)
+	// Attempt a "TryLock" so the page won't block
+
+	// select {
+	// case <-w.ticketTryLock:
+	// 	w.ticketTryLock <- nil
+	// 	responseHeaderMap["Retry-After"] = "60"
+	// 	c.Env["Content"] = template.HTML("Ticket data resyncing.  Please try again later.")
+	// 	return controller.Parse(t, "main", c.Env), http.StatusProcessing
+	// default:
+	// }
+
+	if atomic.LoadInt32(&w.ticketDataBlocker) != 0 {
+		// with HTTP 102 we can specify an estimated time
+		responseHeaderMap["Retry-After"] = "60"
+		// Render page with messgae to try again later
+		//c.Env["Content"] = template.HTML("Ticket data resyncing.  Please try again later.")
+		session.AddFlash("Ticket data now resyncing. Please try again later.", "tickets-warning")
+		c.Env["FlashWarn"] = session.Flashes("tickets-warning")
+		c.Env["Content"] = template.HTML(controller.Parse(t, "tickets", c.Env))
 		return controller.Parse(t, "main", c.Env), http.StatusOK
 	}
 
-	if controller.RPCIsStopped() {
-		return "/error", http.StatusSeeOther
-	}
+	// Vote bits sync is not running, but we also don't want a sync process
+	// starting. Note that the sync process locks this mutex before setting the
+	// atomic, so this shouldn't block.
+	w.ticketDataLock.RLock()
+	defer w.ticketDataLock.RUnlock()
 
-	spui := new(dcrjson.StakePoolUserInfoResult)
-	spui, err = controller.rpcServers.StakePoolUserInfo(ms)
+	widgets := controller.Parse(t, "tickets", c.Env)
+
+	// TODO: how could this happen?
 	if err != nil {
-		// Log the error, but do not return. Consider reporting
-		// the error to the user on the page. A blank tickets
-		// page will be displayed in the meantime.
-		log.Infof("RPC StakePoolUserInfo failed: %v", err)
+		log.Info(err)
+		widgets = controller.Parse(t, "tickets", c.Env)
+		c.Env["Content"] = template.HTML(widgets)
+		return controller.Parse(t, "main", c.Env), http.StatusOK
 	}
 
-	if spui != nil && len(spui.Tickets) > 0 {
-		var tickethashes []*chainhash.Hash
+	// spui := new(dcrjson.StakePoolUserInfoResult)
+	spui, err := w.StakePoolUserInfo(multisig)
+	if err != nil {
+		// Render page with messgae to try again later
+		log.Infof("RPC StakePoolUserInfo failed: %v", err)
+		session.AddFlash("Unable to retreive stake pool user info.", "main")
+		c.Env["Flash"] = session.Flashes("main")
+		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
+	}
 
-		for _, ticket := range spui.Tickets {
-			th, err := chainhash.NewHashFromStr(ticket.Ticket)
-			if err != nil {
-				log.Infof("NewHashFromStr failed for %v", ticket)
-				return "/error?r=/tickets", http.StatusSeeOther
-			}
-			tickethashes = append(tickethashes, th)
+	// If the user has tickets, get their info
+	if spui != nil && len(spui.Tickets) > 0 {
+		// Only get or set votebits for live tickets
+		liveTicketHashes, err := w.GetUnspentUserTickets(multisig)
+		if err != nil {
+			return "/error?r=/tickets", http.StatusSeeOther
 		}
 
-		// TODO: only get votebits for live tickets.
-		gtvb, err := controller.rpcServers.GetTicketsVoteBits(tickethashes)
+		gtvb, err := w.GetTicketsVoteBits(liveTicketHashes)
 		if err != nil {
+			if err.Error() == "non equivalent votebits returned" {
+				// Launch a goroutine to repair these tickets vote bits
+				go w.SyncTicketsVoteBits(liveTicketHashes)
+				responseHeaderMap["Retry-After"] = "60"
+				// Render page with messgae to try again later
+				session.AddFlash("Detected mismatching vote bits.  "+
+					"Ticket data is now resyncing.  Please try again after a "+
+					"few minutes.", "tickets")
+				c.Env["Flash"] = session.Flashes("tickets")
+				c.Env["Content"] = template.HTML(controller.Parse(t, "tickets", c.Env))
+				// Return with a 503 error indicating when to retry
+				return controller.Parse(t, "main", c.Env), http.StatusServiceUnavailable
+			}
+
 			log.Infof("GetTicketsVoteBits failed %v", err)
 			return "/error?r=/tickets", http.StatusSeeOther
 		}
 
+		voteBitMap := make(map[string]uint16)
+		for i := range liveTicketHashes {
+			voteBitMap[liveTicketHashes[i].String()] = gtvb.VoteBitsList[i].VoteBits
+		}
+
 		for idx, ticket := range spui.Tickets {
-			switch {
-			case ticket.Status == "live":
+			switch ticket.Status {
+			case "live":
 				ticketInfoLive[idx] = TicketInfoLive{
 					Ticket:       ticket.Ticket,
 					TicketHeight: ticket.TicketHeight,
-					VoteBits:     gtvb.VoteBitsList[idx].VoteBits,
+					VoteBits:     voteBitMap[ticket.Ticket], //gtvbAll.VoteBitsList[idx].VoteBits,
 				}
-			case ticket.Status == "missed":
+			case "missed":
 				ticketInfoMissed[idx] = TicketInfoHistoric{
 					Ticket:        ticket.Ticket,
 					SpentByHeight: ticket.SpentByHeight,
 					TicketHeight:  ticket.TicketHeight,
 				}
-			case ticket.Status == "voted":
+			case "voted":
 				ticketInfoVoted[idx] = TicketInfoHistoric{
 					Ticket:        ticket.Ticket,
 					SpentBy:       ticket.SpentBy,
@@ -1617,13 +1718,22 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	c.Env["TicketsMissed"] = ticketInfoMissed
 	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets = controller.Parse(t, "tickets", c.Env)
+
 	c.Env["Content"] = template.HTML(widgets)
+	c.Env["Flash"] = session.Flashes("tickets")
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
 // TicketsPost form submit route.
 func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string, int) {
+	w := controller.rpcServers
+
+	// If already processing let /tickets handle this
+	if atomic.LoadInt32(&w.ticketDataBlocker) != 0 {
+		return "/tickets", http.StatusSeeOther
+	}
+
 	chooseallow := r.FormValue("chooseallow")
 	var voteBits = uint16(0)
 
@@ -1640,16 +1750,25 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 		}
 	}
 
+	// Look up user, and try very hard to avoid a panic
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
-	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+	id, ok := session.Values["UserId"].(int64)
+	if !ok {
+		log.Error("No valid UserID")
+	}
+
+	user := models.GetUserById(dbMap, id)
+	if user == nil {
+		log.Error("Unable to find user with ID", id)
+	}
 
 	if user.MultiSigAddress == "" {
 		log.Info("Multisigaddress empty")
 		return "/error?r=/tickets", http.StatusSeeOther
 	}
 
-	ms, err := dcrutil.DecodeAddress(user.MultiSigAddress, controller.params)
+	multisig, err := dcrutil.DecodeAddress(user.MultiSigAddress, controller.params)
 	if err != nil {
 		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
 		return "/error?r=/tickets", http.StatusSeeOther
@@ -1658,32 +1777,60 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
-	spui, err := controller.rpcServers.StakePoolUserInfo(ms)
-	if err != nil {
-		log.Infof("RPC StakePoolUserInfo failed: %v", err)
-		return "/error?r=/tickets", http.StatusSeeOther
-	}
 
-	for _, ticket := range spui.Tickets {
-		if controller.RPCIsStopped() {
-			return "/error", http.StatusSeeOther
+	outPath := "/tickets"
+	status := http.StatusSeeOther
+
+	// Set this off in a goroutine
+	// TODO: error on channel
+	go func() {
+		// write lock
+		w.ticketDataLock.Lock()
+		defer w.ticketDataLock.Unlock()
+
+		var err error
+		defer func() { w.setVoteBitsResyncChan <- err }()
+
+		if !atomic.CompareAndSwapInt32(&w.ticketDataBlocker, 0, 1) {
+			return
 		}
-		th, err := chainhash.NewHashFromStr(ticket.Ticket)
+		defer atomic.StoreInt32(&w.ticketDataBlocker, 0)
+
+		// Only get or set votebits for live tickets
+		liveTicketHashes, err := w.GetUnspentUserTickets(multisig)
 		if err != nil {
-			log.Infof("NewHashFromStr failed for %v", ticket)
-			return "/error?r=/tickets", http.StatusSeeOther
+			return
 		}
-		err = controller.rpcServers.SetTicketVoteBits(th, voteBits)
+
+		log.Infof("Started setting of vote bits for %d tickets.",
+			len(liveTicketHashes))
+
+		vbs := make([]stake.VoteBits, len(liveTicketHashes))
+		for i := 0; i < len(liveTicketHashes); i++ {
+			vbs[i] = stake.VoteBits{Bits: voteBits}
+			//vbs[i].Bits = voteBits
+		}
+
+		err = controller.rpcServers.SetTicketsVoteBits(liveTicketHashes, vbs)
 		if err != nil {
 			if err == ErrSetVoteBitsCoolDown {
-				return "/error?r=/tickets&rl=1", http.StatusSeeOther
+				return
 			}
 			controller.handlePotentialFatalError("SetTicketVoteBits", err)
-			return "/error?r=/tickets", http.StatusSeeOther
+			return
 		}
-	}
 
-	return "/tickets", http.StatusSeeOther
+		log.Infof("Completed setting of vote bits for %d tickets.",
+			len(liveTicketHashes))
+
+		return
+	}()
+
+	// Like a timeout, give the sync some time to process, otherwise /tickets
+	// will show a message that it is still syncing.
+	time.Sleep(3 * time.Second)
+
+	return outPath, status
 }
 
 // Logout the user.

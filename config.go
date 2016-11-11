@@ -93,8 +93,8 @@ type config struct {
 	MinServers       int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
 }
 
-// serviceOptions defines the configuration options for the daemon as a service on
-// Windows.
+// serviceOptions defines the configuration options for the daemon as a service
+// on Windows.
 type serviceOptions struct {
 	ServiceCommand string `short:"s" long:"service" description:"Service command {install, remove, start, stop}"`
 }
