@@ -1538,6 +1538,7 @@ func (w *walletSvrManager) SyncVoteBits() error {
 	}
 
 	// Check live tickets
+	log.Info("SyncVoteBits: Getting list of all live tickets on wallet 0.")
 	// legacyrpc.getTickets excludes spent tickets
 	ticketHashes, err := w.servers[0].GetTickets(true)
 	if err != nil {
@@ -1545,7 +1546,7 @@ func (w *walletSvrManager) SyncVoteBits() error {
 	}
 	ticketHashesMined := getMinedTickets(w.servers[0], ticketHashes)
 	numLiveTickets := len(ticketHashesMined)
-	log.Infof("Excluding %d unmined tickets in votebits sync.",
+	log.Infof("SyncVoteBits: Excluding %d unmined tickets in votebits sync.",
 		len(ticketHashes)-numLiveTickets)
 
 	// gsi, err := w.servers[0].GetStakeInfo()
@@ -1564,6 +1565,7 @@ func (w *walletSvrManager) SyncVoteBits() error {
 			continue
 		}
 
+		log.Infof("SyncVoteBits: Checking number of tickets on wallet %d", i)
 		ticketHashes, err = cl.GetTickets(true)
 		//gsi, err = cl.GetStakeInfo()
 		if err != nil {
@@ -1795,6 +1797,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 	}
 	// Go through each server and see who is synced to the longest
 	// address indexes and and the most redeemscripts.
+	log.Info("Getting address index and importscript information from wallets.")
 	for i := range wsm.servers {
 		if wsm.servers[i] == nil {
 			continue
@@ -1836,6 +1839,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 	// Synchronize the address indexes if needed, then synchronize the
 	// redeemscripts. Ignore the errors when importing scripts and
 	// assume it'll just skip reimportation if it already has it.
+	log.Info("Syncing wallets' redeem scripts and setting address indexes.")
 	desynced := false
 	for i := range wsm.servers {
 		if wsm.servers[i] == nil {
