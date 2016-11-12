@@ -1679,6 +1679,8 @@ func (w *walletSvrManager) SyncTicketsVoteBits(tickets []*chainhash.Hash) error 
 					hash)
 			}
 			if votebits != refVoteBits {
+                log.Infof("Setting ticket %v votebits to %v on wallet %v",
+					hash.String(), refVoteBits, i)
 				err := w.servers[i].SetTicketVoteBits(&hash, refVoteBits)
 				if err != nil {
 					return err
