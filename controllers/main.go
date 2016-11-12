@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"html/template"
+	"net"
 	"net/http"
 	"net/smtp"
 	"strconv"
@@ -27,6 +29,40 @@ import (
 	"github.com/zenazn/goji/web"
 	"gopkg.in/gorp.v1"
 )
+
+// ipRange is a structure that holds the start and end of a range of ip addresses
+type ipRange struct {
+	start net.IP
+	end   net.IP
+}
+
+// privateRanges are various IANA private address ranges
+var privateRanges = []ipRange{
+	ipRange{
+		start: net.ParseIP("10.0.0.0"),
+		end:   net.ParseIP("10.255.255.255"),
+	},
+	ipRange{
+		start: net.ParseIP("100.64.0.0"),
+		end:   net.ParseIP("100.127.255.255"),
+	},
+	ipRange{
+		start: net.ParseIP("172.16.0.0"),
+		end:   net.ParseIP("172.31.255.255"),
+	},
+	ipRange{
+		start: net.ParseIP("192.0.0.0"),
+		end:   net.ParseIP("192.0.0.255"),
+	},
+	ipRange{
+		start: net.ParseIP("192.168.0.0"),
+		end:   net.ParseIP("192.168.255.255"),
+	},
+	ipRange{
+		start: net.ParseIP("198.18.0.0"),
+		end:   net.ParseIP("198.19.255.255"),
+	},
+}
 
 // disapproveBlockMask checks to see if the votebits have been set to No.
 const disapproveBlockMask = 0x0000
@@ -64,6 +100,57 @@ type MainController struct {
 	smtpUsername     string
 	smtpPassword     string
 	version          string
+}
+
+// inRange checks if a given ip address is within a range given
+func inRange(r ipRange, ipAddress net.IP) bool {
+	// strcmp type byte comparison
+	if bytes.Compare(ipAddress, r.start) >= 0 && bytes.Compare(ipAddress, r.end) < 0 {
+		return true
+	}
+	return false
+}
+
+// isPrivateSubnet checks if an ip is in a private subnet
+func isPrivateSubnet(ipAddress net.IP) bool {
+	// my use case is only concerned with ipv4 atm
+	if ipCheck := ipAddress.To4(); ipCheck != nil {
+		// iterate over all our ranges
+		for _, r := range privateRanges {
+			// check if this ip is in a private range
+			if inRange(r, ipAddress) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func getIPAddress(r *http.Request) string {
+	for _, h := range []string{"X-Forwarded-For", "X-Real-Ip"} {
+		addresses := strings.Split(r.Header.Get(h), ",")
+		// march from right to left until we get a public address
+		// that will be the address right before our proxy.
+		for i := len(addresses) - 1; i >= 0; i-- {
+			ip := strings.TrimSpace(addresses[i])
+			// header can contain spaces too, strip those out.
+			realIP := net.ParseIP(ip)
+			if !realIP.IsGlobalUnicast() || isPrivateSubnet(realIP) {
+				// bad address, go to next
+				continue
+			}
+			return ip
+		}
+	}
+
+	remoteIP := r.RemoteAddr
+	if strings.Contains(remoteIP, ":") {
+		parts := strings.Split(remoteIP, ":")
+		remoteIP = parts[0]
+	}
+
+	return remoteIP
 }
 
 func randToken() string {
@@ -400,15 +487,9 @@ func (controller *MainController) APISignUp(c web.C, r *http.Request) ([]string,
 		return nil, "signup error", errors.New("unable to insert new user into db")
 	}
 
-	remoteIP := r.RemoteAddr
-	if strings.Contains(remoteIP, ":") {
-		parts := strings.Split(remoteIP, ":")
-		remoteIP = parts[0]
-	}
-
 	body := signupEmailTemplate
 	body = strings.Replace(body, "__URL__", controller.baseURL, -1)
-	body = strings.Replace(body, "__REMOTEIP__", remoteIP, -1)
+	body = strings.Replace(body, "__REMOTEIP__", getIPAddress(r), -1)
 	body = strings.Replace(body, "__TOKEN__", token, -1)
 
 	err := controller.SendMail(user.Email, signupEmailSubject, body)
@@ -637,7 +718,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	userPubKeyAddr := r.FormValue("UserPubKeyAddr")
 
-	log.Infof("Address POST from %v, pubkeyaddr %v", r.RemoteAddr, userPubKeyAddr)
+	log.Infof("Address POST from %v, pubkeyaddr %v", getIPAddress(r), userPubKeyAddr)
 
 	if len(userPubKeyAddr) < 40 {
 		session.AddFlash("Address is too short", "address")
@@ -939,7 +1020,7 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	if err != nil {
 		session.AddFlash("Invalid Email", "passwordresetError")
 	} else {
-		log.Infof("PasswordReset POST from %v, email %v", r.RemoteAddr,
+		log.Infof("PasswordReset POST from %v, email %v", getIPAddress(r),
 			user.Email)
 
 		t := time.Now()
@@ -959,14 +1040,8 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 			return controller.PasswordReset(c, r)
 		}
 
-		remoteIP := r.RemoteAddr
-		if strings.Contains(remoteIP, ":") {
-			parts := strings.Split(remoteIP, ":")
-			remoteIP = parts[0]
-		}
-
 		body := "A request to reset your password was made from IP address: " +
-			remoteIP + "\r\n\n" +
+			getIPAddress(r) + "\r\n\n" +
 			"If you made this request, follow the link below:\r\n\n" +
 			controller.baseURL + "/passwordupdate?t=" + token + "\r\n\n" +
 			"The above link expires an hour after this email was sent.\r\n\n" +
@@ -1059,12 +1134,12 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 
 	user, err := helpers.UserIDExists(dbMap, passwordReset.UserId)
 	if err != nil {
-		log.Infof("UserIDExists failure %v, %v", err, r.RemoteAddr)
+		log.Infof("UserIDExists failure %v, %v", err, getIPAddress(r))
 		session.AddFlash("Unable to find User ID", "passwordupdateError")
 		return controller.PasswordUpdate(c, r)
 	}
 
-	log.Infof("PasswordUpdate POST from %v, email %v", r.RemoteAddr,
+	log.Infof("PasswordUpdate POST from %v, email %v", getIPAddress(r),
 		user.Email)
 
 	user.HashPassword(password)
@@ -1131,14 +1206,8 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		return controller.Settings(c, r)
 	}
 
-	log.Infof("Settings POST from %v, email %v", r.RemoteAddr,
+	log.Infof("Settings POST from %v, email %v", getIPAddress(r),
 		user.Email)
-
-	remoteIP := r.RemoteAddr
-	if strings.Contains(remoteIP, ":") {
-		parts := strings.Split(remoteIP, ":")
-		remoteIP = parts[0]
-	}
 
 	if updateEmail == "true" {
 		newEmail := r.FormValue("email")
@@ -1183,7 +1252,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		bodyNew := "A request was made to change the email address\r\n" +
 			"for a stake pool account at " + controller.baseURL + "\r\n" +
 			"from " + user.Email + " to " + newEmail + "\r\n\n" +
-			"The request was made from IP address " + remoteIP + "\r\n\n" +
+			"The request was made from IP address " + getIPAddress(r) + "\r\n\n" +
 			"If you made this request, follow the link below:\r\n\n" +
 			controller.baseURL + "/emailupdate?t=" + token + "\r\n\n" +
 			"The above link expires an hour after this email was sent.\r\n\n" +
@@ -1204,7 +1273,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		bodyOld := "A request was made to change the email address\r\n" +
 			"for your stake pool account at " + controller.baseURL + "\r\n" +
 			"from " + user.Email + " to " + newEmail + "\r\n\n" +
-			"The request was made from IP address " + remoteIP + "\r\n\n" +
+			"The request was made from IP address " + getIPAddress(r) + "\r\n\n" +
 			"If you did not make this request, please contact the \r\n" +
 			"stake pool administrator immediately.\r\n"
 		err = controller.SendMail(user.Email, "Stake pool email change",
@@ -1234,7 +1303,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 
 		// send a confirmation email.
 		body := "Your stake pool password for " + controller.baseURL + "\r\n" +
-			"was just changed by IP Address " + remoteIP + "\r\n\n" +
+			"was just changed by IP Address " + getIPAddress(r) + "\r\n\n" +
 			"If you did not make this request, please contact the \r\n" +
 			"stake pool administrator immediately.\r\n"
 		err = controller.SendMail(user.Email, "Stake pool password change",
@@ -1278,12 +1347,12 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 	// Validate email and password combination.
 	user, err := helpers.Login(dbMap, email, password)
 	if err != nil {
-		log.Infof(email+" login failed %v, %v", err, r.RemoteAddr)
+		log.Infof(email+" login failed %v, %v", err, getIPAddress(r))
 		session.AddFlash("Invalid Email or Password", "auth")
 		return controller.SignIn(c, r)
 	}
 
-	log.Infof("SignIn POST from %v, email %v", r.RemoteAddr, user.Email)
+	log.Infof("SignIn POST from %v, email %v", getIPAddress(r), user.Email)
 
 	if user.EmailVerified == 0 {
 		session.AddFlash("You must validate your email address", "auth")
@@ -1396,7 +1465,7 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	user.HashPassword(password)
 
 	log.Infof("SignUp POST from %v, email %v.  Inserting...",
-		r.RemoteAddr, user.Email)
+		getIPAddress(r), user.Email)
 
 	if err := models.InsertUser(dbMap, user); err != nil {
 		session.AddFlash("Database error occurred while adding user", "signupError")
@@ -1404,15 +1473,9 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 		return controller.SignUp(c, r)
 	}
 
-	remoteIP := r.RemoteAddr
-	if strings.Contains(remoteIP, ":") {
-		parts := strings.Split(remoteIP, ":")
-		remoteIP = parts[0]
-	}
-
 	body := signupEmailTemplate
 	body = strings.Replace(body, "__URL__", controller.baseURL, -1)
-	body = strings.Replace(body, "__REMOTEIP__", remoteIP, -1)
+	body = strings.Replace(body, "__REMOTEIP__", getIPAddress(r), -1)
 	body = strings.Replace(body, "__TOKEN__", token, -1)
 
 	err := controller.SendMail(user.Email, signupEmailSubject, body)
@@ -1469,13 +1532,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 
 	// Confirm that the incoming IP address is an approved
 	// admin IP as set in config.
-	remoteIP := r.RemoteAddr
-	if strings.Contains(remoteIP, ":") {
-		parts := strings.Split(remoteIP, ":")
-		remoteIP = parts[0]
-	}
-
-	if !stringSliceContains(controller.adminIPs, remoteIP) {
+	if !stringSliceContains(controller.adminIPs, getIPAddress(r)) {
 		return "/error", http.StatusSeeOther
 	}
 
@@ -1614,7 +1671,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
 	}
 
-	log.Infof("Tickets GET from %v, multisig %v", r.RemoteAddr,
+	log.Infof("Tickets GET from %v, multisig %v", getIPAddress(r),
 		user.MultiSigAddress)
 
 	w := controller.rpcServers
@@ -1780,7 +1837,7 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 		log.Error("Unable to find user with ID", id)
 	}
 
-	log.Infof("Tickets POST from %v, multisig %v", r.RemoteAddr,
+	log.Infof("Tickets POST from %v, multisig %v", getIPAddress(r),
 		user.MultiSigAddress)
 
 	if user.MultiSigAddress == "" {
