@@ -939,8 +939,6 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	if err != nil {
 		session.AddFlash("Invalid Email", "passwordresetError")
 	} else {
-		session.AddFlash("Recaptcha error", "passwordresetError")
-		
 		log.Infof("PasswordReset POST from %v, email %v", r.RemoteAddr,
 			user.Email)
 
