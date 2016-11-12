@@ -32,6 +32,7 @@ const (
 	getTicketVoteBitsFn
 	getTicketsVoteBitsFn
 	setTicketVoteBitsFn
+	setTicketsVoteBitsFn
 	getTxOutFn
 	getStakeInfoFn
 	connectedFn
@@ -282,6 +283,10 @@ out:
 			case setTicketVoteBitsMsg:
 				resp := w.executeInSequence(setTicketVoteBitsFn, msg)
 				respTyped := resp.(*setTicketVoteBitsResponse)
+				msg.reply <- *respTyped
+			case setTicketsVoteBitsMsg:
+				resp := w.executeInSequence(setTicketsVoteBitsFn, msg)
+				respTyped := resp.(*setTicketsVoteBitsResponse)
 				msg.reply <- *respTyped
 			case getTxOutMsg:
 				resp := w.executeInSequence(getTxOutFn, msg)
@@ -711,8 +716,38 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		}
 
 		if connectCount < w.minServers {
+			log.Errorf("Unable to check any servers for setTicketVoteBitsFn")
+			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v",
+				connectCount, w.minServers)
+			return resp
+		}
+
+		return resp
+
+	// Handle multiple tickets at once
+	case setTicketsVoteBitsFn:
+		stvbm := msg.(setTicketsVoteBitsMsg)
+		resp := new(setTicketsVoteBitsResponse)
+
+		connectCount := 0
+		for i, s := range w.servers {
+			err := s.SetTicketsVoteBits(stvbm.hashes, stvbm.votesBits)
+			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
+				err != dcrrpcclient.ErrClientShutdown) {
+				log.Infof("setTicketsVoteBitsFn failure on server %v: %v", i, err)
+				resp.err = err
+				return resp
+			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
+				err == dcrrpcclient.ErrClientShutdown) {
+				continue
+			}
+			connectCount++
+		}
+
+		if connectCount < w.minServers {
 			log.Errorf("Unable to check any servers for setTicketsVoteBitsFn")
-			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v", connectCount, w.minServers)
+			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v",
+				connectCount, w.minServers)
 			return resp
 		}
 
@@ -1644,6 +1679,8 @@ func (w *walletSvrManager) SyncTicketsVoteBits(tickets []*chainhash.Hash) error 
 					hash)
 			}
 			if votebits != refVoteBits {
+                log.Infof("Setting ticket %v votebits to %v on wallet %v",
+					hash.String(), refVoteBits, i)
 				err := w.servers[i].SetTicketVoteBits(&hash, refVoteBits)
 				if err != nil {
 					return err
