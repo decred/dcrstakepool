@@ -1593,25 +1593,21 @@ func (w *walletSvrManager) SyncVoteBits() error {
 	// 		gsi.Live+gsi.Immature, numLiveTickets)
 	// }
 
-	// Check number of tickets
-
+	// Check number of live tickets on other servers
 	for i, cl := range w.servers {
 		if i == 0 {
 			continue
 		}
 
 		log.Infof("SyncVoteBits: Checking number of tickets on wallet %d", i)
-		ticketHashes, err = cl.GetTickets(true)
-		//gsi, err = cl.GetStakeInfo()
+		gsi, err := cl.GetStakeInfo()
 		if err != nil {
 			return err
 		}
 
-		thMined := getMinedTickets(w.servers[0], ticketHashes)
-
-		if numLiveTickets != len(thMined) {
+		if numLiveTickets != int(gsi.Live+gsi.Immature) {
 			log.Errorf("Non-equivalent number of tickets on servers %v, %v "+
-				" (%v, %v)", 0, i, numLiveTickets, len(thMined))
+				" (%v, %v)", 0, i, numLiveTickets, int(gsi.Live))
 			return fmt.Errorf("non equivalent num elements returned")
 		}
 	}
@@ -1679,7 +1675,7 @@ func (w *walletSvrManager) SyncTicketsVoteBits(tickets []*chainhash.Hash) error 
 					hash)
 			}
 			if votebits != refVoteBits {
-                log.Infof("Setting ticket %v votebits to %v on wallet %v",
+				log.Infof("Setting ticket %v votebits to %v on wallet %v",
 					hash.String(), refVoteBits, i)
 				err := w.servers[i].SetTicketVoteBits(&hash, refVoteBits)
 				if err != nil {
@@ -2027,7 +2023,7 @@ func newWalletSvrManager(walletHosts []string, walletCerts []string,
 			return nil, err
 		}
 	}
-	
+
 	wsm := walletSvrManager{
 		walletHosts:            walletHosts,
 		walletCerts:            walletCerts,
