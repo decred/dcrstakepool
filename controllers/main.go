@@ -523,7 +523,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 }
 
 // RPCSync checks to ensure that the wallets are synced on startup.
-func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
+func (controller *MainController) RPCSync(dbMap *gorp.DbMap, skipVoteBitsSync bool) error {
 	multisigScripts, err := models.GetAllCurrentMultiSigScripts(dbMap)
 	if err != nil {
 		return err
@@ -534,26 +534,29 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 		return err
 	}
 
-	// TODO: Wait for wallets to sync, or schedule the vote bits sync somehow.
-	// For now, just skip full vote bits sync in favor of on-demand user's vote
-	// bits sync if the wallets are busy at this point.
+	if !skipVoteBitsSync {
+		// TODO: Wait for wallets to sync, or schedule the vote bits sync somehow.
+		// For now, just skip full vote bits sync in favor of on-demand user's vote
+		// bits sync if the wallets are busy at this point.
 
-	// Allow sync to get going before attempting vote bits sync.
-	time.Sleep(2 * time.Second)
+		// Allow sync to get going before attempting vote bits sync.
+		time.Sleep(2 * time.Second)
 
-	// Look for that -4 message from wallet that says: "the wallet is
-	// currently syncing to the best block, please try again later"
-	err = controller.rpcServers.CheckWalletsReady()
-	if err != nil /*strings.Contains(err.Error(), "try again later")*/ {
-		// If importscript is running, it will take a while.
-		log.Errorf("Wallets are syncing. Unable to initiate votebits sync: %v",
-			err)
-	} else {
-		// Sync vote bits for all tickets owned by the wallet
-		err = controller.rpcServers.SyncVoteBits()
-		if err != nil {
-			log.Error(err)
-			return err
+		// Look for that -4 message from wallet that says: "the wallet is
+		// currently syncing to the best block, please try again later"
+		wsm := controller.rpcServers
+		err = wsm.CheckWalletsReady()
+		if err != nil /*strings.Contains(err.Error(), "try again later")*/ {
+			// If importscript is running, it will take a while.
+			log.Errorf("Wallets are syncing. Unable to initiate votebits sync: %v",
+				err)
+		} else {
+			// Sync vote bits for all tickets owned by the wallet
+			err = wsm.SyncVoteBits()
+			if err != nil {
+				log.Error(err)
+				return err
+			}
 		}
 	}
 
