@@ -5,9 +5,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/gorilla/context"
 
@@ -63,21 +61,8 @@ func runMain() int {
 	}
 
 	// Set up signal handler
-	// SIGUSR1 = Reload html templates
-	sigs := make(chan os.Signal, 1)
-
-	signal.Notify(sigs, syscall.SIGUSR1)
-
-	go func() {
-		for {
-			sig := <-sigs
-			log.Infof("Received: %s", sig)
-			if sig == syscall.SIGUSR1 {
-				application.LoadTemplates(cfg.TemplatePath)
-				log.Infof("LoadTemplates() executed.")
-			}
-		}
-	}()
+	// SIGUSR1 = Reload html templates (On nix systems)
+	system.ReloadTemplatesSig(application)
 
 	dcrrpcclient.UseLogger(log)
 
