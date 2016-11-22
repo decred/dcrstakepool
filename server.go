@@ -100,7 +100,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = controller.RPCSync(application.DbMap)
+	err = controller.RPCSync(application.DbMap, cfg.SkipVoteBitsSync)
 	if err != nil {
 		application.Close()
 		dcrstakepoolLog.Errorf("Failed to sync the wallets: %v",

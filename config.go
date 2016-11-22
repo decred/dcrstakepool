@@ -88,6 +88,7 @@ type config struct {
 	WalletUsers      []string `long:"walletusers" description:"Username for wallet server"`
 	WalletPasswords  []string `long:"walletpasswords" description:"Pasword for wallet server"`
 	WalletCerts      []string `long:"walletcerts" description:"Certificate path for wallet server"`
+	SkipVoteBitsSync bool     `long:"skipvotebitssync" descrition:"Skip full vote bits check and sync on startup"`
 	Version          string
 	AdminIPs         []string `long:"adminips" description:"Expected admin host"`
 	MinServers       int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
