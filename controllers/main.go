@@ -72,6 +72,30 @@ func randToken() string {
 	return fmt.Sprintf("%x", b)
 }
 
+// Get the client's real IP address using the X-Real-IP header, or if that is
+// empty, http.Request.RemoteAddr. See the sample nginx.conf for using the
+// real_ip module to correctly set the X-Real-IP header.
+func getClientIP(r *http.Request) string {
+	getHost := func(ip string) string {
+		if strings.Contains(ip, ":") {
+			parts := strings.Split(ip, ":")
+			return parts[0]
+		}
+		return ip
+	}
+
+	realIP := r.Header.Get("X-Real-IP")
+	realIP = getHost(realIP)
+
+	if realIP == "" {
+		log.Info(`"X-Real-IP" header invalid, using RemoteAddr instead`)
+		// If this somehow errors, just go with empty
+		realIP = getHost(r.RemoteAddr)
+	}
+
+	return realIP
+}
+
 // NewMainController is the constructor for the entire controller routing.
 func NewMainController(params *chaincfg.Params, adminIPs []string, baseURL string, closePool bool,
 	closePoolMsg string, extPubStr string, poolEmail string, poolFees float64,
@@ -400,11 +424,7 @@ func (controller *MainController) APISignUp(c web.C, r *http.Request) ([]string,
 		return nil, "signup error", errors.New("unable to insert new user into db")
 	}
 
-	remoteIP := r.RemoteAddr
-	if strings.Contains(remoteIP, ":") {
-		parts := strings.Split(remoteIP, ":")
-		remoteIP = parts[0]
-	}
+	remoteIP := getClientIP(r)
 
 	body := signupEmailTemplate
 	body = strings.Replace(body, "__URL__", controller.baseURL, -1)
@@ -619,6 +639,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 // AddressPost is address form submit route.
 func (controller *MainController) AddressPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
+	remoteIP := getClientIP(r)
 
 	// User may have a session so error out here as well.
 	if controller.closePool {
@@ -640,7 +661,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	userPubKeyAddr := r.FormValue("UserPubKeyAddr")
 
-	log.Infof("Address POST from %v, pubkeyaddr %v", r.RemoteAddr, userPubKeyAddr)
+	log.Infof("Address POST from %v, pubkeyaddr %v", remoteIP, userPubKeyAddr)
 
 	if len(userPubKeyAddr) < 40 {
 		session.AddFlash("Address is too short", "address")
@@ -942,7 +963,9 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	if err != nil {
 		session.AddFlash("Invalid Email", "passwordresetError")
 	} else {
-		log.Infof("PasswordReset POST from %v, email %v", r.RemoteAddr,
+		remoteIP := getClientIP(r)
+
+		log.Infof("PasswordReset POST from %v, email %v", remoteIP,
 			user.Email)
 
 		t := time.Now()
@@ -960,12 +983,6 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 			session.AddFlash("Unable to add reset token to database", "passwordresetError")
 			log.Errorf("Unable to add reset token to database: %v", err)
 			return controller.PasswordReset(c, r)
-		}
-
-		remoteIP := r.RemoteAddr
-		if strings.Contains(remoteIP, ":") {
-			parts := strings.Split(remoteIP, ":")
-			remoteIP = parts[0]
 		}
 
 		body := "A request to reset your password was made from IP address: " +
@@ -1025,6 +1042,7 @@ func (controller *MainController) PasswordUpdate(c web.C, r *http.Request) (stri
 func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
+	remoteIP := getClientIP(r)
 
 	// validate that the token is set and not expired.
 	token := r.URL.Query().Get("t")
@@ -1062,12 +1080,12 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 
 	user, err := helpers.UserIDExists(dbMap, passwordReset.UserId)
 	if err != nil {
-		log.Infof("UserIDExists failure %v, %v", err, r.RemoteAddr)
+		log.Infof("UserIDExists failure %v, %v", err, remoteIP)
 		session.AddFlash("Unable to find User ID", "passwordupdateError")
 		return controller.PasswordUpdate(c, r)
 	}
 
-	log.Infof("PasswordUpdate POST from %v, email %v", r.RemoteAddr,
+	log.Infof("PasswordUpdate POST from %v, email %v", remoteIP,
 		user.Email)
 
 	user.HashPassword(password)
@@ -1120,6 +1138,7 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
+	remoteIP := getClientIP(r)
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
@@ -1134,14 +1153,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		return controller.Settings(c, r)
 	}
 
-	log.Infof("Settings POST from %v, email %v", r.RemoteAddr,
-		user.Email)
-
-	remoteIP := r.RemoteAddr
-	if strings.Contains(remoteIP, ":") {
-		parts := strings.Split(remoteIP, ":")
-		remoteIP = parts[0]
-	}
+	log.Infof("Settings POST from %v, email %v", remoteIP, user.Email)
 
 	if updateEmail == "true" {
 		newEmail := r.FormValue("email")
@@ -1277,16 +1289,17 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
+	remoteIP := getClientIP(r)
 
 	// Validate email and password combination.
 	user, err := helpers.Login(dbMap, email, password)
 	if err != nil {
-		log.Infof(email+" login failed %v, %v", err, r.RemoteAddr)
+		log.Infof(email+" login failed %v, %v", err, remoteIP)
 		session.AddFlash("Invalid Email or Password", "auth")
 		return controller.SignIn(c, r)
 	}
 
-	log.Infof("SignIn POST from %v, email %v", r.RemoteAddr, user.Email)
+	log.Infof("SignIn POST from %v, email %v", remoteIP, user.Email)
 
 	if user.EmailVerified == 0 {
 		session.AddFlash("You must validate your email address", "auth")
@@ -1355,6 +1368,7 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	}
 
 	session := controller.GetSession(c)
+	remoteIP := getClientIP(r)
 
 	email, password, passwordRepeat := r.FormValue("email"),
 		r.FormValue("password"), r.FormValue("passwordrepeat")
@@ -1398,19 +1412,12 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	}
 	user.HashPassword(password)
 
-	log.Infof("SignUp POST from %v, email %v.  Inserting...",
-		r.RemoteAddr, user.Email)
+	log.Infof("SignUp POST from %v, email %v. Inserting.", remoteIP, user.Email)
 
 	if err := models.InsertUser(dbMap, user); err != nil {
 		session.AddFlash("Database error occurred while adding user", "signupError")
 		log.Errorf("Error while registering user: %v", err)
 		return controller.SignUp(c, r)
-	}
-
-	remoteIP := r.RemoteAddr
-	if strings.Contains(remoteIP, ":") {
-		parts := strings.Split(remoteIP, ":")
-		remoteIP = parts[0]
 	}
 
 	body := signupEmailTemplate
@@ -1472,11 +1479,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 
 	// Confirm that the incoming IP address is an approved
 	// admin IP as set in config.
-	remoteIP := r.RemoteAddr
-	if strings.Contains(remoteIP, ":") {
-		parts := strings.Split(remoteIP, ":")
-		remoteIP = parts[0]
-	}
+	remoteIP := getClientIP(r)
 
 	if !stringSliceContains(controller.adminIPs, remoteIP) {
 		return "/error", http.StatusSeeOther
@@ -1588,6 +1591,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
+	remoteIP := getClientIP(r)
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
@@ -1617,7 +1621,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
 	}
 
-	log.Infof("Tickets GET from %v, multisig %v", r.RemoteAddr,
+	log.Infof("Tickets GET from %v, multisig %v", remoteIP,
 		user.MultiSigAddress)
 
 	w := controller.rpcServers
@@ -1778,12 +1782,14 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 		log.Error("No valid UserID")
 	}
 
+	remoteIP := getClientIP(r)
+
 	user := models.GetUserById(dbMap, id)
 	if user == nil {
 		log.Error("Unable to find user with ID", id)
 	}
 
-	log.Infof("Tickets POST from %v, multisig %v", r.RemoteAddr,
+	log.Infof("Tickets POST from %v, multisig %v", remoteIP,
 		user.MultiSigAddress)
 
 	if user.MultiSigAddress == "" {
