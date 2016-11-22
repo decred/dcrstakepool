@@ -12,11 +12,16 @@ import (
 	"crypto/sha256"
 
 	"github.com/decred/dcrstakepool/models"
-	"github.com/golang/glog"
 	"github.com/gorilla/sessions"
-	"github.com/pelletier/go-toml"
 	"github.com/zenazn/goji/web"
 	"gopkg.in/gorp.v1"
+)
+
+// CSRF token constants
+const (
+	CSRFCookie = "XSRF-TOKEN"
+	CSRFHeader = "X-XSRF-TOKEN"
+	CSRFKey    = "csrf_token"
 )
 
 type CsrfProtection struct {
@@ -27,47 +32,41 @@ type CsrfProtection struct {
 }
 
 type Application struct {
-	Config         *toml.TomlTree
 	Template       *template.Template
 	Store          *sessions.CookieStore
 	DbMap          *gorp.DbMap
 	CsrfProtection *CsrfProtection
 }
 
-func (application *Application) Init(filename *string) {
-
-	config, err := toml.LoadFile(*filename)
-	if err != nil {
-		glog.Fatalf("TOML load failed: %s\n", err)
-	}
+func (application *Application) Init(cookieSecret string, cookieSecure bool,
+	DBHost string, DBName string, DBPassword string, DBPort string,
+	DBUser string) {
 
 	hash := sha256.New()
-	io.WriteString(hash, config.Get("cookie.mac_secret").(string))
+	io.WriteString(hash, cookieSecret)
 	application.Store = sessions.NewCookieStore(hash.Sum(nil))
 	application.Store.Options = &sessions.Options{
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   config.Get("cookie.secure").(bool),
+		Secure:   cookieSecure,
 	}
-	dbConfig := config.Get("database").(*toml.TomlTree)
+
 	application.DbMap = models.GetDbMap(
-		dbConfig.Get("user").(string),
-		dbConfig.Get("password").(string),
-		dbConfig.Get("hostname").(string),
-		dbConfig.Get("port").(string),
-		dbConfig.Get("database").(string))
+		DBUser,
+		DBPassword,
+		DBHost,
+		DBPort,
+		DBName)
 
 	application.CsrfProtection = &CsrfProtection{
-		Key:    config.Get("csrf.key").(string),
-		Cookie: config.Get("csrf.cookie").(string),
-		Header: config.Get("csrf.header").(string),
-		Secure: config.Get("cookie.secure").(bool),
+		Key:    CSRFKey,
+		Cookie: CSRFCookie,
+		Header: CSRFHeader,
+		Secure: cookieSecure,
 	}
-
-	application.Config = config
 }
 
-func (application *Application) LoadTemplates() error {
+func (application *Application) LoadTemplates(templatePath string) error {
 	var templates []string
 
 	fn := func(path string, f os.FileInfo, err error) error {
@@ -77,7 +76,7 @@ func (application *Application) LoadTemplates() error {
 		return nil
 	}
 
-	err := filepath.Walk(application.Config.Get("general.template_path").(string), fn)
+	err := filepath.Walk(templatePath, fn)
 
 	if err != nil {
 		return err
@@ -88,7 +87,7 @@ func (application *Application) LoadTemplates() error {
 }
 
 func (application *Application) Close() {
-	glog.Info("Bye!")
+	log.Info("Application.Close() called")
 }
 
 func (application *Application) Route(controller interface{}, route string) interface{} {
@@ -104,7 +103,7 @@ func (application *Application) Route(controller interface{}, route string) inte
 		if session, exists := c.Env["Session"]; exists {
 			err := session.(*sessions.Session).Save(r, w)
 			if err != nil {
-				glog.Errorf("Can't save session: %v", err)
+				log.Errorf("Can't save session: %v", err)
 			}
 		}
 

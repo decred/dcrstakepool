@@ -27,13 +27,17 @@ const (
 	defaultLogLevel         = "info"
 	defaultLogDirname       = "logs"
 	defaultLogFilename      = "dcrstakepool.log"
+	defaultCookieSecure     = false
 	defaultDBHost           = "localhost"
 	defaultDBName           = "stakepool"
-	defaultDBPort           = 3306
+	defaultDBPort           = "3306"
 	defaultDBUser           = "stakepool"
+	defaultListen           = ":8000"
 	defaultPoolEmail        = "admin@example.com"
 	defaultPoolFees         = 7.5
 	defaultPoolLink         = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
+	defaultPublicPath       = "public"
+	defaultTemplatePath     = "views"
 	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
 	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
 	defaultSMTPHost         = ""
@@ -59,7 +63,7 @@ type config struct {
 	ConfigFile       string   `short:"C" long:"configfile" description:"Path to configuration file"`
 	DataDir          string   `short:"b" long:"datadir" description:"Directory to store data"`
 	LogDir           string   `long:"logdir" description:"Directory to log output."`
-	Listeners        []string `long:"listen" description:"Add an interface/port to listen for connections (default all interfaces port: 9108, testnet: 19108)"`
+	Listen           string   `long:"listen" description:"Listen for connections on the specified interface/port (default: all interfaces, port 8000)"`
 	TestNet          bool     `long:"testnet" description:"Use the test network"`
 	SimNet           bool     `long:"simnet" description:"Use the simulation test network"`
 	Profile          string   `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
@@ -70,11 +74,15 @@ type config struct {
 	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
 	ClosePool        bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
 	ClosePoolMsg     string   `long:"closepoolmsg" description:"Message to display when closepool is set (default: Stake pool is currently oversubscribed)"`
+	CookieSecret     string   `long:"cookiesecret" description:"Secret string used to encrypt session data."`
+	CookieSecure     bool     `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
 	DBHost           string   `long:"dbhost" description:"Hostname for database connection"`
 	DBUser           string   `long:"dbuser" description:"Username for database connection"`
-	DBPass           string   `long:"dbpass" description:"Password for database connection"`
-	DBPort           int16    `long:"dbport" description:"Port for database connection"`
+	DBPassword       string   `long:"dbpassword" description:"Password for database connection"`
+	DBPort           string   `long:"dbport" description:"Port for database connection"`
 	DBName           string   `long:"dbname" description:"Name of database"`
+	PublicPath       string   `long:"publicpath" description:"Path to the public folder which contains css/fonts/images/javascript."`
+	TemplatePath     string   `long:"templatepath" description:"Path to the views folder which contains html files."`
 	RecaptchaSecret  string   `long:"recaptchasecret" description:"Recaptcha Secret"`
 	RecaptchaSitekey string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
 	PoolEmail        string   `long:"poolemail" description:"Email address to for support inquiries"`
@@ -273,13 +281,17 @@ func loadConfig() (*config, []string, error) {
 		DebugLevel:       defaultLogLevel,
 		DataDir:          defaultDataDir,
 		LogDir:           defaultLogDir,
+		CookieSecure:     defaultCookieSecure,
 		DBHost:           defaultDBHost,
 		DBName:           defaultDBName,
 		DBPort:           defaultDBPort,
 		DBUser:           defaultDBUser,
+		Listen:           defaultListen,
 		PoolEmail:        defaultPoolEmail,
 		PoolFees:         defaultPoolFees,
 		PoolLink:         defaultPoolLink,
+		PublicPath:       defaultPublicPath,
+		TemplatePath:     defaultTemplatePath,
 		RecaptchaSecret:  defaultRecaptchaSecret,
 		RecaptchaSitekey: defaultRecaptchaSitekey,
 		SMTPHost:         defaultSMTPHost,
@@ -371,14 +383,6 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	/*if cfg.DBPass == "" {
-		str := "%s: database password isn't set"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintln(os.Stderr, usageMessage)
-		return nil, nil, err
-	}*/
-
 	// Multiple networks can't be selected simultaneously.
 	numNets := 0
 
@@ -447,31 +451,19 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
-	// Add the default listener if none were specified. The default
-	// listener is all addresses on the listen port for the network
-	// we are to connect to.
-	if len(cfg.Listeners) == 0 {
-		cfg.Listeners = []string{
-			net.JoinHostPort("", activeNetParams.DefaultPort),
-		}
+	if cfg.CookieSecret == "" {
+		str := "%s: cookiesecret is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
 	}
 
-	/*
-		// Default to listen on localhost only.
-		addrs, err := net.LookupHost("localhost")
-		if err != nil {
-			return nil, nil, err
-		}
-		cfg.WEBListeners = make([]string, 0, len(addrs))
-		for _, addr := range addrs {
-			addr = net.JoinHostPort(addr, activeNetParams.webPort)
-			cfg.WEBListeners = append(cfg.WEBListeners, addr)
-		}
-
-		// Add default port to all rpc listener addresses if needed and remove
-		// duplicate addresses.
-		cfg.WEBListeners = normalizeAddresses(cfg.WEBListeners,
-			activeNetParams.webPort)*/
+	if cfg.DBPassword == "" {
+		str := "%s: dbpassword is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
 
 	if len(cfg.ColdWalletExtPub) == 0 {
 		str := "%s: coldwalletextpub is not set in config"
@@ -571,7 +563,7 @@ func loadConfig() (*config, []string, error) {
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
 	if configFileError != nil {
-		dcrstakepoolLog.Warnf("%v", configFileError)
+		log.Warnf("%v", configFileError)
 	}
 
 	return &cfg, remainingArgs, nil

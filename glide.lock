@@ -70,8 +70,6 @@ imports:
   version: 8f6c67f0228a4a6a962008d6c3d1e694e4532e71
 - name: github.com/go-utils/uslice
   version: 7f8c3df848991b2e38824a7bda55bda1339b651e
-- name: github.com/golang/glog
-  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/securecookie
@@ -80,10 +78,6 @@ imports:
   version: ca9ada44574153444b00d3fd9c8559e4cc95f896
 - name: github.com/haisum/recaptcha
   version: 8527d614dbb33cac7cf2433c83ad6d3346761276
-- name: github.com/pelletier/go-buffruneio
-  version: df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
-- name: github.com/pelletier/go-toml
-  version: 45932ad32dfdd20826f5671da37a5f3ce9f26a8d
 - name: github.com/zenazn/goji
   version: 4d7077956293261309684d3cf1af673f773c6819
   subpackages:
