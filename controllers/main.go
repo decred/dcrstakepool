@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"net"
 	"net/http"
 	"net/smtp"
 	"strconv"
@@ -89,8 +88,7 @@ func getClientIP(r *http.Request) string {
 	realIP = getHost(realIP)
 
 	if realIP == "" {
-		log.Infof(`"X-Real-IP" header invalid, using RemoteAddr instead (%s, %v).`,
-			realIP)
+		log.Info(`"X-Real-IP" header invalid, using RemoteAddr instead`)
 		// If this somehow errors, just go with empty
 		realIP = getHost(r.RemoteAddr)
 	}
