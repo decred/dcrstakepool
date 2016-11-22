@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/decred/dcrstakepool/models"
-	"github.com/go-utils/uslice"
 	"github.com/gorilla/sessions"
 	"github.com/zenazn/goji/web"
 	"gopkg.in/gorp.v1"
@@ -85,7 +84,16 @@ func isValidToken(a, b string) bool {
 var csrfProtectionMethodForNoXhr = []string{"POST", "PUT", "DELETE"}
 
 func isCsrfProtectionMethodForNoXhr(method string) bool {
-	return uslice.StrHas(csrfProtectionMethodForNoXhr, strings.ToUpper(method))
+	return strInSlice(csrfProtectionMethodForNoXhr, strings.ToUpper(method)) >= 0
+}
+
+func strInSlice(strs []string, str string) int {
+	for i, v := range strs {
+		if str == v {
+			return i
+		}
+	}
+	return -1
 }
 
 func (application *Application) ApplyCsrfProtection(c *web.C, h http.Handler) http.Handler {
