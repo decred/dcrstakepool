@@ -25,6 +25,10 @@ var (
 	cfg *config
 )
 
+func gojify(h http.HandlerFunc) web.HandlerFunc {
+	return system.GojiWebHandlerFunc(h)
+}
+
 func main() {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
@@ -124,8 +128,8 @@ func main() {
 	goji.Post("/address", application.Route(controller, "AddressPost"))
 
 	// API
-	goji.Handle("/api/*", application.Route(controller, "API"))
-	goji.Handle("/api/*", system.GojiWebHandlerFunc(controller))
+	goji.Handle("/api/v1/:command", controller.APIHandler)
+	goji.Handle("/api/*", gojify(controller.APIInvalidHandler))
 
 	// Email change/update confirmation
 	goji.Get("/emailupdate", application.Route(controller, "EmailUpdate"))
