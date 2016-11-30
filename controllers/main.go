@@ -484,7 +484,7 @@ func (controller *MainController) APIStats(c web.C,
 	stats := &poolapi.Stats{
 		AllMempoolTix:    I32toa(gsi.AllMempoolTix),
 		BlockHeight:      I32toa(uint32(gsi.BlockHeight)),
-		Difficulty:       strconv.FormatFloat(gsi.ProportionLive, 'f', 2, 64),
+		Difficulty:       strconv.FormatFloat(gsi.Difficulty, 'f', 2, 64),
 		Immature:         I32toa(gsi.Immature),
 		Live:             I32toa(gsi.Live),
 		Missed:           I32toa(gsi.Missed),
