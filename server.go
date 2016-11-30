@@ -125,6 +125,7 @@ func main() {
 
 	// API
 	goji.Handle("/api/*", application.Route(controller, "API"))
+	goji.Handle("/api/*", system.GojiWebHandlerFunc(controller))
 
 	// Email change/update confirmation
 	goji.Get("/emailupdate", application.Route(controller, "EmailUpdate"))
