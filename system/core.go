@@ -34,6 +34,14 @@ type Application struct {
 	CsrfProtection *CsrfProtection
 }
 
+// GojiWebHandlerFunc is an adaptor that allows an http.HanderFunc where a
+// web.HandlerFunc is required.
+func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
+	return func(_ web.C, w http.ResponseWriter, r *http.Request) {
+		h(w, r)
+	}
+}
+
 func (application *Application) Init(filename *string) {
 
 	config, err := toml.LoadFile(*filename)
@@ -91,7 +99,7 @@ func (application *Application) Close() {
 	glog.Info("Bye!")
 }
 
-func (application *Application) Route(controller interface{}, route string) interface{} {
+func (application *Application) Route(controller interface{}, route string) web.HandlerFunc {
 	fn := func(c web.C, w http.ResponseWriter, r *http.Request) {
 		c.Env["Content-Type"] = "text/html"
 
