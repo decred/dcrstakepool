@@ -139,7 +139,8 @@ func NewMainController(params *chaincfg.Params, adminIPs []string, baseURL strin
 	return mc, nil
 }
 
-func (c *MainController) APIInvalidHandler(w http.ResponseWriter, r *http.Request) {
+// APIInvalidHandler responds to invalid requests. It satisfies http.Hander.
+func APIInvalidHandler(w http.ResponseWriter, _ *http.Request) {
 	resp := poolapi.Response{Status: "error",
 		Message: "invalid API version",
 	}
@@ -150,8 +151,9 @@ func (c *MainController) APIInvalidHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func APIResponseHandler(resp *poolapi.Response, code int, w http.ResponseWriter,
-	r *http.Request) {
+// WriteAPIResponse marshals the given poolapi.Response into the
+// http.ResponseWriter and sets HTTP status code.
+func WriteAPIResponse(resp *poolapi.Response, code int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -159,47 +161,52 @@ func APIResponseHandler(resp *poolapi.Response, code int, w http.ResponseWriter,
 	}
 }
 
-// APIHandler is the main frontend that handles all API requests.
+// APIHandler is the main frontend that handles all API requests. It satisfies
+// goji's web.Handler.
 func (controller *MainController) APIHandler(c web.C, w http.ResponseWriter,
 	r *http.Request) {
 	command := c.URLParams["command"]
 
+	// poolapi.Response comprises a status, message, and a data struct
+	var response, status string
+	var data interface{}
+
+	var err error
 	httpStatus := http.StatusOK
-	var aresp *poolapi.Response
 
 	switch r.Method {
 	case "GET":
 		switch command {
 		case "getpurchaseinfo":
-			data, response, err := controller.APIPurchaseInfo(c, r)
-			aresp = poolapi.NewResponse(err.Error(), response, data)
+			data, response, err = controller.APIPurchaseInfo(c, r)
 		case "startsession":
-			aresp = poolapi.NewResponse("success", "session started", nil)
+			status, response = "success", "session started"
 		case "stats":
-			data, response, err := controller.APIStats(c, r)
-			aresp = poolapi.NewResponse(err.Error(), response, data)
+			data, response, err = controller.APIStats(c, r)
 		default:
-			controller.APIInvalidHandler(w, r)
+			APIInvalidHandler(w, r)
 			return
 		}
 	case "POST":
 		switch command {
 		case "address":
-			_, response, err := controller.APIAddress(c, r)
-			aresp = poolapi.NewResponse(err.Error(), response, nil)
+			_, response, err = controller.APIAddress(c, r)
 		case "signin":
-			_, response, err := controller.APISignIn(c, r)
-			aresp = poolapi.NewResponse(err.Error(), response, nil)
+			_, response, err = controller.APISignIn(c, r)
 		case "signup":
-			_, response, err := controller.APISignUp(c, r)
-			aresp = poolapi.NewResponse(err.Error(), response, nil)
+			_, response, err = controller.APISignUp(c, r)
 		default:
-			controller.APIInvalidHandler(w, r)
+			APIInvalidHandler(w, r)
 			return
 		}
 	}
 
-	APIResponseHandler(aresp, httpStatus, w, r)
+	if err != nil {
+		status = err.Error()
+	}
+
+	aresp := poolapi.NewResponse(status, response, data)
+	WriteAPIResponse(aresp, httpStatus, w)
 }
 
 // APIAddress is AddressPost API'd a bit

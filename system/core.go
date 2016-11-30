@@ -34,6 +34,8 @@ type Application struct {
 	CsrfProtection *CsrfProtection
 }
 
+// GojiWebHandlerFunc is an adaptor that allows an http.HanderFunc where a
+// web.HandlerFunc is required.
 func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
 	return func(_ web.C, w http.ResponseWriter, r *http.Request) {
 		h(w, r)
