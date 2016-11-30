@@ -144,6 +144,9 @@ func NewMainController(params *chaincfg.Params, adminIPs []string, baseURL strin
 // This would make it much easier to share code between the web UI and JSON
 // API with less duplication.
 func (controller *MainController) API(c web.C, r *http.Request) (string, int) {
+	// JSON is always returned presently
+	c.Env["Content-Type"] = "application/json; charset=utf-8"
+
 	// we expect /api/vX.YZ/command
 	URIparts := strings.Split(r.RequestURI, "/")
 	if len(URIparts) != 4 {
