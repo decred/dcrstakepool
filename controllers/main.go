@@ -177,7 +177,7 @@ func (controller *MainController) APIHandler(c web.C, w http.ResponseWriter,
 	switch r.Method {
 	case "GET":
 		switch command {
-		case "getpurchaseinfo":
+		case "getPurchaseInfo":
 			data, response, err = controller.APIPurchaseInfo(c, r)
 		case "startsession":
 			status, response = "success", "session started"
