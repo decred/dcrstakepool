@@ -22,6 +22,7 @@ import (
 	"github.com/decred/dcrd/blockchain/stake"
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/models"
+	"github.com/decred/dcrstakepool/poolapi"
 	"github.com/decred/dcrstakepool/system"
 	"github.com/haisum/recaptcha"
 	"github.com/zenazn/goji/web"
@@ -138,54 +139,45 @@ func NewMainController(params *chaincfg.Params, adminIPs []string, baseURL strin
 }
 
 // API is the main frontend that handles all API requests.
-// XXX This is very hacky.  It can be made more elegant by improving or
-// re-writing the middleware and switching to a more modern framework
-// such as goji2 or something else that utilizes the context package/built-in.
-// This would make it much easier to share code between the web UI and JSON
-// API with less duplication.
-func (controller *MainController) API(c web.C, r *http.Request) (string, int) {
-	// we expect /api/vX.YZ/command
-	URIparts := strings.Split(r.RequestURI, "/")
-	if len(URIparts) != 4 {
-		return "{\"status\": \"error\"," +
-			"\"message\": \"invalid API request\"}\n", http.StatusOK
-	}
-	version := URIparts[2]
-	command := URIparts[3]
+func (controller *MainController) API(c web.C, r *http.Request) *system.APIResponse {
+	command := c.URLParams["command"]
 
-	if version != "v0.1" {
-		return "{\"status\": \"error\"," +
-			"\"message\": \"invalid API version\"}\n", http.StatusOK
-	}
+	// poolapi.Response comprises a status, message, and a data struct
+	var response, status string
+	var data interface{}
+
+	var err error
 
 	switch r.Method {
 	case "GET":
 		switch command {
 		case "getPurchaseInfo":
-			data, response, err := controller.APIPurchaseInfo(c, r)
-			return APIResponse(data, response, err), http.StatusOK
+			data, response, err = controller.APIPurchaseInfo(c, r)
 		case "startsession":
-			return APIResponse(nil, "session started", nil), http.StatusOK
+			status, response = "success", "session started"
 		case "stats":
-			data, response, err := controller.APIStats(c, r)
-			return APIResponse(data, response, err), http.StatusOK
+			data, response, err = controller.APIStats(c, r)
+		default:
+			return nil
 		}
 	case "POST":
 		switch command {
 		case "address":
-			_, response, err := controller.APIAddress(c, r)
-			return APIResponse(nil, response, err), http.StatusOK
+			_, response, err = controller.APIAddress(c, r)
 		case "signin":
-			_, response, err := controller.APISignIn(c, r)
-			return APIResponse(nil, response, err), http.StatusOK
+			_, response, err = controller.APISignIn(c, r)
 		case "signup":
-			_, response, err := controller.APISignUp(c, r)
-			return APIResponse(nil, response, err), http.StatusOK
+			_, response, err = controller.APISignUp(c, r)
+		default:
+			return nil
 		}
 	}
 
-	return "{\"status\": \"error\"," +
-		"\"message\": \"invalid API command\"}\n", http.StatusOK
+	if err != nil {
+		status = err.Error()
+	}
+
+	return system.NewAPIResponse(status, response, data)
 }
 
 // APIAddress is AddressPost API'd a bit
@@ -327,11 +319,10 @@ func APIResponse(data []string, response string, err error) string {
 }
 
 // APIPurchaseInfo fetches and returns the user's info or an error
-func (controller *MainController) APIPurchaseInfo(c web.C, r *http.Request) ([]string, string, error) {
+func (controller *MainController) APIPurchaseInfo(c web.C,
+	r *http.Request) (*poolapi.PurchaseInfo, string, error) {
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
-
-	var purchaseInfo []string
 
 	if session.Values["UserId"] == nil {
 		return nil, "purchaseinfo error", errors.New("invalid session")
@@ -343,12 +334,12 @@ func (controller *MainController) APIPurchaseInfo(c web.C, r *http.Request) ([]s
 		return nil, "purchaseinfo error", errors.New("no address submitted")
 	}
 
-	purchaseInfo = append(purchaseInfo,
-		"pooladdress", user.UserFeeAddr,
-		"poolfees", strconv.FormatFloat(controller.poolFees, 'f', 2, 64),
-		"script", user.MultiSigScript,
-		"ticketaddress", user.MultiSigAddress,
-	)
+	purchaseInfo := &poolapi.PurchaseInfo{
+		PoolAddress:   user.UserFeeAddr,
+		PoolFees:      strconv.FormatFloat(controller.poolFees, 'f', 2, 64),
+		Script:        user.MultiSigScript,
+		TicketAddress: user.MultiSigAddress,
+	}
 
 	return purchaseInfo, "purchaseinfo successfully retrieved", nil
 }
@@ -441,9 +432,8 @@ func (controller *MainController) APISignUp(c web.C, r *http.Request) ([]string,
 }
 
 // APIStats fetches is Stats() API'd a bit
-func (controller *MainController) APIStats(c web.C, r *http.Request) ([]string, string, error) {
-	var stats []string
-
+func (controller *MainController) APIStats(c web.C,
+	r *http.Request) (*poolapi.Stats, string, error) {
 	dbMap := controller.GetDbMap(c)
 	userCount := models.GetUserCount(dbMap)
 	userCountActive := models.GetUserCountActive(dbMap)
@@ -451,41 +441,46 @@ func (controller *MainController) APIStats(c web.C, r *http.Request) ([]string, 
 	if controller.RPCIsStopped() {
 		return nil, "stats error", errors.New("RPC server stopped")
 	}
+
 	gsi, err := controller.rpcServers.GetStakeInfo()
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
 		return nil, "stats error", errors.New("RPC server error")
 	}
 
-	poolStatus := "Unknown"
+	var poolStatus string
 	if controller.closePool {
 		poolStatus = "Closed"
 	} else {
 		poolStatus = "Open"
 	}
 
-	stats = append(stats,
-		"AllMempoolTix", fmt.Sprintf("%d", gsi.AllMempoolTix),
-		"BlockHeight", fmt.Sprintf("%d", gsi.BlockHeight),
-		"Difficulty", fmt.Sprintf("%f", gsi.Difficulty),
-		"Immature", fmt.Sprintf("%d", gsi.Immature),
-		"Live", fmt.Sprintf("%d", gsi.Live),
-		"Missed", fmt.Sprintf("%d", gsi.Missed),
-		"OwnMempoolTix", fmt.Sprintf("%d", gsi.OwnMempoolTix),
-		"PoolSize", fmt.Sprintf("%d", gsi.PoolSize),
-		"ProportionLive", fmt.Sprintf("%f", gsi.ProportionLive),
-		"ProportionMissed", fmt.Sprintf("%f", gsi.ProportionMissed),
-		"Revoked", fmt.Sprintf("%d", gsi.Revoked),
-		"TotalSubsidy", fmt.Sprintf("%f", gsi.TotalSubsidy),
-		"Voted", fmt.Sprintf("%d", gsi.Voted),
-		"Network", controller.params.Name,
-		"PoolEmail", controller.poolEmail,
-		"PoolFees", strconv.FormatFloat(controller.poolFees, 'f', 2, 64),
-		"PoolStatus", poolStatus,
-		"UserCount", fmt.Sprintf("%d", userCount),
-		"UserCountActive", fmt.Sprintf("%d", userCountActive),
-		"Version", controller.version,
-	)
+	I32toa := func(i uint32) string {
+		return strconv.FormatInt(int64(i), 10)
+	}
+
+	stats := &poolapi.Stats{
+		AllMempoolTix:    I32toa(gsi.AllMempoolTix),
+		BlockHeight:      I32toa(uint32(gsi.BlockHeight)),
+		Difficulty:       strconv.FormatFloat(gsi.Difficulty, 'f', 2, 64),
+		Immature:         I32toa(gsi.Immature),
+		Live:             I32toa(gsi.Live),
+		Missed:           I32toa(gsi.Missed),
+		OwnMempoolTix:    I32toa(gsi.OwnMempoolTix),
+		PoolSize:         I32toa(gsi.PoolSize),
+		ProportionLive:   strconv.FormatFloat(gsi.ProportionLive, 'f', 6, 64),
+		ProportionMissed: strconv.FormatFloat(gsi.ProportionMissed, 'f', 6, 64),
+		Revoked:          I32toa(gsi.Revoked),
+		TotalSubsidy:     strconv.FormatFloat(gsi.TotalSubsidy, 'f', 2, 64),
+		Voted:            I32toa(gsi.Voted),
+		Network:          controller.params.Name,
+		PoolEmail:        controller.poolEmail,
+		PoolFees:         strconv.FormatFloat(controller.poolFees, 'f', 2, 64),
+		PoolStatus:       poolStatus,
+		UserCount:        I32toa(uint32(userCount)),
+		UserCountActive:  I32toa(uint32(userCountActive)),
+		Version:          controller.version,
+	}
 
 	return stats, "stats successfully retrieved", nil
 }
