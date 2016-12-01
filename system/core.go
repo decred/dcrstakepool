@@ -169,7 +169,8 @@ func WriteAPIResponse(resp *APIResponse, code int, w http.ResponseWriter) {
 	}
 }
 
-// APIInvalidHandler responds to invalid requests. It satisfies http.Hander.
+// APIInvalidHandler responds to invalid requests. It matches the signature of
+// http.HanderFunc.
 func APIInvalidHandler(w http.ResponseWriter, _ *http.Request) {
 	resp := &APIResponse{Status: "error",
 		Message: "invalid API version",
