@@ -3,10 +3,8 @@ package models
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/golang/glog"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/gorp.v1"
 )
@@ -46,7 +44,7 @@ type User struct {
 func (user *User) HashPassword(password string) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		glog.Fatalf("Couldn't hash password: %v", err)
+		log.Criticalf("Couldn't hash password: %v", err)
 		panic(err)
 	}
 	user.Password = hash
@@ -56,7 +54,7 @@ func GetUserByEmail(dbMap *gorp.DbMap, email string) (user *User) {
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users where Email = ?", email)
 
 	if err != nil {
-		glog.Warningf("Can't get user by email: %v", err)
+		log.Warnf("Can't get user by email: %v", err)
 	}
 	return
 }
@@ -65,7 +63,7 @@ func GetUserById(dbMap *gorp.DbMap, id int64) (user *User) {
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 
 	if err != nil {
-		glog.Warningf("Can't get user by id: %v", err)
+		log.Warnf("Can't get user by id: %v", err)
 	}
 	return
 }
@@ -114,7 +112,7 @@ func UpdateUserByID(dbMap *gorp.DbMap, id int64, multiSigAddr string,
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 
 	if err != nil {
-		glog.Warningf("Can't get user by id: %v", err)
+		log.Warnf("Can't get user by id: %v", err)
 	}
 
 	user.MultiSigAddress = multiSigAddr
@@ -127,7 +125,7 @@ func UpdateUserByID(dbMap *gorp.DbMap, id int64, multiSigAddr string,
 	_, err = dbMap.Update(user)
 
 	if err != nil {
-		glog.Warningf("Couldn't update user: %v", err)
+		log.Warnf("Couldn't update user: %v", err)
 	}
 
 	// return updated User
@@ -221,6 +219,6 @@ func addColumn(dbMap *gorp.DbMap, db string, table string, columnToAdd string,
 
 func checkErr(err error, msg string) {
 	if err != nil {
-		log.Fatalln(msg, err)
+		log.Critical(msg, err)
 	}
 }

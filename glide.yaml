@@ -27,7 +27,6 @@ import:
 - package: github.com/gorilla/context
 - package: github.com/gorilla/sessions
 - package: github.com/haisum/recaptcha
-- package: github.com/pelletier/go-toml
 - package: github.com/zenazn/goji
   subpackages:
   - graceful

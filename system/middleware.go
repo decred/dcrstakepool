@@ -10,7 +10,6 @@ import (
 
 	"github.com/decred/dcrstakepool/models"
 	"github.com/go-utils/uslice"
-	"github.com/golang/glog"
 	"github.com/gorilla/sessions"
 	"github.com/zenazn/goji/web"
 	"gopkg.in/gorp.v1"
@@ -51,7 +50,7 @@ func (application *Application) ApplyAuth(c *web.C, h http.Handler) http.Handler
 
 			user, err := dbMap.Get(models.User{}, userId)
 			if err != nil {
-				glog.Warningf("Auth error: %v", err)
+				log.Warnf("Auth error: %v", err)
 				c.Env["User"] = nil
 			} else {
 				c.Env["User"] = user
@@ -98,12 +97,14 @@ func (application *Application) ApplyCsrfProtection(c *web.C, h http.Handler) ht
 			buffer := make([]byte, 32)
 			_, err := rand.Read(buffer)
 			if err != nil {
-				glog.Fatalf("crypt/rand.Read failed: %s", err)
+				log.Criticalf("crypt/rand.Read failed: %s", err)
+				panic(err)
 			}
 			hash.Write(buffer)
 			session.Values["CsrfToken"] = fmt.Sprintf("%x", hash.Sum(nil))
 			if err = session.Save(r, w); err != nil {
-				glog.Fatal("session.Save() failed")
+				log.Criticalf("session.Save() failed")
+				panic(err)
 			}
 		}
 		c.Env["CsrfKey"] = csrfProtection.Key

@@ -4,6 +4,13 @@ dcrstakepool
 dcrstakepool is a minimalist web application which provides a method for allowing users to purchase tickets and have a pool of wallet servers redeem and vote on the user's behalf.
 
 ## Version History
+- 0.0.4 - Major changes/improvements.
+  * config.toml is no longer required as the options in that file have been
+    migrated to dcrstakepool.conf.
+  * Automatic syncing of scripts, tickets, and vote bits is now performed at
+    startup.  Syncing of vote bits is a long process and can be skipped with the
+    SkipVoteBitsSync flag/configuration value.
+  * Temporary wallet connectivity errors are now handled much more gracefully.
 - 0.0.3 - More expected/basic web application functionality added.
   * SMTPHost now defaults to an empty string so a stake pool can be used for
     development or testing purposes without a configured mail server.  The
@@ -167,12 +174,7 @@ $ scp walletserver2:~/.dcrwallet/rpc.cert wallet2.cert
 $ scp walletserver3:~/.dcrwallet/rpc.cert wallet3.cert
 ```
 
-- Copy old-style sample config and edit appropriately
-```bash
-$ cp -p config.toml.sample config.toml
-```
-
-- Copy new-style sample config and edit appropriately
+- Copy sample config and edit appropriately
 ```bash
 $ cp -p sample-dcrstakepool.conf dcrstakepool.conf
 ```
@@ -188,12 +190,12 @@ $ go build
 $ ./dcrstakepool
 ```
 
-If you wish to run dcrstakepool from a different directory you will need to:
+If you wish to run dcrstakepool from a different directory you will need to change **publicpath** and **templatepath**
+from their relative paths to an absolute path.
 
-- Copy **config.toml** to the same directory you will be running **dcrstakepool**
-   from
-- Either copy **public** and **views** to the same directory or specify
-   absolute paths in **config.toml**
+## Development
+
+If you are modifying templates, sending the USR1 signal to the dcrstakepool process will trigger a template reload.
 
 ## Operations
 
@@ -219,15 +221,7 @@ If you wish to run dcrstakepool from a different directory you will need to:
 
 - In the case of a total failure of a wallet server:
   * Restore the failed wallet(s) from seed
-  * getnewaddress until it matches the index of the other wallets
-  * Import scripts for all users
-```bash
-for s in `mysql -ustakepool -ppassword -Dstakepool -se 'SELECT Multisigscript FROM Users WHERE LENGTH(Multisigscript) != 0'`;
-do dcrctl --wallet importscript "$s";
-done
-```
-
-- If servers get desynced but are otherwise running okay, call getnewaddress/listscripts/importscript until they're re-synced.  See doc.go for some example shell commands.
+  * Restart the dcrstakepool process to allow automatic syncing to occur.
 
 ## IRC
 
