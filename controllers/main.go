@@ -174,7 +174,7 @@ func (controller *MainController) API(c web.C, r *http.Request) *system.APIRespo
 	}
 
 	if err != nil {
-		status = err.Error()
+		status = "error"
 	} else {
 		status = "success"
 	}
