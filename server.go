@@ -34,22 +34,27 @@ func listenTo(bind string) (net.Listener, error) {
 	return nil, fmt.Errorf("error while parsing bind arg %v", bind)
 }
 
-func main() {
+func runMain() int {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	loadedCfg, _, err := loadConfig()
 	if err != nil {
-		os.Exit(1)
+		return 1
 	}
 	cfg = loadedCfg
 	log.Infof("Version: %s", version())
 	log.Infof("Network: %s", activeNetParams.Params.Name)
 
+	defer backendLog.Flush()
+
 	var application = &system.Application{}
 
 	application.Init(cfg.CookieSecret, cfg.CookieSecure,
 		cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort, cfg.DBUser)
-	application.LoadTemplates(cfg.TemplatePath)
+	if err = application.LoadTemplates(cfg.TemplatePath); err != nil {
+		log.Criticalf("Failed to load templates: %v", err)
+		return 2
+	}
 
 	// Set up signal handler
 	// SIGUSR1 = Reload html templates
@@ -103,7 +108,7 @@ func main() {
 			err)
 		fmt.Fprintf(os.Stderr, "Fatal error in controller init: %v",
 			err)
-		os.Exit(1)
+		return 3
 	}
 
 	err = controller.RPCSync(application.DbMap, cfg.SkipVoteBitsSync)
@@ -111,7 +116,7 @@ func main() {
 		application.Close()
 		log.Errorf("Failed to sync the wallets: %v",
 			err)
-		os.Exit(1)
+		return 4
 	}
 
 	controller.RPCStart()
@@ -183,10 +188,19 @@ func main() {
 	listener, err := listenTo(cfg.Listen)
 	if err != nil {
 		log.Errorf("could not bind %v", err)
-		os.Exit(1)
+		return 5
 	}
 
 	log.Infof("listening on %v", listener.Addr())
 
-	server.Serve(listener)
+	if err = server.Serve(listener); err != nil {
+		log.Errorf("Serve error: %s", err.Error())
+		return 6
+	}
+
+	return 0
+}
+
+func main() {
+	os.Exit(runMain())
 }
