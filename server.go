@@ -51,7 +51,10 @@ func runMain() int {
 
 	application.Init(cfg.CookieSecret, cfg.CookieSecure,
 		cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort, cfg.DBUser)
-	application.LoadTemplates(cfg.TemplatePath)
+	if err = application.LoadTemplates(cfg.TemplatePath); err != nil {
+		log.Criticalf("Failed to load templates: %v", err)
+		return 2
+	}
 
 	// Set up signal handler
 	// SIGUSR1 = Reload html templates
