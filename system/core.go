@@ -3,7 +3,6 @@ package system
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -165,7 +164,7 @@ func WriteAPIResponse(resp *APIResponse, code int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Warningf("JSON encode error: %v", err)
+		log.Warnf("JSON encode error: %v", err)
 	}
 }
 
