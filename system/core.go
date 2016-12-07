@@ -143,17 +143,22 @@ func saveSession(c web.C, w http.ResponseWriter, r *http.Request) error {
 	return log.Errorf("Session not available")
 }
 
+// APIHandler executes an API processing function that provides an *APIResponse
+// required by WriteAPIResponse.  It returns an web.HandlerFunc so it can be
+// used with a goji router.
 func (application *Application) APIHandler(apiFun func(web.C, *http.Request) *APIResponse) web.HandlerFunc {
 	return func(c web.C, w http.ResponseWriter, r *http.Request) {
+		apiResp := apiFun(c, r)
+
 		if err := saveSession(c, w, r); err != nil {
 			log.Errorf("Can't save session: %v", err)
 		}
 
-		apiResp := apiFun(c, r)
 		if apiResp != nil {
 			WriteAPIResponse(apiResp, http.StatusOK, w)
 			return
 		}
+
 		APIInvalidHandler(w, r)
 	}
 }
@@ -177,12 +182,15 @@ func APIInvalidHandler(w http.ResponseWriter, _ *http.Request) {
 	WriteAPIResponse(resp, http.StatusNotFound, w)
 }
 
+// APIResponse is the response struct used by the server to marshal to a JSON
+// object. Data should be another struct with JSON tags.
 type APIResponse struct {
 	Status  string      `json:"status"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
+// NewAPIResponse is a constructor for APIResponse.
 func NewAPIResponse(status, message string, data interface{}) *APIResponse {
 	return &APIResponse{status, message, data}
 }

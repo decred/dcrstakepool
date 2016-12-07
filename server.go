@@ -139,7 +139,7 @@ func runMain() int {
 	app.Post("/address", application.Route(controller, "AddressPost"))
 
 	// API
-	app.Handle("/api/v1/:command", application.APIHandler(controller.API))
+	app.Handle("/api/v0.1/:command", application.APIHandler(controller.API))
 	app.Handle("/api/*", gojify(system.APIInvalidHandler))
 
 	// Email change/update confirmation
