@@ -1,5 +1,5 @@
-hash: 72085948fb84da21f4120bbd09d36931afe08df0b63b0d7df24a1dc52fdf7a55
-updated: 2016-12-07T08:41:51.100978383-08:00
+hash: 3f7d25fe50e40755affad76f8cb4461ae42b5b5d6c9c7a68cd0457529ceb533a
+updated: 2016-12-07T08:51:41.484291527-08:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
@@ -39,8 +39,6 @@ imports:
   version: ca9ada44574153444b00d3fd9c8559e4cc95f896
 - name: github.com/haisum/recaptcha
   version: 8527d614dbb33cac7cf2433c83ad6d3346761276
-- name: github.com/pelletier/go-toml
-  version: 45932ad32dfdd20826f5671da37a5f3ce9f26a8d
 - name: github.com/zenazn/goji
   version: 4d7077956293261309684d3cf1af673f773c6819
   subpackages:
