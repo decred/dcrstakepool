@@ -12,10 +12,10 @@ func reloadTemplatesSig(sig os.Signal, app *Application) {
 	go func() {
 		for {
 			sigr := <-sigChan
-			log.Infof("Received: %s\n", sig)
+			log.Infof("Received: %s", sig)
 			if sigr == sig {
 				app.LoadTemplates(app.TemplatesPath)
-				log.Infof("LoadTemplates() executed.\n")
+				log.Infof("LoadTemplates() executed.")
 			}
 		}
 	}()
