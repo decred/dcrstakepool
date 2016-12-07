@@ -1,5 +1,5 @@
-hash: 3f7d25fe50e40755affad76f8cb4461ae42b5b5d6c9c7a68cd0457529ceb533a
-updated: 2016-12-07T08:51:41.484291527-08:00
+hash: 23b8bd48b01be5e646900e0d8ea08a53402f7d663f67f5efe5d25ceca55deb8d
+updated: 2016-12-07T10:51:28.213651926-08:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
@@ -31,8 +31,6 @@ imports:
   - waddrmgr
 - name: github.com/go-sql-driver/mysql
   version: 8f6c67f0228a4a6a962008d6c3d1e694e4532e71
-- name: github.com/golang/glog
-  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/sessions
