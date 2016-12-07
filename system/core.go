@@ -1,6 +1,8 @@
 package system
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"html/template"
 	"io"
 	"net/http"
@@ -8,8 +10,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-
-	"crypto/sha256"
 
 	"github.com/decred/dcrstakepool/models"
 	"github.com/gorilla/sessions"
@@ -36,6 +36,14 @@ type Application struct {
 	Store          *sessions.CookieStore
 	DbMap          *gorp.DbMap
 	CsrfProtection *CsrfProtection
+}
+
+// GojiWebHandlerFunc is an adaptor that allows an http.HanderFunc where a
+// web.HandlerFunc is required.
+func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
+	return func(_ web.C, w http.ResponseWriter, r *http.Request) {
+		h(w, r)
+	}
 }
 
 func (application *Application) Init(cookieSecret string, cookieSecure bool,
@@ -90,7 +98,7 @@ func (application *Application) Close() {
 	log.Info("Application.Close() called")
 }
 
-func (application *Application) Route(controller interface{}, route string) interface{} {
+func (application *Application) Route(controller interface{}, route string) web.HandlerFunc {
 	fn := func(c web.C, w http.ResponseWriter, r *http.Request) {
 		c.Env["Content-Type"] = "text/html"
 
@@ -100,11 +108,8 @@ func (application *Application) Route(controller interface{}, route string) inte
 
 		body, code := method(c, r)
 
-		if session, exists := c.Env["Session"]; exists {
-			err := session.(*sessions.Session).Save(r, w)
-			if err != nil {
-				log.Errorf("Can't save session: %v", err)
-			}
+		if err := saveSession(c, w, r); err != nil {
+			log.Errorf("Can't save session: %v", err)
 		}
 
 		if respHeader, exists := c.Env["ResponseHeaderMap"]; exists {
@@ -129,4 +134,63 @@ func (application *Application) Route(controller interface{}, route string) inte
 		}
 	}
 	return fn
+}
+
+func saveSession(c web.C, w http.ResponseWriter, r *http.Request) error {
+	if session, exists := c.Env["Session"]; exists {
+		return session.(*sessions.Session).Save(r, w)
+	}
+	return log.Errorf("Session not available")
+}
+
+// APIHandler executes an API processing function that provides an *APIResponse
+// required by WriteAPIResponse.  It returns an web.HandlerFunc so it can be
+// used with a goji router.
+func (application *Application) APIHandler(apiFun func(web.C, *http.Request) *APIResponse) web.HandlerFunc {
+	return func(c web.C, w http.ResponseWriter, r *http.Request) {
+		apiResp := apiFun(c, r)
+
+		if err := saveSession(c, w, r); err != nil {
+			log.Errorf("Can't save session: %v", err)
+		}
+
+		if apiResp != nil {
+			WriteAPIResponse(apiResp, http.StatusOK, w)
+			return
+		}
+
+		APIInvalidHandler(w, r)
+	}
+}
+
+// WriteAPIResponse marshals the given poolapi.Response into the
+// http.ResponseWriter and sets HTTP status code.
+func WriteAPIResponse(resp *APIResponse, code int, w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Warnf("JSON encode error: %v", err)
+	}
+}
+
+// APIInvalidHandler responds to invalid requests. It matches the signature of
+// http.HanderFunc.
+func APIInvalidHandler(w http.ResponseWriter, _ *http.Request) {
+	resp := &APIResponse{Status: "error",
+		Message: "invalid API version",
+	}
+	WriteAPIResponse(resp, http.StatusNotFound, w)
+}
+
+// APIResponse is the response struct used by the server to marshal to a JSON
+// object. Data should be another struct with JSON tags.
+type APIResponse struct {
+	Status  string      `json:"status"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data,omitempty"`
+}
+
+// NewAPIResponse is a constructor for APIResponse.
+func NewAPIResponse(status, message string, data interface{}) *APIResponse {
+	return &APIResponse{status, message, data}
 }

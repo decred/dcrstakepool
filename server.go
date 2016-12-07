@@ -24,6 +24,12 @@ var (
 	cfg *config
 )
 
+// gojify wraps system's GojiWebHandlerFunc to allow the use of an
+// http.HanderFunc as a web.HandlerFunc.
+func gojify(h http.HandlerFunc) web.HandlerFunc {
+	return system.GojiWebHandlerFunc(h)
+}
+
 func listenTo(bind string) (net.Listener, error) {
 	if strings.Contains(bind, ":") {
 		return net.Listen("tcp", bind)
@@ -133,7 +139,8 @@ func runMain() int {
 	app.Post("/address", application.Route(controller, "AddressPost"))
 
 	// API
-	app.Handle("/api/*", application.Route(controller, "API"))
+	app.Handle("/api/v0.1/:command", application.APIHandler(controller.API))
+	app.Handle("/api/*", gojify(system.APIInvalidHandler))
 
 	// Email change/update confirmation
 	app.Get("/emailupdate", application.Route(controller, "EmailUpdate"))
