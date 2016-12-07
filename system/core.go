@@ -33,6 +33,7 @@ type CsrfProtection struct {
 
 type Application struct {
 	Template       *template.Template
+	TemplatesPath  string
 	Store          *sessions.CookieStore
 	DbMap          *gorp.DbMap
 	CsrfProtection *CsrfProtection
@@ -91,6 +92,7 @@ func (application *Application) LoadTemplates(templatePath string) error {
 	}
 
 	application.Template = template.Must(template.ParseFiles(templates...))
+	application.TemplatesPath = templatePath
 	return nil
 }
 
