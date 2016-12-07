@@ -1,52 +1,92 @@
 hash: 23b8bd48b01be5e646900e0d8ea08a53402f7d663f67f5efe5d25ceca55deb8d
-updated: 2016-12-07T10:51:28.213651926-08:00
+updated: 2016-12-07T11:59:09.580210871-08:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
+- name: github.com/btcsuite/fastsha256
+  version: 637e656429416087660c84436a2a035d69d54e2e
 - name: github.com/btcsuite/go-flags
   version: 6c288d648c1cc1befcb90cb5511dcacf64ae8e61
+- name: github.com/btcsuite/go-socks
+  version: cfe8b59e565c1a5bd4e2005d77cd9aa8b2e14524
+  subpackages:
+  - socks
+- name: github.com/btcsuite/golangcrypto
+  version: 53f62d9b43e87a6c56975cf862af7edf33a8d0df
+  subpackages:
+  - nacl/secretbox
+  - pbkdf2
+  - poly1305
+  - ripemd160
+  - salsa20/salsa
+  - scrypt
 - name: github.com/btcsuite/seelog
   version: 313961b101eb55f65ae0f03ddd4e322731763b6c
+- name: github.com/btcsuite/websocket
+  version: 31079b6807923eb23992c421b114992b95131b55
+- name: github.com/decred/blake256
+  version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: cf7fbc0406dd97f3e112c854fa4052a60a1c58b7
+  version: b89abb72e42184872b80bfe964c8b3a3214e3f24
   subpackages:
   - addrmgr
   - blockchain
   - blockchain/stake
+  - blockchain/stake/internal/dbnamespace
+  - blockchain/stake/internal/ticketdb
+  - blockchain/stake/internal/tickettreap
   - chaincfg
+  - chaincfg/chainec
   - chaincfg/chainhash
   - database
+  - dcrec/edwards
+  - dcrec/secp256k1
+  - dcrec/secp256k1/schnorr
   - dcrjson
   - txscript
   - wire
 - name: github.com/decred/dcrrpcclient
   version: fc4826bb281f5b68af4cf95c20d8664419b4cc08
 - name: github.com/decred/dcrutil
-  version: 0484582bf5503574d824f110e836a8c48aa60c8c
+  version: b107d74547385caeaba836a213b9b6ffbd3d8096
   subpackages:
+  - base58
   - hdkeychain
 - name: github.com/decred/dcrwallet
-  version: 1160e7671c476b23a1fa89f0dac19b295dd7c2b2
+  version: 62457f4265f9ccc34166a549e7ad58167a3f5721
   subpackages:
+  - internal/zero
+  - pgpwordlist
+  - snacl
   - waddrmgr
+  - walletdb
+- name: github.com/decred/ed25519
+  version: b0909d3f798b97a03c9e77023f97a5301a2a7900
+  subpackages:
+  - edwards25519
 - name: github.com/go-sql-driver/mysql
-  version: 8f6c67f0228a4a6a962008d6c3d1e694e4532e71
+  version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
+- name: github.com/gorilla/securecookie
+  version: fa5329f913702981df43dcb2a380bac429c810b5
 - name: github.com/gorilla/sessions
-  version: ca9ada44574153444b00d3fd9c8559e4cc95f896
+  version: 52389059572b4736b2b7d899b0242ecc449c8779
 - name: github.com/haisum/recaptcha
   version: 8527d614dbb33cac7cf2433c83ad6d3346761276
 - name: github.com/zenazn/goji
   version: 4d7077956293261309684d3cf1af673f773c6819
   subpackages:
   - graceful
+  - graceful/listener
   - web
   - web/middleware
+  - web/mutil
 - name: golang.org/x/crypto
-  version: 9477e0b78b9ac3d0b03822fd95422e2fe07627cd
+  version: 3f77d695175f990a2967385c493939f380ee40a3
   subpackages:
   - bcrypt
+  - blowfish
 - name: gopkg.in/gorp.v1
   version: c87af80f3cc5036b55b83d77171e156791085e2e
 testImports: []
