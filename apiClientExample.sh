@@ -4,8 +4,9 @@
 # requests the ticket purchasing information for the account, and
 # then requests the pool's statistics.
 
-apiURL="http://127.0.0.1:8000/api/v0.1"
-cookieFile=$(mktemp /tmp/stakepoolapiclient.XXXXXXXXXX)
+apiKEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE0ODE3MzAzNjYsImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCIsImxvZ2dlZEluQXMiOjY0fQ.DS49iqN3hFjAqwTnUKIbJ-Mg3sdwKUVE_diwp7dTok4"
+apiURL="http://127.0.0.1:8000/api/v1"
+#cookieFile=$(mktemp /tmp/stakepoolapiclient.XXXXXXXXXX)
 email="example@example.com"
 password="blake256"
 pubKeyAddr="TkKnJTAQTQ42nAwLj9wSXJcrKadSJneNkXT9LW25kqBKH646N4Bws"
@@ -14,12 +15,11 @@ secsForEmailVerification=15
 apiCmd() {
     # $1 = cmd, $2 = data
     if [ -z "$2" ]; then
-        echo "running curl -s -b $cookieFile -c $cookieFile $apiURL/$1"
-        r="$(curl -s -b $cookieFile -c $cookieFile $apiURL/$1)"
+        echo "running curl -s -H \"Authorization: Bearer $apiKEY\" $apiURL/$1"
+        r=$(curl -s -H "Authorization: Bearer $apiKEY" $apiURL/$1)
     else
-        updateCsrfToken
-        echo "running curl -s -b $cookieFile -c $cookieFile --data $2&csrf_token=$csrftoken $apiURL/$1"
-        r="$(curl -s -b $cookieFile -c $cookieFile --data "$2&csrf_token=$csrftoken" $apiURL/$1)"
+        echo "running curl -s -H \"Authorization: Bearer $apiKEY\" --data $2 $apiURL/$1"
+        r=$(curl -s -H "Authorization: Bearer $apiKEY" --data "$2" $apiURL/$1)
     fi
 
     if [ -z "$r" ]; then
@@ -42,7 +42,7 @@ cleanUp() {
 
 fatal() {
     echo >&2 "$1"
-    cleanUp
+    #cleanUp
     exit 1
 }
 
@@ -59,20 +59,20 @@ waitForVerification() {
 
 command -v jq >/dev/null 2>&1 || { fatal "I require the binary jq (https://stedolan.github.io/jq/) but it's not installed.  Aborting."; }
 
-echo "using cookieFile $cookieFile"
+#echo "using cookieFile $cookieFile"
 
-apiCmd "startsession"
+#apiCmd "startsession"
 
-apiCmd "signup" "email=$email&password=$password&passwordrepeat=$password"
+#apiCmd "signup" "email=$email&password=$password&passwordrepeat=$password"
 
-waitForVerification
+#waitForVerification
 
-apiCmd "signin" "email=$email&password=$password"
+#apiCmd "signin" "email=$email&password=$password"
 
 apiCmd "address" "UserPubKeyAddr=$pubKeyAddr"
 
-apiCmd "getPurchaseInfo"
+apiCmd "getpurchaseinfo"
 
 apiCmd "stats"
 
-cleanUp
+#cleanUp

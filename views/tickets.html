@@ -76,8 +76,8 @@
 			<p><span style="font-size: larger;"><b>Option C - dcrwallet - Manual purchasing - Not recommended</b></span></p>
 			<p><span style="font-size: larger;">Start a wallet with funds available and manually purchase tickets with the following command using <b>dcrctl</b>:</span></p>
 			<p><span style="font-size: larger;">dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</span></p>
-			<div class="cmd"><pre>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "voting" 35 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre></div>
-			<p><span style="font-size: larger;">Will purchase a ticket delegated to the pool using the voting account only if the current network price for a ticket is less than 35.0 coins.</span></p>
+			<div class="cmd"><pre>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 35 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre></div>
+			<p><span style="font-size: larger;">Will purchase a ticket delegated to the pool and an address from the voting account using funds from the default account only if the current network price for a ticket is less than 35.0 coins.</span></p>
 		</div>
 	</div>
 </div>

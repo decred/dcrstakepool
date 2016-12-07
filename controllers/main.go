@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"net/http"
 	"net/smtp"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/decred/dcrd/blockchain/stake"
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/dcrjson"
+	"github.com/decred/dcrstakepool/codes"
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/poolapi"
@@ -47,23 +47,25 @@ type MainController struct {
 	// embed type for c.Env[""] context and ExecuteTemplate helpers
 	system.Controller
 
-	adminIPs         []string
-	baseURL          string
-	closePool        bool
-	closePoolMsg     string
-	extPub           *hdkeychain.ExtendedKey
-	poolEmail        string
-	poolFees         float64
-	poolLink         string
-	params           *chaincfg.Params
-	rpcServers       *walletSvrManager
-	recaptchaSecret  string
-	recaptchaSiteKey string
-	smtpFrom         string
-	smtpHost         string
-	smtpUsername     string
-	smtpPassword     string
-	version          string
+	adminIPs             []string
+	APISecret            string
+	APIVersionsSupported []int
+	baseURL              string
+	closePool            bool
+	closePoolMsg         string
+	extPub               *hdkeychain.ExtendedKey
+	poolEmail            string
+	poolFees             float64
+	poolLink             string
+	params               *chaincfg.Params
+	rpcServers           *walletSvrManager
+	recaptchaSecret      string
+	recaptchaSiteKey     string
+	smtpFrom             string
+	smtpHost             string
+	smtpUsername         string
+	smtpPassword         string
+	version              string
 }
 
 func randToken() string {
@@ -97,12 +99,14 @@ func getClientIP(r *http.Request) string {
 }
 
 // NewMainController is the constructor for the entire controller routing.
-func NewMainController(params *chaincfg.Params, adminIPs []string, baseURL string, closePool bool,
-	closePoolMsg string, extPubStr string, poolEmail string, poolFees float64,
-	poolLink string, recaptchaSecret string, recaptchaSiteKey string,
-	smtpFrom string, smtpHost string, smtpUsername string, smtpPassword string,
-	version string, walletHosts []string, walletCerts []string,
-	walletUsers []string, walletPasswords []string, minServers int) (*MainController, error) {
+func NewMainController(params *chaincfg.Params, adminIPs []string,
+	APISecret string, APIVersionsSupported []int, baseURL string,
+	closePool bool, closePoolMsg string, extPubStr string, poolEmail string,
+	poolFees float64, poolLink string, recaptchaSecret string,
+	recaptchaSiteKey string, smtpFrom string,
+	smtpHost string, smtpUsername string, smtpPassword string, version string,
+	walletHosts []string, walletCerts []string, walletUsers []string,
+	walletPasswords []string, minServers int) (*MainController, error) {
 	// Parse the extended public key and the pool fees.
 	key, err := hdkeychain.NewKeyFromString(extPubStr)
 	if err != nil {
@@ -115,23 +119,25 @@ func NewMainController(params *chaincfg.Params, adminIPs []string, baseURL strin
 	}
 
 	mc := &MainController{
-		adminIPs:         adminIPs,
-		baseURL:          baseURL,
-		closePool:        closePool,
-		closePoolMsg:     closePoolMsg,
-		extPub:           key,
-		poolEmail:        poolEmail,
-		poolFees:         poolFees,
-		poolLink:         poolLink,
-		params:           params,
-		recaptchaSecret:  recaptchaSecret,
-		recaptchaSiteKey: recaptchaSiteKey,
-		rpcServers:       rpcs,
-		smtpFrom:         smtpFrom,
-		smtpHost:         smtpHost,
-		smtpUsername:     smtpUsername,
-		smtpPassword:     smtpPassword,
-		version:          version,
+		adminIPs:             adminIPs,
+		APISecret:            APISecret,
+		APIVersionsSupported: APIVersionsSupported,
+		baseURL:              baseURL,
+		closePool:            closePool,
+		closePoolMsg:         closePoolMsg,
+		extPub:               key,
+		poolEmail:            poolEmail,
+		poolFees:             poolFees,
+		poolLink:             poolLink,
+		params:               params,
+		recaptchaSecret:      recaptchaSecret,
+		recaptchaSiteKey:     recaptchaSiteKey,
+		rpcServers:           rpcs,
+		smtpFrom:             smtpFrom,
+		smtpHost:             smtpHost,
+		smtpUsername:         smtpUsername,
+		smtpPassword:         smtpPassword,
+		version:              version,
 	}
 
 	return mc, nil
@@ -141,7 +147,8 @@ func NewMainController(params *chaincfg.Params, adminIPs []string, baseURL strin
 func (controller *MainController) API(c web.C, r *http.Request) *system.APIResponse {
 	command := c.URLParams["command"]
 
-	// poolapi.Response comprises a status, message, and a data struct
+	// poolapi.Response comprises a status, code, message, and a data struct
+	var code codes.Code
 	var response, status string
 	var data interface{}
 
@@ -150,23 +157,17 @@ func (controller *MainController) API(c web.C, r *http.Request) *system.APIRespo
 	switch r.Method {
 	case "GET":
 		switch command {
-		case "getPurchaseInfo":
-			data, response, err = controller.APIPurchaseInfo(c, r)
-		case "startsession":
-			status, response = "success", "session started"
+		case "getpurchaseinfo":
+			data, code, response, err = controller.APIPurchaseInfo(c, r)
 		case "stats":
-			data, response, err = controller.APIStats(c, r)
+			data, code, response, err = controller.APIStats(c, r)
 		default:
 			return nil
 		}
 	case "POST":
 		switch command {
 		case "address":
-			_, response, err = controller.APIAddress(c, r)
-		case "signin":
-			_, response, err = controller.APISignIn(c, r)
-		case "signup":
-			_, response, err = controller.APISignUp(c, r)
+			_, code, response, err = controller.APIAddress(c, r)
 		default:
 			return nil
 		}
@@ -174,93 +175,88 @@ func (controller *MainController) API(c web.C, r *http.Request) *system.APIRespo
 
 	if err != nil {
 		status = "error"
+		response = response + " - " + err.Error()
 	} else {
 		status = "success"
 	}
 
-	return system.NewAPIResponse(status, response, data)
+	return system.NewAPIResponse(status, code, response, data)
 }
 
-// APIAddress is AddressPost API'd a bit
-func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string, string, error) {
-	session := controller.GetSession(c)
+// APIAddress is the API version of AddressPost
+func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string, codes.Code, string, error) {
 	dbMap := controller.GetDbMap(c)
 
-	if session.Values["UserId"] == nil {
-		return nil, "address error", errors.New("invalid session")
+	if c.Env["APIUserID"] == nil {
+		return nil, codes.Unauthenticated, "address error", errors.New("invalid api token")
 	}
 
-	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+	user := models.GetUserById(dbMap, c.Env["APIUserID"].(int64))
 
-	// User may have a session so error out here as well
 	if controller.closePool {
-		return nil, "pool is closed", errors.New(controller.closePoolMsg)
-	}
-
-	if session.Values["UserId"] == nil {
-		return nil, "address error", errors.New("invalid session")
+		return nil, codes.FailedPrecondition, "pool is closed", errors.New(controller.closePoolMsg)
 	}
 
 	if len(user.UserPubKeyAddr) > 0 {
-		return nil, "address error", errors.New("address already submitted")
+		return nil, codes.AlreadyExists, "address error", errors.New("address already submitted")
 	}
 
 	userPubKeyAddr := r.FormValue("UserPubKeyAddr")
 
 	if len(userPubKeyAddr) < 40 {
-		return nil, "address error", errors.New("address too short")
+		return nil, codes.InvalidArgument, "address error", errors.New("address too short")
 	}
 
 	if len(userPubKeyAddr) > 65 {
-		return nil, "address error", errors.New("address too long")
+		return nil, codes.InvalidArgument, "address error", errors.New("address too long")
 	}
 
 	u, err := dcrutil.DecodeAddress(userPubKeyAddr, controller.params)
 	if err != nil {
-		return nil, "address error", errors.New("couldn't decode address")
+		return nil, codes.InvalidArgument, "address error", errors.New("couldn't decode address")
 	}
 
 	_, is := u.(*dcrutil.AddressSecpPubKey)
 	if !is {
-		return nil, "address error", errors.New("incorrect address type")
+		return nil, codes.InvalidArgument, "address error", errors.New("incorrect address type")
 	}
 
 	if controller.RPCIsStopped() {
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 	pooladdress, err := controller.rpcServers.GetNewAddress()
 	if err != nil {
 		controller.handlePotentialFatalError("GetNewAddress", err)
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
 	if controller.RPCIsStopped() {
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 	poolValidateAddress, err := controller.rpcServers.ValidateAddress(pooladdress)
 	if err != nil {
 		controller.handlePotentialFatalError("ValidateAddress pooladdress", err)
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
 	p, err := dcrutil.DecodeAddress(poolPubKeyAddr, controller.params)
 	if err != nil {
 		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
 	if controller.RPCIsStopped() {
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 	createMultiSig, err := controller.rpcServers.CreateMultisig(1, []dcrutil.Address{p, u})
 	if err != nil {
 		controller.handlePotentialFatalError("CreateMultisig", err)
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
 	if controller.RPCIsStopped() {
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 	_, bestBlockHeight, err := controller.rpcServers.GetBestBlock()
 	if err != nil {
@@ -268,185 +264,72 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 	}
 
 	if controller.RPCIsStopped() {
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 	err = controller.rpcServers.ImportScript(serializedScript, int(bestBlockHeight))
 	if err != nil {
 		controller.handlePotentialFatalError("ImportScript", err)
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	uid64 := session.Values["UserId"].(int64)
-	userFeeAddr, err := controller.FeeAddressForUserID(int(uid64))
+	userFeeAddr, err := controller.FeeAddressForUserID(int(user.Id))
 	if err != nil {
 		log.Warnf("unexpected error deriving pool addr: %s", err.Error())
-		return nil, "system error", errors.New("unable to process wallet commands")
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	models.UpdateUserByID(dbMap, uid64, createMultiSig.Address,
+	models.UpdateUserByID(dbMap, user.Id, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
-	return nil, "address successfully imported", nil
-}
-
-// APIResponse formats a response
-func APIResponse(data []string, response string, err error) string {
-	if err != nil {
-		return "{\"status\":\"error\"," +
-			"\"message\":\"" + response + " - " + err.Error() + "\"}\n"
-	}
-
-	successResp := "{\"status\":\"success\"," +
-		"\"message\":\"" + response + "\""
-
-	if data != nil {
-		// append the key+value pairs in data
-		successResp = successResp + ",\"data\":{"
-		for i := 0; i < len(data)-1; i = i + 2 {
-			successResp = successResp + "\"" + data[i] + "\":" + "\"" + data[i+1] + "\","
-		}
-		successResp = strings.TrimSuffix(successResp, ",") + "}"
-	}
-
-	successResp = successResp + "}\n"
-
-	return successResp
+	return nil, codes.OK, "address successfully imported", nil
 }
 
 // APIPurchaseInfo fetches and returns the user's info or an error
 func (controller *MainController) APIPurchaseInfo(c web.C,
-	r *http.Request) (*poolapi.PurchaseInfo, string, error) {
-	session := controller.GetSession(c)
+	r *http.Request) (*poolapi.PurchaseInfo, codes.Code, string, error) {
 	dbMap := controller.GetDbMap(c)
 
-	if session.Values["UserId"] == nil {
-		return nil, "purchaseinfo error", errors.New("invalid session")
+	if c.Env["APIUserID"] == nil {
+		return nil, codes.Unauthenticated, "purchaseinfo error", errors.New("invalid api token")
 	}
 
-	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+	user := models.GetUserById(dbMap, c.Env["APIUserID"].(int64))
 
 	if len(user.UserPubKeyAddr) == 0 {
-		return nil, "purchaseinfo error", errors.New("no address submitted")
+		return nil, codes.FailedPrecondition, "purchaseinfo error", errors.New("no address submitted")
 	}
 
 	purchaseInfo := &poolapi.PurchaseInfo{
 		PoolAddress:   user.UserFeeAddr,
-		PoolFees:      strconv.FormatFloat(controller.poolFees, 'f', 2, 64),
+		PoolFees:      controller.poolFees,
 		Script:        user.MultiSigScript,
 		TicketAddress: user.MultiSigAddress,
 	}
 
-	return purchaseInfo, "purchaseinfo successfully retrieved", nil
+	return purchaseInfo, codes.OK, "purchaseinfo successfully retrieved", nil
 }
 
-// APISignIn is SignInPost API'd a bit
-func (controller *MainController) APISignIn(c web.C, r *http.Request) ([]string, string, error) {
-	email, password := r.FormValue("email"), r.FormValue("password")
-
-	session := controller.GetSession(c)
-	dbMap := controller.GetDbMap(c)
-
-	user, err := helpers.Login(dbMap, email, password)
-
-	if err != nil {
-		log.Infof("error logging in with email %v password %v err %v", email, password, err)
-		return nil, "auth error", errors.New("invalid email or password")
-	}
-
-	if user.EmailVerified == 0 {
-		return nil, "auth error", errors.New("you must validate your email address")
-	}
-
-	if controller.closePool {
-		if len(user.UserPubKeyAddr) == 0 {
-			return nil, "pool is closed", errors.New(controller.closePoolMsg)
-		}
-	}
-
-	session.Values["UserId"] = user.Id
-
-	return nil, "successfully signed in", nil
-}
-
-// APISignUp is SignUpPost API'd a bit
-func (controller *MainController) APISignUp(c web.C, r *http.Request) ([]string, string, error) {
-	if controller.closePool {
-		log.Infof("attempt to signup while registration disabled")
-		return nil, "pool is closed", errors.New(controller.closePoolMsg)
-	}
-
-	email, password, passwordRepeat := r.FormValue("email"),
-		r.FormValue("password"), r.FormValue("passwordrepeat")
-
-	if !strings.Contains(email, "@") {
-		return nil, "signup error", errors.New("email address is invalid")
-	}
-
-	if password == "" {
-		return nil, "signup error", errors.New("password cannot be empty")
-	}
-
-	if password != passwordRepeat {
-		return nil, "signup error", errors.New("passwords do not match")
-	}
-
-	dbMap := controller.GetDbMap(c)
-	user := models.GetUserByEmail(dbMap, email)
-
-	if user != nil {
-		return nil, "signup error", errors.New("email address already in use")
-	}
-
-	token := randToken()
-	user = &models.User{
-		Username:      email,
-		Email:         email,
-		EmailToken:    token,
-		EmailVerified: 0,
-	}
-	user.HashPassword(password)
-
-	if err := models.InsertUser(dbMap, user); err != nil {
-		return nil, "signup error", errors.New("unable to insert new user into db")
-	}
-
-	remoteIP := getClientIP(r)
-
-	body := signupEmailTemplate
-	body = strings.Replace(body, "__URL__", controller.baseURL, -1)
-	body = strings.Replace(body, "__REMOTEIP__", remoteIP, -1)
-	body = strings.Replace(body, "__TOKEN__", token, -1)
-
-	err := controller.SendMail(user.Email, signupEmailSubject, body)
-	if err != nil {
-		log.Errorf("error sending verification email %v", err)
-		return nil, "signup error", errors.New("unable to send signup email")
-	}
-
-	return nil, "A verification email has been sent to " + email, nil
-}
-
-// APIStats fetches is Stats() API'd a bit
+// APIStats is an API version of the stats page
 func (controller *MainController) APIStats(c web.C,
-	r *http.Request) (*poolapi.Stats, string, error) {
+	r *http.Request) (*poolapi.Stats, codes.Code, string, error) {
 	dbMap := controller.GetDbMap(c)
 	userCount := models.GetUserCount(dbMap)
 	userCountActive := models.GetUserCountActive(dbMap)
 
 	if controller.RPCIsStopped() {
-		return nil, "stats error", errors.New("RPC server stopped")
+		return nil, codes.Unavailable, "stats error", errors.New("RPC server stopped")
 	}
 
 	gsi, err := controller.rpcServers.GetStakeInfo()
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
-		return nil, "stats error", errors.New("RPC server error")
+		return nil, codes.Unavailable, "stats error", errors.New("RPC server error")
 	}
 
 	var poolStatus string
@@ -456,34 +339,31 @@ func (controller *MainController) APIStats(c web.C,
 		poolStatus = "Open"
 	}
 
-	I32toa := func(i uint32) string {
-		return strconv.FormatInt(int64(i), 10)
-	}
-
 	stats := &poolapi.Stats{
-		AllMempoolTix:    I32toa(gsi.AllMempoolTix),
-		BlockHeight:      I32toa(uint32(gsi.BlockHeight)),
-		Difficulty:       strconv.FormatFloat(gsi.Difficulty, 'f', 2, 64),
-		Immature:         I32toa(gsi.Immature),
-		Live:             I32toa(gsi.Live),
-		Missed:           I32toa(gsi.Missed),
-		OwnMempoolTix:    I32toa(gsi.OwnMempoolTix),
-		PoolSize:         I32toa(gsi.PoolSize),
-		ProportionLive:   strconv.FormatFloat(gsi.ProportionLive, 'f', 6, 64),
-		ProportionMissed: strconv.FormatFloat(gsi.ProportionMissed, 'f', 6, 64),
-		Revoked:          I32toa(gsi.Revoked),
-		TotalSubsidy:     strconv.FormatFloat(gsi.TotalSubsidy, 'f', 2, 64),
-		Voted:            I32toa(gsi.Voted),
-		Network:          controller.params.Name,
-		PoolEmail:        controller.poolEmail,
-		PoolFees:         strconv.FormatFloat(controller.poolFees, 'f', 2, 64),
-		PoolStatus:       poolStatus,
-		UserCount:        I32toa(uint32(userCount)),
-		UserCountActive:  I32toa(uint32(userCountActive)),
-		Version:          controller.version,
+		AllMempoolTix:        gsi.AllMempoolTix,
+		APIVersionsSupported: controller.APIVersionsSupported,
+		BlockHeight:          gsi.BlockHeight,
+		Difficulty:           gsi.Difficulty,
+		Immature:             gsi.Immature,
+		Live:                 gsi.Live,
+		Missed:               gsi.Missed,
+		OwnMempoolTix:        gsi.OwnMempoolTix,
+		PoolSize:             gsi.PoolSize,
+		ProportionLive:       gsi.ProportionLive,
+		ProportionMissed:     gsi.ProportionMissed,
+		Revoked:              gsi.Revoked,
+		TotalSubsidy:         gsi.TotalSubsidy,
+		Voted:                gsi.Voted,
+		Network:              controller.params.Name,
+		PoolEmail:            controller.poolEmail,
+		PoolFees:             controller.poolFees,
+		PoolStatus:           poolStatus,
+		UserCount:            userCount,
+		UserCountActive:      userCountActive,
+		Version:              controller.version,
 	}
 
-	return stats, "stats successfully retrieved", nil
+	return stats, codes.OK, "stats successfully retrieved", nil
 }
 
 // SendMail sends an email with the passed data using the system's SMTP
@@ -1104,7 +984,6 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 
 // Settings renders the settings page.
 func (controller *MainController) Settings(c web.C, r *http.Request) (string, int) {
-	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
@@ -1114,14 +993,32 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 
 	user := models.GetUserById(dbMap, session.Values["UserId"].(int64))
 
+	// Generate an API Token for the user on demand if one does not exist and
+	// refresh the user's data before displaying it.
+	if user.APIToken == "" {
+		err := models.SetUserAPIToken(dbMap, controller.APISecret,
+			controller.baseURL, user.Id)
+		if err != nil {
+			session.AddFlash("Unable to set API Token", "settingsError")
+			log.Errorf("could not set API Token for UserId %v", user.Id)
+		}
+
+		user = models.GetUserById(dbMap, session.Values["UserId"].(int64))
+	}
+
+	t := controller.GetTemplate(c)
+
+	c.Env["APIToken"] = user.APIToken
 	c.Env["FlashError"] = session.Flashes("settingsError")
 	c.Env["FlashSuccess"] = session.Flashes("settingsSuccess")
-	c.Env["CurrentEmail"] = user.Email
 	c.Env["IsSettings"] = true
+	c.Env["RecaptchaSiteKey"] = controller.recaptchaSiteKey
+	if user.MultiSigAddress == "" {
+		c.Env["ShowInstructions"] = true
+	}
 	if controller.smtpHost == "" {
 		c.Env["SMTPDisabled"] = true
 	}
-	c.Env["RecaptchaSiteKey"] = controller.recaptchaSiteKey
 
 	widgets := controller.Parse(t, "settings", c.Env)
 	c.Env["Title"] = "Decred Stake Pool - Settings"
@@ -1315,9 +1212,11 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 
 	session.Values["UserId"] = user.Id
 
-	// Go to Address page if multisig script not yet set up.
+	// Go to Settings page if multisig script not yet set up.
+	// GUI users can copy and paste their API Token from here
+	// or follow the notice that directs them to the address page.
 	if user.MultiSigAddress == "" {
-		return "/address", http.StatusSeeOther
+		return "/settings", http.StatusSeeOther
 	}
 
 	// Go to Tickets page if user already set up.

@@ -70,6 +70,7 @@ type config struct {
 	CPUProfile       string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
 	MemProfile       string   `long:"memprofile" description:"Write mem profile to the specified file"`
 	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	APISecret        string   `long:"apisecret" description:"Secret string used to encrypt API tokens."`
 	BaseURL          string   `long:"baseurl" description:"BaseURL to use when sending links via email"`
 	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
 	ClosePool        bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
@@ -449,6 +450,13 @@ func loadConfig() (*config, []string, error) {
 			fmt.Fprintln(os.Stderr, usageMessage)
 			return nil, nil, err
 		}
+	}
+
+	if cfg.APISecret == "" {
+		str := "%s: APIsecret is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
 	}
 
 	if cfg.CookieSecret == "" {

@@ -53,8 +53,9 @@ func runMain() int {
 
 	var application = &system.Application{}
 
-	application.Init(cfg.CookieSecret, cfg.CookieSecure,
-		cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort, cfg.DBUser)
+	application.Init(cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
+		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
+		cfg.DBUser)
 	if err = application.LoadTemplates(cfg.TemplatePath); err != nil {
 		log.Criticalf("Failed to load templates: %v", err)
 		return 2
@@ -78,21 +79,28 @@ func runMain() int {
 	app.Use(middleware.Logger) // TODO: reimplement to use our logger
 	app.Use(middleware.Recoverer)
 
+	// Execute various middleware functions.  The order is very important
+	// as each function establishes part of the application environment/context
+	// that the next function will assume has been setup successfully.
 	app.Use(application.ApplyTemplates)
 	app.Use(application.ApplySessions)
 	app.Use(application.ApplyDbMap)
+	app.Use(application.ApplyAPI)
 	app.Use(application.ApplyAuth)
 	app.Use(application.ApplyIsXhr)
 	app.Use(application.ApplyCsrfProtection)
 	app.Use(context.ClearHandler)
 
+	// Supported API versions are advertised in the API stats result
+	APIVersionsSupported := []int{1}
+
 	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.AdminIPs, cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg,
-		cfg.ColdWalletExtPub, cfg.PoolEmail, cfg.PoolFees, cfg.PoolLink,
-		cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.SMTPFrom, cfg.SMTPHost,
-		cfg.SMTPUsername, cfg.SMTPPassword, cfg.Version,
-		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords,
-		cfg.MinServers)
+		cfg.AdminIPs, cfg.APISecret, APIVersionsSupported, cfg.BaseURL,
+		cfg.ClosePool, cfg.ClosePoolMsg, cfg.ColdWalletExtPub, cfg.PoolEmail,
+		cfg.PoolFees, cfg.PoolLink, cfg.RecaptchaSecret, cfg.RecaptchaSitekey,
+		cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
+		cfg.Version, cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers,
+		cfg.WalletPasswords, cfg.MinServers)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to initialize the main controller: %v",
@@ -124,7 +132,7 @@ func runMain() int {
 	app.Post("/address", application.Route(controller, "AddressPost"))
 
 	// API
-	app.Handle("/api/v0.1/:command", application.APIHandler(controller.API))
+	app.Handle("/api/v1/:command", application.APIHandler(controller.API))
 	app.Handle("/api/*", gojify(system.APIInvalidHandler))
 
 	// Email change/update confirmation

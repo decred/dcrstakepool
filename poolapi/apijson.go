@@ -13,31 +13,32 @@ type Response struct {
 // TODO: make JSON tags lower-case and add "_" between words
 
 type PurchaseInfo struct {
-	PoolAddress   string `json:"PoolAddress"`
-	PoolFees      string `json:"PoolFees"`
-	Script        string `json:"Script"`
-	TicketAddress string `json:"TicketAddress"`
+	PoolAddress   string  `json:"PoolAddress"`
+	PoolFees      float64 `json:"PoolFees"`
+	Script        string  `json:"Script"`
+	TicketAddress string  `json:"TicketAddress"`
 }
 
 type Stats struct {
-	AllMempoolTix    string `json:"AllMempoolTix"`
-	BlockHeight      string `json:"BlockHeight"`
-	Difficulty       string `json:"Difficulty"`
-	Immature         string `json:"Immature"`
-	Live             string `json:"Live"`
-	Missed           string `json:"Missed"`
-	OwnMempoolTix    string `json:"OwnMempoolTix"`
-	PoolSize         string `json:"PoolSize"`
-	ProportionLive   string `json:"ProportionLive"`
-	ProportionMissed string `json:"ProportionMissed"`
-	Revoked          string `json:"Revoked"`
-	TotalSubsidy     string `json:"TotalSubsidy"`
-	Voted            string `json:"Voted"`
-	Network          string `json:"Network"`
-	PoolEmail        string `json:"PoolEmail"`
-	PoolFees         string `json:"PoolFees"`
-	PoolStatus       string `json:"PoolStatus"`
-	UserCount        string `json:"UserCount"`
-	UserCountActive  string `json:"UserCountActive"`
-	Version          string `json:"Version"`
+	AllMempoolTix        uint32  `json:"AllMempoolTix"`
+	APIVersionsSupported []int   `json:"APIVersionsSupported"`
+	BlockHeight          int64   `json:"BlockHeight"`
+	Difficulty           float64 `json:"Difficulty"`
+	Immature             uint32  `json:"Immature"`
+	Live                 uint32  `json:"Live"`
+	Missed               uint32  `json:"Missed"`
+	OwnMempoolTix        uint32  `json:"OwnMempoolTix"`
+	PoolSize             uint32  `json:"PoolSize"`
+	ProportionLive       float64 `json:"ProportionLive"`
+	ProportionMissed     float64 `json:"ProportionMissed"`
+	Revoked              uint32  `json:"Revoked"`
+	TotalSubsidy         float64 `json:"TotalSubsidy"`
+	Voted                uint32  `json:"Voted"`
+	Network              string  `json:"Network"`
+	PoolEmail            string  `json:"PoolEmail"`
+	PoolFees             float64 `json:"PoolFees"`
+	PoolStatus           string  `json:"PoolStatus"`
+	UserCount            int64   `json:"UserCount"`
+	UserCountActive      int64   `json:"UserCountActive"`
+	Version              string  `json:"Version"`
 }

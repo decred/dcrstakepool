@@ -34,3 +34,4 @@ import:
   subpackages:
   - bcrypt
 - package: gopkg.in/gorp.v1
+- package: github.com/dgrijalva/jwt-go
