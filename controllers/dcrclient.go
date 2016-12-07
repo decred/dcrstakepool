@@ -1826,7 +1826,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 			log.Warnf("skipping script %s due to err %v", v.MultiSigScript, err)
 			continue
 		}
-		allRedeemScripts[chainhash.HashFuncH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
+		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
 	}
 	// Go through each server and see who is synced to the longest
 	// address indexes and and the most redeemscripts.
@@ -1861,10 +1861,10 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 
 		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
 		for j := range redeemScripts {
-			redeemScriptsPerServer[i][chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
-			_, ok := allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])]
+			redeemScriptsPerServer[i][chainhash.HashH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
+			_, ok := allRedeemScripts[chainhash.HashH(redeemScripts[j])]
 			if !ok {
-				allRedeemScripts[chainhash.HashFuncH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
+				allRedeemScripts[chainhash.HashH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
 			}
 		}
 	}

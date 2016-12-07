@@ -22,8 +22,6 @@ import:
   subpackages:
   - waddrmgr
 - package: github.com/go-sql-driver/mysql
-- package: github.com/go-utils/uslice
-- package: github.com/golang/glog
 - package: github.com/gorilla/context
 - package: github.com/gorilla/sessions
 - package: github.com/haisum/recaptcha
