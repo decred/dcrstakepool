@@ -4,6 +4,13 @@ dcrstakepool
 dcrstakepool is a minimalist web application which provides a method for allowing users to purchase tickets and have a pool of wallet servers redeem and vote on the user's behalf.
 
 ## Version History
+- 1.0.0 - Major changes/improvements.
+  * API is now at v1 status.  API Tokens are generated for all users with a
+    verified email address when upgrading.  Tokens are generated for new
+    users on demand when visiting the Settings page which displays their token.
+    Authenticated users may use the API to submit a public key address and to
+    retrieve ticket purchasing information.  The stake pool's stats are also
+    available through the API without authentication.
 - 0.0.4 - Major changes/improvements.
   * config.toml is no longer required as the options in that file have been
     migrated to dcrstakepool.conf.
@@ -11,6 +18,7 @@ dcrstakepool is a minimalist web application which provides a method for allowin
     startup.  Syncing of vote bits is a long process and can be skipped with the
     SkipVoteBitsSync flag/configuration value.
   * Temporary wallet connectivity errors are now handled much more gracefully.
+  * A preliminary v0.1 API was added.
 - 0.0.3 - More expected/basic web application functionality added.
   * SMTPHost now defaults to an empty string so a stake pool can be used for
     development or testing purposes without a configured mail server.  The
@@ -206,6 +214,9 @@ If you are modifying templates, sending the USR1 signal to the dcrstakepool proc
 - dcrstakepool attempts to connect to all of the wallet servers on startup or error out if it cannot do so
 
 - dcrstakepool takes a user's pubkey, validates it, calls getnewaddress on all the wallet servers, then createmultisig, and finally importscript.  If any of these RPCs fail or returns inconsistent results, the RPC client built-in to dcrstakepool will shut down and will not operate until it has been restarted.  Wallets should be verified to be in sync before restarting.
+
+- User API Tokens have an issuer field set to baseURL from the configuration file.
+  Changing the baseURL requires all API Tokens to be re-generated.
 
 ## Backups, monitoring, security considerations
 

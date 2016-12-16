@@ -3,7 +3,9 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/gorp.v1"
@@ -39,6 +41,7 @@ type User struct {
 	HeightRegistered int64
 	EmailVerified    int64
 	EmailToken       string
+	APIToken         string
 }
 
 func (user *User) HashPassword(password string) {
@@ -102,6 +105,34 @@ func InsertPasswordReset(dbMap *gorp.DbMap, passwordReset *PasswordReset) error 
 	return dbMap.Insert(passwordReset)
 }
 
+// SetUserAPIToken generates and saves a unique API Token for a user.
+func SetUserAPIToken(dbMap *gorp.DbMap, APISecret string, baseURL string,
+	id int64) error {
+	var user *User
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	claims := make(jwt.MapClaims)
+	claims["iat"] = time.Now().Unix()
+	claims["iss"] = baseURL
+	claims["loggedInAs"] = id
+
+	token.Claims = claims
+
+	tokenString, err := token.SignedString([]byte(APISecret))
+	if err != nil {
+		return err
+	}
+
+	err = dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
+	user.APIToken = tokenString
+	if err != nil {
+		return err
+	}
+
+	_, err = dbMap.Update(user)
+	return err
+}
+
 // UpdateUserByID updates a user, specified by id, in the DB with a new
 // multiSigAddr, multiSigScript, multiSigScript, pool pubkey address,
 // user pub key address, and fee address.  Unchanged are the user's ID, email,
@@ -141,7 +172,7 @@ func GetAllCurrentMultiSigScripts(dbMap *gorp.DbMap) ([]User, error) {
 	return multiSigs, nil
 }
 
-func GetDbMap(user, password, hostname, port, database string) *gorp.DbMap {
+func GetDbMap(APISecret, baseURL, user, password, hostname, port, database string) *gorp.DbMap {
 	// connect to db using standard Go database/sql API
 	// use whatever database/sql driver you wish
 	//TODO: Get user, password and database from config.
@@ -194,6 +225,25 @@ func GetDbMap(user, password, hostname, port, database string) *gorp.DbMap {
 	addColumn(dbMap, database, "Users", "EmailToken", "varchar(255) NULL",
 		"EmailVerified",
 		"UPDATE Users SET EmailToken = ''")
+
+	// stakepool v0.0.4 -> v1.0.0
+
+	// add APIToken column for storing a token that users may use to submit a
+	// public key address and retrieve ticket purchasing information via the API
+	addColumn(dbMap, database, "Users", "APIToken", "varchar(255) NULL",
+		"EmailToken", "UPDATE Users SET APIToken = ''")
+
+	// Set an API token for all users who have verified their email address
+	// and do not have an API Token already set.
+	var users []User
+	_, err = dbMap.Select(&users, "SELECT * FROM Users WHERE APIToken = '' AND EmailVerified > 0")
+	checkErr(err, "Select failed")
+	for _, u := range users {
+		err := SetUserAPIToken(dbMap, APISecret, baseURL, u.Id)
+		if err != nil {
+			log.Criticalf("unable to set API Token for UserId %v: %v", u.Id, err)
+		}
+	}
 
 	return dbMap
 }

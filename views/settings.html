@@ -4,7 +4,6 @@
 		<h4 class="panel-title">Settings</h4>
 	</div>
 	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-		<div class="alert alert-info">You may change your email address or password below.</div>
 		{{if .SMTPDisabled }}<div class="alert alert-danger">Mail server not configured.  You will not receive an email change verification link.</div>{{end}}
 		{{range .FlashSuccess}}
 			<div class="alert alert-success">{{.}}</div><p>
@@ -12,6 +11,20 @@
 		{{range .FlashError}}
 			<div class="alert alert-danger">{{.}}</div><p>
 		{{end}}
+		{{if .ShowInstructions }}
+			<div class="alert alert-info">To start staking, you need to submit a public key address.<br>
+			You may do so on the <a href="/address">Address</a> page or by downloading
+			<a href="https://github.com/decred/decred-binaries/releases/latest">Paymetheus</a>
+			<span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="Paymetheus is the official Decred GUI wallet for Windows. Search for 'msi' on the downloads page to find it."></span>
+			and pasting the API Token below into Paymetheus.</div><p>
+		{{end}}
+		<fieldset>
+			<div class="row">
+				<div class="col-md-4 text-right" for="apitoken"><b>API Token:</b> <span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="Your personalized API Token allows programs such as the official Decred wallet for Windows, Paymetheus, to access your stake pool account."></span></div>
+				<div class="col-md-6" id="apitoken" style="overflow:auto">{{ .APIToken }}</div>
+			</div>
+			<div class="row">&nbsp;</div>
+		</fieldset>
 		<form class="form-horizontal" method="post">
 		<fieldset>
 			<div class="form-group">

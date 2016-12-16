@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/decred/dcrstakepool/codes"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/gorilla/sessions"
 	"github.com/zenazn/goji/web"
@@ -24,19 +25,20 @@ const (
 	CSRFKey    = "csrf_token"
 )
 
-type CsrfProtection struct {
-	Key    string
-	Cookie string
-	Header string
-	Secure bool
-}
-
 type Application struct {
+	APISecret      string
 	Template       *template.Template
 	TemplatesPath  string
 	Store          *sessions.CookieStore
 	DbMap          *gorp.DbMap
 	CsrfProtection *CsrfProtection
+}
+
+type CsrfProtection struct {
+	Key    string
+	Cookie string
+	Header string
+	Secure bool
 }
 
 // GojiWebHandlerFunc is an adaptor that allows an http.HanderFunc where a
@@ -47,9 +49,10 @@ func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
 	}
 }
 
-func (application *Application) Init(cookieSecret string, cookieSecure bool,
-	DBHost string, DBName string, DBPassword string, DBPort string,
-	DBUser string) {
+func (application *Application) Init(APISecret string, baseURL string,
+	cookieSecret string, cookieSecure bool, DBHost string, DBName string,
+	DBPassword string,
+	DBPort string, DBUser string) {
 
 	hash := sha256.New()
 	io.WriteString(hash, cookieSecret)
@@ -61,6 +64,8 @@ func (application *Application) Init(cookieSecret string, cookieSecure bool,
 	}
 
 	application.DbMap = models.GetDbMap(
+		APISecret,
+		baseURL,
 		DBUser,
 		DBPassword,
 		DBHost,
@@ -73,6 +78,8 @@ func (application *Application) Init(cookieSecret string, cookieSecure bool,
 		Header: CSRFHeader,
 		Secure: cookieSecure,
 	}
+
+	application.APISecret = APISecret
 }
 
 func (application *Application) LoadTemplates(templatePath string) error {
@@ -179,7 +186,8 @@ func WriteAPIResponse(resp *APIResponse, code int, w http.ResponseWriter) {
 // http.HanderFunc.
 func APIInvalidHandler(w http.ResponseWriter, _ *http.Request) {
 	resp := &APIResponse{Status: "error",
-		Message: "invalid API version",
+		Code:    codes.InvalidArgument,
+		Message: "invalid API command or version",
 	}
 	WriteAPIResponse(resp, http.StatusNotFound, w)
 }
@@ -188,11 +196,12 @@ func APIInvalidHandler(w http.ResponseWriter, _ *http.Request) {
 // object. Data should be another struct with JSON tags.
 type APIResponse struct {
 	Status  string      `json:"status"`
+	Code    codes.Code  `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
 // NewAPIResponse is a constructor for APIResponse.
-func NewAPIResponse(status, message string, data interface{}) *APIResponse {
-	return &APIResponse{status, message, data}
+func NewAPIResponse(status string, code codes.Code, message string, data interface{}) *APIResponse {
+	return &APIResponse{status, code, message, data}
 }
