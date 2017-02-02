@@ -1563,7 +1563,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	// spui := new(dcrjson.StakePoolUserInfoResult)
 	spui, err := w.StakePoolUserInfo(multisig)
 	if err != nil {
-		// Render page with messgae to try again later
+		// Render page with message to try again later
 		log.Infof("RPC StakePoolUserInfo failed: %v", err)
 		session.AddFlash("Unable to retreive stake pool user info.", "main")
 		c.Env["Flash"] = session.Flashes("main")
@@ -1584,7 +1584,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 				// Launch a goroutine to repair these tickets vote bits
 				go w.SyncTicketsVoteBits(liveTicketHashes)
 				responseHeaderMap["Retry-After"] = "60"
-				// Render page with messgae to try again later
+				// Render page with message to try again later
 				session.AddFlash("Detected mismatching vote bits.  "+
 					"Ticket data is now resyncing.  Please try again after a "+
 					"few minutes.", "tickets")
@@ -1723,6 +1723,10 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 		// Only get or set votebits for live tickets
 		liveTicketHashes, err := w.GetUnspentUserTickets(multisig)
 		if err != nil {
+			return
+		}
+
+		if len(liveTicketHashes) == 0 {
 			return
 		}
 
