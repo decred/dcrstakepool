@@ -1,0 +1,224 @@
+{{define "footer"}}
+    <footer>
+      <div class="row">
+        <div class="col-sm-15 col-md-6 center-block text-center">
+          <p><a href="https://github.com/decred/" target="_blank">Decred Developer</a> | 2016</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+<script src="assets/js/complete.js"></script>
+{{if or (.IsPasswordReset) (.IsSignUp) (.IsSettings) }}<script src="https://www.google.com/recaptcha/api.js"></script>{{end}}
+{{if .IsStats }}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.4.4/d3.min.js" charset="utf-8"></script>
+
+    <script src="assets/js/d3pie.min.js"></script>
+
+    <script>
+var pie = new d3pie("test1", {
+	"size": {
+		"canvasWidth": 400,
+		"canvasHeight": 400,
+		"pieOuterRadius": "100%"
+	},
+	"data": {
+		"sortOrder": "value-asc",
+		"content": [
+			{
+				"label": "Missed",
+				"value": {{ .StakeInfo.Missed }},
+				"color": "#fd714b"
+			},
+			{
+				"label": "Votes",
+				"value": {{ .StakeInfo.Voted }},
+				"color": "#41bf53"
+			}
+	
+		]
+	},
+	"labels": {
+		"outer": {
+			"pieDistance": 32
+		},
+		"inner": {
+			"hideWhenLessThanPercentage": 100
+		},
+		"mainLabel": {
+			"fontSize": 0
+		},
+
+		"lines": {
+			"enabled": false
+		},
+		"truncation": {
+			"enabled": true
+		}
+	},
+	"effects": {
+		"pullOutSegmentOnClick": {
+			"effect": "linear",
+			"speed": 400,
+			"size": 8
+		},
+		"highlightSegmentOnMouseover": false,
+		"highlightLuminosity": 0.99
+	},
+	"misc": {
+		"colors": {
+			"background": "",
+			"segmentStroke": ""
+		},
+	},
+	"tooltips": {
+		"enabled": true,
+		"type": "placeholder",
+		"string": "{label} {percentage}%",
+		"styles": {
+			"fadeInSpeed": 300,
+			"backgroundColor": "#ffffff",
+			"backgroundOpacity": 1,
+			"color": "#000000",
+			"padding": 10
+		}
+	},
+});
+var pie = new d3pie("test2", {
+	"size": {
+		"canvasWidth": 400,
+		"canvasHeight": 400,
+		"pieOuterRadius": "100%"
+	},
+	"data": {
+		"sortOrder": "value-asc",
+		"content": [
+			{
+				"label": "Immature",
+				"value": {{ .StakeInfo.Immature }},
+				"color": "#44d6a5"
+			},
+			{
+				"label": "Live",
+				"value": {{ .StakeInfo.Live }},
+				"color": "#3478f7"
+			}
+		]
+	},
+	"labels": {
+		"outer": {
+			"pieDistance": 32
+		},
+		"inner": {
+			"hideWhenLessThanPercentage": 100
+		},
+		"mainLabel": {
+			"fontSize": 0
+		},
+		"lines": {
+			"enabled": false
+		},
+		"truncation": {
+			"enabled": true
+		}
+	},
+	"effects": {
+		"pullOutSegmentOnClick": {
+			"effect": "linear",
+			"speed": 400,
+			"size": 8
+		},
+		"highlightSegmentOnMouseover": false,
+		"highlightLuminosity": 0.99
+	},
+	"misc": {
+		"colors": {
+			"background": "",
+			"segmentStroke": ""
+		},
+	},
+	"tooltips": {
+		"enabled": true,
+		"type": "placeholder",
+		"string": "{label} {percentage}%",
+		"styles": {
+			"fadeInSpeed": 300,
+			"backgroundColor": "#ffffff",
+			"backgroundOpacity": 1,
+			"color": "#000000",
+			"padding": 10
+		}
+	},
+});
+var pie = new d3pie("test3", {
+	"size": {
+		"canvasWidth": 400,
+		"canvasHeight": 400,
+		"pieOuterRadius": "100%"
+	},
+	"data": {
+		"sortOrder": "value-asc",
+		"content": [
+			{
+				"label": "Stakepool Ticket Pool",
+				"value": {{ .StakeInfo.Live }},
+				"color": "#73d5f3"
+			},
+			{
+				"label": "Network Ticket Pool",
+				"value": {{ .StakeInfo.PoolSize }},
+				"color": "#effafe"
+			}
+		]
+	},
+	"labels": {
+		"outer": {
+			"pieDistance": 32
+		},
+		"inner": {
+			"hideWhenLessThanPercentage": 100
+		},
+		"mainLabel": {
+			"fontSize": 0
+		},
+
+		"lines": {
+			"enabled": false
+		},
+		"truncation": {
+			"enabled": true
+		}
+	},
+	"effects": {
+		"pullOutSegmentOnClick": {
+			"effect": "linear",
+			"speed": 400,
+			"size": 8
+		},
+		"highlightSegmentOnMouseover": false,
+		"highlightLuminosity": 0.99
+	},
+	"misc": {
+		"colors": {
+			"background": "",
+			"segmentStroke": ""
+		},
+	},
+	"tooltips": {
+		"enabled": true,
+		"type": "placeholder",
+		"string": "{label} {percentage}%",
+		"styles": {
+			"fadeInSpeed": 300,
+			"backgroundColor": "#ffffff",
+			"backgroundOpacity": 1,
+			"color": "#000000",
+			"padding": 10
+		}
+	}
+});
+</script>
+{{end}}
+  </body>
+</html>
+{{end}}
