@@ -231,6 +231,47 @@
 <div class="panel panel-default">
 	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
 		<h4 class="panel-title">
+			<a data-class="collapsed" data-toggle="collapse" data-parent="#accordion" href="#collapse-expiredlist">Expired Tickets</a>
+		</h4>
+	</div>
+	<div id="collapse-expiredlist" class="panel-collapse collapse {{if .TicketsExpired}}in{{end}}">
+		<div class="panel-body" style="background-color: #333; color: #ffffff;">
+
+			{{if not .TicketsExpired}}
+			<p><span style="font-size: larger;"><b>No expired tickets.</b></span></p>
+			{{end}}
+			{{if .TicketsExpired}}
+			<table id="ticketsexpired" class="table table-condensed datatablesort">
+			<thead>
+				<tr>
+					<th>Ticket</th>
+					<th>SpentByHeight</th>
+					<th>TicketHeight</th>
+				</tr>
+			</thead>
+			<tfoot>
+				<tr>
+					<th>Ticket</th>
+					<th>SpentByHeight</th>
+					<th>TicketHeight</th>
+				</tr>
+			</tfoot>
+			<tbody>
+			{{ range $i, $data := .TicketsExpired }}<tr>
+				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
+				<td>{{$data.SpentByHeight}}</td>
+				<td>{{$data.TicketHeight}}</td>
+				</tr>{{end}}
+			</tbody>
+			</table>
+			{{end}}
+		</div>
+	</div>
+</div>
+
+<div class="panel panel-default">
+	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
+		<h4 class="panel-title">
 			<a data-toggle="collapse" data-parent="#accordion" href="#collapse-invalidlist">Invalid Tickets</a>
 		</h4>
 	</div>
