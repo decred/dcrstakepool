@@ -9,8 +9,8 @@ $ grunt
 # Step 2
 Edit your dcrstakepool.conf  and point to the public and views directory to activate the template
 ```
-publicpath=tpl_stakepool/public
-templatepath=tpl_stakepool/views
+publicpath=tplstakepool/public
+templatepath=tplstakepool/views
 ```
 # Step 3
 Restart dcrstakepool
