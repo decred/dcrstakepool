@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Masterminds/sprig"
 	"github.com/decred/dcrstakepool/codes"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/gorilla/sessions"
@@ -98,7 +99,8 @@ func (application *Application) LoadTemplates(templatePath string) error {
 		return err
 	}
 
-	application.Template = template.Must(template.ParseFiles(templates...))
+	t := template.New("dcrstakepool").Funcs(sprig.FuncMap())
+	application.Template = template.Must(t.ParseFiles(templates...))
 	application.TemplatesPath = templatePath
 	return nil
 }
