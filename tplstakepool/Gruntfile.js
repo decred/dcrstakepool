@@ -6,20 +6,20 @@ module.exports = function(grunt) {
                         expand: true,
                         cwd: 'src/',
                         src: ['*'],
-                        dest: 'public/',
+                        dest: '../public/',
                         filter: 'isFile'
                     }, {
                         expand: true,
                         cwd: 'src/js',
                         src: ['main.js', 'd3pie.min.js'],
-                        dest: 'public/js',
+                        dest: '../public/js',
                         filter: 'isFile'
                     },
                     {
                         expand: true,
                         cwd: 'src/svg',
                         src: ['sprites.svg'],
-                        dest: 'public/svg',
+                        dest: '../public/svg',
                         filter: 'isFile'
                     },
                 ]
@@ -34,7 +34,7 @@ module.exports = function(grunt) {
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.min.js',
                     'src/js/main.js'
                 ],
-                dest: 'public/js/complete.js'
+                dest: '../public/js/complete.js'
             }
         },
 
@@ -42,7 +42,7 @@ module.exports = function(grunt) {
         uglify: {
             my_target: {
                 files: {
-                    'public/js/complete.js': ['public/js/complete.js']
+                    '../public/js/complete.js': ['../public/js/complete.js']
                 }
             }
         },
@@ -55,7 +55,7 @@ module.exports = function(grunt) {
 
                 },
                 files: { // Dictionary of files
-                    'public/css/main.css': 'src/css/main.scss',
+                    '../public/css/main.css': 'src/css/main.scss',
 
                 }
 
