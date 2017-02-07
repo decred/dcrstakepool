@@ -1,30 +1,31 @@
 {{define "home"}}
-{{if .IsClosed }}<div class="alert alert-danger">{{.ClosePoolMsg}}</div>{{end}}
-<div class="page-header" align="center" id="confirmtitle"><h1 style="color: #ffffff";>Decred Stake Pool</h1></div>
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">Overview</h4>
-	</div>
-	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-	<p><span style="font-size: x-large;">A stake pool is used to delegate your voting powers to a third party (the pool). The pool <b>cannot</b> steal your funds.</span></p>
-
-	<br><p><span style="font-size: large;">Participating in a stake pool is perfect for people who wish to take part in Decred's proof of stake voting but can't due to:</span></p>
-
-	<p><ul>
-		<li><span style="font-size: large;">Not wanting to keep a constantly unlocked wallet</span></li>
-		<li><span style="font-size: large;">Lack of a reliable/low latency Internet connection</span></li>
-	</ul></p>
-
-	<br><p><span style="font-size: large;">The stake pool source code is available on <a href="https://github.com/decred/dcrstakepool">GitHub</a>.
-
-	<p><span style="font-size: x-large;"><b><u>Pool Information</u></b></span></li>
-
-	<p><span style="font-size: x-large;"><b>Network:</b> {{.Network}}</span>
-	<br><span style="font-size: x-large;"><b>Pool Fees:</b> {{.PoolFees}}%</span>
-	<br><span style="font-size: x-large;"><b>Support Email:</b> {{.PoolEmail}}</span>
-	<br><span style="font-size: x-large;"><b>Support Link:</b> <a href="{{.PoolLink}}">{{.PoolLink}}</a></span></p>
-
-	{{if not .User}}<div class="center-block col-md-4 text-center" style="float: none;"><br><p><a class="btn btn-primary btn-lg" href="/signup" role="button">Sign Up</a></p></div>{{end}}
-</div>
+<div class="wrapper">
+    <div class="row main-row">
+ <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
+    </div>
+    <div class="col-sm-12 col-md-10 col-lg-6 center-block">
+       <h1>Decred Stake Pool Overview</h1>
+       <p>A stake pool is used to delegate your voting powers to a third party (the pool). The pool <b>cannot</b> steal your funds.</p>
+       <p>Participating in a stake pool is perfect for people who wish to take part in Decred's proof of stake voting but can't due to:</p>
+       <ul><li>Not wanting to keep a constantly unlocked wallet</li>
+       <li>Lack of a realible/low latency Internet connection</li></ul>
+       <p>The source code for is available at <a href="https://github.com/decred/dcrstakepool">GitHub.</a></p> 
+       <hr>
+       <ul>
+         <li class="li-heading">Pool Information</li>
+         <li>Network: {{.Network}}</li>
+         <li>Pool Fees: {{.PoolFees}}%</li>
+         <li>Support Email: <a href="mailto:{{.PoolEmail}}">{{.PoolEmail}}</a></li>
+         <li>Support Link: <a href="{{.PoolLink}}" target="_blank">{{.PoolLink}}</a></li>
+       </ul>
+    </div>   
+    </div>
+	{{if not .User}}
+     <div class="row row-button">
+      <div class="col-sm-15 col-md-6 center-block text-center">
+        <button type="button" class="btn btn-primary" id="btn-sign-up" ><a href="/signup">Sign up</a></button>
+      </div>
+    </div>
+	{{end}}
 </div>
 {{end}}

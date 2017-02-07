@@ -1,53 +1,87 @@
 {{define "stats"}}
-<div class="col-md-6 panel panel-default" id="votepanel" style="padding: 0;">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">Pool Votes</h4>
-	</div>
-	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-		<div class="center-block col-md-12" style="float: none;" id="votechart">
-			<svg></svg>
-		</div>
-	</div>
-</div>
-<div class="col-md-6 panel panel-default" id="ticketpanel" style="padding: 0;">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">Pool Tickets</h4>
-	</div>
-	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-		<div class="center-block col-md-12" style="float: none;" id="ticketchart">
-			<svg></svg>
-		</div>
-	</div>
-</div>
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">Stats &amp; Status</h4>
-	</div>
-	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-	<table class="table table-condensed" id="status">
-		<tr><td><span style="font-size: larger;">Immature:</span></td><td><span id="Immature">{{ .StakeInfo.Immature }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Live:</span></td><td><span id="Live">{{ .StakeInfo.Live }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Voted:</span></td><td><span id="Voted">{{ .StakeInfo.Voted }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Missed:</span></td><td><span id="Missed">{{ .StakeInfo.Missed }}</span></td></tr>
-		{{if .StakeInfo.Expired}}
-		<tr><td><span style="font-size: larger;">Expired:</span></td><td><span id="Expired">{{ .StakeInfo.Expired }}</span></td></tr>
-		{{end}}
-		<tr><td><span style="font-size: larger;">Revoked:</span></td><td><span id="Revoked">{{ .StakeInfo.Revoked }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">ProportionMissed:</span></td><td><span id="ProportionMissed">{{ .StakeInfo.ProportionMissed }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Pool Size:</span></td><td><span id="PoolSize">{{ .StakeInfo.PoolSize }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">AllMempoolTix:</span></td><td><span id="AllMempoolTix">{{ .StakeInfo.AllMempoolTix }}</span></td></tr>
-		<!-- disabled due to https://github.com/decred/dcrwallet/issues/251
-			<tr><td><span style="font-size: larger;">OwnMempoolTix:</span></td><td><span id="OwnMempoolTix">{{ .StakeInfo.OwnMempoolTix }}</span></td></tr>-->
-		<tr><td><span style="font-size: larger;">ProportionLive:</span></td><td><span id="ProportionLive">{{ .StakeInfo.ProportionLive }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Difficulty:</span></td><td><span id="Difficulty">{{ .StakeInfo.Difficulty }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">TotalSubsidy:</span></td><td><span id="TotalSubsidy">{{ .StakeInfo.TotalSubsidy }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Total User Count:</span></td><td><span id="UserCount">{{ .UserCount }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Active User Count:</span></td><td><span id="UserCountActive">{{ .UserCountActive }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Network:</span></td><td><span id="Network">{{ .Network }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Pool Fees:</span></td><td><span id="PoolFees">{{ .PoolFees }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Pool Status:</span></td><td><span id="PoolStatus">{{ .PoolStatus }}</span></td></tr>
-		<tr><td><span style="font-size: larger;">Pool Email:</span></td><td><span id="PoolEmail">{{ .PoolEmail }}</span></td></tr>
-	</table>
-</div>
+        <div class="wrapper">
+            <div class="row main-row pie-row">
+<div class="col-sm-15 col-md-10 text-left center-block">
+                <div class="col-sm-15 col-md-6">
+				<hr>
+				<h1>Pool Votes</h1>
+					<div class="pull-right">
+				<div class="legend-box">
+					 <label>Missed</label>
+				    <div class="legend"></div>
+				</div>
+				<div class="legend-box">
+			      <label>Votes</label>
+			      <div class="legend legend1"></div>
+			      </div>
+				</div>
+				<div id="test1"></div>
+                </div>
+                <div class="col-sm-15 col-md-6 col-md-offset-3 pie-margin">
+				<hr>
+				<h1>Pool Tickets</h1>
+						<div class="pull-right">
+				<div class="legend-box">
+					 <label>Live</label>
+				    <div class="legend legend2"></div>
+				</div>
+				<div class="legend-box">
+			      <label>Inmature</label>
+			      <div class="legend legend3"></div>
+			      </div>
+				</div>
+				<div id="test2"></div>		
+               </div>
+               <div class="col-sm-15 col-md-6">
+               <hr>
+               <h1>Stakepool vs Network Proportion</h1>
+               	<div class="pull-right">
+				<div class="legend-box">
+					 <label>Stakepool Ticket Pool</label>
+				    <div class="legend legend4"></div>
+				</div>
+				<div class="legend-box">
+			      <label>Network Ticket Pool</label>
+			      <div class="legend legend5"></div>
+			      </div>
+				</div>
+               	<div id="test3"></div>
+               </div>
+                <div class="col-sm-15 col-md-6 col-md-offset-3">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Stats &amp; Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+               <tr><td>Immature:</td><td><span id="Immature">{{ .StakeInfo.Immature }}</td></tr>
+                <tr><td>Live:</td><td><span id="Live">{{ .StakeInfo.Live }}</td></tr>
+                <tr><td>Voted:</td><td><span id="Voted">{{ .StakeInfo.Voted }}</td></tr>
+                <tr><td>Missed:</td><td><span id="Missed">{{ .StakeInfo.Missed }}</td></tr>
+                {{if .StakeInfo.Expired}}
+                <tr><td>Expired:</td><td><span id="Expired">{{ .StakeInfo.Expired }}</td></tr>
+                {{end}}
+                <tr><td>Revoked:</td><td><span id="Revoked">{{ .StakeInfo.Revoked }}</td></tr>
+                <tr><td>ProportionMissed:</td><td><span id="ProportionMissed">{{ .StakeInfo.ProportionMissed }}</td></tr>
+                <tr><td>Pool Size:</td><td><span id="PoolSize">{{ .StakeInfo.PoolSize }}</td></tr>
+                <tr><td>AllMempoolTix:</td><td><span id="AllMempoolTix">{{ .StakeInfo.AllMempoolTix }}</td></tr>
+                <!-- disabled due to https://github.com/decred/dcrwallet/issues/251
+                        <tr><td>OwnMempoolTix:</td><td><span id="OwnMempoolTix">{{ .StakeInfo.OwnMempoolTix }}</td></tr>-->
+                <tr><td>ProportionLive:</td><td><span id="ProportionLive">{{ .StakeInfo.ProportionLive }}</td></tr>
+                <tr><td>Difficulty:</td><td><span id="Difficulty">{{ .StakeInfo.Difficulty }}</td></tr>
+                <tr><td>TotalSubsidy:</td><td><span id="TotalSubsidy">{{ .StakeInfo.TotalSubsidy }}</td></tr>
+                <tr><td>Total User Count:</td><td><span id="UserCount">{{ .UserCount }}</td></tr>
+                <tr><td>Active User Count:</td><td><span id="UserCountActive">{{ .UserCountActive }}</td></tr>
+                <tr><td>Network:</td><td><span id="Network">{{ .Network }}</td></tr>
+                <tr><td>Pool Fees:</td><td><span id="PoolFees">{{ .PoolFees }}</td></tr>
+                <tr><td>Pool Status:</td><td><span id="PoolStatus">{{ .PoolStatus }}</td></tr>
+                <tr><td>Pool Email:</td><td><span id="PoolEmail">{{ .PoolEmail }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 </div>
 {{end}}
+

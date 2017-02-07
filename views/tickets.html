@@ -1,98 +1,99 @@
 {{define "tickets"}}
-{{if .Error}}
-	<div class="alert alert-danger">{{.Error}}</div><p>
-{{end}}
-{{range .Flash}}
-	<div class="alert alert-danger">{{.}}</div>
-{{end}}
-{{range .FlashWarn}}
-	<div class="alert alert-warning">{{.}}</div>
-{{end}}
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">
-			<a data-toggle="collapse" data-parent="#accordion" href="#collapse-info">Ticket Information</a>
-		</h4>
-	</div>
-	<div id="collapse-info" class="panel-collapse collapse in">
-		<div class="panel-body" style="background-color: #333; color: #ffffff;">
-			<table class="table table-condensed">
-				<tr>
-					<td style="border: none;"><span style="font-size: large;"><b>P2SH Address:</b></span></td>
-					<td style="border: none;">{{ .User.MultiSigAddress }}</td>
-				</tr>
-				<tr>
-					<td style="border: none;"><span style="font-size: large;"><b>Redeem Script:</b></span></td>
-					<td style="border: none; overflow: hidden; max-width: 450px; word-wrap: break-word;">{{ .User.MultiSigScript }}</b>
-				</tr>
-			</table>
-		</div>
-	</div>
-</div>
+<div class="wrapper">
+ <div class="row">
 
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">
-			<a data-toggle="collapse" data-parent="#accordion" href="#collapse-instr">Ticket Instructions</a>
-		</h4>
-	</div>
+  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
+    {{if .Error}}<div class="well well-notification  orange-notification">{{.Error}}</div>{{end}}
+    {{range .Flash}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
+    {{range .FlashWarn}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
+  </div>
+ 
+  <div class="col-sm-15 col-md-10 text-left center-block">
 
-	<div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive }}in{{end}}">
-		<div class="panel-body" style="background-color: #333; color: #ffffff;">
-			<p><span style="font-size: larger;"><b><u>Step 1</u></b></span></p>
-			<p><span style="font-size: larger;"><b>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</b></span>
-			<a href="https://github.com/decred/decred-release/releases/latest"><span class="glyphicon glyphicon-download" aria-label="Download Decred Installer"></span> <span style="font-size: larger;">Installer</span></a> |
-			<a href="https://github.com/decred/decred-binaries/releases/latest"><span class="glyphicon glyphicon-download" aria-label="Download Decred Binaries"></span> <span style="font-size: larger;">Binaries</span></a></p>
+<div class="panel-group" id="accordion">
+
+<!-- TICKET INFORMATION BEGIN HERE -->
+  <div class="panel panel-default panel-control">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-info">
+        Ticket Information</a>
+      </h4>
+    </div>
+    <div id="collapse-info" class="panel-collapse collapse in">
+      <div class="panel-body">
+	 <h1>P2SH Address:</h1><pre>{{ .User.MultiSigAddress }}</pre>
+        <hr />
+        <h1>Redeem Script:</h1><pre>{{ .User.MultiSigScript }}</pre>
+      </div>
+    </div>
+  </div>
+
+<!-- TICKET INSTRUCTIONS BEGIN HERE -->
+  <div class="panel panel-default panel-control">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-instr">
+        Ticket Instructions</a>
+      </h4>
+    </div>
+    <div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive }}in{{end}}">
+      <div class="panel-body">
+			<p><b><u>Step 1</u></b></p>
+			<p><b>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</b>
+			<a href="https://github.com/decred/decred-release/releases/latest"><span class="glyphicon glyphicon-download" aria-label="Download Decred Installer"> Installer</a> |
+			<a href="https://github.com/decred/decred-binaries/releases/latest"><span class="glyphicon glyphicon-download" aria-label="Download Decred Binaries"> Binaries</a></p>
 
 			</p>
-			<p><span style="font-size: larger;"><b><u>Step 2</u></b></span></p>
-			<p><span style="font-size: larger;">Your P2SH multisignature script for delegating votes has been generated. Please first import it locally into your wallet using <b>dcrctl</b> for safe keeping, so you can recover your funds and vote in the unlikely event of a pool failure:</span></p>
+			<p><b><u>Step 2</u></b></p>
+			<p>Your P2SH multisignature script for delegating votes has been generated. Please first import it locally into your wallet using <b>dcrctl</b> for safe keeping, so you can recover your funds and vote in the unlikely event of a pool failure:</p>
 
-			<p><span style="font-size: larger;">dcrctl --wallet importscript "script"</span></p>
-			<p><span style="font-size: larger;">For example:</span></p>
+			<p>dcrctl --wallet importscript "script"</p>
+			<p>For example:</p>
 			<div class="cmd"><pre>$ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet importscript {{ .User.MultiSigScript }}</pre></div>
 
-			<p><span style="font-size: larger;">After successfully importing the script into your wallet, you may generate tickets delegated to the pool in either of two ways:</span></p>
+			<p>After successfully importing the script into your wallet, you may generate tickets delegated to the pool in either of two ways:</p>
 
-			<p><span style="font-size: larger;"><b><u>Step 3</u></b></span></p>
-			<p><span style="font-size: larger;"><b>Option A - dcrticketbuyer - Automatic purchasing - Recommended (Automatically adjusts ticket fees so tickets purchases are more likely to be mined.)</b></span></p>
-			<p><span style="font-size: larger;">Stop dcrticketbuyer if it is currently running and and the following to <b>ticketbuyer.conf</b>:</span></p>
-			<p><span style="font-size: larger;">maxpriceabsolute=35</span></p>
-			<p><span style="font-size: larger;">pooladdress={{ .User.UserFeeAddr }}</span></p>
-			<p><span style="font-size: larger;">poolfees={{ .PoolFees }}</span></p>
-			<p><span style="font-size: larger;">ticketaddress={{ .User.MultiSigAddress }}</span></p>
-			<p><span style="font-size: larger;">Unlock dcrwallet, start dcrticketbuyer, and it will automatically purchase stake tickets delegated to the pool address.</span></p>
+			<p><b><u>Step 3</u></b></p>
+			<p><b>Option A - dcrticketbuyer - Automatic purchasing - Recommended (Automatically adjusts ticket fees so tickets purchases are more likely to be mined.)</b></p>
+			<p>Stop dcrticketbuyer if it is currently running and and the following to <b>ticketbuyer.conf</b>:</p>
+			<p>maxpriceabsolute=35</p>
+			<p>pooladdress={{ .User.UserFeeAddr }}</p>
+			<p>poolfees={{ .PoolFees }}</p>
+			<p>ticketaddress={{ .User.MultiSigAddress }}</p>
+			<p>Unlock dcrwallet, start dcrticketbuyer, and it will automatically purchase stake tickets delegated to the pool address.</p>
 
-			<p><span style="font-size: larger;"><b>Option B - dcrwallet - Automatic purchasing - Not recommended</b></span></p>
-			<p><span style="font-size: larger;">Stop dcrwallet if it is currently running and and the following to <b>dcrwallet.conf</b>:</span></p>
-			<p><span style="font-size: larger;">enablestakemining=1</span></p>
-			<p><span style="font-size: larger;">pooladdress={{ .User.UserFeeAddr }}</span></p>
-			<p><span style="font-size: larger;">poolfees={{ .PoolFees }}</span></p>
-			<p><span style="font-size: larger;">promptpass=1</span></p>
-			<p><span style="font-size: larger;">ticketaddress={{ .User.MultiSigAddress }}</span></p>
-			<p><span style="font-size: larger;">ticketmaxprice=35</span></p>
-			<p><span style="font-size: larger;">Start dcrwallet and it will prompt your for your password. After unlocking, stake tickets delegated to the pool address will automatically be purchased as long as funds are available.</span></p>
+			<p><b>Option B - dcrwallet - Automatic purchasing - Not recommended</b></p>
+			<p>Stop dcrwallet if it is currently running and and the following to <b>dcrwallet.conf</b>:</p>
+			<p>enablestakemining=1</p>
+			<p>pooladdress={{ .User.UserFeeAddr }}</p>
+			<p>poolfees={{ .PoolFees }}</p>
+			<p>promptpass=1</p>
+			<p>ticketaddress={{ .User.MultiSigAddress }}</p>
+			<p>ticketmaxprice=35</p>
+			<p>Start dcrwallet and it will prompt your for your password. After unlocking, stake tickets delegated to the pool address will automatically be purchased as long as funds are available.</p>
 
-			<p><span style="font-size: larger;"><b>Option C - dcrwallet - Manual purchasing - Not recommended</b></span></p>
-			<p><span style="font-size: larger;">Start a wallet with funds available and manually purchase tickets with the following command using <b>dcrctl</b>:</span></p>
-			<p><span style="font-size: larger;">dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</span></p>
+			<p><b>Option C - dcrwallet - Manual purchasing - Not recommended</b></p>
+			<p>Start a wallet with funds available and manually purchase tickets with the following command using <b>dcrctl</b>:</p>
+			<p>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</p>
 			<div class="cmd"><pre>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 35 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre></div>
-			<p><span style="font-size: larger;">Will purchase a ticket delegated to the pool and an address from the voting account using funds from the default account only if the current network price for a ticket is less than 35.0 coins.</span></p>
-		</div>
-	</div>
-</div>
+			<p>Will purchase a ticket delegated to the pool and an address from the voting account using funds from the default account only if the current network price for a ticket is less than 35.0 coins.</p>
+      </div>
+    </div>
+  </div>
 
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">
-			<a data-toggle="collapse" data-parent="#accordion" href="#collapse-livelist">Live/Immature Tickets</a>
-		</h4>
-	</div>
-	<div id="collapse-livelist" class="panel-collapse collapse {{if .TicketsLive}}in{{end}}">
-		<div class="panel-body" style="background-color: #333; color: #ffffff;">
-
+<!-- BEGIN LIVE IMMATURE -->
+  <div class="panel panel-default panel-control">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-livelist">
+        Live/Immature</a>
+      </h4>
+    </div>
+    <div id="collapse-livelist" class="panel-collapse collapse">
+      <div class="panel-body">
 			{{if not .TicketsLive}}
-			<p><span style="font-size: larger;"><b>No live tickets.</b></span></p>
+			<p><b>No live tickets.</b></p>
 			{{end}}
 			{{if .TicketsLive}}
 			<table id="ticketslive" class="table table-condensed datatablesort">
@@ -121,9 +122,9 @@
 				</tr>{{end}}
 			</tbody>
 			</table>
-            <form method="post" class="form-inline" role="form">
+	            <form method="post" class="form-inline" role="form">
 	            <div id="votebits" class="form-group">
-                    <label class="control-label" for=""> &nbsp;Vote Bits: &nbsp;<span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="More options and their definitions will be added soon"></span></label>
+                    <label class="control-label" for=""> &nbsp;Vote Bits: &nbsp;<span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="More options and their definitions will be added soon"></label>
                     <label class="control-label" for="chooseallow"> &nbsp;Choose:</label>
                     <select class="form-control" id="chooseallow" name="chooseallow">
 						<option value=2>Use Pool Policy</option>
@@ -141,19 +142,20 @@
             	<input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
             </form>
 			{{end}}
-		</div>
-	</div>
-</div>
+      </div>
+    </div>
+  </div>
 
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">
-			<a data-toggle="collapse" data-parent="#accordion" href="#collapse-votedlist">Voted Tickets</a>
-		</h4>
-	</div>
-	<div id="collapse-votedlist" class="panel-collapse collapse {{if .TicketsVoted}}in{{end}}">
-		<div class="panel-body" style="background-color: #333; color: #ffffff;">
-
+<!-- BEGIN VOTED TICKETS-->
+  <div class="panel panel-default panel-control">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-votedlist">
+        Voted Tickets</a>
+      </h4>
+    </div>
+    <div id="collapse-votedlist" class="panel-collapse collapse">
+      <div class="panel-body">
 			{{if not .TicketsVoted}}
 			<p><span style="font-size: larger;"><b>No voted tickets.</b></span></p>
 			{{end}}
@@ -182,26 +184,28 @@
 			</tbody>
 			</table>
 			{{end}}
-		</div>
-	</div>
-</div>
+      </div>
+    </div>
+  </div>
 
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">
-			<a data-toggle="collapse" data-parent="#accordion" href="#collapse-missedlist">Missed Tickets</a>
-		</h4>
-	</div>
-	<div id="collapse-missedlist" class="panel-collapse collapse {{if .TicketsMissed}}in{{end}}">
-		<div class="panel-body" style="background-color: #333; color: #ffffff;">
 
+<!-- BEGIN MISSED TICKETS-->
+  <div class="panel panel-default panel-control">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-missedlist">
+        Missed Tickets</a>
+      </h4>
+    </div>
+    <div id="collapse-missedlist" class="panel-collapse collapse">
+      <div class="panel-body">
 			{{if not .TicketsMissed}}
 			<p><span style="font-size: larger;"><b>No missed tickets.</b></span></p>
 			{{end}}
 			{{if .TicketsMissed}}
+			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool.</div>
 			<table id="ticketsmissed" class="table table-condensed datatablesort">
 			<thead>
-				<div class="alert alert-warning"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool.</div>
 				<tr>
 					<th>Ticket</th>
 					<th>SpentByHeight</th>
@@ -224,19 +228,20 @@
 			</tbody>
 			</table>
 			{{end}}
-		</div>
-	</div>
-</div>
+      </div>
+    </div>
+  </div>
 
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">
-			<a data-toggle="collapse" data-parent="#accordion" href="#collapse-invalidlist">Invalid Tickets</a>
-		</h4>
-	</div>
-	<div id="collapse-invalidlist" class="panel-collapse collapse {{if .TicketsInvalid}}in{{end}}">
-		<div class="panel-body" style="background-color: #333; color: #ffffff;">
-
+<!-- BEGIN INVALID TICKETS-->
+  <div class="panel panel-default panel-control">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-invalidlist">
+        Invalid Tickets</a>
+      </h4>
+    </div>
+    <div id="collapse-invalidlist" class="panel-collapse collapse">
+      <div class="panel-body">
 			{{if not .TicketsInvalid}}
 			<p><span style="font-size: larger;"><b>No tickets.</b></span></p>
 			{{end}}
@@ -262,7 +267,14 @@
 			</tbody>
 			</table>
 			{{end}}
-		</div>
-	</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+</div>
+</div>
 </div>
 {{end}}
