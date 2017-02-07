@@ -22,6 +22,13 @@ module.exports = function(grunt) {
                         dest: '../public/svg',
                         filter: 'isFile'
                     },
+                    {
+                        expand: true,
+                        cwd: 'src/fonts',
+                        src: ['inconsolata-v15-latin-regular.eot', 'inconsolata-v15-latin-regular.svg', 'inconsolata-v15-latin-regular.woff', 'inconsolata-v15-latin-regular.woff2', 'source-sans-pro-v9-latin-regular.eot', 'source-sans-pro-v9-latin-regular.svg', 'source-sans-pro-v9-latin-regular.woff', 'source-sans-pro-v9-latin-regular.woff2'],
+                        dest: '../public/fonts',
+                        filter: 'isFile'
+                    },
                 ]
 
             }
