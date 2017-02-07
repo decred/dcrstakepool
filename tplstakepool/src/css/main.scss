@@ -1,7 +1,9 @@
+$web-font-path: '' !default;
+$icon-font-path: '' !default;
+$iconSpritePath: '' !default;
+$iconWhiteSpritePath: '' !default;
 @import "variables.scss";
 @import "../../bower_components/bootstrap-sass/assets/stylesheets/_bootstrap.scss";
-/* @import 'https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,600,700'; */
-/* @import 'https://fonts.googleapis.com/css?family=Inconsolata'; */
 
 /* inconsolata-regular - latin */
 @font-face {
