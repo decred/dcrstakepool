@@ -96,6 +96,7 @@
 			<p><b>No live tickets.</b></p>
 			{{end}}
 			{{if .TicketsLive}}
+			<div class="table-responsive">
 			<table id="ticketslive" class="table table-condensed datatablesort responsive">
 			<thead>
 				<tr>
@@ -122,6 +123,7 @@
 				</tr>{{end}}
 			</tbody>
 			</table>
+			</div>
 	            <form method="post" class="form-inline" role="form">
 	            <div id="votebits" class="form-group">
                     <label class="control-label" for=""> &nbsp;Vote Bits: &nbsp;<span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="More options and their definitions will be added soon"></label>
@@ -160,6 +162,7 @@
 			<p><span style="font-size: larger;"><b>No voted tickets.</b></span></p>
 			{{end}}
 			{{if .TicketsVoted}}
+			<div class="table-responsive">
 			<table id="ticketsvoted" class="table table-condensed datatablesort responsive">
 			<thead>
 				<tr>
@@ -183,6 +186,7 @@
 				</tr>{{end}}
 			</tbody>
 			</table>
+			</div>
 			{{end}}
       </div>
     </div>
@@ -204,6 +208,7 @@
 			{{end}}
 			{{if .TicketsMissed}}
 			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool.</div>
+			<div class="table-responsive">
 			<table id="ticketsmissed" class="table table-condensed datatablesort responsive">
 			<thead>
 				<tr>
@@ -227,6 +232,7 @@
 				</tr>{{end}}
 			</tbody>
 			</table>
+			</div>
 			{{end}}
       </div>
     </div>
