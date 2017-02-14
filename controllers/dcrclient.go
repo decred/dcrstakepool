@@ -1947,7 +1947,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 			if wsm.servers[i] == nil {
 				continue
 			}
-			for ticketHash, _ := range allTickets {
+			for ticketHash := range allTickets {
 				_, ok := ticketsPerServer[i][ticketHash]
 				if !ok {
 					h := chainhash.Hash(ticketHash)
