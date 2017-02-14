@@ -1,0 +1,50 @@
+{{define "main"}}
+	{{template "header" .}}
+	<!-- Fixed navbar -->
+	<div class="navbar navbar-default" role="navigation">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="#"><img alt="Decred" src="/assets/images/logo_dark.png"></a>
+			</div>
+			<div class="navbar-collapse collapse">
+				<ul class="nav navbar-nav">
+					<li {{if .IsIndex }}class="active"{{end}}><a href="/">Home</a></li>
+					<li {{if .IsStats }}class="active"{{end}}><a href="/stats">Stats</a></li>
+					{{if .User}}<li {{if .IsAddress }}class="active"{{end}}><a href="/address">Address</a></li>{{end}}
+					{{if .User}}<li {{if .IsSettings }}class="active"{{end}}><a href="/settings">Settings</a></li>{{end}}
+					{{if .IsStatus}}<li class="active"><a href="/status">Status</a></li>{{end}}
+					{{if .User}}{{if .User.MultiSigAddress}}<li {{if .IsTickets }}class="active"{{end}}><a href="/tickets">Tickets</a></li>{{end}}{{end}}
+				</ul>
+				{{if .User}}
+				<ul class="nav navbar-nav navbar-right">
+					<li>
+						<p class="navbar-text">
+							Hello, {{ .User.Email}}
+						</p>
+					</li>
+					<li><a href="/logout">Logout</a></li>
+				</ul>
+				{{else}}
+				<ul class="nav navbar-nav navbar-right">
+					{{if .IsEmailUpdate }}<li class="active"><a href="/emailupdate">Email Update</a></li>{{end}}
+					{{if .IsEmailVerify }}<li class="active"><a href="/emailverify">Email Verification</a></li>{{end}}
+					{{if .IsPasswordReset }}<li class="active"><a href="/passwordreset">Password Reset</a></li>{{end}}
+					{{if .IsPasswordUpdate }}<li class="active"><a href="/passwordupdate">Password Update</a></li>{{end}}
+					<li {{if .IsSignIn }}class="active"{{end}}><a href="/signin">Sign In</a></li>
+					<li {{if .IsSignUp }}class="active"{{end}}><a href="/signup">Sign Up</a></li>
+				</ul>
+				{{end}}				
+			</div><!--/.nav-collapse -->
+		</div>
+	</div>
+	<div class="container" role="main">		
+	{{.Content}}	
+	</div>
+	{{template "footer" .}}
+{{end}}

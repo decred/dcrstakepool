@@ -1,97 +1,87 @@
 {{define "settings"}}
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">Settings</h4>
+<div class="wrapper">
+ <div class="row">
+  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
+    {{if .SMTPDisabled }}<div class="well well-notification  orange-notification">Mail server not configured.  You will not receive an email change verification link.</div>{{end}}
+    {{range .FlashError}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
+    {{range .FlashSuccess}}<div class="well well-notification green-notification">{{.}}</div>{{end}}
+ 
+{{if .ShowInstructions }}  <div class="well well-notification  orange-notification">
+To start staking, you need to submit a public key address.<br>
+    You may do so on the <a href="/address">Address</a> page or by downloading
+    <a href="https://github.com/decred/decred-binaries/releases/latest">Paymetheus</a>
+   <!-- <span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="Paymetheus is the official Decred GUI wallet for Windows. Search for 'msi' on the downloads page to find it.">
+    </span> --> and pasting the API Token below into Paymetheus.
+  </div>
+{{end}}
+
+
+  </div>
+ 
+  <div class="col-sm-15 col-md-10 text-left center-block">
+    <h1>Settings</h1>
+ 
+	<p><strong>Api Token:</strong></p>
+	<pre>{{ .APIToken }}</pre>
+<hr />
+
+	<h2>Change Email Address</h2>
+        <form method="post" class="form-horizontal">
+	 <div class="form-group">
+	  <label class="control-label col-sm-2" for="email">New Email:</label>
+	<div class="col-sm-13">
+	  <input type="email" name="email" placeholder="New Email Address" type="email" class="form-control" required>
 	</div>
-	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-		{{if .SMTPDisabled }}<div class="alert alert-danger">Mail server not configured.  You will not receive an email change verification link.</div>{{end}}
-		{{range .FlashSuccess}}
-			<div class="alert alert-success">{{.}}</div><p>
-		{{end}}
-		{{range .FlashError}}
-			<div class="alert alert-danger">{{.}}</div><p>
-		{{end}}
-		{{if .ShowInstructions }}
-			<div class="alert alert-info">To start staking, you need to submit a public key address.<br>
-			You may do so on the <a href="/address">Address</a> page or by downloading
-			<a href="https://github.com/decred/decred-binaries/releases/latest">Paymetheus</a>
-			<span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="Paymetheus is the official Decred GUI wallet for Windows. Search for 'msi' on the downloads page to find it."></span>
-			and pasting the API Token below into Paymetheus.</div><p>
-		{{end}}
-		<fieldset>
-			<div class="row">
-				<div class="col-md-4 text-right" for="apitoken"><b>API Token:</b> <span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="Your personalized API Token allows programs such as the official Decred wallet for Windows, Paymetheus, to access your stake pool account."></span></div>
-				<div class="col-md-6" id="apitoken" style="overflow:auto">{{ .APIToken }}</div>
-			</div>
-			<div class="row">&nbsp;</div>
-		</fieldset>
-		<form class="form-horizontal" method="post">
-		<fieldset>
-			<div class="form-group">
-				<label class="col-md-4 control-label" for="email">New Email Address</label>  
-				<div class="col-md-6">
-					<input id="email" name="email" type="email" placeholder="New Email Address" class="form-control input-md" required>
-				</div>
-			</div>
-
-			<div class="form-group">
-				<label class="col-md-4 control-label" for="emailpassword">Password</label>
-				<div class="col-md-6">
-					<input id="emailpassword" name="password" type="password" placeholder="Password" class="form-control input-md" required>
-				</div>
-			</div>
-
-			<div class="form-group">
-				<label class="col-md-4 control-label" for=""></label>
-				<div class="col-md-6">
-					<div class="g-recaptcha" data-sitekey="{{.RecaptchaSiteKey}}" data-theme="dark"></div>
-				</div>
-			</div>
-
-			<div class="form-group">
-				<label class="col-md-4 control-label" for="updateemail"></label>
-				<div class="col-md-4">
-					<button id="updateemail" name="updateEmail" value="true" class="btn btn-primary">Update Email</button>
-				</div>
-			</div>
-		</fieldset>
-		<input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-		</form>
-
-		<div class="form-group">&nbsp;</div>
-
-		<form class="form-horizontal" method="post">
-			<fieldset>
-			<div class="form-group">
-				<label class="col-md-4 control-label" for="curpassword">Current Password</label>
-				<div class="col-md-6">
-					<input id="curpassword" name="password" type="password" placeholder="Current Password" class="form-control input-md" required>
-				</div>
-			</div>
-
-			<div class="form-group">
-				<label class="col-md-4 control-label" for="newpassword">New Password</label>
-				<div class="col-md-6">
-					<input id="newpassword" name="newpassword" type="password" placeholder="New Password" class="form-control input-md" required>
-				</div>
-			</div>
-
-			<div class="form-group">
-				<label class="col-md-4 control-label" for="newpasswordrepeat">Repeat New Password</label>
-				<div class="col-md-6">
-					<input id="newpasswordrepeat" name="newpasswordrepeat" type="password" placeholder="Repeat New Password" class="form-control input-md" required>
-				</div>
-			</div>
-
-			<div class="form-group">
-				<label class="col-md-4 control-label" for="updatepassword"></label>
-				<div class="col-md-4">
-					<button id="updatepassword" name="updatePassword" value="true" class="btn btn-primary">Update Password</button>
-				</div>
-			</div>
-		</fieldset>
-    	<input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-		</form>
+	 </div>
+	 <div class="form-group">
+	  <label class="control-label col-sm-2" for="emailpassword">Password:</label>
+	<div class="col-sm-13">
+	  <input id="emailpassword" name="emailpassword" type="password" class="form-control" required>
 	</div>
+	 </div>
+	<div class="form-group">
+         <div class="g-recaptcha pull-right" style="padding-right: 15px;" data-sitekey="{{.RecaptchaSiteKey}}" data-theme="light"></div>
+	</div>
+	<div class="form-group">
+         <button id="updatepassword" name="updatepassword" class="btn btn-primary">Change Email Address</button>
+	</div>
+	 <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+	</form>
+
+<hr />
+	<h2>Change Password</h2>
+       <form class="form-horizontal" method="post">
+	<div class="form-group">
+          <label for="curpassword" class="control-label col-sm-2">Current<br />Password</label>
+	<div class="col-sm-13">
+          <input id="curpassword" name="password" type="password" placeholder="Current Password" class="form-control sing-in-control" required>
+	</div>
+        </div>
+        <div class="form-group">
+          <label class="control-label col-sm-2" for="newpassword">New<br />Password</label>
+	<div class="col-sm-13">
+          <input id="newpassword" name="newpassword" type="password" placeholder="New Password" class="form-control sing-in-control" required>
+	</div>
+	</div>
+	<div class="form-group">
+          <label class="control-label col-sm-2" for="newpasswordrepeat">Repeat New Password</label>
+	<div class="col-sm-13">
+          <input id="newpasswordrepeat" name="newpasswordrepeat" type="password" placeholder="Repeat New Password" class="form-control sing-in-control" required>
+	</div>
+        </div>
+        <div class="form-group">
+          <label class="control-label" for="updatepassword"></label>
+          <button id="updatepassword" name="updatePassword" value="true" class="btn btn-primary">Update Password</button>
+        </div>
+        <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+       </form>
+
+
+
+
+  </div>
+
+ </div>
 </div>
 {{end}}
+
