@@ -252,6 +252,7 @@
 			<p><span style="font-size: larger;"><b>No tickets.</b></span></p>
 			{{end}}
 			{{if .TicketsInvalid}}
+			<div class="table-responsive">
 			<table id="ticketsinvalid" class="table table-condensed">
 			<thead>
 				<div class="alert alert-danger"><b>Alert!</b> Tickets appearing here did not pay the correct pool fee.
@@ -272,6 +273,7 @@
 				</tr>{{end}}
 			</tbody>
 			</table>
+			</div>
 			{{end}}
       </div>
     </div>
