@@ -12,3 +12,15 @@ $("#inputEmail3,#inputPassword3").focusout(function(){
 });
 
 })
+
+$(document).ready(function(){
+    $('#ticketslive').DataTable({
+	responsive: true
+    });
+    $('#ticketsvoted').DataTable({
+	responsive: true
+    });
+    $('#ticketsmissed').DataTable({
+	responsive: true
+    });
+});
