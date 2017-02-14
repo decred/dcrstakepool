@@ -25,7 +25,7 @@ module.exports = function(grunt) {
                     {
                         expand: true,
                         cwd: 'src/images',
-                        src: ['sort_asc.png', 'sort_both.png', 'sort_desc.png'],
+                        src: ['sort_asc.png', 'sort_both.png', 'sort_desc.png', 'sort_desc_disabled.png', 'sort_asc_disabled.png'],
                         dest: '../public/images',
                         filter: 'isFile'
                     },
@@ -46,7 +46,7 @@ module.exports = function(grunt) {
                     {
                         expand: true,
                         cwd: 'src/css',
-                        src: ['datatables.css'],
+                        src: ['datatables.css', 'glyphicons-halflings-regular.ttf', 'glyphicons-halflings-regular.woff', 'glyphicons-halflings-regular.woff2'],
                         dest: '../public/css',
                         filter: 'isFile'
                     },
