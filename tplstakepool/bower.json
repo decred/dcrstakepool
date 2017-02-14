@@ -12,6 +12,8 @@
   "moduleType": [],
   "homepage": "",
   "dependencies": {
-    "bootstrap-sass": "^3.3.7"
+    "bootstrap-sass": "^3.3.7",
+    "datatables.net": "~1.10.10",
+    "datatables.net-responsive": "~2.0.1"
   }
 }

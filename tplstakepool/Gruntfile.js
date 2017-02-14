@@ -17,6 +17,20 @@ module.exports = function(grunt) {
                     },
                     {
                         expand: true,
+                        cwd: 'bower_components/datatables.net-responsive/js',
+                        src: ['dataTables.responsive.js'],
+                        dest: '../public/js',
+                        filter: 'isFile'
+                    },
+                    {
+                        expand: true,
+                        cwd: 'src/images',
+                        src: ['sort_asc.png', 'sort_both.png', 'sort_desc.png'],
+                        dest: '../public/images',
+                        filter: 'isFile'
+                    },
+                    {
+                        expand: true,
                         cwd: 'src/svg',
                         src: ['sprites.svg'],
                         dest: '../public/svg',
@@ -29,6 +43,13 @@ module.exports = function(grunt) {
                         dest: '../public/fonts',
                         filter: 'isFile'
                     },
+                    {
+                        expand: true,
+                        cwd: 'src/css',
+                        src: ['datatables.css'],
+                        dest: '../public/css',
+                        filter: 'isFile'
+                    },
                 ]
 
             }
@@ -39,12 +60,12 @@ module.exports = function(grunt) {
                 src: [
                     'bower_components/jquery/dist/jquery.min.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.min.js',
+                    'bower_components/datatables.net/js/jquery.dataTables.min.js',
                     'src/js/main.js'
                 ],
                 dest: '../public/js/complete.js'
             }
         },
-
 
         uglify: {
             my_target: {
@@ -63,13 +84,10 @@ module.exports = function(grunt) {
                 },
                 files: { // Dictionary of files
                     '../public/css/main.css': 'src/css/main.scss',
-
                 }
 
             }
         },
-
-
         watch: {
 
             css: {

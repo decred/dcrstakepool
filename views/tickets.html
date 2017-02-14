@@ -96,7 +96,7 @@
 			<p><b>No live tickets.</b></p>
 			{{end}}
 			{{if .TicketsLive}}
-			<table id="ticketslive" class="table table-condensed datatablesort">
+			<table id="ticketslive" class="table table-condensed datatablesort responsive">
 			<thead>
 				<tr>
 					<th>Ticket</th>
@@ -160,7 +160,7 @@
 			<p><span style="font-size: larger;"><b>No voted tickets.</b></span></p>
 			{{end}}
 			{{if .TicketsVoted}}
-			<table id="ticketsvoted" class="table table-condensed datatablesort">
+			<table id="ticketsvoted" class="table table-condensed datatablesort responsive">
 			<thead>
 				<tr>
 					<th>Ticket</th>
@@ -204,7 +204,7 @@
 			{{end}}
 			{{if .TicketsMissed}}
 			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool.</div>
-			<table id="ticketsmissed" class="table table-condensed datatablesort">
+			<table id="ticketsmissed" class="table table-condensed datatablesort responsive">
 			<thead>
 				<tr>
 					<th>Ticket</th>
