@@ -3,7 +3,7 @@ package helpers
 import (
 	"github.com/decred/dcrstakepool/models"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/gorp.v1"
+	"github.com/go-gorp/gorp"
 )
 
 func AddPasswordResetToken(dbMap *gorp.DbMap, email string) (*models.User, error) {

@@ -1,12 +1,12 @@
-hash: 7005b774d59e299b20b9c90c05bc2e91f5ce2810a26b81521da02ac392283fba
-updated: 2016-12-15T22:41:56.662723628-06:00
+hash: 3fa092c0562caf125c568ee179c9dc8cb73b7573527a6d8e866c61299a91f87a
+updated: 2017-02-15T10:05:17.292989339-08:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
 - name: github.com/btcsuite/fastsha256
   version: 637e656429416087660c84436a2a035d69d54e2e
 - name: github.com/btcsuite/go-flags
-  version: 6c288d648c1cc1befcb90cb5511dcacf64ae8e61
+  version: 1679536dcc895411a9f5848d9a0250be7856448c
 - name: github.com/btcsuite/go-socks
   version: cfe8b59e565c1a5bd4e2005d77cd9aa8b2e14524
   subpackages:
@@ -27,7 +27,7 @@ imports:
 - name: github.com/decred/blake256
   version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: b89abb72e42184872b80bfe964c8b3a3214e3f24
+  version: bfc076ecf1557c370bde149daca9c35bfe74218c
   subpackages:
   - addrmgr
   - blockchain
@@ -46,26 +46,29 @@ imports:
   - txscript
   - wire
 - name: github.com/decred/dcrrpcclient
-  version: fc4826bb281f5b68af4cf95c20d8664419b4cc08
+  version: a1200f54d5aff356f7db4699d64ccdf2e35e2876
 - name: github.com/decred/dcrutil
-  version: b107d74547385caeaba836a213b9b6ffbd3d8096
+  version: ba0a5f399a43abc0e1a0a0442509c36f35321bce
   subpackages:
   - base58
   - hdkeychain
 - name: github.com/decred/dcrwallet
-  version: 62457f4265f9ccc34166a549e7ad58167a3f5721
+  version: 43620621173cdfb7997ccb10fe29321d412aa8e6
   subpackages:
   - internal/zero
   - pgpwordlist
   - snacl
   - waddrmgr
   - walletdb
+  - walletseed
 - name: github.com/decred/ed25519
   version: b0909d3f798b97a03c9e77023f97a5301a2a7900
   subpackages:
   - edwards25519
 - name: github.com/dgrijalva/jwt-go
   version: 9ed569b5d1ac936e6494082958d63a6aa4fff99a
+- name: github.com/go-gorp/gorp
+  version: c87af80f3cc5036b55b83d77171e156791085e2e
 - name: github.com/go-sql-driver/mysql
   version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/gorilla/context
@@ -85,10 +88,8 @@ imports:
   - web/middleware
   - web/mutil
 - name: golang.org/x/crypto
-  version: 3f77d695175f990a2967385c493939f380ee40a3
+  version: c3b1d0d6d8690eaebe3064711b026770cc37efa3
   subpackages:
   - bcrypt
   - blowfish
-- name: gopkg.in/gorp.v1
-  version: c87af80f3cc5036b55b83d77171e156791085e2e
 testImports: []
