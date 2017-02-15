@@ -25,7 +25,7 @@ import (
 	"github.com/decred/dcrwallet/waddrmgr"
 	"github.com/haisum/recaptcha"
 	"github.com/zenazn/goji/web"
-	"gopkg.in/gorp.v1"
+	"github.com/go-gorp/gorp"
 )
 
 // disapproveBlockMask checks to see if the votebits have been set to No.

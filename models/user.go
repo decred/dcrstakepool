@@ -8,7 +8,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/gorp.v1"
+	"github.com/go-gorp/gorp"
 )
 
 type EmailChange struct {

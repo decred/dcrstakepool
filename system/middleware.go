@@ -12,7 +12,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/sessions"
 	"github.com/zenazn/goji/web"
-	"gopkg.in/gorp.v1"
+	"github.com/go-gorp/gorp"
 )
 
 // Makes sure templates are stored in the context
