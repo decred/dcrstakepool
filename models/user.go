@@ -177,7 +177,17 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// use whatever database/sql driver you wish
 	//TODO: Get user, password and database from config.
 	db, err := sql.Open("mysql", fmt.Sprint(user, ":", password, "@(", hostname, ":", port, ")/", database, "?charset=utf8mb4"))
-	checkErr(err, "sql.Open failed")
+	if err != nil {
+		log.Critical("sql.Open failed: ", err)
+		return nil
+	}
+
+	// sql.Open just validates its arguments without creating a connection
+	// Verify that the data source name is valid with Ping:
+	if err = db.Ping(); err != nil {
+		log.Critical("Unable to establish connection to database: ", err)
+		return nil
+	}
 
 	// construct a gorp DbMap
 	dbMap := &gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8MB4"}}
@@ -191,7 +201,12 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
 	err = dbMap.CreateTablesIfNotExists()
-	checkErr(err, "Create tables failed")
+	if err != nil {
+		log.Critical("Create tables failed: ", err)
+		// There is no point proceeding, so return. TODO: signal to caller the
+		// error, or possibly close the db, or panic.
+		return dbMap
+	}
 
 	// The ORM, Gorp, doesn't support migrations so we just add new columns
 	// that weren't present in the original schema so admins can upgrade
@@ -213,7 +228,10 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// bug fix for previous -- users who hadn't submitted a script won't be
 	// able to login because Gorp can't handle NULL values
 	_, err = dbMap.Exec("UPDATE Users SET HeightRegistered = 0 WHERE HeightRegistered IS NULL")
-	checkErr(err, "setting HeightRegistered to 0 failed")
+	if err != nil {
+		log.Error("Setting HeightRegistered to 0 failed ", err)
+		// Do not return since db is opened an other statements may work
+	}
 
 	// add EmailVerified, EmailToken so new users' email addresses can be
 	// verified.  We consider users who already registered to be grandfathered
@@ -237,11 +255,16 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// and do not have an API Token already set.
 	var users []User
 	_, err = dbMap.Select(&users, "SELECT * FROM Users WHERE APIToken = '' AND EmailVerified > 0")
-	checkErr(err, "Select failed")
+	if err != nil {
+		log.Critical("Select verified users failed: ", err)
+		// With out a Valid []Users, we cannot proceed
+		return dbMap
+	}
+
 	for _, u := range users {
 		err := SetUserAPIToken(dbMap, APISecret, baseURL, u.Id)
 		if err != nil {
-			log.Criticalf("unable to set API Token for UserId %v: %v", u.Id, err)
+			log.Errorf("Unable to set API Token for UserId %v: %v", u.Id, err)
 		}
 	}
 
