@@ -15,6 +15,7 @@ import (
 	"github.com/decred/dcrd/blockchain/stake"
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/dcrjson"
+	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/codes"
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/models"
@@ -1653,18 +1654,47 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 		return "/tickets", http.StatusSeeOther
 	}
 
-	chooseallow := r.FormValue("chooseallow")
-	var voteBits = uint16(0)
+	voteBits := uint16(0)
 
-	if chooseallow == "2" {
-		// pool policy and approve.
-		// TODO: set policy somewhere else and make it available to /tickets page.
-		voteBits = uint16(1)
-		voteBits |= approveBlockMask
+	if controller.params.Net == wire.TestNet {
+		voteBlockSize := r.FormValue("voteBlockSize")
+		votePrevBlockInvalid := r.FormValue("votePrevBlockInvalid")
+		switch voteBlockSize {
+		default:
+			log.Infof("Invalid voteBlockSize: %v", voteBlockSize)
+			return "/error?r=/tickets", http.StatusSeeOther
+		case "": // Unset
+			fallthrough
+		case "0": // Abstain
+		case "2": // No
+			voteBits |= 2
+		case "4": // Yes
+			voteBits |= 4
+		}
+
+		switch votePrevBlockInvalid {
+		default:
+			log.Infof("Invalid votePrevBlockInvalid: %v", votePrevBlockInvalid)
+			return "/error?r=/tickets", http.StatusSeeOther
+		case "": // Unset
+			fallthrough
+		case "0": // No
+		case "1": // Yes
+			voteBits |= 1
+		}
 	} else {
-		if chooseallow == "1" {
+		chooseallow := r.FormValue("chooseallow")
+		switch chooseallow {
+		case "2":
+			// pool policy and approve.
+			// TODO: set policy somewhere else and make it available to /tickets page.
+			voteBits = uint16(1)
+			voteBits |= approveBlockMask
+		case "1":
 			voteBits = approveBlockMask
-		} else {
+		case "0":
+			fallthrough
+		default:
 			voteBits = disapproveBlockMask
 		}
 	}
