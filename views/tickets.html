@@ -56,12 +56,15 @@
 
 			<p><b><u>Step 3</u></b></p>
 			<p><b>Option A - dcrticketbuyer - Automatic purchasing - Recommended (Automatically adjusts ticket fees so tickets purchases are more likely to be mined.)</b></p>
-			<p>Stop dcrticketbuyer if it is currently running and and the following to <b>ticketbuyer.conf</b>:</p>
-			<p>maxpriceabsolute=35</p>
+			<p>Stop dcrticketbuyer if it is currently running and add the following to <b>ticketbuyer.conf</b>:</p>
+			<p>NOTE: As of v0.8.0, dcrticketbuyer has been integrated into dcrwallet and is no longer a standalone application. 
+				The following settings should instead be added to <b>dcrwallet.conf</b> and prefixed with "ticketbuyer." (e.g. maxpriceabsolute=35 becomes ticketbuyer.maxpriceabsolute=35)</p>
+	      		<p>maxpriceabsolute=35</p>
 			<p>pooladdress={{ .User.UserFeeAddr }}</p>
 			<p>poolfees={{ .PoolFees }}</p>
 			<p>ticketaddress={{ .User.MultiSigAddress }}</p>
 			<p>Unlock dcrwallet, start dcrticketbuyer, and it will automatically purchase stake tickets delegated to the pool address.</p>
+	      		<p>As of v0.8.0, the ticketbuyer will purchase tickets that meet the settings defined in dcrwallet.conf while dcrwallet is open and unlocked.</p>
 
 			<p><b>Option B - dcrwallet - Automatic purchasing - Not recommended</b></p>
 			<p>Stop dcrwallet if it is currently running and and the following to <b>dcrwallet.conf</b>:</p>
