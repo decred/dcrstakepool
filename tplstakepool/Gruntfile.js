@@ -36,6 +36,14 @@ module.exports = function(grunt) {
                         dest: '../public/svg',
                         filter: 'isFile'
                     },
+                    {   
+                        expand: true,
+                        cwd: 'src/images',
+                        src: ['**/*'],
+                        dest: '../public/images',
+                        filter: 'isFile'
+                    },
+
                     {
                         expand: true,
                         cwd: 'src/fonts',
@@ -101,7 +109,7 @@ module.exports = function(grunt) {
             },
 
             img: {
-                files: ['src/img/*.{png,jpg,gif}'],
+                files: ['src/images/*.{png,jpg,gif}'],
                 tasks: ['imagemin'],
                 options: {
                     livereload: true
