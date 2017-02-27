@@ -116,6 +116,40 @@ func UpdateUserPasswordById(dbMap *gorp.DbMap, id int64, password []byte) (*mode
 	return &user, err
 }
 
+func UpdateVoteBitsByID(dbMap *gorp.DbMap, id int64, voteBits uint16) (*models.User, error) {
+	var user models.User
+	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
+	if err != nil {
+		return nil, err
+	}
+
+	user.VoteBits = int64(voteBits)
+
+	_, err = dbMap.Update(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, err
+}
+
+func UpdateVoteBitsVersionByID(dbMap *gorp.DbMap, id int64, voteVersion uint32) (*models.User, error) {
+	var user models.User
+	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
+	if err != nil {
+		return nil, err
+	}
+
+	user.VoteBitsVersion = int64(voteVersion)
+
+	_, err = dbMap.Update(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, err
+}
+
 func UserIDExists(dbMap *gorp.DbMap, userid int64) (*models.User, error) {
 	var user models.User
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", userid)

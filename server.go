@@ -1,14 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 
+	"google.golang.org/grpc"
+
 	"github.com/gorilla/context"
 
+	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/system"
@@ -96,7 +100,59 @@ func runMain() int {
 	app.Use(context.ClearHandler)
 
 	// Supported API versions are advertised in the API stats result
-	APIVersionsSupported := []int{1}
+	APIVersionsSupported := []int{1, 2}
+
+	// TODO maybe better to just use agenda info from chainparams?
+	var voteInfo dcrjson.GetVoteInfoResult
+	// TODO remove this hack once stakepoold is mandatory
+	voteVersion := uint32(4)
+	if activeNetParams.Params.Name == "mainnet" {
+		voteVersion = 3
+	}
+	voteVersions := make([]uint32, len(cfg.StakepooldHosts))
+
+	if cfg.EnableStakepoold {
+		nodeConnections := make([]*grpc.ClientConn, len(cfg.StakepooldHosts))
+		voteInfos := make([]string, len(cfg.StakepooldHosts))
+
+		for i := range cfg.StakepooldHosts {
+			nodeConnections[i], err = connectStakepooldGRPC(cfg, i)
+			if err != nil {
+				log.Errorf("Failed to connect to stakepoold host %d: %v", i, err)
+				return 8
+			}
+			voteVersions[i], voteInfos[i], err = stakepooldGetVoteOptions(nodeConnections[i])
+			if err != nil {
+				log.Errorf("Failed to retrieve stakepoold voting config from host %d: %v", i, err)
+				return 9
+			}
+		}
+
+		for i := range cfg.StakepooldHosts {
+			if i == 0 {
+				continue
+			}
+
+			if voteInfos[i] != voteInfos[i-1] {
+				log.Errorf("voteInfo mismatch host %d has %v while host %d has %v",
+					i, voteInfos[i], i-1, voteInfos[i-1])
+				return 10
+			}
+			if voteVersions[i] != voteVersions[i-1] {
+				log.Errorf("voteVersion mismatch host %d has %d while host %d has %d",
+					i, voteVersions[i], i-1, voteVersions[i-1])
+				return 11
+			}
+		}
+
+		voteVersion = voteVersions[0]
+
+		err = json.Unmarshal([]byte(voteInfos[0]), &voteInfo)
+		if err != nil {
+			log.Errorf("Unable to unmarshal voteInfo: %v", err)
+			return 12
+		}
+	}
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
 		cfg.AdminIPs, cfg.APISecret, APIVersionsSupported, cfg.BaseURL,
@@ -104,7 +160,8 @@ func runMain() int {
 		cfg.PoolFees, cfg.PoolLink, cfg.RecaptchaSecret, cfg.RecaptchaSitekey,
 		cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
 		cfg.Version, cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers,
-		cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader)
+		cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader,
+		voteInfo, voteVersion)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to initialize the main controller: %v",
@@ -114,7 +171,11 @@ func runMain() int {
 		return 3
 	}
 
-	err = controller.RPCSync(application.DbMap, cfg.SkipVoteBitsSync)
+	// reset votebits if Vote Version changed or if the stored VoteBits are
+	// somehow invalid
+	controller.CheckAndResetUserVoteBits(application.DbMap, voteVersion, voteInfo)
+
+	err = controller.RPCSync(application.DbMap)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to sync the wallets: %v",
@@ -174,9 +235,12 @@ func runMain() int {
 	// Status
 	app.Get("/status", application.Route(controller, "Status"))
 
-	// Tickets routes
+	// Tickets
 	app.Get("/tickets", application.Route(controller, "Tickets"))
-	app.Post("/tickets", application.Route(controller, "TicketsPost"))
+
+	// Voting routes
+	app.Get("/voting", application.Route(controller, "Voting"))
+	app.Post("/voting", application.Route(controller, "VotingPost"))
 
 	// KTHXBYE
 	app.Get("/logout", application.Route(controller, "Logout"))

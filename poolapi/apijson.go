@@ -17,6 +17,7 @@ type PurchaseInfo struct {
 	PoolFees      float64 `json:"PoolFees"`
 	Script        string  `json:"Script"`
 	TicketAddress string  `json:"TicketAddress"`
+	VoteBits      uint16  `json:"VoteBits"`
 }
 
 type Stats struct {
@@ -24,6 +25,7 @@ type Stats struct {
 	APIVersionsSupported []int   `json:"APIVersionsSupported"`
 	BlockHeight          int64   `json:"BlockHeight"`
 	Difficulty           float64 `json:"Difficulty"`
+	Expired              uint32  `json:"Expired"`
 	Immature             uint32  `json:"Immature"`
 	Live                 uint32  `json:"Live"`
 	Missed               uint32  `json:"Missed"`

@@ -30,6 +30,9 @@ func (controller *Controller) IsXhr(c web.C) bool {
 
 func (controller *Controller) Parse(t *template.Template, name string, data interface{}) string {
 	var doc bytes.Buffer
-	t.ExecuteTemplate(&doc, name, data)
+	err := t.ExecuteTemplate(&doc, name, data)
+	if err != nil {
+		log.Warnf("ExecuteTemplate error: %v", err)
+	}
 	return doc.String()
 }

@@ -42,6 +42,8 @@ type User struct {
 	EmailVerified    int64
 	EmailToken       string
 	APIToken         string
+	VoteBits         int64
+	VoteBitsVersion  int64
 }
 
 func (user *User) HashPassword(password string) {
@@ -62,13 +64,14 @@ func GetUserByEmail(dbMap *gorp.DbMap, email string) (user *User) {
 	return
 }
 
-func GetUserById(dbMap *gorp.DbMap, id int64) (user *User) {
-	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
+func GetUserById(dbMap *gorp.DbMap, id int64) (user *User, err error) {
+	err = dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 
 	if err != nil {
-		log.Warnf("Can't get user by id: %v", err)
+		return nil, err
 	}
-	return
+
+	return user, nil
 }
 
 // GetUserCount gives a count of all users
@@ -195,8 +198,8 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// add a table, setting the table name and specifying that
 	// the Id property is an auto incrementing primary key
 	dbMap.AddTableWithName(EmailChange{}, "EmailChange").SetKeys(true, "Id")
-	dbMap.AddTableWithName(User{}, "Users").SetKeys(true, "Id")
 	dbMap.AddTableWithName(PasswordReset{}, "PasswordReset").SetKeys(true, "Id")
+	dbMap.AddTableWithName(User{}, "Users").SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -230,7 +233,7 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	_, err = dbMap.Exec("UPDATE Users SET HeightRegistered = 0 WHERE HeightRegistered IS NULL")
 	if err != nil {
 		log.Error("Setting HeightRegistered to 0 failed ", err)
-		// Do not return since db is opened an other statements may work
+		// Do not return since db is opened and other statements may work
 	}
 
 	// add EmailVerified, EmailToken so new users' email addresses can be
@@ -267,6 +270,17 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 			log.Errorf("Unable to set API Token for UserId %v: %v", u.Id, err)
 		}
 	}
+
+	// stakepool v1.0.0 -> v1.1.0
+
+	// add VoteBits column for storing the user's voting preferences.  Set the
+	// default to 1 which means the previous block was valid
+	addColumn(dbMap, database, "Users", "VoteBits", "bigint(20) NULL", "APIToken", "UPDATE Users SET VoteBits = 1")
+
+	// add VoteBitsVersion column for storing the vote version that the VoteBits
+	// are set for.  The default is 3 since that is the current version on mainnet
+	// and it will be upgraded when talking to stakepoold
+	addColumn(dbMap, database, "Users", "VoteBitsVersion", "bigint(20) NULL", "VoteBits", "UPDATE Users SET VoteBitsVersion = 3")
 
 	return dbMap
 }

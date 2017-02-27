@@ -20,37 +20,25 @@ import (
 )
 
 const (
-	defaultBaseURL          = "http://127.0.0.1:8000"
-	defaultClosePoolMsg     = "The stake pool is temporarily closed to new signups."
-	defaultConfigFilename   = "dcrstakepool.conf"
-	defaultDataDirname      = "data"
-	defaultLogLevel         = "info"
-	defaultLogDirname       = "logs"
-	defaultLogFilename      = "dcrstakepool.log"
-	defaultCookieSecure     = false
-	defaultDBHost           = "localhost"
-	defaultDBName           = "stakepool"
-	defaultDBPort           = "3306"
-	defaultDBUser           = "stakepool"
-	defaultListen           = ":8000"
-	defaultPoolEmail        = "admin@example.com"
-	defaultPoolFees         = 7.5
-	defaultPoolLink         = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
-	defaultPublicPath       = "public"
-	defaultTemplatePath     = "views"
-	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
-	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
-	defaultSMTPHost         = ""
-	defaultMinServers       = 2
+	defaultConfigFilename = "stakepoold.conf"
+	defaultDataDirname    = "data"
+	defaultLogLevel       = "info"
+	defaultLogDirname     = "logs"
+	defaultLogFilename    = "stakepoold.log"
+	defaultCookieSecure   = false
+	defaultPoolFees       = 5
 )
 
 var (
-	dcrstakepoolHomeDir = dcrutil.AppDataDir("dcrstakepool", false)
-	defaultConfigFile   = filepath.Join(dcrstakepoolHomeDir, defaultConfigFilename)
-	defaultDataDir      = filepath.Join(dcrstakepoolHomeDir, defaultDataDirname)
-	defaultLogDir       = filepath.Join(dcrstakepoolHomeDir, defaultLogDirname)
-	defaultRPCKeyFile   = filepath.Join(dcrstakepoolHomeDir, "rpc.key")
-	defaultRPCCertFile  = filepath.Join(dcrstakepoolHomeDir, "rpc.cert")
+	stakepooldHomeDir  = dcrutil.AppDataDir("stakepoold", false)
+	defaultDBName      = "stakepool"
+	defaultDBPort      = "3306"
+	defaultDBUser      = "stakepool"
+	defaultRPCKeyFile  = filepath.Join(stakepooldHomeDir, "rpc.key")
+	defaultRPCCertFile = filepath.Join(stakepooldHomeDir, "rpc.cert")
+	defaultConfigFile  = filepath.Join(stakepooldHomeDir, defaultConfigFilename)
+	defaultDataDir     = filepath.Join(stakepooldHomeDir, defaultDataDirname)
+	defaultLogDir      = filepath.Join(stakepooldHomeDir, defaultLogDirname)
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -61,51 +49,36 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	ShowVersion      bool     `short:"V" long:"version" description:"Display version information and exit"`
-	ConfigFile       string   `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir          string   `short:"b" long:"datadir" description:"Directory to store data"`
-	LogDir           string   `long:"logdir" description:"Directory to log output."`
-	Listen           string   `long:"listen" description:"Listen for connections on the specified interface/port (default: all interfaces, port 8000)"`
-	TestNet          bool     `long:"testnet" description:"Use the test network"`
-	SimNet           bool     `long:"simnet" description:"Use the simulation test network"`
-	Profile          string   `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	CPUProfile       string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	MemProfile       string   `long:"memprofile" description:"Write mem profile to the specified file"`
-	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	APISecret        string   `long:"apisecret" description:"Secret string used to encrypt API tokens."`
-	BaseURL          string   `long:"baseurl" description:"BaseURL to use when sending links via email"`
-	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
-	ClosePool        bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
-	ClosePoolMsg     string   `long:"closepoolmsg" description:"Message to display when closepool is set (default: Stake pool is currently oversubscribed)"`
-	CookieSecret     string   `long:"cookiesecret" description:"Secret string used to encrypt session data."`
-	CookieSecure     bool     `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
-	DBHost           string   `long:"dbhost" description:"Hostname for database connection"`
-	DBUser           string   `long:"dbuser" description:"Username for database connection"`
-	DBPassword       string   `long:"dbpassword" description:"Password for database connection"`
-	DBPort           string   `long:"dbport" description:"Port for database connection"`
-	DBName           string   `long:"dbname" description:"Name of database"`
-	PublicPath       string   `long:"publicpath" description:"Path to the public folder which contains css/fonts/images/javascript."`
-	TemplatePath     string   `long:"templatepath" description:"Path to the views folder which contains html files."`
-	RecaptchaSecret  string   `long:"recaptchasecret" description:"Recaptcha Secret"`
-	RecaptchaSitekey string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
-	PoolEmail        string   `long:"poolemail" description:"Email address to for support inquiries"`
-	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
-	PoolLink         string   `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
-	RealIPHeader     string   `long:"realipheader" description:"The name of an HTTP request header containing the actual remote client IP address, typically set by a reverse proxy. An empty string (default) indicates to use net/Request.RemodeAddr."`
-	SMTPFrom         string   `long:"smtpfrom" description:"From address to use on outbound mail"`
-	SMTPHost         string   `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
-	SMTPUsername     string   `long:"smtpusername" description:"SMTP username for authentication if required"`
-	SMTPPassword     string   `long:"smtppassword" description:"SMTP password for authentication if required"`
-	StakepooldHosts  []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
-	StakepooldCerts  []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
-	WalletHosts      []string `long:"wallethosts" description:"Hostnames for wallet servers"`
-	WalletUsers      []string `long:"walletusers" description:"Usernames for wallet servers"`
-	WalletPasswords  []string `long:"walletpasswords" description:"Passwords for wallet servers"`
-	WalletCerts      []string `long:"walletcerts" description:"Certificate paths for wallet servers"`
+	ShowVersion      bool    `short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile       string  `short:"C" long:"configfile" description:"Path to configuration file"`
+	DataDir          string  `short:"b" long:"datadir" description:"Directory to store data"`
+	LogDir           string  `long:"logdir" description:"Directory to log output."`
+	Listen           string  `long:"listen" description:"Listen for connections on the specified interface/port (default: all interfaces, port 8000)"`
+	TestNet          bool    `long:"testnet" description:"Use the test network"`
+	SimNet           bool    `long:"simnet" description:"Use the simulation test network"`
+	Profile          string  `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	CPUProfile       string  `long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	MemProfile       string  `long:"memprofile" description:"Write mem profile to the specified file"`
+	DebugLevel       string  `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	ColdWalletExtPub string  `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
+	PoolFees         float64 `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
+	DBHost           string  `long:"dbhost" description:"Hostname for database connection"`
+	DBUser           string  `long:"dbuser" description:"Username for database connection"`
+	DBPassword       string  `long:"dbpassword" description:"Password for database connection"`
+	DBPort           string  `long:"dbport" description:"Port for database connection"`
+	DBName           string  `long:"dbname" description:"Name of database"`
+	DcrdHost         string  `long:"dcrdhost" description:"Hostname/IP for dcrd server"`
+	DcrdUser         string  `long:"dcrduser" description:"Username for dcrd server"`
+	DcrdPassword     string  `long:"dcrdpassword" description:"Password for dcrd server"`
+	DcrdCert         string  `long:"dcrdcert" description:"Certificate path for dcrd server"`
+	WalletHost       string  `long:"wallethost" description:"Hostname for wallet server"`
+	WalletUser       string  `long:"walletuser" description:"Username for wallet server"`
+	WalletPassword   string  `long:"walletpassword" description:"Password for wallet server"`
+	WalletCert       string  `long:"walletcert" description:"Certificate path for wallet server"`
 	Version          string
-	AdminIPs         []string `long:"adminips" description:"Expected admin host"`
-	MinServers       int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
-	EnableStakepoold bool     `long:"enablestakepoold" description:"Enable communication with stakepoold"`
+	RPCListeners     []string `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 9109, testnet: 19109)"`
+	RPCCert          string   `long:"rpccert" description:"File containing the certificate file"`
+	RPCKey           string   `long:"rpckey" description:"File containing the certificate key"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service
@@ -119,7 +92,7 @@ type serviceOptions struct {
 func cleanAndExpandPath(path string) string {
 	// Expand initial ~ to OS specific home directory.
 	if strings.HasPrefix(path, "~") {
-		homeDir := filepath.Dir(dcrstakepoolHomeDir)
+		homeDir := filepath.Dir(stakepooldHomeDir)
 		path = strings.Replace(path, "~", homeDir, 1)
 	}
 
@@ -280,29 +253,17 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
-		BaseURL:          defaultBaseURL,
-		ClosePool:        false,
-		ClosePoolMsg:     defaultClosePoolMsg,
-		ConfigFile:       defaultConfigFile,
-		DebugLevel:       defaultLogLevel,
-		DataDir:          defaultDataDir,
-		LogDir:           defaultLogDir,
-		CookieSecure:     defaultCookieSecure,
-		DBHost:           defaultDBHost,
-		DBName:           defaultDBName,
-		DBPort:           defaultDBPort,
-		DBUser:           defaultDBUser,
-		Listen:           defaultListen,
-		PoolEmail:        defaultPoolEmail,
-		PoolFees:         defaultPoolFees,
-		PoolLink:         defaultPoolLink,
-		PublicPath:       defaultPublicPath,
-		TemplatePath:     defaultTemplatePath,
-		RecaptchaSecret:  defaultRecaptchaSecret,
-		RecaptchaSitekey: defaultRecaptchaSitekey,
-		SMTPHost:         defaultSMTPHost,
-		Version:          version(),
-		MinServers:       defaultMinServers,
+		ConfigFile: defaultConfigFile,
+		DebugLevel: defaultLogLevel,
+		DataDir:    defaultDataDir,
+		DBName:     defaultDBName,
+		DBPort:     defaultDBPort,
+		DBUser:     defaultDBUser,
+		LogDir:     defaultLogDir,
+		PoolFees:   defaultPoolFees,
+		RPCKey:     defaultRPCKeyFile,
+		RPCCert:    defaultRPCCertFile,
+		Version:    version(),
 	}
 
 	// Service options which are only added on Windows.
@@ -371,7 +332,7 @@ func loadConfig() (*config, []string, error) {
 
 	// Create the home directory if it doesn't already exist.
 	funcName := "loadConfig"
-	err = os.MkdirAll(dcrstakepoolHomeDir, 0700)
+	err = os.MkdirAll(stakepooldHomeDir, 0700)
 	if err != nil {
 		// Show a nicer error message if it's because a symlink is
 		// linked to a directory that does not exist (probably because
@@ -445,27 +406,8 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	// Validate profile port number
-	if cfg.Profile != "" {
-		profilePort, err := strconv.Atoi(cfg.Profile)
-		if err != nil || profilePort < 1024 || profilePort > 65535 {
-			str := "%s: The profile port must be between 1024 and 65535"
-			err := fmt.Errorf(str, funcName)
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
-		}
-	}
-
-	if cfg.APISecret == "" {
-		str := "%s: APIsecret is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if cfg.CookieSecret == "" {
-		str := "%s: cookiesecret is not set in config"
+	if cfg.DBHost == "" {
+		str := "%s: dbhost is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
@@ -478,6 +420,32 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	if cfg.DBPort == "" {
+		str := "%s: dbport is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if cfg.DBUser == "" {
+		str := "%s: dbuser is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	// Validate profile port number
+	if cfg.Profile != "" {
+		profilePort, err := strconv.Atoi(cfg.Profile)
+		if err != nil || profilePort < 1024 || profilePort > 65535 {
+			str := "%s: The profile port must be between 1024 and 65535"
+			err := fmt.Errorf(str, funcName)
+			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, usageMessage)
+			return nil, nil, err
+		}
+	}
+
 	if len(cfg.ColdWalletExtPub) == 0 {
 		str := "%s: coldwalletextpub is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -485,146 +453,106 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	if len(cfg.AdminIPs) == 0 {
-		str := "%s: adminips is not set in config"
+	if len(cfg.DcrdHost) == 0 {
+		str := "%s: dcrdhost is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	if len(cfg.StakepooldHosts) == 0 {
-		str := "%s: stakepooldhosts is not set in config"
+	if len(cfg.DcrdCert) == 0 {
+		str := "%s: dcrdcert is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	if len(cfg.StakepooldCerts) == 0 {
-		str := "%s: stakepooldcerts is not set in config"
+	if len(cfg.DcrdUser) == 0 {
+		str := "%s: dcrduser is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	if len(cfg.WalletHosts) == 0 {
-		str := "%s: wallethosts is not set in config"
+	if len(cfg.DcrdPassword) == 0 {
+		str := "%s: dcrdpassword is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	if len(cfg.WalletCerts) == 0 {
-		str := "%s: walletcerts is not set in config"
+	if len(cfg.WalletHost) == 0 {
+		str := "%s: wallethost is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	if len(cfg.WalletUsers) == 0 {
-		str := "%s: walletusers is not set in config"
+	if len(cfg.WalletCert) == 0 {
+		str := "%s: walletcert is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	if len(cfg.WalletPasswords) == 0 {
-		str := "%s: walletpasswords is not set in config"
+	if len(cfg.WalletUser) == 0 {
+		str := "%s: walletuser is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
 
-	// Convert comma separated list into a slice
-	cfg.AdminIPs = strings.Split(cfg.AdminIPs[0], ",")
-	cfg.StakepooldHosts = strings.Split(cfg.StakepooldHosts[0], ",")
-	cfg.StakepooldCerts = strings.Split(cfg.StakepooldCerts[0], ",")
-	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
-	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
-	cfg.WalletPasswords = strings.Split(cfg.WalletPasswords[0], ",")
-	cfg.WalletCerts = strings.Split(cfg.WalletCerts[0], ",")
+	if len(cfg.WalletPassword) == 0 {
+		str := "%s: walletpassword is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
 
 	// Add default wallet port for the active network if there's no port specified
-	cfg.WalletHosts = normalizeAddresses(cfg.WalletHosts, activeNetParams.WalletRPCServerPort)
+	cfg.DcrdHost = normalizeAddress(cfg.DcrdHost, activeNetParams.DcrdRPCServerPort)
+	cfg.WalletHost = normalizeAddress(cfg.WalletHost, activeNetParams.WalletRPCServerPort)
 
-	if len(cfg.WalletHosts) < 2 {
-		str := "%s: you must specify at least 2 wallethosts"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.WalletHosts) != len(cfg.WalletUsers) {
-		str := "%s: wallet configuration mismatch (walletusers and wallethosts counts differ)"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.WalletHosts) != len(cfg.WalletPasswords) {
-		str := "%s: wallet configuration mismatch (walletpasswords and wallethosts counts differ)"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.WalletHosts) != len(cfg.WalletCerts) {
-		str := "%s: wallet configuration mismatch (walletcerts and wallethosts counts differ)"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	for idx := range cfg.WalletCerts {
-		if _, err := os.Stat(cfg.WalletCerts[idx]); os.IsNotExist(err) {
-			if _, err := os.Stat(filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])); os.IsNotExist(err) {
-				str := "%s: walletcert " + cfg.WalletCerts[idx] + " and " +
-					filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx]) + " don't exist"
-				err := fmt.Errorf(str, funcName)
-				fmt.Fprintln(os.Stderr, err)
-				return nil, nil, err
-			}
-
-			cfg.WalletCerts[idx] = filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])
-		}
-	}
-
-	if cfg.EnableStakepoold {
-		if activeNetParams.Name == "mainnet" {
-			str := "%s: enablestakepoold is not ready for production"
+	if _, err := os.Stat(cfg.DcrdCert); os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(stakepooldHomeDir, cfg.DcrdCert)); os.IsNotExist(err) {
+			str := "%s: dcrdcert " + cfg.DcrdCert + " and " +
+				filepath.Join(stakepooldHomeDir, cfg.DcrdCert) + " don't exist"
 			err := fmt.Errorf(str, funcName)
 			fmt.Fprintln(os.Stderr, err)
 			return nil, nil, err
 		}
 
-		// Add default stakepoold port for the active network if there's no port specified
-		cfg.StakepooldHosts = normalizeAddresses(cfg.StakepooldHosts, activeNetParams.StakepooldRPCServerPort)
-		if len(cfg.StakepooldHosts) < 2 {
-			str := "%s: you must specify at least 2 stakepooldhosts"
+		cfg.DcrdCert = filepath.Join(stakepooldHomeDir, cfg.DcrdCert)
+	}
+
+	if _, err := os.Stat(cfg.WalletCert); os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(stakepooldHomeDir, cfg.WalletCert)); os.IsNotExist(err) {
+			str := "%s: walletcert " + cfg.WalletCert + " and " +
+				filepath.Join(stakepooldHomeDir, cfg.WalletCert) + " don't exist"
 			err := fmt.Errorf(str, funcName)
 			fmt.Fprintln(os.Stderr, err)
 			return nil, nil, err
 		}
 
-		if len(cfg.StakepooldHosts) != len(cfg.StakepooldCerts) {
-			str := "%s: wallet configuration mismatch (stakepooldcerts and stakepooldhosts counts differ)"
-			err := fmt.Errorf(str, funcName)
+		cfg.WalletCert = filepath.Join(stakepooldHomeDir, cfg.WalletCert)
+	}
+
+	// Set default listener to localhost
+	if len(cfg.RPCListeners) == 0 {
+		addrs, err := net.LookupHost("localhost")
+		if err != nil {
+			str := "%s: unable to resolve localhost to set default RPCListener: %s"
+			err := fmt.Errorf(str, funcName, err)
 			fmt.Fprintln(os.Stderr, err)
 			return nil, nil, err
 		}
-
-		for idx := range cfg.StakepooldCerts {
-			if _, err := os.Stat(cfg.StakepooldCerts[idx]); os.IsNotExist(err) {
-				if _, err := os.Stat(filepath.Join(dcrstakepoolHomeDir, cfg.StakepooldCerts[idx])); os.IsNotExist(err) {
-					str := "%s: stakepooldcert " + cfg.StakepooldCerts[idx] + " and " +
-						filepath.Join(dcrstakepoolHomeDir, cfg.StakepooldCerts[idx]) + " don't exist"
-					err := fmt.Errorf(str, funcName)
-					fmt.Fprintln(os.Stderr, err)
-					return nil, nil, err
-				}
-
-				cfg.StakepooldCerts[idx] = filepath.Join(dcrstakepoolHomeDir, cfg.StakepooldCerts[idx])
-			}
+		cfg.RPCListeners = make([]string, 0, len(addrs))
+		for _, addr := range addrs {
+			addr = net.JoinHostPort(addr, activeNetParams.RPCServerPort)
+			cfg.RPCListeners = append(cfg.RPCListeners, addr)
 		}
+	} else {
+		cfg.RPCListeners = normalizeAddresses(cfg.RPCListeners, activeNetParams.RPCServerPort)
 	}
 
 	// Warn about missing config file only after all other configuration is

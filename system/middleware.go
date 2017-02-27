@@ -64,12 +64,12 @@ func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler 
 					if claims, ok := JWTtoken.Claims.(jwt.MapClaims); ok && JWTtoken.Valid {
 						dbMap := c.Env["DbMap"].(*gorp.DbMap)
 
-						user := models.GetUserById(dbMap, int64(claims["loggedInAs"].(float64)))
-						if user != nil {
+						user, err := models.GetUserById(dbMap, int64(claims["loggedInAs"].(float64)))
+						if err != nil {
+							log.Errorf("unable to map apitoken %v to user id %v", apitoken, claims["loggedInAs"])
+						} else {
 							c.Env["APIUserID"] = user.Id
 							log.Infof("mapped apitoken %v to user id %v", apitoken, user.Id)
-						} else {
-							log.Errorf("unable to map apitoken %v to user id %v", apitoken, claims["loggedInAs"])
 						}
 					}
 				}

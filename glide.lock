@@ -1,37 +1,30 @@
-hash: 3fa092c0562caf125c568ee179c9dc8cb73b7573527a6d8e866c61299a91f87a
-updated: 2017-03-28T12:46:54.311648366-07:00
+hash: 22579d3226386f0deb227919c4cb6f0e69be7551d69bb7cba48ca1b2b97e8642
+updated: 2017-04-18T09:13:07.671352545-05:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
-- name: github.com/btcsuite/fastsha256
-  version: 637e656429416087660c84436a2a035d69d54e2e
 - name: github.com/btcsuite/go-flags
-  version: 1679536dcc895411a9f5848d9a0250be7856448c
+  version: 6c288d648c1cc1befcb90cb5511dcacf64ae8e61
 - name: github.com/btcsuite/go-socks
-  version: cfe8b59e565c1a5bd4e2005d77cd9aa8b2e14524
+  version: 4720035b7bfd2a9bb130b1c184f8bbe41b6f0d0f
   subpackages:
   - socks
-- name: github.com/btcsuite/golangcrypto
-  version: 53f62d9b43e87a6c56975cf862af7edf33a8d0df
-  subpackages:
-  - nacl/secretbox
-  - pbkdf2
-  - poly1305
-  - ripemd160
-  - salsa20/salsa
-  - scrypt
-  - ssh/terminal
 - name: github.com/btcsuite/seelog
   version: 313961b101eb55f65ae0f03ddd4e322731763b6c
 - name: github.com/btcsuite/websocket
   version: 31079b6807923eb23992c421b114992b95131b55
+- name: github.com/davecgh/go-spew
+  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  subpackages:
+  - spew
 - name: github.com/decred/blake256
   version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: 64a414c64fd59706460f47c2aef5930a9e86dce4
+  version: ff07aac47f0477f0021bc667dd7a794e67f4abd0
   subpackages:
-  - addrmgr
   - blockchain
+  - blockchain/internal/dbnamespace
+  - blockchain/internal/progresslog
   - blockchain/stake
   - blockchain/stake/internal/dbnamespace
   - blockchain/stake/internal/ticketdb
@@ -47,19 +40,22 @@ imports:
   - txscript
   - wire
 - name: github.com/decred/dcrrpcclient
-  version: a1200f54d5aff356f7db4699d64ccdf2e35e2876
+  version: e5a52611671993ad821dab68f6e7d8fb57510381
 - name: github.com/decred/dcrutil
-  version: ee6d002bf0de123fe47a8d2b8489f75145ce746e
+  version: ebd2e98736e819ac043d54439969b30144b92ced
   subpackages:
   - base58
   - hdkeychain
 - name: github.com/decred/dcrwallet
-  version: 43620621173cdfb7997ccb10fe29321d412aa8e6
+  version: 66c410e7b976b22a7943280ab10e82d944b351a7
   subpackages:
+  - apperrors
+  - chain
   - internal/zero
   - pgpwordlist
   - snacl
-  - waddrmgr
+  - wallet/txrules
+  - wallet/udb
   - walletdb
   - walletseed
 - name: github.com/decred/ed25519
@@ -67,19 +63,24 @@ imports:
   subpackages:
   - edwards25519
 - name: github.com/dgrijalva/jwt-go
-  version: 9ed569b5d1ac936e6494082958d63a6aa4fff99a
+  version: 2268707a8f0843315e2004ee4f1d021dc08baedf
 - name: github.com/go-gorp/gorp
-  version: c87af80f3cc5036b55b83d77171e156791085e2e
+  version: 390956328094c74d7c75a7e71a4d17e9297ed90e
 - name: github.com/go-sql-driver/mysql
-  version: a0583e0143b1624142adab07e0e97fe106d99561
+  version: 9dee4ca50b83acdf57a35fb9e6fb4be640afa2f3
+- name: github.com/golang/protobuf
+  version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
+  subpackages:
+  - proto
+  - ptypes/any
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/securecookie
-  version: fa5329f913702981df43dcb2a380bac429c810b5
+  version: e59506cc896acb7f7bf732d4fdf5e25f7ccd8983
 - name: github.com/gorilla/sessions
-  version: 52389059572b4736b2b7d899b0242ecc449c8779
+  version: ba78acc856fe7c79891d516131b3d903cc8d9367
 - name: github.com/haisum/recaptcha
-  version: 8527d614dbb33cac7cf2433c83ad6d3346761276
+  version: 7d3b8053900e7a0f549a11e800649a5fa950700f
 - name: github.com/zenazn/goji
   version: 4d7077956293261309684d3cf1af673f773c6819
   subpackages:
@@ -89,9 +90,50 @@ imports:
   - web/middleware
   - web/mutil
 - name: golang.org/x/crypto
-  version: c3b1d0d6d8690eaebe3064711b026770cc37efa3
+  version: efac7f277b17c19894091e358c6130cb6bd51117
   subpackages:
   - bcrypt
   - blowfish
+  - nacl/secretbox
+  - pbkdf2
+  - poly1305
   - ripemd160
+  - salsa20/salsa
+  - scrypt
+- name: golang.org/x/net
+  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
+  subpackages:
+  - context
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
+- name: golang.org/x/text
+  version: f4b4367115ec2de254587813edaa901bc1c723a8
+  subpackages:
+  - secure/bidirule
+  - transform
+  - unicode/bidi
+  - unicode/norm
+- name: google.golang.org/genproto
+  version: 411e09b969b1170a9f0c467558eb4c4c110d9c77
+  subpackages:
+  - googleapis/rpc/status
+- name: google.golang.org/grpc
+  version: 8050b9cbc271307e5a716a9d782803d09b0d6f2d
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - keepalive
+  - metadata
+  - naming
+  - peer
+  - stats
+  - status
+  - tap
+  - transport
 testImports: []
