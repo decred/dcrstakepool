@@ -104,7 +104,7 @@ func runMain() int {
 		cfg.PoolFees, cfg.PoolLink, cfg.RecaptchaSecret, cfg.RecaptchaSitekey,
 		cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
 		cfg.Version, cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers,
-		cfg.WalletPasswords, cfg.MinServers)
+		cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to initialize the main controller: %v",

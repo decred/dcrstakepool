@@ -101,6 +101,7 @@ type config struct {
 	Version          string
 	AdminIPs         []string `long:"adminips" description:"Expected admin host"`
 	MinServers       int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
+	RealIPHeader     string   `long:"realipheader" description:"The name of an HTTP request header containing the actual remote client IP address, typically set by a reverse proxy. An empty string (default) indicates to use net/Request.RemodeAddr."`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service
