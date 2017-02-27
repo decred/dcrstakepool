@@ -56,6 +56,10 @@ func runMain() int {
 	application.Init(cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
 		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
 		cfg.DBUser)
+	if application.DbMap == nil {
+		log.Critical("Failed to open database.")
+		return 7
+	}
 	if err = application.LoadTemplates(cfg.TemplatePath); err != nil {
 		log.Criticalf("Failed to load templates: %v", err)
 		return 2
