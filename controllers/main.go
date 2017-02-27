@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"net"
 	"net/http"
 	"net/smtp"
 	"strings"
@@ -79,10 +80,13 @@ func randToken() string {
 // empty, http.Request.RemoteAddr. See the sample nginx.conf for using the
 // real_ip module to correctly set the X-Real-IP header.
 func getClientIP(r *http.Request) string {
-	getHost := func(ip string) string {
-		if strings.Contains(ip, ":") {
-			parts := strings.Split(ip, ":")
-			return parts[0]
+	// getHost returns the host portion of a string containing either a
+	// host:port formatted name or just a host. An empty string is returned if
+	// net.SplitHostPort returns an error.
+	getHost := func(hostPort string) string {
+		ip, _, err := net.SplitHostPort(hostPort)
+		if err != nil {
+			return ""
 		}
 		return ip
 	}
