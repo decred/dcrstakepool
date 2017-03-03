@@ -96,7 +96,7 @@
     <div id="collapse-livelist" class="panel-collapse collapse">
       <div class="panel-body">
 			{{if not .TicketsLive}}
-			<p><b>No live tickets.</b></p>
+			<p><span style="font-size: larger;"><b>No live tickets.</b></span></p>
 			{{end}}
 			{{if .TicketsLive}}
 			<div class="table-responsive">
@@ -270,12 +270,12 @@
 			<p><span style="font-size: larger;"><b>No tickets.</b></span></p>
 			{{end}}
 			{{if .TicketsInvalid}}
+			<div class="well well-notification orange-notification"><b>Alert!</b> Tickets appearing here did not pay the correct pool fee.
+			You will either need to vote these tickets yourself or contact your stake pool administrator to have them add
+			the ticket to the pool manually.</div>
 			<div class="table-responsive">
 			<table id="ticketsinvalid" class="table table-condensed">
 			<thead>
-				<div class="alert alert-danger"><b>Alert!</b> Tickets appearing here did not pay the correct pool fee.
-				You will either need to vote these tickets yourself or contact your stake pool administrator to have them add
-				the ticket to the pool manually.</div>
 				<tr>
 					<th>Ticket</th>
 				</tr>
