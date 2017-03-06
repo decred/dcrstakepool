@@ -13,9 +13,9 @@ import (
 
 	"github.com/decred/dcrstakepool/codes"
 	"github.com/decred/dcrstakepool/models"
+	"github.com/go-gorp/gorp"
 	"github.com/gorilla/sessions"
 	"github.com/zenazn/goji/web"
-	"github.com/go-gorp/gorp"
 )
 
 // CSRF token constants
@@ -91,7 +91,7 @@ func (application *Application) LoadTemplates(templatePath string) error {
 		if err != nil {
 			return err
 		}
-		if f.IsDir() != true && strings.HasSuffix(f.Name(), ".html") {
+		if !f.IsDir() && strings.HasSuffix(f.Name(), ".html") {
 			templates = append(templates, path)
 		}
 		return nil

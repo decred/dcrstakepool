@@ -2,8 +2,8 @@ package helpers
 
 import (
 	"github.com/decred/dcrstakepool/models"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/go-gorp/gorp"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func AddPasswordResetToken(dbMap *gorp.DbMap, email string) (*models.User, error) {
@@ -31,11 +31,7 @@ func EmailChangeComplete(dbMap *gorp.DbMap, token string) error {
 	}
 
 	_, err = dbMap.Exec("DELETE FROM EmailChange WHERE Token = ?", token)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func EmailChangeTokenExists(dbMap *gorp.DbMap, token string) (*models.EmailChange, error) {

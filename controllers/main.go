@@ -24,9 +24,9 @@ import (
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/waddrmgr"
+	"github.com/go-gorp/gorp"
 	"github.com/haisum/recaptcha"
 	"github.com/zenazn/goji/web"
-	"github.com/go-gorp/gorp"
 )
 
 // disapproveBlockMask checks to see if the votebits have been set to No.

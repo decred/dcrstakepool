@@ -10,9 +10,9 @@ import (
 
 	"github.com/decred/dcrstakepool/models"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-gorp/gorp"
 	"github.com/gorilla/sessions"
 	"github.com/zenazn/goji/web"
-	"github.com/go-gorp/gorp"
 )
 
 // Makes sure templates are stored in the context

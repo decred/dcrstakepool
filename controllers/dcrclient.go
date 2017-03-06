@@ -1203,7 +1203,7 @@ func (w *walletSvrManager) TicketsForAddress(address dcrutil.Address) (*dcrjson.
 	// If it isn't too old, return that instead.
 	cachedResp, ok := w.cachedGetTicketsMap[address.EncodeAddress()]
 	if ok {
-		if time.Now().Sub(cachedResp.timer) < cacheTimerGetTickets {
+		if time.Since(cachedResp.timer) < cacheTimerGetTickets {
 			return cachedResp.res, nil
 		}
 	}
@@ -1272,7 +1272,7 @@ func (w *walletSvrManager) SetTicketVoteBits(hash *chainhash.Hash, voteBits uint
 	// vote bits.
 	vbSetTime, ok := w.setVoteBitsCoolDownMap[*hash]
 	if ok {
-		if time.Now().Sub(vbSetTime) < allowTimerSetVoteBits {
+		if time.Since(vbSetTime) < allowTimerSetVoteBits {
 			return ErrSetVoteBitsCoolDown
 		}
 	}
@@ -1310,7 +1310,7 @@ func (w *walletSvrManager) SetTicketsVoteBits(hashes []*chainhash.Hash, votesBit
 	// TODO: handle this better
 	vbSetTime, ok := w.setVoteBitsCoolDownMap[*hashes[0]]
 	if ok {
-		if time.Now().Sub(vbSetTime) < allowTimerSetVoteBits {
+		if time.Since(vbSetTime) < allowTimerSetVoteBits {
 			return ErrSetVoteBitsCoolDown
 		}
 	}
@@ -1383,7 +1383,7 @@ func (w *walletSvrManager) GetBestBlock() (*chainhash.Hash, int64, error) {
 func (w *walletSvrManager) getStakeInfo() (*dcrjson.GetStakeInfoResult, error) {
 	// Less than five minutes has elapsed since the last call. Return
 	// the previously cached stake information.
-	if time.Now().Sub(w.cachedStakeInfoTimer) < cacheTimerStakeInfo {
+	if time.Since(w.cachedStakeInfoTimer) < cacheTimerStakeInfo {
 		return w.cachedStakeInfo, nil
 	}
 
@@ -1950,7 +1950,7 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 			for ticketHash := range allTickets {
 				_, ok := ticketsPerServer[i][ticketHash]
 				if !ok {
-					h := chainhash.Hash(ticketHash)
+					h := ticketHash
 					log.Infof("wallet %v: is missing ticket %v", i, h)
 					tx, err := wsm.fetchTransaction(&h)
 					if err != nil {
