@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"html/template"
 
+	"github.com/go-gorp/gorp"
 	"github.com/gorilla/sessions"
 	"github.com/zenazn/goji/web"
-	"github.com/go-gorp/gorp"
 )
 
 type Controller struct {

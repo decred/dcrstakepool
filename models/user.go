@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-gorp/gorp"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
-	"github.com/go-gorp/gorp"
 )
 
 type EmailChange struct {
