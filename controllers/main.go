@@ -82,12 +82,11 @@ func randToken() string {
 // real_ip module to correctly set the X-Real-IP header.
 func getClientIP(r *http.Request, realIPHeader string) string {
 	// getHost returns the host portion of a string containing either a
-	// host:port formatted name or just a host. An empty string is returned if
-	// net.SplitHostPort returns an error.
+	// host:port formatted name or just a host.
 	getHost := func(hostPort string) string {
 		ip, _, err := net.SplitHostPort(hostPort)
 		if err != nil {
-			return ""
+			return hostPort
 		}
 		return ip
 	}
