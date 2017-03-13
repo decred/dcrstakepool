@@ -1388,12 +1388,9 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 	}
 
 	type WalletInfoPage struct {
-		Connected         bool
-		DaemonConnected   bool
-		Unlocked          bool
-		TicketMaxPrice    float64
-		BalanceToMaintain float64
-		StakeMining       bool
+		Connected       bool
+		DaemonConnected bool
+		Unlocked        bool
 	}
 	walletPageInfo := make([]WalletInfoPage, len(walletInfo), len(walletInfo))
 	connectedWallets := 0
@@ -1413,12 +1410,9 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 		// Wallet has been successfully queried.
 		connectedWallets++
 		walletPageInfo[i] = WalletInfoPage{
-			Connected:         true,
-			DaemonConnected:   v.DaemonConnected,
-			Unlocked:          v.Unlocked,
-			TicketMaxPrice:    v.TicketMaxPrice,
-			BalanceToMaintain: v.BalanceToMaintain,
-			StakeMining:       v.StakeMining,
+			Connected:       true,
+			DaemonConnected: v.DaemonConnected,
+			Unlocked:        v.Unlocked,
 		}
 	}
 
