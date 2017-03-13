@@ -1524,9 +1524,6 @@ func (w *walletSvrManager) CheckServers() error {
 		if !wi.DaemonConnected {
 			return fmt.Errorf("Wallet on svr %d not connected\n", i)
 		}
-		if !wi.StakeMining {
-			return fmt.Errorf("Wallet on svr %d not stakemining.\n", i)
-		}
 		if !wi.Unlocked {
 			return fmt.Errorf("Wallet on svr %d not unlocked.\n", i)
 		}
@@ -1747,9 +1744,6 @@ func checkIfWalletConnected(client *dcrrpcclient.Client) error {
 	}
 	if !wi.DaemonConnected {
 		return fmt.Errorf("wallet not connected")
-	}
-	if !wi.StakeMining {
-		return fmt.Errorf("wallet not stakemining")
 	}
 	if !wi.Unlocked {
 		return fmt.Errorf("wallet not unlocked")
