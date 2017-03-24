@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"net"
 	"net/http"
 	"net/smtp"
 	"strings"
@@ -60,6 +61,7 @@ type MainController struct {
 	poolLink             string
 	params               *chaincfg.Params
 	rpcServers           *walletSvrManager
+	realIPHeader         string
 	recaptchaSecret      string
 	recaptchaSiteKey     string
 	smtpFrom             string
@@ -78,25 +80,22 @@ func randToken() string {
 // Get the client's real IP address using the X-Real-IP header, or if that is
 // empty, http.Request.RemoteAddr. See the sample nginx.conf for using the
 // real_ip module to correctly set the X-Real-IP header.
-func getClientIP(r *http.Request) string {
-	getHost := func(ip string) string {
-		if strings.Contains(ip, ":") {
-			parts := strings.Split(ip, ":")
-			return parts[0]
+func getClientIP(r *http.Request, realIPHeader string) string {
+	// getHost returns the host portion of a string containing either a
+	// host:port formatted name or just a host.
+	getHost := func(hostPort string) string {
+		ip, _, err := net.SplitHostPort(hostPort)
+		if err != nil {
+			return hostPort
 		}
 		return ip
 	}
 
-	realIP := r.Header.Get("X-Real-IP")
-	realIP = getHost(realIP)
-
-	if realIP == "" {
-		log.Info(`"X-Real-IP" header invalid, using RemoteAddr instead`)
-		// If this somehow errors, just go with empty
-		realIP = getHost(r.RemoteAddr)
+	// If header not set, return RemoteAddr. Invalid hosts are replaced with "".
+	if realIPHeader == "" {
+		return getHost(r.RemoteAddr)
 	}
-
-	return realIP
+	return getHost(r.Header.Get(realIPHeader))
 }
 
 // NewMainController is the constructor for the entire controller routing.
@@ -107,7 +106,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	recaptchaSiteKey string, smtpFrom string,
 	smtpHost string, smtpUsername string, smtpPassword string, version string,
 	walletHosts []string, walletCerts []string, walletUsers []string,
-	walletPasswords []string, minServers int) (*MainController, error) {
+	walletPasswords []string, minServers int, realIPHeader string) (*MainController, error) {
 	// Parse the extended public key and the pool fees.
 	key, err := hdkeychain.NewKeyFromString(extPubStr)
 	if err != nil {
@@ -134,6 +133,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		recaptchaSecret:      recaptchaSecret,
 		recaptchaSiteKey:     recaptchaSiteKey,
 		rpcServers:           rpcs,
+		realIPHeader:         realIPHeader,
 		smtpFrom:             smtpFrom,
 		smtpHost:             smtpHost,
 		smtpUsername:         smtpUsername,
@@ -516,7 +516,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 // AddressPost is address form submit route.
 func (controller *MainController) AddressPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
-	remoteIP := getClientIP(r)
+	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	// User may have a session so error out here as well.
 	if controller.closePool {
@@ -840,7 +840,7 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	if err != nil {
 		session.AddFlash("Invalid Email", "passwordresetError")
 	} else {
-		remoteIP := getClientIP(r)
+		remoteIP := getClientIP(r, controller.realIPHeader)
 
 		log.Infof("PasswordReset POST from %v, email %v", remoteIP,
 			user.Email)
@@ -919,7 +919,7 @@ func (controller *MainController) PasswordUpdate(c web.C, r *http.Request) (stri
 func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
-	remoteIP := getClientIP(r)
+	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	// validate that the token is set and not expired.
 	token := r.URL.Query().Get("t")
@@ -1032,7 +1032,7 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
-	remoteIP := getClientIP(r)
+	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
@@ -1183,7 +1183,7 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
-	remoteIP := getClientIP(r)
+	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	// Validate email and password combination.
 	user, err := helpers.Login(dbMap, email, password)
@@ -1264,7 +1264,7 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	}
 
 	session := controller.GetSession(c)
-	remoteIP := getClientIP(r)
+	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	email, password, passwordRepeat := r.FormValue("email"),
 		r.FormValue("password"), r.FormValue("passwordrepeat")
@@ -1375,7 +1375,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 
 	// Confirm that the incoming IP address is an approved
 	// admin IP as set in config.
-	remoteIP := getClientIP(r)
+	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	if !stringSliceContains(controller.adminIPs, remoteIP) {
 		return "/error", http.StatusSeeOther
@@ -1481,7 +1481,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
-	remoteIP := getClientIP(r)
+	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
@@ -1701,7 +1701,7 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 		log.Error("No valid UserID")
 	}
 
-	remoteIP := getClientIP(r)
+	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	user := models.GetUserById(dbMap, id)
 	if user == nil {
