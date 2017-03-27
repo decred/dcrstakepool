@@ -36,14 +36,14 @@ To start staking, you need to submit a public key address.<br>
 	 <div class="form-group">
 	  <label class="control-label col-sm-2" for="emailpassword">Password:</label>
 	<div class="col-sm-13">
-	  <input id="emailpassword" name="emailpassword" type="password" class="form-control" required>
+	  <input id="emailpassword" name="password" type="password" class="form-control" required>
 	</div>
 	 </div>
 	<div class="form-group">
          <div class="g-recaptcha pull-right" style="padding-right: 15px;" data-sitekey="{{.RecaptchaSiteKey}}" data-theme="light"></div>
 	</div>
 	<div class="form-group">
-         <button id="updatepassword" name="updatepassword" class="btn btn-primary">Change Email Address</button>
+         <button id="updateEmail" name="updateEmail" value="true" class="btn btn-primary">Change Email Address</button>
 	</div>
 	 <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
 	</form>
