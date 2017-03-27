@@ -1629,7 +1629,7 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 
 	voteBits := uint16(0)
 
-	if controller.params.Net == wire.TestNet {
+	if controller.params.Net == wire.TestNet2 {
 		voteBlockSize := r.FormValue("voteBlockSize")
 		votePrevBlockInvalid := r.FormValue("votePrevBlockInvalid")
 		switch voteBlockSize {

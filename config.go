@@ -393,7 +393,7 @@ func loadConfig() (*config, []string, error) {
 	activeNetParams = &mainNetParams
 	if cfg.TestNet {
 		numNets++
-		activeNetParams = &testNetParams
+		activeNetParams = &testNet2Params
 	}
 	if cfg.SimNet {
 		numNets++
