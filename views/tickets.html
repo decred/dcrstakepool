@@ -1,306 +1,447 @@
 {{define "tickets"}}
-<div class="wrapper">
- <div class="row">
+            <div class="wrapper">
+                <div class="row">
 
-  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-    {{if .Error}}<div class="well well-notification  orange-notification">{{.Error}}</div>{{end}}
-    {{range .Flash}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-    {{range .FlashWarn}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-  </div>
- 
-  <div class="col-sm-15 col-md-10 text-left center-block">
+                    <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
+                        {{if .Error}}
+                        <div class="well well-notification  orange-notification">
+                            {{.Error}}
+                        </div>
+                        {{end}}
 
-<div class="panel-group" id="accordion">
+                        {{range .Flash}}
+                        <div class="well well-notification  orange-notification">
+                            {{.}}
+                        </div>
+                        {{end}}
 
-<!-- TICKET INFORMATION BEGIN HERE -->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-info">
-        Ticket Information</a>
-      </h4>
-    </div>
-    <div id="collapse-info" class="panel-collapse collapse in">
-      <div class="panel-body">
-	 <h1>P2SH Address:</h1><pre>{{ .User.MultiSigAddress }}</pre>
-        <hr />
-        <h1>Redeem Script:</h1><pre>{{ .User.MultiSigScript }}</pre>
-      </div>
-    </div>
-  </div>
+                        {{range .FlashWarn}}
+                        <div class="well well-notification  orange-notification">
+                            {{.}}
+                        </div>
+                        {{end}}
+                    </div>
 
-<!-- TICKET INSTRUCTIONS BEGIN HERE -->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-instr">
-        Ticket Instructions</a>
-      </h4>
-    </div>
-    <div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive }}in{{end}}">
-      <div class="panel-body">
-			<p><b><u>Step 1</u></b></p>
-			<p><b>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</b>
-			<a href="https://github.com/decred/decred-release/releases/latest"><span aria-label="Download Decred Installer"> &#8675; Installer</a> |
-			<a href="https://github.com/decred/decred-binaries/releases/latest"><span aria-label="Download Decred Binaries"> &#8675; Binaries</a></p>
+                    <div class="col-sm-15 col-md-10 text-left center-block">
+                        <div class="panel-group" id="accordion">
+                            <div class="panel panel-default panel-control">
+                                <div class="panel-heading">
+                                    <h4 class="panel-title">
+                                        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-info">
+                                            Ticket Information
+                                        </a>
+                                    </h4>
+                                </div>
 
-			</p>
-			<p><b><u>Step 2</u></b></p>
-			<p>Your P2SH multisignature script for delegating votes has been generated. Please first import it locally into your wallet using <b>dcrctl</b> for safe keeping, so you can recover your funds and vote in the unlikely event of a pool failure:</p>
+                                <div id="collapse-info" class="panel-collapse collapse in">
+                                    <div class="panel-body">
+                                        <h1>P2SH Address:</h1>
+                                        <pre>{{ .User.MultiSigAddress }}</pre>
 
-			<p>dcrctl --wallet importscript "script"</p>
-			<p>For example:</p>
-			<div class="cmd"><pre>$ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet importscript {{ .User.MultiSigScript }}</pre></div>
+                                        <hr>
 
-			<p>After successfully importing the script into your wallet, you may generate tickets delegated to the pool in either of two ways:</p>
+                                        <h1>Redeem Script:</h1>
+                                        <pre>{{ .User.MultiSigScript }}</pre>
+                                    </div>
+                                </div>
+                            </div>
 
-			<p><b><u>Step 3</u></b></p>
-			<p><b>Option A - dcrticketbuyer - Automatic purchasing - Recommended (Automatically adjusts ticket fees so tickets purchases are more likely to be mined.)</b></p>
-			<p>Stop dcrticketbuyer if it is currently running and add the following to <b>ticketbuyer.conf</b>:</p>
-			<p>NOTE: As of v0.8.0, dcrticketbuyer has been integrated into dcrwallet and is no longer a standalone application. 
-				The following settings should instead be added to <b>dcrwallet.conf</b> and prefixed with "ticketbuyer." (e.g. maxpriceabsolute=35 becomes ticketbuyer.maxpriceabsolute=35)</p>
-	      		<p>maxpriceabsolute=35</p>
-			<p>pooladdress={{ .User.UserFeeAddr }}</p>
-			<p>poolfees={{ .PoolFees }}</p>
-			<p>ticketaddress={{ .User.MultiSigAddress }}</p>
-			<p>Unlock dcrwallet, start dcrticketbuyer, and it will automatically purchase stake tickets delegated to the pool address.</p>
-	      		<p>As of v0.8.0, the ticketbuyer will purchase tickets that meet the settings defined in dcrwallet.conf while dcrwallet is open and unlocked.</p>
+                            <div class="panel panel-default panel-control">
+                                <div class="panel-heading">
+                                    <h4 class="panel-title">
+                                        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-instr">
+                                            Ticket Instructions
+                                        </a>
+                                    </h4>
+                                </div>
 
-			<p><b>Option B - dcrwallet - Automatic purchasing - Not recommended</b></p>
-			<p>Stop dcrwallet if it is currently running and and the following to <b>dcrwallet.conf</b>:</p>
-			<p>enablestakemining=1</p>
-			<p>pooladdress={{ .User.UserFeeAddr }}</p>
-			<p>poolfees={{ .PoolFees }}</p>
-			<p>promptpass=1</p>
-			<p>ticketaddress={{ .User.MultiSigAddress }}</p>
-			<p>ticketmaxprice=35</p>
-			<p>Start dcrwallet and it will prompt your for your password. After unlocking, stake tickets delegated to the pool address will automatically be purchased as long as funds are available.</p>
+                                <div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive }}in{{end}}">
+                                    <div class="panel-body">
+                                        <p>
+                                            <strong><u>Step 1</u></strong>
+                                        </p>
 
-			<p><b>Option C - dcrwallet - Manual purchasing - Not recommended</b></p>
-			<p>Start a wallet with funds available and manually purchase tickets with the following command using <b>dcrctl</b>:</p>
-			<p>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</p>
-			<div class="cmd"><pre>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 35 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre></div>
-			<p>Will purchase a ticket delegated to the pool and an address from the voting account using funds from the default account only if the current network price for a ticket is less than 35.0 coins.</p>
-      </div>
-    </div>
-  </div>
+                                        <p>
+                                            <strong>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</strong>
+                                            <a href="https://github.com/decred/decred-release/releases/latest">
+                                                <span aria-label="Download Decred Installer"> &#8675;</span> Installer
+                                            </a>
+                                            |
+                                            <a href="https://github.com/decred/decred-binaries/releases/latest">
+                                                <span aria-label="Download Decred Binaries"> &#8675;</span> Binaries
+                                            </a>
+                                        </p>
 
-<!-- BEGIN LIVE IMMATURE -->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-livelist">
-        Live/Immature</a>
-      </h4>
-    </div>
-    <div id="collapse-livelist" class="panel-collapse collapse">
-      <div class="panel-body">
-			{{if not .TicketsLive}}
-			<p><span style="font-size: larger;"><b>No live tickets.</b></span></p>
-			{{end}}
-			{{if .TicketsLive}}
-			<div class="table-responsive">
-			<table id="ticketslive" class="table table-condensed datatablesort responsive">
-			<thead>
-				<tr>
-					<th>Ticket</th>
-					<th>TicketHeight</th>
-					<th>Pool Control</th>
-					<th>Votebits</th>
-				</tr>
-			</thead>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>TicketHeight</th>
-					<th>Pool Control</th>
-					<th>Votebits</th>
-				</tr>
-			</tfoot>
-			<tbody>
-			{{ range $i, $data := .TicketsLive }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
-				<td>{{ $data.TicketHeight }}</td>
-				<td>{{ if eq $data.VoteBits 1 }}Yes{{end}}{{ if ne $data.VoteBits 1}}No{{end}}</td>
-				<td>{{ $data.VoteBits }}</td>
-				</tr>{{end}}
-			</tbody>
-			</table>
-			</div>
-	            <form method="post" class="form-inline" role="form">
-	            <div id="votebits" class="form-group">
-                    <label class="control-label" for=""> &nbsp;Vote Bits: &nbsp;<span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="More options and their definitions will be added soon"></label>
+                                        <hr>
+                                        <p>
+                                            <b><strong>Step 2</strong></b>
+                                        </p>
 
-{{ if eq .Network "testnet" }}
-                    <label class="control-label" for="votePrevBlockInvalid"> &nbsp;Previous Block Valid?</label>
-                    <select class="form-control" id="votePrevBlockInvalid" name="votePrevBlockInvalid">
-                        <option value=0>No</option>
-                        <option value=1>Yes</option>
-                    </select>
-                    <label class="control-label" for="voteBlockSize"> &nbsp;Increase Block Size from 1.0MiB to 1.25MB</label>
-                    <select class="form-control" id="voteBlockSize" name="voteBlockSize">
-                        <option value=0>Abstain</option>
-                        <option value=2>No</option>
-                        <option value=4>Yes</option>
-                    </select>
-{{ else }}
-                    <label class="control-label" for="chooseallow"> &nbsp;Choose:</label>
-                    <select class="form-control" id="chooseallow" name="chooseallow">
-                        <option value=2>Use Pool Policy</option>
-                        <option value=1>Allow All Blocks</option>
-                        <option value=0>Disallow All Blocks</option>
-                     </select>
-{{ end }}
-                    <!--<label class="control-label" for="votebitsmanual"> &nbsp;Manual: &nbsp;
-                    <input class="form-control input-sm" type="text" id="votebitsmanual" name="votebitsmanual" pattern="^0*(?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{1,3}|[0-9])$">-->
-	            </div>
-	            <div class="form-group">
-	            	<div class="col-sm-2">
-	            		 <button name="updatetickets" class="btn btn-primary">Update Tickets</button>
-	            	</div>
-	            </div>
-            	<input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-            </form>
-			{{end}}
-      </div>
-    </div>
-  </div>
+                                        <p>
+                                            Your P2SH multisignature script for delegating votes has been generated. Please first import it locally into your wallet using <strong>dcrctl</strong> for safe keeping, so you can recover your funds and vote in the unlikely event of a pool failure:
+                                        </p>
 
-<!-- BEGIN VOTED TICKETS-->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-votedlist">
-        Voted Tickets</a>
-      </h4>
-    </div>
-    <div id="collapse-votedlist" class="panel-collapse collapse">
-      <div class="panel-body">
-			{{if not .TicketsVoted}}
-			<p><span style="font-size: larger;"><b>No voted tickets.</b></span></p>
-			{{end}}
-			{{if .TicketsVoted}}
-			<div class="table-responsive">
-			<table id="ticketsvoted" class="table table-condensed datatablesort responsive">
-			<thead>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</thead>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
-			<tbody>
-			{{ range $i, $data := .TicketsVoted }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.SpentBy}}">{{$data.SpentByHeight}}</a></td>
-				<td>{{$data.TicketHeight}}</td>
-				</tr>{{end}}
-			</tbody>
-			</table>
-			</div>
-			{{end}}
-      </div>
-    </div>
-  </div>
+                                        <p>
+                                            dcrctl --wallet importscript "script"
+                                        </p>
 
+                                        <p>
+                                            For example:
+                                        </p>
 
-<!-- BEGIN MISSED TICKETS-->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-missedlist">
-        Missed Tickets</a>
-      </h4>
-    </div>
-    <div id="collapse-missedlist" class="panel-collapse collapse">
-      <div class="panel-body">
-			{{if not .TicketsMissed}}
-			<p><span style="font-size: larger;"><b>No missed tickets.</b></span></p>
-			{{end}}
-			{{if .TicketsMissed}}
-			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool.</div>
-			<div class="table-responsive">
-			<table id="ticketsmissed" class="table table-condensed datatablesort responsive">
-			<thead>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</thead>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
-			<tbody>
-			{{ range $i, $data := .TicketsMissed }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
-				<td>{{$data.SpentByHeight}}</td>
-				<td>{{$data.TicketHeight}}</td>
-				</tr>{{end}}
-			</tbody>
-			</table>
-			</div>
-			{{end}}
-      </div>
-    </div>
-  </div>
+                                        <pre>$ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet importscript {{ .User.MultiSigScript }}</pre>
 
-<!-- BEGIN INVALID TICKETS-->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-invalidlist">
-        Invalid Tickets</a>
-      </h4>
-    </div>
-    <div id="collapse-invalidlist" class="panel-collapse collapse">
-      <div class="panel-body">
-			{{if not .TicketsInvalid}}
-			<p><span style="font-size: larger;"><b>No tickets.</b></span></p>
-			{{end}}
-			{{if .TicketsInvalid}}
-			<div class="well well-notification orange-notification"><b>Alert!</b> Tickets appearing here did not pay the correct pool fee.
-			You will either need to vote these tickets yourself or contact your stake pool administrator to have them add
-			the ticket to the pool manually.</div>
-			<div class="table-responsive">
-			<table id="ticketsinvalid" class="table table-condensed">
-			<thead>
-				<tr>
-					<th>Ticket</th>
-				</tr>
-			</thead>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-				</tr>
-			</tfoot>
-			<tbody>
-			{{ range $i, $data := .TicketsInvalid }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
-				</tr>{{end}}
-			</tbody>
-			</table>
-			</div>
-			{{end}}
-      </div>
-    </div>
-  </div>
+                                        <p>
+                                            After successfully importing the script into your wallet, you may generate tickets delegated to the pool in either of two ways:
+                                        </p>
 
-</div>
+                                        <hr>
+                                        <p>
+                                            <strong><u>Step 3</u></strong>
+                                        </p>
 
+                                        <p>
+                                            <strong>Option A - dcrticketbuyer - Automatic purchasing</strong> (Recommended)
+                                        </p>
 
-</div>
-</div>
-</div>
+                                        <p>
+                                            Stop dcrticketbuyer if it is currently running and add the following to <strong>ticketbuyer.conf</strong>:
+                                        </p>
+
+                                        <pre>
+maxpriceabsolute=35
+pooladdress={{ .User.UserFeeAddr }}
+poolfees={{ .PoolFees }}
+ticketaddress={{ .User.MultiSigAddress }}
+</pre>
+
+                                        <p>
+                                            Unlock dcrwallet, start dcrticketbuyer, and it will automatically purchase stake tickets delegated to the pool address.
+                                        </p>
+
+                                        <br>
+                                        <br>
+
+                                        <p>
+                                            <strong>Option B - dcrwallet - Manual purchasing</strong> (Not recommended)
+                                        </p>
+
+                                        <p>
+                                            Start a wallet with funds available and manually purchase tickets with the following command using <strong>dcrctl</strong>:
+                                        </p>
+
+                                        <p>
+                                            dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt
+                                        </p>
+
+                                        <pre>
+dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 35 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre>
+
+                                        <p>
+                                            Will purchase a ticket delegated to the pool and an address from the voting account using funds from the default account only if the current network price for a ticket is less than 35.0 coins.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="panel panel-default panel-control">
+                                <div class="panel-heading">
+                                    <h4 class="panel-title">
+                                        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-livelist">
+                                            Live/Immature
+                                        </a>
+                                    </h4>
+                                </div>
+
+                                <!-- Live tickets -->
+                                <div id="collapse-livelist" class="panel-collapse collapse">
+                                    <div class="panel-body">
+                                        {{if not .TicketsLive}}
+                                        <p>
+                                            <strong>No live tickets.</strong>
+                                        </p>
+                                        {{end}}
+
+                                        {{if .TicketsLive}}
+                                        <div class="table-responsive">
+                                            <table id="ticketslive" class="table table-condensed datatablesort responsive">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Ticket</th>
+                                                        <th>TicketHeight</th>
+                                                        <th>Pool Control</th>
+                                                        <th>Votebits</th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tfoot>
+                                                    <tr>
+                                                        <th>Ticket</th>
+                                                        <th>TicketHeight</th>
+                                                        <th>Pool Control</th>
+                                                        <th>Votebits</th>
+                                                    </tr>
+                                                </tfoot>
+
+                                                <tbody>
+                                                    {{ range $i, $data := .TicketsLive }}
+                                                    <tr>
+                                                        <td>
+                                                            <a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">
+                                                                {{$data.Ticket}}
+                                                            </a>
+                                                        </td>
+
+                                                        <td>
+                                                            {{ $data.TicketHeight }}
+                                                        </td>
+
+                                                        <td>
+                                                            {{ if eq $data.VoteBits 1 }}Yes{{end}}{{ if ne $data.VoteBits 1}}No{{end}}
+                                                        </td>
+
+                                                        <td>
+                                                            {{ $data.VoteBits }}
+                                                        </td>
+                                                    </tr>
+                                                    {{end}}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <form method="post" class="form-inline" role="form">
+                                            <div id="votebits" class="form-group">
+                                                <label class="control-label" for=""> &nbsp;Vote Bits: &nbsp;
+                                                    <span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="More options and their definitions will be added soon"></span>
+                                                </label>
+
+                                                {{ if eq .Network "testnet" }}
+                                                <label class="control-label" for="votePrevBlockInvalid"> &nbsp;Previous Block Valid?</label>
+                                                <select class="form-control" id="votePrevBlockInvalid" name="votePrevBlockInvalid">
+                                                    <option value=0>No</option>
+                                                    <option value=1>Yes</option>
+                                                </select>
+
+                                                <label class="control-label" for="voteBlockSize"> &nbsp;Increase Block Size from 1.0MiB to 1.25MB</label>
+                                                <select class="form-control" id="voteBlockSize" name="voteBlockSize">
+                                                    <option value=0>Abstain</option>
+                                                    <option value=2>No</option>
+                                                    <option value=4>Yes</option>
+                                                </select>
+                                                {{ else }}
+                                                <label class="control-label" for="chooseallow"> &nbsp;Choose:</label>
+                                                <select class="form-control" id="chooseallow" name="chooseallow">
+                                                    <option value=2>Use Pool Policy</option>
+                                                    <option value=1>Allow All Blocks</option>
+                                                    <option value=0>Disallow All Blocks</option>
+                                                </select>
+                                                {{ end }}
+                                                <!--<label class="control-label" for="votebitsmanual"> &nbsp;Manual: &nbsp;
+                                                <input class="form-control input-sm" type="text" id="votebitsmanual" name="votebitsmanual" pattern="^0*(?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{1,3}|[0-9])$">-->
+                                            </div>
+
+                                            <div class="form-group">
+                                                <div class="col-sm-2">
+                                                    <button name="updatetickets" class="btn btn-primary">Update Tickets</button>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+                                        </form>
+                                        {{end}}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Voted tickets -->
+                            <div class="panel panel-default panel-control">
+                                <div class="panel-heading">
+                                    <h4 class="panel-title">
+                                        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-votedlist">
+                                            Voted Tickets
+                                        </a>
+                                    </h4>
+                                </div>
+
+                                <div id="collapse-votedlist" class="panel-collapse collapse">
+                                    <div class="panel-body">
+                                        {{if not .TicketsVoted}}
+                                        <p>
+                                            <strong>No voted tickets.</strong>
+                                        </p>
+                                        {{end}}
+
+                                        {{if .TicketsVoted}}
+                                        <div class="table-responsive">
+                                            <table id="ticketsvoted" class="table table-condensed datatablesort responsive">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Ticket</th>
+                                                        <th>SpentByHeight</th>
+                                                        <th>TicketHeight</th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tfoot>
+                                                    <tr>
+                                                        <th>Ticket</th>
+                                                        <th>SpentByHeight</th>
+                                                        <th>TicketHeight</th>
+                                                    </tr>
+                                                </tfoot>
+
+                                                <tbody>
+                                                    {{ range $i, $data := .TicketsVoted }}
+                                                    <tr>
+                                                        <td>
+                                                            <a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">
+                                                                {{$data.Ticket}}
+                                                            </a>
+                                                        </td>
+
+                                                        <td>
+                                                            <a href="https://{{$.Network}}.decred.org/tx/{{$data.SpentBy}}">
+                                                                {{$data.SpentByHeight}}
+                                                            </a>
+                                                        </td>
+
+                                                        <td>
+                                                            {{$data.TicketHeight}}
+                                                        </td>
+                                                    </tr>
+                                                    {{end}}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {{end}}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Missed tickets -->
+                            <div class="panel panel-default panel-control">
+                                <div class="panel-heading">
+                                    <h4 class="panel-title">
+                                        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-missedlist">
+                                            Missed Tickets
+                                        </a>
+                                    </h4>
+                                </div>
+
+                                <div id="collapse-missedlist" class="panel-collapse collapse">
+                                    <div class="panel-body">
+                                        {{if not .TicketsMissed}}
+                                        <p>
+                                            <strong>No missed tickets.</strong>
+                                        </p>
+                                        {{end}}
+
+                                        {{if .TicketsMissed}}
+                                        <div class="well well-notification  orange-notification">
+                                            <strong>Caution!</strong> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool
+                                        </div>
+
+                                        <div class="table-responsive">
+                                            <table id="ticketsmissed" class="table table-condensed datatablesort responsive">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Ticket</th>
+                                                        <th>SpentByHeight</th>
+                                                        <th>TicketHeight</th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tfoot>
+                                                    <tr>
+                                                        <th>Ticket</th>
+                                                        <th>SpentByHeight</th>
+                                                        <th>TicketHeight</th>
+                                                    </tr>
+                                                </tfoot>
+
+                                                <tbody>
+                                                    {{ range $i, $data := .TicketsMissed }}
+                                                    <tr>
+                                                        <td>
+                                                            <a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">
+                                                                {{$data.Ticket}}
+                                                            </a>
+                                                        </td>
+
+                                                        <td>
+                                                            {{$data.SpentByHeight}}
+                                                        </td>
+
+                                                        <td>
+                                                            {{$data.TicketHeight}}
+                                                        </td>
+                                                    </tr>
+                                                    {{end}}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {{end}}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Invalid tickets -->
+                            <div class="panel panel-default panel-control">
+                                <div class="panel-heading">
+                                    <h4 class="panel-title">
+                                        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-invalidlist">
+                                            Invalid Tickets
+                                        </a>
+                                    </h4>
+                                </div>
+
+                                <div id="collapse-invalidlist" class="panel-collapse collapse">
+                                    <div class="panel-body">
+                                        {{if not .TicketsInvalid}}
+                                        <p>
+                                            <strong>No tickets.</strong>
+                                        </p>
+                                        {{end}}
+
+                                        {{if .TicketsInvalid}}
+                                        <div class="well well-notification orange-notification">
+                                            <strong>Alert!</strong> Tickets appearing here did not pay the correct pool fee.
+                                            You will either need to vote these tickets yourself or contact your stake pool administrator to have them add the ticket to the pool manually.
+                                        </div>
+
+                                        <div class="table-responsive">
+                                            <table id="ticketsinvalid" class="table table-condensed">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Ticket</th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tfoot>
+                                                    <tr>
+                                                        <th>Ticket</th>
+                                                    </tr>
+                                                </tfoot>
+
+                                                <tbody>
+                                                    {{ range $i, $data := .TicketsInvalid }}
+                                                    <tr>
+                                                        <td>
+                                                            <a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">
+                                                                {{$data.Ticket}}
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    {{end}}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {{end}}
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
 {{end}}

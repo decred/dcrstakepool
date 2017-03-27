@@ -49,7 +49,7 @@ dcrstakepool is a minimalist web application which provides a method for allowin
 
 ## Requirements
 
-- [Go](http://golang.org) 1.6.3 or newer.
+- [Go](http://golang.org) 1.7.0 or newer.
 - MySQL
 - Nginx or other web server to proxy to dcrstakepool
 
@@ -59,7 +59,7 @@ dcrstakepool is a minimalist web application which provides a method for allowin
 
 Building or updating from source requires the following build dependencies:
 
-- **Go 1.6 or 1.7**
+- **Go 1.7.0 or newer
 
   Installation instructions can be found here: http://golang.org/doc/install.
   It is recommended to add `$GOPATH/bin` to your `PATH` at this point.
