@@ -57,7 +57,8 @@
                         </p>
 
                         <pre>
-$ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet getnewaddress voting<strong>{{ if eq .Network "mainnet"}}D{{end}}{{ if eq .Network "testnet"}}T{{end}}sExampleAddr1For2Demo3PurposesOnly</strong>
+$ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet getnewaddress voting
+<strong>{{ if eq .Network "mainnet"}}D{{end}}{{ if eq .Network "testnet"}}T{{end}}sExampleAddr1For2Demo3PurposesOnly</strong>
 
 $ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet validateaddress {{ if eq .Network "mainnet"}}D{{end}}{{ if eq .Network "testnet"}}T{{end}}sExampleAddr1For2Demo3PurposesOnly
 {
