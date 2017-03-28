@@ -53,7 +53,7 @@
                             <div class="form-group">
                                 <label class="control-label col-sm-2" for="emailpassword">Password:</label>
                                 <div class="col-sm-13">
-                                    <input id="emailpassword" name="emailpassword" type="password" class="form-control" required>
+                                    <input id="emailpassword" name="password" type="password" placeholder="Current Password" class="form-control" required>
                                 </div>
                             </div>
 
@@ -62,7 +62,7 @@
                             </div>
 
                             <div class="form-group">
-                                <button id="updatepassword" name="updatepassword" class="btn btn-primary">Change Email Address</button>
+                                <button id="updateemail" name="updateemail" value="true" class="btn btn-primary">Change Email Address</button>
                             </div>
 
                             <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
@@ -73,14 +73,14 @@
                         <h2>Change Password</h2>
                         <form class="form-horizontal" method="post">
                             <div class="form-group">
-                                <label for="curpassword" class="control-label col-sm-2">Current<br />Password</label>
+                                <label for="curpassword" class="control-label col-sm-2">Current<br>Password</label>
                                 <div class="col-sm-13">
                                     <input id="curpassword" name="password" type="password" placeholder="Current Password" class="form-control" required>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label class="control-label col-sm-2" for="newpassword">New<br />Password</label>
+                                <label class="control-label col-sm-2" for="newpassword">New<br>Password</label>
                                 <div class="col-sm-13">
                                     <input id="newpassword" name="newpassword" type="password" placeholder="New Password" class="form-control" required>
                                 </div>
