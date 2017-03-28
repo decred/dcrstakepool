@@ -194,10 +194,6 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	user := models.GetUserById(dbMap, c.Env["APIUserID"].(int64))
 
-	if controller.closePool {
-		return nil, codes.FailedPrecondition, "pool is closed", errors.New(controller.closePoolMsg)
-	}
-
 	if len(user.UserPubKeyAddr) > 0 {
 		return nil, codes.AlreadyExists, "address error", errors.New("address already submitted")
 	}
@@ -517,12 +513,6 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 func (controller *MainController) AddressPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	remoteIP := getClientIP(r, controller.realIPHeader)
-
-	// User may have a session so error out here as well.
-	if controller.closePool {
-		session.AddFlash(controller.closePoolMsg, "address")
-		return controller.Address(c, r)
-	}
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
@@ -1200,17 +1190,6 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 		return controller.SignIn(c, r)
 	}
 
-	// If pool is closed and user has not yet provided a pubkey address, do not
-	// allow login.
-	if controller.closePool {
-		if len(user.UserPubKeyAddr) == 0 {
-			session.AddFlash(controller.closePoolMsg, "auth")
-			c.Env["IsClosed"] = true
-			c.Env["ClosePoolMsg"] = controller.closePoolMsg
-			return controller.SignIn(c, r)
-		}
-	}
-
 	session.Values["UserId"] = user.Id
 
 	// Go to Settings page if multisig script not yet set up.
@@ -1650,7 +1629,7 @@ func (controller *MainController) TicketsPost(c web.C, r *http.Request) (string,
 
 	voteBits := uint16(0)
 
-	if controller.params.Net == wire.TestNet {
+	if controller.params.Net == wire.TestNet2 {
 		voteBlockSize := r.FormValue("voteBlockSize")
 		votePrevBlockInvalid := r.FormValue("votePrevBlockInvalid")
 		switch voteBlockSize {
