@@ -1,5 +1,5 @@
 hash: 3fa092c0562caf125c568ee179c9dc8cb73b7573527a6d8e866c61299a91f87a
-updated: 2017-02-15T10:05:17.292989339-08:00
+updated: 2017-03-28T12:46:54.311648366-07:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
@@ -20,6 +20,7 @@ imports:
   - ripemd160
   - salsa20/salsa
   - scrypt
+  - ssh/terminal
 - name: github.com/btcsuite/seelog
   version: 313961b101eb55f65ae0f03ddd4e322731763b6c
 - name: github.com/btcsuite/websocket
@@ -27,7 +28,7 @@ imports:
 - name: github.com/decred/blake256
   version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: bfc076ecf1557c370bde149daca9c35bfe74218c
+  version: 64a414c64fd59706460f47c2aef5930a9e86dce4
   subpackages:
   - addrmgr
   - blockchain
@@ -48,7 +49,7 @@ imports:
 - name: github.com/decred/dcrrpcclient
   version: a1200f54d5aff356f7db4699d64ccdf2e35e2876
 - name: github.com/decred/dcrutil
-  version: ba0a5f399a43abc0e1a0a0442509c36f35321bce
+  version: ee6d002bf0de123fe47a8d2b8489f75145ce746e
   subpackages:
   - base58
   - hdkeychain
@@ -92,4 +93,5 @@ imports:
   subpackages:
   - bcrypt
   - blowfish
+  - ripemd160
 testImports: []
