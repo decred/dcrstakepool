@@ -144,6 +144,17 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	return mc, nil
 }
 
+// getNetworkName will strip any suffix from a network name starting with
+// "testnet" (e.g. "testnet2"). This is primarily intended for the tickets page,
+// which generates block explorer links using a value set by the network string,
+// which is a problem since there is no testnet2.deced.org host.
+func (controller *MainController) getNetworkName() string {
+	if strings.HasPrefix(controller.params.Name, "testnet") {
+		return "testnet"
+	}
+	return controller.params.Name
+}
+
 // API is the main frontend that handles all API requests.
 func (controller *MainController) API(c web.C, r *http.Request) *system.APIResponse {
 	command := c.URLParams["command"]
@@ -1467,7 +1478,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	}
 
 	c.Env["IsTickets"] = true
-	c.Env["Network"] = controller.params.Name
+	c.Env["Network"] = controller.getNetworkName()
 	c.Env["PoolFees"] = controller.poolFees
 	c.Env["Title"] = "Decred Stake Pool - Tickets"
 
