@@ -62,6 +62,8 @@ var (
 )
 
 var (
+	// ErrSetVoteBitsCoolDown is returned by SetTicketVoteBits and
+	// SetTicketsVoteBits the vote bits were set too recently.
 	ErrSetVoteBitsCoolDown = fmt.Errorf("Cannot set the vote bits because " +
 		"last call was too recent.")
 )
@@ -327,7 +329,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	switch fn {
 	case getNewAddressFn:
 		resp := new(getNewAddressResponse)
-		addrs := make([]dcrutil.Address, w.serversLen, w.serversLen)
+		addrs := make([]dcrutil.Address, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -382,8 +384,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case validateAddressFn:
 		vam := msg.(validateAddressMsg)
 		resp := new(validateAddressResponse)
-		vawrs := make([]*dcrjson.ValidateAddressWalletResult, w.serversLen,
-			w.serversLen)
+		vawrs := make([]*dcrjson.ValidateAddressWalletResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -436,8 +437,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case createMultisigFn:
 		cmsm := msg.(createMultisigMsg)
 		resp := new(createMultisigResponse)
-		cmsrs := make([]*dcrjson.CreateMultiSigResult, w.serversLen,
-			w.serversLen)
+		cmsrs := make([]*dcrjson.CreateMultiSigResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -490,7 +490,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case importScriptFn:
 		ism := msg.(importScriptMsg)
 		resp := new(importScriptResponse)
-		isErrors := make([]error, w.serversLen, w.serversLen)
+		isErrors := make([]error, w.serversLen)
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
@@ -529,8 +529,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case ticketsForAddressFn:
 		tfam := msg.(ticketsForAddressMsg)
 		resp := new(ticketsForAddressResponse)
-		tfars := make([]*dcrjson.TicketsForAddressResult, w.serversLen,
-			w.serversLen)
+		tfars := make([]*dcrjson.TicketsForAddressResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -570,8 +569,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case getTicketVoteBitsFn:
 		gtvbm := msg.(getTicketVoteBitsMsg)
 		resp := new(getTicketVoteBitsResponse)
-		gtvbrs := make([]*dcrjson.GetTicketVoteBitsResult, w.serversLen,
-			w.serversLen)
+		gtvbrs := make([]*dcrjson.GetTicketVoteBitsResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -624,8 +622,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case getTicketsVoteBitsFn:
 		gtvbm := msg.(getTicketsVoteBitsMsg)
 		resp := new(getTicketsVoteBitsResponse)
-		gtvbrs := make([]*dcrjson.GetTicketsVoteBitsResult, w.serversLen,
-			w.serversLen)
+		gtvbrs := make([]*dcrjson.GetTicketsVoteBitsResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -756,8 +753,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case getTxOutFn:
 		gtom := msg.(getTxOutMsg)
 		resp := new(getTxOutResponse)
-		gtors := make([]*dcrjson.GetTxOutResult, w.serversLen,
-			w.serversLen)
+		gtors := make([]*dcrjson.GetTxOutResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -809,8 +805,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 
 	case getStakeInfoFn:
 		resp := new(getStakeInfoResponse)
-		gsirs := make([]*dcrjson.GetStakeInfoResult, w.serversLen,
-			w.serversLen)
+		gsirs := make([]*dcrjson.GetStakeInfoResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -865,7 +860,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case connectedFn:
 		resp := new(connectedResponse)
 		resp.err = nil
-		wirs := make([]*dcrjson.WalletInfoResult, w.serversLen, w.serversLen)
+		wirs := make([]*dcrjson.WalletInfoResult, w.serversLen)
 		resp.walletInfo = wirs
 		connectCount := 0
 		for i, s := range w.servers {
@@ -920,8 +915,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case stakePoolUserInfoFn:
 		spuim := msg.(stakePoolUserInfoMsg)
 		resp := new(stakePoolUserInfoResponse)
-		spuirs := make([]*dcrjson.StakePoolUserInfoResult, w.serversLen,
-			w.serversLen)
+		spuirs := make([]*dcrjson.StakePoolUserInfoResult, w.serversLen)
 		// use connectCount to increment total number of successful responses
 		// if we have > 0 then we proceed as though nothing is wrong for the user
 		connectCount := 0
@@ -1423,6 +1417,8 @@ type getTicketsCacheData struct {
 	timer time.Time
 }
 
+// NewGetTicketsCacheData is a contructor for getTicketsCacheData that sets the
+// last get time to now.
 func NewGetTicketsCacheData(tfar *dcrjson.TicketsForAddressResult) *getTicketsCacheData {
 	return &getTicketsCacheData{tfar, time.Now()}
 }
@@ -2009,7 +2005,7 @@ func newWalletSvrManager(walletHosts []string, walletCerts []string,
 	walletUsers []string, walletPasswords []string, minServers int) (*walletSvrManager, error) {
 
 	var err error
-	localServers := make([]*dcrrpcclient.Client, len(walletHosts), len(walletHosts))
+	localServers := make([]*dcrrpcclient.Client, len(walletHosts))
 	for i := range walletHosts {
 		localServers[i], err = connectWalletRPC(walletHosts[i], walletCerts[i], walletUsers[i], walletPasswords[i])
 		if err != nil {
