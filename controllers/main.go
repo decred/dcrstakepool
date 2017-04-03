@@ -1371,7 +1371,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 		DaemonConnected bool
 		Unlocked        bool
 	}
-	walletPageInfo := make([]WalletInfoPage, len(walletInfo), len(walletInfo))
+	walletPageInfo := make([]WalletInfoPage, len(walletInfo))
 	connectedWallets := 0
 	for i, v := range walletInfo {
 		// If something is nil in the slice means it is disconnected.
@@ -1397,7 +1397,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 
 	// Depending on how many wallets have been detected update RPCStatus.
 	// Admins can then use to monitor this page periodically and check status.
-	rpcstatus := "Unknown"
+	var rpcstatus string
 	allWallets := len(walletInfo)
 
 	if connectedWallets == allWallets {
