@@ -67,6 +67,10 @@ svg:not(:root) {
     padding: 10px 27px
 }
 
+.navbar-default .navbar-nav li>p {
+    line-height: 55px;
+}
+
 .navbar-default .navbar-nav li>a:hover,
 .navbar-default .navbar-nav li>a:focus,
 .navbar-default .navbar-nav li>a:active {
