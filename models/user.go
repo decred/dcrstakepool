@@ -12,36 +12,36 @@ import (
 )
 
 type EmailChange struct {
-	Id       int64 `db:"EmailChangeID"`
-	UserId   int64
-	NewEmail string
-	Token    string
-	Created  int64
-	Expires  int64
+	Id       int64     `db:"email_change_id"`
+    UserId   int64     `db:"user_id"`
+    NewEmail string    `db:"new_email"`
+    Token    string    `db:"token"`
+	Created  int64     `db:"created"`
+	Expires  int64     `db:"expires"`
 }
 
 type PasswordReset struct {
-	Id      int64 `db:"PasswordResetID"`
-	UserId  int64
-	Token   string
-	Created int64
-	Expires int64
+	Id      int64      `db:"password_reset_id"`
+	UserId  int64      `db:"user_id"`
+	Token   string     `db:"token"`
+	Created int64      `db:"created"`
+	Expires int64      `db:"expires"`
 }
 
 type User struct {
-	Id               int64 `db:"UserId"`
-	Email            string
-	Username         string
-	Password         []byte
-	MultiSigAddress  string
-	MultiSigScript   string
-	PoolPubKeyAddr   string
-	UserPubKeyAddr   string
-	UserFeeAddr      string
-	HeightRegistered int64
-	EmailVerified    int64
-	EmailToken       string
-	APIToken         string
+	Id               int64     `db:"user_id"`
+	Email            string    `db:"email"`
+	Username         string    `db:"username"`
+	Password         []byte    `db:"password"`
+	MultiSigAddress  string    `db:"multi_sig_address"`
+	MultiSigScript   string    `db:"multi_sig_script"`
+	PoolPubKeyAddr   string    `db:"pool_pubkey_address"`
+	UserPubKeyAddr   string    `db:"user_pubkey_address"`
+	UserFeeAddr      string    `db:"user_fee_address"`
+	HeightRegistered int64     `db:"height_registered"`
+	EmailVerified    int64     `db:"email_verified"`       //This should be a boolean
+	EmailToken       string    `db:"email_token"`
+	APIToken         string    `db:"api_token"`
 }
 
 func (user *User) HashPassword(password string) {
@@ -54,7 +54,7 @@ func (user *User) HashPassword(password string) {
 }
 
 func GetUserByEmail(dbMap *gorp.DbMap, email string) (user *User) {
-	err := dbMap.SelectOne(&user, "SELECT * FROM Users where Email = ?", email)
+	err := dbMap.SelectOne(&user, "SELECT * FROM users where email = ?;", email)
 
 	if err != nil {
 		log.Warnf("Can't get user by email: %v", err)
@@ -63,7 +63,7 @@ func GetUserByEmail(dbMap *gorp.DbMap, email string) (user *User) {
 }
 
 func GetUserById(dbMap *gorp.DbMap, id int64) (user *User) {
-	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
+	err := dbMap.SelectOne(&user, "SELECT * FROM users WHERE user_id = ?;", id)
 
 	if err != nil {
 		log.Warnf("Can't get user by id: %v", err)
@@ -73,7 +73,7 @@ func GetUserById(dbMap *gorp.DbMap, id int64) (user *User) {
 
 // GetUserCount gives a count of all users
 func GetUserCount(dbMap *gorp.DbMap) int64 {
-	userCount, err := dbMap.SelectInt("SELECT COUNT(*) FROM Users")
+	userCount, err := dbMap.SelectInt("SELECT COUNT(user_id) FROM users;")
 	if err != nil {
 		return int64(0)
 	}
@@ -83,8 +83,8 @@ func GetUserCount(dbMap *gorp.DbMap) int64 {
 
 // GetUserCountActive gives a count of all users who have submitted an address
 func GetUserCountActive(dbMap *gorp.DbMap) int64 {
-	userCountActive, err := dbMap.SelectInt("SELECT COUNT(*) FROM Users " +
-		"WHERE MultiSigAddress <> ''")
+	userCountActive, err := dbMap.SelectInt("SELECT COUNT(user_id) FROM users " +
+		"WHERE multi_sig_address <> '';")
 	if err != nil {
 		return int64(0)
 	}
@@ -123,7 +123,7 @@ func SetUserAPIToken(dbMap *gorp.DbMap, APISecret string, baseURL string,
 		return err
 	}
 
-	err = dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
+	err = dbMap.SelectOne(&user, "SELECT * FROM users WHERE user_id = ?;", id)
 	user.APIToken = tokenString
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func SetUserAPIToken(dbMap *gorp.DbMap, APISecret string, baseURL string,
 func UpdateUserByID(dbMap *gorp.DbMap, id int64, multiSigAddr string,
 	multiSigScript string, poolPubKeyAddr string, userPubKeyAddr string,
 	userFeeAddr string, height int64) (user *User) {
-	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
+	err := dbMap.SelectOne(&user, "SELECT * FROM users WHERE user_id = ?;", id)
 
 	if err != nil {
 		log.Warnf("Can't get user by id: %v", err)
@@ -165,7 +165,7 @@ func UpdateUserByID(dbMap *gorp.DbMap, id int64, multiSigAddr string,
 
 func GetAllCurrentMultiSigScripts(dbMap *gorp.DbMap) ([]User, error) {
 	var multiSigs []User
-	_, err := dbMap.Select(&multiSigs, "SELECT MultiSigScript, HeightRegistered FROM Users WHERE MultiSigAddress <> ''")
+	_, err := dbMap.Select(&multiSigs, "SELECT multi_sig_script, height_registered FROM users WHERE multi_sig_address <> '';")
 	if err != nil {
 		return nil, err
 	}
@@ -194,9 +194,9 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 
 	// add a table, setting the table name and specifying that
 	// the Id property is an auto incrementing primary key
-	dbMap.AddTableWithName(EmailChange{}, "EmailChange").SetKeys(true, "Id")
-	dbMap.AddTableWithName(User{}, "Users").SetKeys(true, "Id")
-	dbMap.AddTableWithName(PasswordReset{}, "PasswordReset").SetKeys(true, "Id")
+	dbMap.AddTableWithName(EmailChange{}, "email_change").SetKeys(true, "Id")
+	dbMap.AddTableWithName(User{}, "users").SetKeys(true, "Id")
+	dbMap.AddTableWithName(PasswordReset{}, "password_reset").SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -219,15 +219,15 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// April 1st 2016.  The last mainnet block on Mar 31st of 15346 is used
 	// as a safe default to ensure no tickets are missed. This could be
 	// adjusted upwards since most pools were on testnet for a long time.
-	addColumn(dbMap, database, "Users", "HeightRegistered", "bigint(20) NULL",
-		"UserFeeAddr",
-		"UPDATE Users SET HeightRegistered = 15346 WHERE MultiSigAddress <> ''")
+	addColumn(dbMap, database, "users", "height_registered", "bigint(20) NULL",
+		"user_fee_address",
+		"UPDATE users SET height_registered = 15346 WHERE multi_sig_address <> '';")
 
 	// stakepool v0.0.2 -> v0.0.3
 
 	// bug fix for previous -- users who hadn't submitted a script won't be
 	// able to login because Gorp can't handle NULL values
-	_, err = dbMap.Exec("UPDATE Users SET HeightRegistered = 0 WHERE HeightRegistered IS NULL")
+	_, err = dbMap.Exec("UPDATE users SET height_registered = 0 WHERE height_registered IS NULL;")
 	if err != nil {
 		log.Error("Setting HeightRegistered to 0 failed ", err)
 		// Do not return since db is opened an other statements may work
@@ -236,25 +236,25 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// add EmailVerified, EmailToken so new users' email addresses can be
 	// verified.  We consider users who already registered to be grandfathered
 	// in and use 2 to reflect that.  1 is verified, 0 is unverified.
-	addColumn(dbMap, database, "Users", "EmailVerified", "bigint(20) NULL",
-		"HeightRegistered",
-		"UPDATE Users SET EmailVerified = 2")
+	addColumn(dbMap, database, "users", "email_verified", "bigint(20) NULL",
+		"height_registered",
+		"UPDATE users SET email_verified = 2;")
 	// Set an empty token for grandfathered accounts
-	addColumn(dbMap, database, "Users", "EmailToken", "varchar(255) NULL",
-		"EmailVerified",
-		"UPDATE Users SET EmailToken = ''")
+	addColumn(dbMap, database, "users", "email_token", "varchar(255) NULL",
+		"email_verified",
+		"UPDATE users SET email_token = '';")
 
 	// stakepool v0.0.4 -> v1.0.0
 
 	// add APIToken column for storing a token that users may use to submit a
 	// public key address and retrieve ticket purchasing information via the API
-	addColumn(dbMap, database, "Users", "APIToken", "varchar(255) NULL",
-		"EmailToken", "UPDATE Users SET APIToken = ''")
+	addColumn(dbMap, database, "users", "api_token", "varchar(255) NULL",
+		"email_token", "UPDATE users SET api_token = '';")
 
 	// Set an API token for all users who have verified their email address
 	// and do not have an API Token already set.
 	var users []User
-	_, err = dbMap.Select(&users, "SELECT * FROM Users WHERE APIToken = '' AND EmailVerified > 0")
+	_, err = dbMap.Select(&users, "SELECT * FROM users WHERE api_token = '' AND email_verified > 0;")
 	if err != nil {
 		log.Critical("Select verified users failed: ", err)
 		// With out a Valid []Users, we cannot proceed
