@@ -20,7 +20,7 @@
         Ticket Information</a>
       </h4>
     </div>
-    <div id="collapse-info" class="panel-collapse collapse in">
+    <div id="collapse-info" class="panel-collapse collapse {{if not .TicketsLive}}in{{end}}">
       <div class="panel-body">
 	 <h1>P2SH Address:</h1><pre>{{ .User.MultiSigAddress }}</pre>
         <hr />
@@ -37,7 +37,7 @@
         Ticket Instructions</a>
       </h4>
     </div>
-    <div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive }}in{{end}}">
+    <div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive}}in{{end}}">
       <div class="panel-body">
 			<p><strong><u>Step 1</u></strong></p>
 			<p><strong>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</strong>
@@ -85,7 +85,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
         Live/Immature</a>
       </h4>
     </div>
-    <div id="collapse-livelist" class="panel-collapse collapse">
+    <div id="collapse-livelist" class="panel-collapse collapse {{if .TicketsLive }}in{{end}}">
       <div class="panel-body">
 			{{if not .TicketsLive}}
 			<p><strong>No live tickets.</strong></p>
@@ -166,7 +166,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
         Voted Tickets</a>
       </h4>
     </div>
-    <div id="collapse-votedlist" class="panel-collapse collapse">
+    <div id="collapse-votedlist" class="panel-collapse collapse {{if .TicketsVoted}}in{{end}}">
       <div class="panel-body">
 			{{if not .TicketsVoted}}
 			<p><strong>No voted tickets.</strong></p>
