@@ -35,6 +35,6 @@ test -z "$(gometalinter --disable-all \
 --enable=vet \
 --enable=gosimple \
 --enable=unconvert \
---deadline=4m $linter_targets 2>&1 | tee /dev/stderr)"
+--deadline=10m $linter_targets 2>&1 | tee /dev/stderr)"
 
 env GORACE="halt_on_error=1" go test -race $linter_targets
