@@ -526,7 +526,7 @@ func loadConfig() (*config, []string, error) {
 	// Add default wallet port for the active network if there's no port specified
 	cfg.WalletHosts = normalizeAddresses(cfg.WalletHosts, activeNetParams.WalletRPCServerPort)
 
-	if len(cfg.WalletHosts) < 2 {
+	if len(cfg.WalletHosts) < defaultMinServers {
 		str := "%s: you must specify at least 2 wallethosts"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
