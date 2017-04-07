@@ -12,36 +12,36 @@ import (
 )
 
 type EmailChange struct {
-	Id       int64     `db:"email_change_id"`
-    UserId   int64     `db:"user_id"`
-    NewEmail string    `db:"new_email"`
-    Token    string    `db:"token"`
-	Created  int64     `db:"created"`
-	Expires  int64     `db:"expires"`
+	Id       int64  `db:"email_change_id"`
+	UserId   int64  `db:"user_id"`
+	NewEmail string `db:"new_email"`
+	Token    string `db:"token"`
+	Created  int64  `db:"created"`
+	Expires  int64  `db:"expires"`
 }
 
 type PasswordReset struct {
-	Id      int64      `db:"password_reset_id"`
-	UserId  int64      `db:"user_id"`
-	Token   string     `db:"token"`
-	Created int64      `db:"created"`
-	Expires int64      `db:"expires"`
+	Id      int64  `db:"password_reset_id"`
+	UserId  int64  `db:"user_id"`
+	Token   string `db:"token"`
+	Created int64  `db:"created"`
+	Expires int64  `db:"expires"`
 }
 
 type User struct {
-	Id               int64     `db:"user_id"`
-	Email            string    `db:"email"`
-	Username         string    `db:"username"`
-	Password         []byte    `db:"password"`
-	MultiSigAddress  string    `db:"multi_sig_address"`
-	MultiSigScript   string    `db:"multi_sig_script"`
-	PoolPubKeyAddr   string    `db:"pool_pubkey_address"`
-	UserPubKeyAddr   string    `db:"user_pubkey_address"`
-	UserFeeAddr      string    `db:"user_fee_address"`
-	HeightRegistered int64     `db:"height_registered"`
-	EmailVerified    int64     `db:"email_verified"`       //This should be a boolean
-	EmailToken       string    `db:"email_token"`
-	APIToken         string    `db:"api_token"`
+	Id               int64  `db:"user_id"`
+	Email            string `db:"email"`
+	Username         string `db:"username"`
+	Password         []byte `db:"password"`
+	MultiSigAddress  string `db:"multi_sig_address"`
+	MultiSigScript   string `db:"multi_sig_script"`
+	PoolPubKeyAddr   string `db:"pool_pubkey_address"`
+	UserPubKeyAddr   string `db:"user_pubkey_address"`
+	UserFeeAddr      string `db:"user_fee_address"`
+	HeightRegistered int64  `db:"height_registered"`
+	EmailVerified    int64  `db:"email_verified"` //This should be a boolean
+	EmailToken       string `db:"email_token"`
+	APIToken         string `db:"api_token"`
 }
 
 func (user *User) HashPassword(password string) {

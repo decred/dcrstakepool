@@ -24,7 +24,7 @@ func EmailChangeComplete(dbMap *gorp.DbMap, token string) error {
 		return err
 	}
 
-    _, err = dbMap.Exec("UPDATE users SET email = ? WHERE user_id = ?;",
+	_, err = dbMap.Exec("UPDATE users SET email = ? WHERE user_id = ?;",
 		emailChange.NewEmail, emailChange.UserId)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func PasswordResetTokenExists(dbMap *gorp.DbMap, token string) (*models.Password
 
 func PasswordValidById(dbMap *gorp.DbMap, id int64, password string) (*models.User, error) {
 	var user models.User
-    err := dbMap.SelectOne(&user, "SELECT * FROM users WHERE user_id = ?;", id)
+	err := dbMap.SelectOne(&user, "SELECT * FROM users WHERE user_id = ?;", id)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func PasswordValidById(dbMap *gorp.DbMap, id int64, password string) (*models.Us
 
 func UpdateUserPasswordById(dbMap *gorp.DbMap, id int64, password []byte) (*models.User, error) {
 	var user models.User
-    err := dbMap.SelectOne(&user, "SELECT * FROM users WHERE user_id = ?;", id)
+	err := dbMap.SelectOne(&user, "SELECT * FROM users WHERE user_id = ?;", id)
 	if err != nil {
 		return nil, err
 	}
