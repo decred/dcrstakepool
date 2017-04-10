@@ -20,7 +20,7 @@
         Ticket Information</a>
       </h4>
     </div>
-    <div id="collapse-info" class="panel-collapse collapse in">
+    <div id="collapse-info" class="panel-collapse collapse {{if not .TicketsLive}}in{{end}}">
       <div class="panel-body">
 	 <h1>P2SH Address:</h1><pre>{{ .User.MultiSigAddress }}</pre>
         <hr />
@@ -37,15 +37,15 @@
         Ticket Instructions</a>
       </h4>
     </div>
-    <div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive }}in{{end}}">
+    <div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive}}in{{end}}">
       <div class="panel-body">
-			<p><b><u>Step 1</u></b></p>
-			<p><b>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</b>
-			<a href="https://github.com/decred/decred-release/releases/latest"><span aria-label="Download Decred Installer"> &#8675; Installer</a> |
-			<a href="https://github.com/decred/decred-binaries/releases/latest"><span aria-label="Download Decred Binaries"> &#8675; Binaries</a></p>
+			<p><strong><u>Step 1</u></strong></p>
+			<p><strong>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</strong>
+			<a href="https://github.com/decred/decred-release/releases/latest" target="_blank"><span aria-label="Download Decred Installer"> &#8675; Installer</a> |
+			<a href="https://github.com/decred/decred-binaries/releases/latest" target="_blank"><span aria-label="Download Decred Binaries"> &#8675; Binaries</a></p>
 
 			</p>
-			<p><b><u>Step 2</u></b></p>
+			<p><strong><u>Step 2</u></strong></p>
 			<p>Your P2SH multisignature script for delegating votes has been generated. Please first import it locally into your wallet using <b>dcrctl</b> for safe keeping, so you can recover your funds and vote in the unlikely event of a pool failure:</p>
 
 			<p>dcrctl --wallet importscript "script"</p>
@@ -54,33 +54,25 @@
 
 			<p>After successfully importing the script into your wallet, you may generate tickets delegated to the pool in either of two ways:</p>
 
-			<p><b><u>Step 3</u></b></p>
-			<p><b>Option A - dcrticketbuyer - Automatic purchasing - Recommended (Automatically adjusts ticket fees so tickets purchases are more likely to be mined.)</b></p>
-			<p>Stop dcrticketbuyer if it is currently running and add the following to <b>ticketbuyer.conf</b>:</p>
-			<p>NOTE: As of v0.8.0, dcrticketbuyer has been integrated into dcrwallet and is no longer a standalone application. 
-				The following settings should instead be added to <b>dcrwallet.conf</b> and prefixed with "ticketbuyer." (e.g. maxpriceabsolute=35 becomes ticketbuyer.maxpriceabsolute=35)</p>
-	      		<p>maxpriceabsolute=35</p>
-			<p>pooladdress={{ .User.UserFeeAddr }}</p>
-			<p>poolfees={{ .PoolFees }}</p>
-			<p>ticketaddress={{ .User.MultiSigAddress }}</p>
-			<p>Unlock dcrwallet, start dcrticketbuyer, and it will automatically purchase stake tickets delegated to the pool address.</p>
-	      		<p>As of v0.8.0, the ticketbuyer will purchase tickets that meet the settings defined in dcrwallet.conf while dcrwallet is open and unlocked.</p>
+			<p><strong><u>Step 3</u></strong></p>
+			<p><strong>Option A - dcrwallet - Automatic purchasing</strong> (Recommended)</p>
+			<p>Stop dcrwallet if it is currently running and add the following to <strong>dcrwallet.conf</strong>:</p>
+<pre>
+enableticketbuyer=1
+pooladdress={{ .User.UserFeeAddr }}
+poolfees={{ .PoolFees }}
+ticketaddress={{ .User.MultiSigAddress }}
+ticketbuyer.maxpriceabsolute=58
+</pre>
+            <p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the pool address.</p>
+            <p>See <a href="https://docs.decred.org/mining/proof-of-stake/#automatic-purchasing-of-tickets" target="_blank">documentation</a> for more options.</p>
 
-			<p><b>Option B - dcrwallet - Automatic purchasing - Not recommended</b></p>
-			<p>Stop dcrwallet if it is currently running and and the following to <b>dcrwallet.conf</b>:</p>
-			<p>enablestakemining=1</p>
-			<p>pooladdress={{ .User.UserFeeAddr }}</p>
-			<p>poolfees={{ .PoolFees }}</p>
-			<p>promptpass=1</p>
-			<p>ticketaddress={{ .User.MultiSigAddress }}</p>
-			<p>ticketmaxprice=35</p>
-			<p>Start dcrwallet and it will prompt your for your password. After unlocking, stake tickets delegated to the pool address will automatically be purchased as long as funds are available.</p>
-
-			<p><b>Option C - dcrwallet - Manual purchasing - Not recommended</b></p>
-			<p>Start a wallet with funds available and manually purchase tickets with the following command using <b>dcrctl</b>:</p>
+			<p><strong>Option B - dcrwallet - Manual purchasing</strong> (Not recommended)</p>
+			<p>Start a wallet with funds available and manually purchase tickets with the following command using <strong>dcrctl</strong>:</p>
 			<p>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</p>
-			<div class="cmd"><pre>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 35 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre></div>
-			<p>Will purchase a ticket delegated to the pool and an address from the voting account using funds from the default account only if the current network price for a ticket is less than 35.0 coins.</p>
+<pre>
+dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 58 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre>
+			<p>Will purchase a ticket delegated to the pool and an address from the voting account using funds from the default account only if the current network price for a ticket is less than 58.0 coins.</p>
       </div>
     </div>
   </div>
@@ -93,10 +85,10 @@
         Live/Immature</a>
       </h4>
     </div>
-    <div id="collapse-livelist" class="panel-collapse collapse">
+    <div id="collapse-livelist" class="panel-collapse collapse {{if .TicketsLive }}in{{end}}">
       <div class="panel-body">
 			{{if not .TicketsLive}}
-			<p><span style="font-size: larger;"><b>No live tickets.</b></span></p>
+			<p><strong>No live tickets.</strong></p>
 			{{end}}
 			{{if .TicketsLive}}
 			<div class="table-responsive">
@@ -119,7 +111,7 @@
 			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsLive }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				<td>{{ $data.TicketHeight }}</td>
 				<td>{{ if eq $data.VoteBits 1 }}Yes{{end}}{{ if ne $data.VoteBits 1}}No{{end}}</td>
 				<td>{{ $data.VoteBits }}</td>
@@ -174,10 +166,10 @@
         Voted Tickets</a>
       </h4>
     </div>
-    <div id="collapse-votedlist" class="panel-collapse collapse">
+    <div id="collapse-votedlist" class="panel-collapse collapse {{if .TicketsVoted}}in{{end}}">
       <div class="panel-body">
 			{{if not .TicketsVoted}}
-			<p><span style="font-size: larger;"><b>No voted tickets.</b></span></p>
+			<p><strong>No voted tickets.</strong></p>
 			{{end}}
 			{{if .TicketsVoted}}
 			<div class="table-responsive">
@@ -198,8 +190,8 @@
 			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsVoted }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.SpentBy}}">{{$data.SpentByHeight}}</a></td>
+				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.SpentBy}}" target="_blank">{{$data.SpentByHeight}}</a></td>
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
 			</tbody>
@@ -222,7 +214,7 @@
     <div id="collapse-missedlist" class="panel-collapse collapse">
       <div class="panel-body">
 			{{if not .TicketsMissed}}
-			<p><span style="font-size: larger;"><b>No missed tickets.</b></span></p>
+			<p><strong>No missed tickets.</strong></p>
 			{{end}}
 			{{if .TicketsMissed}}
 			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool.</div>
@@ -244,7 +236,7 @@
 			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsMissed }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				<td>{{$data.SpentByHeight}}</td>
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
@@ -267,7 +259,7 @@
     <div id="collapse-invalidlist" class="panel-collapse collapse">
       <div class="panel-body">
 			{{if not .TicketsInvalid}}
-			<p><span style="font-size: larger;"><b>No tickets.</b></span></p>
+			<p><strong>No tickets.</strong></p>
 			{{end}}
 			{{if .TicketsInvalid}}
 			<div class="well well-notification orange-notification"><b>Alert!</b> Tickets appearing here did not pay the correct pool fee.
@@ -287,7 +279,7 @@
 			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsInvalid }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				</tr>{{end}}
 			</tbody>
 			</table>
