@@ -583,16 +583,17 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	for idx := range cfg.WalletCerts {
-		if _, err := os.Stat(cfg.WalletCerts[idx]); os.IsNotExist(err) {
-			if _, err := os.Stat(filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])); os.IsNotExist(err) {
+		if !fileExists(cfg.WalletCerts[idx]) {
+			path := filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])
+			if !fileExists(path) {
 				str := "%s: walletcert " + cfg.WalletCerts[idx] + " and " +
-					filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx]) + " don't exist"
+					path + " don't exist"
 				err := fmt.Errorf(str, funcName)
 				fmt.Fprintln(os.Stderr, err)
 				return nil, nil, err
 			}
 
-			cfg.WalletCerts[idx] = filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])
+			cfg.WalletCerts[idx] = path
 		}
 	}
 
@@ -604,8 +605,10 @@ func loadConfig() (*config, []string, error) {
 			return nil, nil, err
 		}
 
-		// Add default stakepoold port for the active network if there's no port specified
-		cfg.StakepooldHosts = normalizeAddresses(cfg.StakepooldHosts, activeNetParams.StakepooldRPCServerPort)
+		// Add default stakepoold port for the active network if there's
+		// no port specified
+		cfg.StakepooldHosts = normalizeAddresses(cfg.StakepooldHosts,
+			activeNetParams.StakepooldRPCServerPort)
 		if len(cfg.StakepooldHosts) < 2 {
 			str := "%s: you must specify at least 2 stakepooldhosts"
 			err := fmt.Errorf(str, funcName)
@@ -614,23 +617,28 @@ func loadConfig() (*config, []string, error) {
 		}
 
 		if len(cfg.StakepooldHosts) != len(cfg.StakepooldCerts) {
-			str := "%s: wallet configuration mismatch (stakepooldcerts and stakepooldhosts counts differ)"
+			str := "%s: wallet configuration mismatch " +
+				"(stakepooldcerts and stakepooldhosts " +
+				"counts differ)"
 			err := fmt.Errorf(str, funcName)
 			fmt.Fprintln(os.Stderr, err)
 			return nil, nil, err
 		}
 
 		for idx := range cfg.StakepooldCerts {
-			if _, err := os.Stat(cfg.StakepooldCerts[idx]); os.IsNotExist(err) {
-				if _, err := os.Stat(filepath.Join(dcrstakepoolHomeDir, cfg.StakepooldCerts[idx])); os.IsNotExist(err) {
-					str := "%s: stakepooldcert " + cfg.StakepooldCerts[idx] + " and " +
-						filepath.Join(dcrstakepoolHomeDir, cfg.StakepooldCerts[idx]) + " don't exist"
+			if !fileExists(cfg.StakepooldCerts[idx]) {
+				path := filepath.Join(dcrstakepoolHomeDir,
+					cfg.StakepooldCerts[idx])
+				if !fileExists(path) {
+					str := "%s: stakepooldcert " +
+						cfg.StakepooldCerts[idx] +
+						" and " + path + " don't exist"
 					err := fmt.Errorf(str, funcName)
 					fmt.Fprintln(os.Stderr, err)
 					return nil, nil, err
 				}
 
-				cfg.StakepooldCerts[idx] = filepath.Join(dcrstakepoolHomeDir, cfg.StakepooldCerts[idx])
+				cfg.StakepooldCerts[idx] = path
 			}
 		}
 	}

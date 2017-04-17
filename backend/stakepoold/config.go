@@ -512,28 +512,30 @@ func loadConfig() (*config, []string, error) {
 	cfg.DcrdHost = normalizeAddress(cfg.DcrdHost, activeNetParams.DcrdRPCServerPort)
 	cfg.WalletHost = normalizeAddress(cfg.WalletHost, activeNetParams.WalletRPCServerPort)
 
-	if _, err := os.Stat(cfg.DcrdCert); os.IsNotExist(err) {
-		if _, err := os.Stat(filepath.Join(stakepooldHomeDir, cfg.DcrdCert)); os.IsNotExist(err) {
+	if !fileExists(cfg.DcrdCert) {
+		path := filepath.Join(stakepooldHomeDir, cfg.DcrdCert)
+		if !fileExists(path) {
 			str := "%s: dcrdcert " + cfg.DcrdCert + " and " +
-				filepath.Join(stakepooldHomeDir, cfg.DcrdCert) + " don't exist"
+				path + " don't exist"
 			err := fmt.Errorf(str, funcName)
 			fmt.Fprintln(os.Stderr, err)
 			return nil, nil, err
 		}
 
-		cfg.DcrdCert = filepath.Join(stakepooldHomeDir, cfg.DcrdCert)
+		cfg.DcrdCert = path
 	}
 
-	if _, err := os.Stat(cfg.WalletCert); os.IsNotExist(err) {
-		if _, err := os.Stat(filepath.Join(stakepooldHomeDir, cfg.WalletCert)); os.IsNotExist(err) {
+	if !fileExists(cfg.WalletCert) {
+		path := filepath.Join(stakepooldHomeDir, cfg.WalletCert)
+		if !fileExists(path) {
 			str := "%s: walletcert " + cfg.WalletCert + " and " +
-				filepath.Join(stakepooldHomeDir, cfg.WalletCert) + " don't exist"
+				path + " don't exist"
 			err := fmt.Errorf(str, funcName)
 			fmt.Fprintln(os.Stderr, err)
 			return nil, nil, err
 		}
 
-		cfg.WalletCert = filepath.Join(stakepooldHomeDir, cfg.WalletCert)
+		cfg.WalletCert = path
 	}
 
 	// Set default listener to localhost

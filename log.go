@@ -37,22 +37,6 @@ var subsystemLoggers = map[string]btclog.Logger{
 	"SYTM": systemLog,
 }
 
-// logClosure is used to provide a closure over expensive logging operations
-// so don't have to be performed when the logging level doesn't warrant it.
-type logClosure func() string
-
-// String invokes the underlying function and returns the result.
-func (c logClosure) String() string {
-	return c()
-}
-
-// newLogClosure returns a new closure over a function that returns a string
-// which itself provides a Stringer interface so that it can be used with the
-// logging system.
-func newLogClosure(c func() string) logClosure {
-	return logClosure(c)
-}
-
 // useLogger updates the logger references for subsystemID to logger.  Invalid
 // subsystems are ignored.
 func useLogger(subsystemID string, logger btclog.Logger) {
@@ -134,11 +118,4 @@ func setLogLevels(logLevel string) {
 	for subsystemID := range subsystemLoggers {
 		setLogLevel(subsystemID, logLevel)
 	}
-}
-
-// fatalf logs a string, then cleanly exits.
-func fatalf(str string) {
-	log.Errorf("Unable to create profiler: %v", str)
-	backendLog.Flush()
-	os.Exit(1)
 }
