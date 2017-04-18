@@ -207,7 +207,6 @@ func walletFetchUserTickets(ctx *appContext) map[string]UserTickets {
 					} else {
 						tickets = append(tickets, hash)
 					}
-					break
 				}
 			}
 			if len(tickets) > 0 {
