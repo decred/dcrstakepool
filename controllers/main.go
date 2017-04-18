@@ -499,8 +499,8 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 // changed or if the stored VoteBits are somehow invalid.
 func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap, voteVersion uint32, voteInfo dcrjson.GetVoteInfoResult) {
 	defaultVoteBits := uint16(1)
-	userCount := models.GetUserCount(dbMap)
-	for userid := int64(1); userid <= userCount; userid++ {
+	userMax := models.GetUserMax(dbMap)
+	for userid := int64(1); userid <= userMax; userid++ {
 		// may have gaps due to users deleted from the database
 		user, err := models.GetUserById(dbMap, userid)
 		if err != nil {

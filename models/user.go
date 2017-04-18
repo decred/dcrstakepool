@@ -84,6 +84,16 @@ func GetUserCount(dbMap *gorp.DbMap) int64 {
 	return userCount
 }
 
+// GetUserMax gives the last userid
+func GetUserMax(dbMap *gorp.DbMap) int64 {
+	maxUserID, err := dbMap.SelectInt("SELECT MAX(Userid) FROM Users")
+	if err != nil {
+		return int64(0)
+	}
+
+	return maxUserID
+}
+
 // GetUserCountActive gives a count of all users who have submitted an address
 func GetUserCountActive(dbMap *gorp.DbMap) int64 {
 	userCountActive, err := dbMap.SelectInt("SELECT COUNT(*) FROM Users " +
