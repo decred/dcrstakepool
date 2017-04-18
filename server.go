@@ -198,6 +198,7 @@ func runMain() int {
 
 	// API
 	app.Handle("/api/v1/:command", application.APIHandler(controller.API))
+	app.Handle("/api/v2/:command", application.APIHandler(controller.API))
 	app.Handle("/api/*", gojify(system.APIInvalidHandler))
 
 	// Email change/update confirmation
