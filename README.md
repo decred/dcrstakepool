@@ -196,7 +196,7 @@ $ dcrwallet --create
 $ dcrwallet
 ```
 
-- Get the master pubkey from the default account.  This will be used for votingextpubkey in dcrstakepool.conf.
+- Get the master pubkey from the default account.  This will be used for votingwalletextpub in dcrstakepool.conf.
 
 ```bash
 $ dcrctl --wallet getmasterpubkey default
