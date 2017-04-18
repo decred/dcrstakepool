@@ -207,7 +207,7 @@ func (controller *MainController) API(c web.C, r *http.Request) *system.APIRespo
 		case "address":
 			_, code, response, err = controller.APIAddress(c, r)
 		case "voting":
-			_, code, response, err = controller.APIVotingPost(c, r)
+			_, code, response, err = controller.APIVoting(c, r)
 		default:
 			return nil
 		}
@@ -405,7 +405,7 @@ func (controller *MainController) APIStats(c web.C,
 }
 
 // APIVotingPost is the API version of VotingPost
-func (controller *MainController) APIVotingPost(c web.C, r *http.Request) ([]string, codes.Code, string, error) {
+func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string, codes.Code, string, error) {
 	dbMap := controller.GetDbMap(c)
 
 	if c.Env["APIUserID"] == nil {
