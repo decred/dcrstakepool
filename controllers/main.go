@@ -43,6 +43,11 @@ const signupEmailTemplate = "A request for an account for __URL__\r\n" +
 	"to verify your email address and finalize registration.\r\n\n"
 const signupEmailSubject = "Stake pool email verification"
 
+// MaxUsers is the maximum number of users supported by a stake pool.
+// This is an artificial limit and can be increased by adjusting the
+// ticket/fee address indexes above 10000.
+const MaxUsers = 10000
+
 // MainController is the wallet RPC controller type.  Its methods include the
 // route handlers.
 type MainController struct {
@@ -55,7 +60,7 @@ type MainController struct {
 	baseURL              string
 	closePool            bool
 	closePoolMsg         string
-	extPub               *hdkeychain.ExtendedKey
+	feeXpub              *hdkeychain.ExtendedKey
 	poolEmail            string
 	poolFees             float64
 	poolLink             string
@@ -71,6 +76,7 @@ type MainController struct {
 	version              string
 	voteInfo             dcrjson.GetVoteInfoResult
 	voteVersion          uint32
+	votingXpub           *hdkeychain.ExtendedKey
 }
 
 func randToken() string {
@@ -103,20 +109,31 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 // NewMainController is the constructor for the entire controller routing.
 func NewMainController(params *chaincfg.Params, adminIPs []string,
 	APISecret string, APIVersionsSupported []int, baseURL string,
-	closePool bool, closePoolMsg string, extPubStr string, poolEmail string,
+	closePool bool, closePoolMsg string, feeXpubStr string, poolEmail string,
 	poolFees float64, poolLink string, recaptchaSecret string,
 	recaptchaSiteKey string, smtpFrom string,
 	smtpHost string, smtpUsername string, smtpPassword string, version string,
 	walletHosts []string, walletCerts []string, walletUsers []string,
 	walletPasswords []string, minServers int, realIPHeader string,
-	voteInfo dcrjson.GetVoteInfoResult, voteVersion uint32) (*MainController, error) {
+	votingXpubStr string, voteInfo dcrjson.GetVoteInfoResult,
+	voteVersion uint32) (*MainController, error) {
+
 	// Parse the extended public key and the pool fees.
-	key, err := hdkeychain.NewKeyFromString(extPubStr)
+	feeKey, err := hdkeychain.NewKeyFromString(feeXpubStr)
 	if err != nil {
 		return nil, err
 	}
-	if !key.IsForNet(params) {
-		return nil, fmt.Errorf("extended public key is for wrong network")
+	if !feeKey.IsForNet(params) {
+		return nil, fmt.Errorf("fee extended public key is for wrong network")
+	}
+
+	// Parse the extended public key for the voting addresses.
+	voteKey, err := hdkeychain.NewKeyFromString(votingXpubStr)
+	if err != nil {
+		return nil, err
+	}
+	if !voteKey.IsForNet(params) {
+		return nil, fmt.Errorf("voting extended public key is for wrong network")
 	}
 
 	rpcs, err := newWalletSvrManager(walletHosts, walletCerts, walletUsers, walletPasswords, minServers)
@@ -131,7 +148,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		baseURL:              baseURL,
 		closePool:            closePool,
 		closePoolMsg:         closePoolMsg,
-		extPub:               key,
+		feeXpub:              feeKey,
 		poolEmail:            poolEmail,
 		poolFees:             poolFees,
 		poolLink:             poolLink,
@@ -147,6 +164,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		version:              version,
 		voteInfo:             voteInfo,
 		voteVersion:          voteVersion,
+		votingXpub:           voteKey,
 	}
 
 	return mc, nil
@@ -413,6 +431,8 @@ func (controller *MainController) APIVotingPost(c web.C, r *http.Request) ([]str
 		return nil, codes.Internal, "voting error", errors.New("failed to update voting prefs in database")
 	}
 
+	// TODO should notify stakepoold via gRPC to update user/voting config
+
 	log.Infof("updated voteBits for user %d from %d to %d",
 		user.Id, oldVoteBits, userVoteBits)
 
@@ -458,11 +478,41 @@ func (controller *MainController) SendMail(emailaddress string, subject string, 
 // fees for an individual pool user.
 func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 	error) {
-	if uint32(uid+1) > udb.MaxAddressesPerAccount {
+	if uint32(uid+1) > MaxUsers {
 		return nil, fmt.Errorf("bad uid index %v", uid)
 	}
 
-	acctKey := controller.extPub
+	acctKey := controller.feeXpub
+	index := uint32(uid)
+
+	// Derive the appropriate branch key
+	branchKey, err := acctKey.Child(udb.ExternalBranch)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := branchKey.Child(index)
+	if err != nil {
+		return nil, err
+	}
+
+	addr, err := key.Address(controller.params)
+	if err != nil {
+		return nil, err
+	}
+
+	return addr, nil
+}
+
+// TicketAddressForUserID generates a unique ticket address per used ID for
+// generating the 1-of-2 multisig.
+func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Address,
+	error) {
+	if uint32(uid+1) > MaxUsers {
+		return nil, fmt.Errorf("bad uid index %v", uid)
+	}
+
+	acctKey := controller.votingXpub
 	index := uint32(uid)
 
 	// Derive the appropriate branch key
@@ -591,7 +641,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	}
 
 	c.Env["IsAddress"] = true
-	c.Env["Network"] = controller.params.Name
+	c.Env["Network"] = controller.getNetworkName()
 
 	c.Env["Flash"] = session.Flashes("address")
 	widgets := controller.Parse(t, "address", c.Env)
@@ -610,6 +660,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
 	}
+	uid64 := session.Values["UserId"].(int64)
 
 	// Only accept address if user does not already have a PubKeyAddr set.
 	dbMap := controller.GetDbMap(c)
@@ -646,14 +697,12 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return controller.Address(c, r)
 	}
 
-	// Get new address from pool wallets
-	if controller.RPCIsStopped() {
-		return "/error", http.StatusSeeOther
-	}
-	pooladdress, err := controller.rpcServers.GetNewAddress()
+	// Get the ticket address for this user
+	pooladdress, err := controller.TicketAddressForUserID(int(uid64))
 	if err != nil {
-		controller.handlePotentialFatalError("GetNewAddress", err)
-		return "/error", http.StatusSeeOther
+		log.Errorf("unexpected error deriving ticket addr: %s", err.Error())
+		session.AddFlash("Unable to derive ticket address", "address")
+		return controller.Address(c, r)
 	}
 
 	// From new address (pkh), get pubkey address
@@ -664,6 +713,12 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	if err != nil {
 		controller.handlePotentialFatalError("ValidateAddress pooladdress", err)
 		return "/error", http.StatusSeeOther
+	}
+	if !poolValidateAddress.IsMine {
+		log.Errorf("unable to validate ismine for pool ticket addr: %s",
+			err.Error())
+		session.AddFlash("Unable to validate pool ticket address", "address")
+		return controller.Address(c, r)
 	}
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
@@ -710,11 +765,11 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// Get the pool fees address for this user
-	uid64 := session.Values["UserId"].(int64)
 	userFeeAddr, err := controller.FeeAddressForUserID(int(uid64))
 	if err != nil {
-		log.Warnf("unexpected error deriving pool addr: %s", err.Error())
-		return "/error", http.StatusSeeOther
+		log.Errorf("unexpected error deriving fee addr: %s", err.Error())
+		session.AddFlash("Unable to derive fee address", "address")
+		return controller.Address(c, r)
 	}
 
 	// Update the user's DB entry with multisig, user and pool pubkey
@@ -1403,6 +1458,8 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 		session.AddFlash("A verification email has been sent to "+email, "signupSuccess")
 	}
 
+	// TODO should notify stakepoold via gRPC to update user/voting config
+
 	return controller.SignUp(c, r)
 }
 
@@ -1759,6 +1816,8 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 		session.AddFlash("unable to save new voting preferences", "votingError")
 		return "/voting", http.StatusSeeOther
 	}
+
+	// TODO should notify stakepoold via gRPC to update user/voting config
 
 	log.Infof("updated voteBits for user %d from %d to %d",
 		user.Id, oldVoteBits, generatedVoteBits)

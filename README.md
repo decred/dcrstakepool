@@ -7,6 +7,8 @@ vote on the user's behalf.
 
 ## Version History
 - 1.1.0 - Work-In-Progress migration of voting from dcrwallet to stakepoold.
+  * Addresses for generating the 1-of-2 multisig for the ticket address are now
+    derived from votingwalletextpub rather than calling getnewaddress.
   * Setting individual votebits on tickets has been removed in favor of setting
     a global voting preference per stake version that is used by a voting daemon
     called stakepoold.  This is currently wrapped behind the enablestakepoold
@@ -190,6 +192,12 @@ $ dcrwallet --create
 
 ```bash
 $ dcrwallet
+```
+
+- Get the master pubkey from the default account.  This will be used for votingextpubkey in dcrstakepool.conf.
+
+```bash
+$ dcrctl --wallet getmasterpubkey default
 ```
 
 #### MySQL

@@ -1271,12 +1271,20 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 		Height int
 	}
 
-	// Fetch the address indexes and redeem scripts from
-	// each server.
-	addrIdxExts := make([]int, wsm.serversLen)
-	var bestAddrIdxExt int
-	addrIdxInts := make([]int, wsm.serversLen)
-	var bestAddrIdxInt int
+	for i := range wsm.servers {
+		if wsm.servers[i] == nil {
+			continue
+		}
+		// Set watched address index to MaxUsers so all generated ticket
+		// addresses show as 'ismine'.
+		err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
+			udb.ExternalBranch, MaxUsers)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Fetch the redeem scripts from each server.
 	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
 		wsm.serversLen)
 	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
@@ -1290,37 +1298,15 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 		}
 		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
 	}
-	// Go through each server and see who is synced to the longest
-	// address indexes and and the most redeemscripts.
-	log.Info("Getting address index and importscript information from wallets.")
+	// Go through each server and see who is synced to the most redeemscripts.
+	log.Info("Getting importscript information from wallets")
 	for i := range wsm.servers {
 		if wsm.servers[i] == nil {
 			continue
 		}
-		addrIdxExt, err := wsm.servers[i].AccountAddressIndex("default",
-			udb.ExternalBranch)
-		if err != nil {
-			return err
-		}
-		addrIdxInt, err := wsm.servers[i].AccountAddressIndex("default",
-			udb.InternalBranch)
-		if err != nil {
-			return err
-		}
 		redeemScripts, err := wsm.servers[i].ListScripts()
 		if err != nil {
 			return err
-		}
-		log.Infof("wallet %d addrIdxExt %d addrIdxInt %d",
-			i, addrIdxExt, addrIdxInt)
-
-		addrIdxExts[i] = addrIdxExt
-		addrIdxInts[i] = addrIdxInt
-		if addrIdxExt > bestAddrIdxExt {
-			bestAddrIdxExt = addrIdxExt
-		}
-		if addrIdxInt > bestAddrIdxInt {
-			bestAddrIdxInt = addrIdxInt
 		}
 
 		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
@@ -1332,38 +1318,15 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 			}
 		}
 	}
-	log.Infof("bestAddrIdxExt %d bestAddrIdxInt %d",
-		bestAddrIdxExt, bestAddrIdxInt)
 
 	// Synchronize the address indexes if needed, then synchronize the
 	// redeemscripts. Ignore the errors when importing scripts and
 	// assume it'll just skip reimportation if it already has it.
-	log.Info("Syncing wallets' redeem scripts and setting address indexes.")
+	log.Info("Syncing wallets' redeem scripts")
 	desynced := false
 	for i := range wsm.servers {
 		if wsm.servers[i] == nil {
 			continue
-		}
-		// Sync address indexes.
-		if addrIdxExts[i] < bestAddrIdxExt {
-			log.Infof("calling AccountSyncAddressIndex on wallet %d with args %v %v %v",
-				i, defaultAccountName, udb.ExternalBranch, bestAddrIdxExt)
-			err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
-				udb.ExternalBranch, bestAddrIdxExt)
-			if err != nil {
-				return err
-			}
-			log.Infof("Expected external address index for wallet %v is desynced. Got %v Want %v", i, addrIdxExts[i], bestAddrIdxExt)
-			desynced = true
-		}
-		if addrIdxInts[i] < bestAddrIdxInt {
-			err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
-				udb.InternalBranch, bestAddrIdxInt)
-			if err != nil {
-				return err
-			}
-			log.Infof("Expected internal address index for wallet %v is desynced. Got %v Want %v", i, addrIdxInts[i], bestAddrIdxInt)
-			desynced = true
 		}
 
 		// Sync redeemscripts.
@@ -1380,9 +1343,11 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 		}
 	}
 
-	// If we had to sync the address indexes, we might be missing
-	// some tickets. Scan for the tickets now and try to import any
-	// that another wallet may be missing.
+	// If we had to sync then we might be missing some tickets.
+	// Scan for the tickets now and try to import any that another wallet may
+	// be missing.
+	// TODO we should block until the rescans triggered by importing the scripts
+	// have been completed.
 	if desynced {
 		log.Infof("desynced had been detected, now attempting to " +
 			"resync all tickets acrosss each wallet.")

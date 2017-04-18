@@ -161,7 +161,7 @@ func runMain() int {
 		cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
 		cfg.Version, cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers,
 		cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader,
-		voteInfo, voteVersion)
+		cfg.VotingWalletExtPub, voteInfo, voteVersion)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to initialize the main controller: %v",
