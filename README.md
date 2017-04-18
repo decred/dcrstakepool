@@ -67,6 +67,8 @@ vote on the user's behalf.
 
 ## v1.1.0 Migration Guide (Work-In-Progress/Subject To Change)
 
+- Set votingwalletextpub in dcrstakepool.conf by getting the masterpubkey from
+  the default account on a voting wallet per the instructions below.
 - Start dcrstakepool without any stakepoold options set. VoteBits and VoteBitsVersion
   columns will be added to MySQL.
 - Ensure that dcrstakepool is functioning normally.
