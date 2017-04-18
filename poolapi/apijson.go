@@ -13,11 +13,12 @@ type Response struct {
 // TODO: make JSON tags lower-case and add "_" between words
 
 type PurchaseInfo struct {
-	PoolAddress   string  `json:"PoolAddress"`
-	PoolFees      float64 `json:"PoolFees"`
-	Script        string  `json:"Script"`
-	TicketAddress string  `json:"TicketAddress"`
-	VoteBits      uint16  `json:"VoteBits"`
+	PoolAddress     string  `json:"PoolAddress"`
+	PoolFees        float64 `json:"PoolFees"`
+	Script          string  `json:"Script"`
+	TicketAddress   string  `json:"TicketAddress"`
+	VoteBits        uint16  `json:"VoteBits"`
+	VoteBitsVersion uint32  `json:"VoteBitsVersion"`
 }
 
 type Stats struct {
