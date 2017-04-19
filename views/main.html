@@ -26,6 +26,7 @@
 	{{if .User}}<li {{if .IsSettings }}class="active"{{end}}><a href="/settings">Settings</a></li>{{end}}
 	{{if .IsStatus}}<li class="active"><a href="/status">Status</a></li>{{end}}
 	{{if .User}}{{if .User.MultiSigAddress}}<li {{if .IsTickets }}class="active"{{end}}><a href="/tickets">Tickets</a></li>{{end}}{{end}}
+  {{if .User}}{{if .User.MultiSigAddress}}<li {{if .IsVoting }}class="active"{{end}}><a href="/voting">Voting</a></li>{{end}}{{end}}
       </ul>
 {{if .User}}
       <ul class="nav navbar-nav navbar-right">

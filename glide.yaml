@@ -3,16 +3,15 @@ import:
 - package: github.com/btcsuite/btclog
 - package: github.com/btcsuite/go-flags
 - package: github.com/btcsuite/seelog
+- package: github.com/davecgh/go-spew
+  subpackages:
+  - spew
 - package: github.com/decred/dcrd
   subpackages:
-  - addrmgr
-  - blockchain
   - blockchain/stake
   - chaincfg
   - chaincfg/chainhash
-  - database
   - dcrjson
-  - txscript
   - wire
 - package: github.com/decred/dcrrpcclient
 - package: github.com/decred/dcrutil
@@ -20,8 +19,13 @@ import:
   - hdkeychain
 - package: github.com/decred/dcrwallet
   subpackages:
-  - waddrmgr
+  - wallet/udb
+- package: github.com/dgrijalva/jwt-go
+- package: github.com/go-gorp/gorp
 - package: github.com/go-sql-driver/mysql
+- package: github.com/golang/protobuf
+  subpackages:
+  - proto
 - package: github.com/gorilla/context
 - package: github.com/gorilla/sessions
 - package: github.com/haisum/recaptcha
@@ -33,6 +37,11 @@ import:
 - package: golang.org/x/crypto
   subpackages:
   - bcrypt
-- package: github.com/dgrijalva/jwt-go
-- package: github.com/go-gorp/gorp
-  version: c87af80f3cc5036b55b83d77171e156791085e2e
+- package: golang.org/x/net
+  subpackages:
+  - context
+- package: google.golang.org/grpc
+  subpackages:
+  - codes
+  - credentials
+  - grpclog

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package stakepoolrpc;
+
+service VersionService {
+	rpc Version (VersionRequest) returns (VersionResponse);
+}
+
+service VoteOptionsConfigService {
+	rpc VoteOptionsConfig (VoteOptionsConfigRequest) returns (VoteOptionsConfigResponse);
+}
+
+message VersionRequest {}
+message VersionResponse {
+	string version_string = 1;
+	uint32 major = 2;
+	uint32 minor = 3;
+	uint32 patch = 4;
+	string prerelease = 5;
+	string build_metadata = 6;
+}
+
+message VoteOptionsConfigRequest {}
+message VoteOptionsConfigResponse {
+	string VoteInfo = 1;
+	uint32 VoteVersion = 2;
+}
