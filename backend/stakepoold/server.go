@@ -136,6 +136,8 @@ func runMain() int {
 	cfg = loadedCfg
 	dataPath := filepath.Join(cfg.DataDir, "data.json")
 
+	defer backendLog.Flush()
+
 	log.Infof("Version: %s", version())
 	log.Infof("Network: %s", activeNetParams.Params.Name)
 
@@ -152,8 +154,6 @@ func runMain() int {
 		log.Errorf("Error calculating fee payment addresses: %v", err)
 		return 2
 	}
-
-	defer backendLog.Flush()
 
 	dcrrpcclient.UseLogger(clientLog)
 
