@@ -99,24 +99,18 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 				<tr>
 					<th>Ticket</th>
 					<th>TicketHeight</th>
-					<th>Pool Control</th>
-					<th>Votebits</th>
 				</tr>
 			</thead>
 			<tfoot>
 				<tr>
 					<th>Ticket</th>
 					<th>TicketHeight</th>
-					<th>Pool Control</th>
-					<th>Votebits</th>
 				</tr>
 			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsLive }}<tr>
 				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				<td>{{ $data.TicketHeight }}</td>
-				<td>{{ if eq $data.VoteBits 1 }}Yes{{end}}{{ if ne $data.VoteBits 1}}No{{end}}</td>
-				<td>{{ $data.VoteBits }}</td>
 				</tr>{{end}}
 			</tbody>
 			</table>

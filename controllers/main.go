@@ -1598,7 +1598,6 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	type TicketInfoLive struct {
 		Ticket       string
 		TicketHeight uint32
-		VoteBits     uint16
 	}
 
 	ticketInfoInvalid := map[int]TicketInfoInvalid{}
