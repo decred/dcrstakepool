@@ -9,47 +9,30 @@
   <div class="col-sm-15 col-md-10 text-left center-block">
     <h1>Voting Preferences (v{{.VoteVersion}})</h1>
 
-    <p><strong>Current VoteBits:</strong></p>
-    <pre>{{.User.VoteBits}}</pre>
     <hr />
 
     <!-- AGENDAS -->
     <h2>Agendas</h2>
     <form method="post" class="form-horizontal">
 	    <div class="form-group">
-	      <label class="control-label col-sm-2" for="lastblockvalid"
-          title="Whether or not the last block was valid.  In the future, this value will be configurable once a policy engine has been written.">Last Block Valid</label>
+	      <label class="control-label col-sm-2" for="lastblockvalid">Last Block Valid - Whether or not the last block was valid.</label>
 	      <div class="col-sm-13">
 	        <select class="form-control" name="lastblockvalid" id="lastblockvalid" disabled><option value=1>Yes</option></select>
 	      </div>
 	    </div>
       {{if .Agendas}}
-        {{ $selected := 0 }}
-        {{ $agendachoices := .AgendaChoices }}
         {{ range $i, $data := .Agendas }}
-          {{ range $agendanum, $agendachoice := $agendachoices}}
-            {{if eq $agendanum $i}}
-              {{ $selected := $agendachoice }}
-            {{end}}
-          {{ end }}
           <div class="form-group">
-            <label class="control-label col-sm-2" for="agenda{{$i}}" title="{{ $data.Description }}">{{$data.Id}}</label>
+            <label class="control-label col-sm-2" for="agenda{{$i}}">{{$data.Id}} - {{$data.Description}}</label>
             <div class="col-sm-13">
               <select class="form-control" name="agenda{{$i}}" id="{{ $data.Id }}">
                 {{ range $j, $choicesdata := $data.Choices}}
-                  {{ $choice := $choicesdata.Bits }}
-                  {{ $desc := $choicesdata.Description }}
-                  <option value="{{$choicesdata.Bits}}"
-                  {{if eq $choice $selected}}
-                    selected>{{$desc}}</option>
-                  {{else}}
-                    >{{$desc}}</option>
-                  {{end}}
+                  <option value="{{$choicesdata.Bits}}"{{if eq $choicesdata.Selected 1}} selected{{end}}>{{$choicesdata.Description}}</option>
                 {{end}}
               </select>
             </div>
           </div>
-          {{end}}
+        {{end}}
       {{end}}
 	    <div class="form-group">
          <button id="updateVoting" name="updateVoting" class="btn btn-primary">Update Voting Preferences</button>
