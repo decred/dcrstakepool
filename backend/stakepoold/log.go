@@ -10,9 +10,7 @@ import (
 
 	"github.com/btcsuite/btclog"
 	"github.com/btcsuite/seelog"
-	"github.com/decred/dcrstakepool/controllers"
-	"github.com/decred/dcrstakepool/models"
-	"github.com/decred/dcrstakepool/system"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 )
 
 // Loggers per subsytem.  Note that backendLog is a seelog logger that all of
@@ -20,21 +18,17 @@ import (
 // add a reference here, to the subsystemLoggers map, and the useLogger
 // function.
 var (
-	backendLog     = seelog.Disabled
-	controllersLog = btclog.Disabled
-	grpcLog        = btclog.Disabled
-	log            = btclog.Disabled
-	modelsLog      = btclog.Disabled
-	systemLog      = btclog.Disabled
+	backendLog = seelog.Disabled
+	clientLog  = btclog.Disabled
+	grpcLog    = btclog.Disabled
+	log        = btclog.Disabled
 )
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
 var subsystemLoggers = map[string]btclog.Logger{
-	"DCRS": log,
-	"CNTL": controllersLog,
+	"RPCC": clientLog,
 	"GRPC": grpcLog,
-	"MODL": modelsLog,
-	"SYTM": systemLog,
+	"STPK": log,
 }
 
 // logClosure is used to provide a closure over expensive logging operations
@@ -62,17 +56,13 @@ func useLogger(subsystemID string, logger btclog.Logger) {
 	subsystemLoggers[subsystemID] = logger
 
 	switch subsystemID {
-	case "DCRS":
+	case "STPK":
 		log = logger
-	case "CNTL":
-		controllersLog = logger
-		controllers.UseLogger(logger)
-	case "MODL":
-		modelsLog = logger
-		models.UseLogger(logger)
-	case "SYTM":
-		systemLog = logger
-		system.UseLogger(logger)
+	case "GRPC":
+		grpcLog = logger
+		rpcserver.UseLogger(logger)
+	case "RPCC":
+		clientLog = logger
 	}
 }
 
@@ -87,7 +77,7 @@ func initSeelogLogger(logFile string) {
                         <rollingfile type="size" filename="%s" maxsize="10485760" maxrolls="3" />
                 </outputs>
                 <formats>
-                        <format id="all" format="%%Time %%Date [%%LEV] %%Msg%%n" />
+                        <format id="all" format="%%Date(15:04:05.00 2006-01-02) [%%LEV] %%Msg%%n" />
                 </formats>
         </seelog>`
 	config = fmt.Sprintf(config, logFile)
@@ -141,4 +131,13 @@ func fatalf(str string) {
 	log.Errorf("Unable to create profiler: %v", str)
 	backendLog.Flush()
 	os.Exit(1)
+}
+
+// pickNoun returns the singular or plural form of a noun depending
+// on the count n.
+func pickNoun(n int, singular, plural string) string {
+	if n == 1 {
+		return singular
+	}
+	return plural
 }

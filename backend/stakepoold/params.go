@@ -18,8 +18,9 @@ var activeNetParams = &mainNetParams
 // network and test networks.
 type params struct {
 	*chaincfg.Params
-	StakepooldRPCServerPort string
-	WalletRPCServerPort     string
+	DcrdRPCServerPort   string
+	RPCServerPort       string
+	WalletRPCServerPort string
 }
 
 // mainNetParams contains parameters specific to the main network
@@ -29,27 +30,29 @@ type params struct {
 // it does not handle on to dcrd.  This approach allows the wallet process
 // to emulate the full reference implementation RPC API.
 var mainNetParams = params{
-	Params:                  &chaincfg.MainNetParams,
-	StakepooldRPCServerPort: "9113",
-	WalletRPCServerPort:     "9110",
+	Params:              &chaincfg.MainNetParams,
+	DcrdRPCServerPort:   "9109",
+	RPCServerPort:       "9113",
+	WalletRPCServerPort: "9110",
 }
 
 // testNet2Params contains parameters specific to the test network (version 0)
 // (wire.TestNet).  NOTE: The RPC port is intentionally different than the
 // reference implementation - see the mainNetParams comment for details.
-
 var testNet2Params = params{
-	Params:                  &chaincfg.TestNet2Params,
-	StakepooldRPCServerPort: "19113",
-	WalletRPCServerPort:     "19110",
+	Params:              &chaincfg.TestNet2Params,
+	DcrdRPCServerPort:   "19109",
+	RPCServerPort:       "19113",
+	WalletRPCServerPort: "19110",
 }
 
 // simNetParams contains parameters specific to the simulation test network
 // (wire.SimNet).
 var simNetParams = params{
-	Params:                  &chaincfg.SimNetParams,
-	StakepooldRPCServerPort: "19560",
-	WalletRPCServerPort:     "19557",
+	Params:              &chaincfg.SimNetParams,
+	DcrdRPCServerPort:   "19556",
+	RPCServerPort:       "19560",
+	WalletRPCServerPort: "19557",
 }
 
 // netName returns the name used when referring to a decred network.  At the

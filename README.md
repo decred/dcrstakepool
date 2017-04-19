@@ -1,9 +1,18 @@
 dcrstakepool
 ====
 
-dcrstakepool is a minimalist web application which provides a method for allowing users to purchase tickets and have a pool of wallet servers redeem and vote on the user's behalf.
+dcrstakepool is a minimalist web application which provides a method for
+allowing users to purchase tickets and have a pool of wallet servers redeem and
+vote on the user's behalf.
 
 ## Version History
+- 1.1.0 - Work-In-Progress migration of voting from dcrwallet to stakepoold.
+  * Addresses for generating the 1-of-2 multisig for the ticket address are now
+    derived from votingwalletextpub rather than calling getnewaddress.
+  * Setting individual votebits on tickets has been removed in favor of setting
+    a global voting preference per stake version that is used by a voting daemon
+    called stakepoold.  This is currently wrapped behind the enablestakepoold
+    option and is only available on testnet.
 - 1.0.0 - Major changes/improvements.
   * API is now at v1 status.  API Tokens are generated for all users with a
     verified email address when upgrading.  Tokens are generated for new
@@ -46,6 +55,31 @@ dcrstakepool is a minimalist web application which provides a method for allowin
   * User instructions on the address and ticket pages were updated.
   * SpentBy link added to the voted tickets display.
 - 0.0.1 - Initial release for mainnet operations
+
+## v1.1.0 Architecture
+
+![Stake Pool Architecture](https://i.imgur.com/2JDA9dl.png)
+
+- It is highly recommended to use 3 dcrd+dcrwallet+stakepoold nodes for
+  production use on mainnet.
+- The architecture is subject to change more in the future to lessen the
+  dependence on dcrwallet and MySQL.
+
+## v1.1.0 Migration Guide (Work-In-Progress/Subject To Change)
+
+- Set votingwalletextpub in dcrstakepool.conf by getting the masterpubkey from
+  the default account on a voting wallet per the instructions below.
+- Start dcrstakepool without any stakepoold options set. VoteBits and VoteBitsVersion
+  columns will be added to MySQL.
+- Ensure that dcrstakepool is functioning normally.
+- Enable MySQL access from the stakepoold hosts.
+- Configure stakepoold by editing stakepoold.conf.  You should place stakepoold
+  on the same server as dcrd/dcrwallet so stakepoold can talk to them via loopback
+  to lower latency as much as possible.
+- Copy stakepoold certs to the dcrstakepool server and set
+  enablestakepoold=true, stakepooldhosts, stakepooldcerts.
+- Once stakepoold is running to your satisfaction, disable enablevoting=1 in
+  dcrwallet.conf and restart dcrwallet.
 
 ## Requirements
 
@@ -90,6 +124,14 @@ $ glide install
 ```bash
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ go build
+$ ./dcrstakepool
+```
+
+- Build stakepoold and copy it to your voting nodes:
+
+```bash
+$ cd $GOPATH/src/github.com/decred/dcrstakepool/backend/stakepoold
+$ go build
 ```
 
 ## Updating
@@ -101,6 +143,8 @@ matching dependencies:
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ git pull
 $ glide install
+$ go build
+$ cd $GOPATH/src/github.com/decred/dcrstakepool/backend/stakepoold
 $ go build
 ```
 
@@ -152,6 +196,12 @@ $ dcrwallet --create
 $ dcrwallet
 ```
 
+- Get the master pubkey from the default account.  This will be used for votingwalletextpub in dcrstakepool.conf.
+
+```bash
+$ dcrctl --wallet getmasterpubkey default
+```
+
 #### MySQL
 
 - Install, configure, and start MySQL
@@ -179,7 +229,6 @@ $ mkdir ~/.dcrstakepool
 $ cd ~/.dcrstakepool
 $ scp walletserver1:~/.dcrwallet/rpc.cert wallet1.cert
 $ scp walletserver2:~/.dcrwallet/rpc.cert wallet2.cert
-$ scp walletserver3:~/.dcrwallet/rpc.cert wallet3.cert
 ```
 
 - Copy sample config and edit appropriately
@@ -217,6 +266,14 @@ If you are modifying templates, sending the USR1 signal to the dcrstakepool proc
 
 - User API Tokens have an issuer field set to baseURL from the configuration file.
   Changing the baseURL requires all API Tokens to be re-generated.
+
+## Adding Invalid Tickets
+
+If a user pays an incorrect fee you may add their tickets like so (requires dcrd running with txindex=1):
+
+```bash
+dcrctl --wallet stakepooluserinfo "MultiSigAddress" | grep -Pzo '(?<="invalid": \[)[^\]]*' | tr -d , | xargs -Itickethash dcrctl --wallet getrawtransaction tickethash | xargs -Itickethex dcrctl --wallet addticket "tickethex"
+```
 
 ## Backups, monitoring, security considerations
 

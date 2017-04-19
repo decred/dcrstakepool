@@ -11,11 +11,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/decred/dcrstakepool/codes"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/go-gorp/gorp"
 	"github.com/gorilla/sessions"
 	"github.com/zenazn/goji/web"
+
+	"google.golang.org/grpc/codes"
 )
 
 // CSRF token constants
