@@ -30,15 +30,16 @@ const (
 )
 
 var (
-	stakepooldHomeDir  = dcrutil.AppDataDir("stakepoold", false)
-	defaultDBName      = "stakepool"
-	defaultDBPort      = "3306"
-	defaultDBUser      = "stakepool"
-	defaultRPCKeyFile  = filepath.Join(stakepooldHomeDir, "rpc.key")
-	defaultRPCCertFile = filepath.Join(stakepooldHomeDir, "rpc.cert")
-	defaultConfigFile  = filepath.Join(stakepooldHomeDir, defaultConfigFilename)
-	defaultDataDir     = filepath.Join(stakepooldHomeDir, defaultDataDirname)
-	defaultLogDir      = filepath.Join(stakepooldHomeDir, defaultLogDirname)
+	defaultHomeDir     = dcrutil.AppDataDir("stakepoold", false)
+	defaultConfigFile  = filepath.Join(defaultHomeDir, defaultConfigFilename)
+	defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
+	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
+	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
+	defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
+
+	defaultDBName = "stakepool"
+	defaultDBPort = "3306"
+	defaultDBUser = "stakepool"
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -49,6 +50,7 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
+	HomeDir          string  `short:"A" long:"appdata" description:"Path to application home directory"`
 	ShowVersion      bool    `short:"V" long:"version" description:"Display version information and exit"`
 	ConfigFile       string  `short:"C" long:"configfile" description:"Path to configuration file"`
 	DataDir          string  `short:"b" long:"datadir" description:"Directory to store data"`
@@ -91,7 +93,7 @@ type serviceOptions struct {
 func cleanAndExpandPath(path string) string {
 	// Expand initial ~ to OS specific home directory.
 	if strings.HasPrefix(path, "~") {
-		homeDir := filepath.Dir(stakepooldHomeDir)
+		homeDir := filepath.Dir(defaultHomeDir)
 		path = strings.Replace(path, "~", homeDir, 1)
 	}
 
@@ -252,6 +254,7 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
+		HomeDir:    defaultHomeDir,
 		ConfigFile: defaultConfigFile,
 		DebugLevel: defaultLogLevel,
 		DataDir:    defaultDataDir,
@@ -302,13 +305,44 @@ func loadConfig() (*config, []string, error) {
 		os.Exit(0)
 	}
 
+	// Update the home directory for stakepoold if specified. Since the
+	// home directory is updated, other variables need to be updated to
+	// reflect the new changes.
+	if preCfg.HomeDir != "" {
+		cfg.HomeDir, _ = filepath.Abs(preCfg.HomeDir)
+
+		if preCfg.ConfigFile == defaultConfigFile {
+			cfg.ConfigFile = filepath.Join(cfg.HomeDir, defaultConfigFilename)
+		} else {
+			cfg.ConfigFile = preCfg.ConfigFile
+		}
+		if preCfg.DataDir == defaultDataDir {
+			cfg.DataDir = filepath.Join(cfg.HomeDir, defaultDataDirname)
+		} else {
+			cfg.DataDir = preCfg.DataDir
+		}
+		if preCfg.RPCKey == defaultRPCKeyFile {
+			cfg.RPCKey = filepath.Join(cfg.HomeDir, "rpc.key")
+		} else {
+			cfg.RPCKey = preCfg.RPCKey
+		}
+		if preCfg.RPCCert == defaultRPCCertFile {
+			cfg.RPCCert = filepath.Join(cfg.HomeDir, "rpc.cert")
+		} else {
+			cfg.RPCCert = preCfg.RPCCert
+		}
+		if preCfg.LogDir == defaultLogDir {
+			cfg.LogDir = filepath.Join(cfg.HomeDir, defaultLogDirname)
+		} else {
+			cfg.LogDir = preCfg.LogDir
+		}
+	}
+
 	// Load additional config from file.
 	var configFileError error
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
-	if !(preCfg.SimNet) || preCfg.ConfigFile !=
-		defaultConfigFile {
-
-		err := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
+	if !(preCfg.SimNet) || cfg.ConfigFile != defaultConfigFile {
+		err := flags.NewIniParser(parser).ParseFile(cfg.ConfigFile)
 		if err != nil {
 			if _, ok := err.(*os.PathError); !ok {
 				fmt.Fprintf(os.Stderr, "Error parsing config "+
@@ -331,7 +365,7 @@ func loadConfig() (*config, []string, error) {
 
 	// Create the home directory if it doesn't already exist.
 	funcName := "loadConfig"
-	err = os.MkdirAll(stakepooldHomeDir, 0700)
+	err = os.MkdirAll(defaultHomeDir, 0700)
 	if err != nil {
 		// Show a nicer error message if it's because a symlink is
 		// linked to a directory that does not exist (probably because
@@ -513,7 +547,7 @@ func loadConfig() (*config, []string, error) {
 	cfg.WalletHost = normalizeAddress(cfg.WalletHost, activeNetParams.WalletRPCServerPort)
 
 	if !fileExists(cfg.DcrdCert) {
-		path := filepath.Join(stakepooldHomeDir, cfg.DcrdCert)
+		path := filepath.Join(cfg.HomeDir, cfg.DcrdCert)
 		if !fileExists(path) {
 			str := "%s: dcrdcert " + cfg.DcrdCert + " and " +
 				path + " don't exist"
@@ -526,7 +560,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	if !fileExists(cfg.WalletCert) {
-		path := filepath.Join(stakepooldHomeDir, cfg.WalletCert)
+		path := filepath.Join(cfg.HomeDir, cfg.WalletCert)
 		if !fileExists(path) {
 			str := "%s: walletcert " + cfg.WalletCert + " and " +
 				path + " don't exist"
