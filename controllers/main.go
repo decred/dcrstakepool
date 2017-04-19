@@ -1760,7 +1760,7 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 		IsNo        bool    `json:"isno"`
 		Count       uint32  `json:"count"`
 		Progress    float64 `json:"progress"`
-		Selected    int     `json:"progress"`
+		Selected    int     `json:"selected"`
 	}
 
 	// AgendaWithSelected models an individual agenda including its choices.
