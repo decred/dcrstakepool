@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/davecgh/go-spew/spew"
@@ -25,16 +26,18 @@ import (
 
 type appContext struct {
 	sync.Mutex
-	blockheight      int64
-	coldwalletextpub *hdkeychain.ExtendedKey
-	dataPath         string
-	feeAddrs         map[string]struct{}
-	nodeConnection   *dcrrpcclient.Client
-	params           *chaincfg.Params
-	userTickets      map[string]UserTickets
-	userVotingConfig map[string]UserVotingConfig
-	walletConnection *dcrrpcclient.Client
-	votingConfig     *VotingConfig
+	blockheight        int64
+	coldwalletextpub   *hdkeychain.ExtendedKey
+	dataPath           string
+	feeAddrs           map[string]struct{}
+	nodeConnection     *dcrrpcclient.Client
+	params             *chaincfg.Params
+	quit               chan struct{}
+	userTickets        map[string]UserTickets
+	userVotingConfig   map[string]UserVotingConfig
+	walletConnection   *dcrrpcclient.Client
+	votingConfig       *VotingConfig
+	winningTicketsChan chan WinningTicketsForBlock
 }
 
 // UserTickets contains each user's tickets.
@@ -61,8 +64,18 @@ type VotingConfig struct {
 	VoteVersion      uint32
 }
 
+type WinningTicketsForBlock struct {
+	blockHash      *chainhash.Hash
+	blockHeight    int64
+	host           string
+	winningTickets []*chainhash.Hash
+}
+
 var (
 	cfg *config
+
+	// WaitGroup for the monitor goroutines
+	wg sync.WaitGroup
 )
 
 // calculateFeeAddresses decodes the string of stake pool payment addresses
@@ -157,8 +170,6 @@ func runMain() int {
 
 	dcrrpcclient.UseLogger(clientLog)
 
-	var nodeConn *dcrrpcclient.Client
-
 	var walletVer semver
 	walletConn, walletVer, err := connectWalletRPC(cfg)
 	if err != nil || walletConn == nil {
@@ -189,14 +200,15 @@ func runMain() int {
 	userVotingConfig := dbFetchUserVotingConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
 
 	ctx := &appContext{
-		blockheight:      0,
-		dataPath:         dataPath,
-		feeAddrs:         feeAddrs,
-		nodeConnection:   nodeConn,
-		params:           activeNetParams.Params,
-		userVotingConfig: userVotingConfig,
-		walletConnection: walletConn,
-		votingConfig:     &votingConfig,
+		blockheight:        0,
+		dataPath:           dataPath,
+		feeAddrs:           feeAddrs,
+		params:             activeNetParams.Params,
+		quit:               make(chan struct{}),
+		userVotingConfig:   userVotingConfig,
+		walletConnection:   walletConn,
+		votingConfig:       &votingConfig,
+		winningTicketsChan: make(chan WinningTicketsForBlock),
 	}
 
 	ctx.userTickets = walletFetchUserTickets(ctx)
@@ -207,6 +219,7 @@ func runMain() int {
 		log.Infof("Connection to dcrd failed: %v", err)
 		return 6
 	}
+	ctx.nodeConnection = nodeConn
 
 	// Display connected network
 	curnet, err := nodeConn.GetCurrentNet()
@@ -254,9 +267,6 @@ func runMain() int {
 
 	startGRPCServers(vo)
 
-	// Ctrl-C to shut down.
-	// Nothing should be sent the quit channel.  It should only be closed.
-	quit := make(chan struct{})
 	// Only accept a single CTRL+C
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -267,15 +277,13 @@ func runMain() int {
 		signal.Stop(c)
 		// Close the channel so multiple goroutines can get the message
 		log.Infof("CTRL+C hit.  Closing goroutines.")
-		saveData(ctx)
-		close(quit)
+		//saveData(ctx)
+		close(ctx.quit)
 		return
 	}()
 
-	// WaitGroup for the monitor goroutines
-	var wg sync.WaitGroup
-
-	wg.Add(1)
+	wg.Add(2)
+	go ctx.winningTicketHandler()
 
 	// Wait for CTRL+C to signal goroutines to terminate via quit channel.
 	wg.Wait()
@@ -368,4 +376,54 @@ func saveData(ctx *appContext) {
 func (ctx *appContext) loadData() {
 	ctx.Lock()
 	defer ctx.Unlock()
+}
+
+func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
+	blockHash := wt.blockHash
+	blockHeight := wt.blockHeight
+
+	txStrs := make([]string, 0, len(wt.winningTickets))
+	for _, ticket := range wt.winningTickets {
+		txStrs = append(txStrs, ticket.String())
+		for msa := range ctx.userTickets {
+			if sliceContains(ctx.userTickets[msa].Tickets, ticket) {
+				log.Infof("winningTicket %v for height %v hash %v is present on wallet",
+					ticket, blockHeight, blockHash)
+				sstx, err := walletCreateVote(ctx, blockHash, blockHeight, ticket, msa)
+				if err != nil {
+					log.Infof("failed to create vote: %v", err)
+				} else {
+					log.Infof("created vote %v", sstx)
+					txHex, err := nodeSendVote(ctx, sstx)
+					if err != nil {
+						log.Infof("failed to vote: %v", err)
+					} else {
+						log.Infof("sent vote ok hex %v", txHex)
+					}
+				}
+			}
+		}
+	}
+	log.Debugf("OnWinningTickets from %v tickets for height %v: %v",
+		wt.host, blockHeight, strings.Join(txStrs, ", "))
+	// TODO we don't want to do this every block.  otherwise if 2 blocks
+	// come in close together, we may vote late on the 2nd block.
+	// maybe a config option that does it on even/odd blocks so not all
+	// wallets are updating every block?
+	// we also don't want to do this from the notification handler.
+	ctx.userTickets = walletFetchUserTickets(ctx)
+}
+
+func (ctx *appContext) winningTicketHandler() {
+	defer wg.Done()
+
+out:
+	for {
+		select {
+		case wt := <-ctx.winningTicketsChan:
+			go ctx.processWinningTickets(wt)
+		case <-ctx.quit:
+			break out
+		}
+	}
 }
