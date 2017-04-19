@@ -179,7 +179,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			<p><strong>No missed tickets.</strong></p>
 			{{end}}
 			{{if .TicketsMissed}}
-			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool.</div>
+			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool. Expired tickets will also show up here.</div>
 			<div class="table-responsive">
 			<table id="ticketsmissed" class="table table-condensed datatablesort responsive">
 			<thead>
