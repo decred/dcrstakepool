@@ -1742,10 +1742,6 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
-	type SelectedAgendaChoice struct {
-		SelectedAgendaChoice uint16
-	}
-
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
 	}
@@ -1754,16 +1750,13 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 
 	t := controller.GetTemplate(c)
 
-	agendaChoices := map[int]SelectedAgendaChoice{}
 	choicesSelected := choicesForAgendas(uint16(user.VoteBits), controller.voteInfo)
 
 	for k, v := range choicesSelected {
-		agendaChoices[k] = SelectedAgendaChoice{v}
+		strk := strconv.Itoa(k)
+		c.Env["Agenda"+strk+"Selected"] = v
 	}
-
-	log.Infof("agendaChoices %v", agendaChoices)
 	c.Env["Agendas"] = controller.voteInfo.Agendas
-	c.Env["AgendaChoices"] = agendaChoices
 	c.Env["FlashError"] = session.Flashes("votingError")
 	c.Env["FlashSuccess"] = session.Flashes("votingSuccess")
 	c.Env["IsVoting"] = true
