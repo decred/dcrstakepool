@@ -94,7 +94,8 @@ func calculateFeeAddresses(xpubStr string, params *chaincfg.Params) (map[string]
 	}
 
 	// Derive the addresses from [0, end) for this extended public key.
-	addrs, err := deriveChildAddresses(branchKey, 0, end+1, params)
+	// deriveChildAddresses takes the start index and the count.
+	addrs, err := deriveChildAddresses(branchKey, 0, end, params)
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +113,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 	for i := uint32(0); i < count; i++ {
 		child, err := key.Child(startIndex + i)
 		if err == hdkeychain.ErrInvalidChild {
+			// NOTE: return slice will be shorter than requested
 			continue
 		}
 		if err != nil {
