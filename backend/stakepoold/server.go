@@ -110,10 +110,9 @@ func calculateFeeAddresses(xpubStr string, params *chaincfg.Params) (map[string]
 
 func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32, params *chaincfg.Params) ([]dcrutil.Address, error) {
 	addresses := make([]dcrutil.Address, 0, count)
-	for i := uint32(0); i < count; i++ {
+	for i := uint32(0); i < count; {
 		child, err := key.Child(startIndex + i)
 		if err == hdkeychain.ErrInvalidChild {
-			// NOTE: return slice will be shorter than requested
 			continue
 		}
 		if err != nil {
@@ -124,6 +123,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 			return nil, err
 		}
 		addresses = append(addresses, addr)
+		i++
 	}
 	return addresses, nil
 }
