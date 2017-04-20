@@ -3,7 +3,6 @@ package controllers
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -1751,60 +1750,13 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 
 	t := controller.GetTemplate(c)
 
-	// ChoiceWithSelected models an individual choice inside an Agenda.
-	type ChoiceWithSelected struct {
-		Id          string  `json:"id"`
-		Description string  `json:"description"`
-		Bits        uint16  `json:"bits"`
-		IsIgnore    bool    `json:"isignore"`
-		IsNo        bool    `json:"isno"`
-		Count       uint32  `json:"count"`
-		Progress    float64 `json:"progress"`
-		Selected    int     `json:"selected"`
-	}
-
-	// AgendaWithSelected models an individual agenda including its choices.
-	type AgendaWithSelected struct {
-		Id             string               `json:"id"`
-		Description    string               `json:"description"`
-		Mask           uint16               `json:"mask"`
-		StartTime      uint64               `json:"starttime"`
-		ExpireTime     uint64               `json:"expiretime"`
-		Status         string               `json:"status"`
-		QuorumProgress float64              `json:"quorumprogress"`
-		Choices        []ChoiceWithSelected `json:"choices"`
-	}
-
-	// GetVoteInfoResultWithSelected models the data returned from the getvoteinfo command.
-	type GetVoteInfoResultWithSelected struct {
-		CurrentHeight int64                `json:"currentheight"`
-		StartHeight   int64                `json:"startheight"`
-		EndHeight     int64                `json:"endheight"`
-		Hash          string               `json:"hash"`
-		VoteVersion   uint32               `json:"voteversion"`
-		Quorum        uint32               `json:"quorum"`
-		TotalVotes    uint32               `json:"totalvotes"`
-		Agendas       []AgendaWithSelected `json:"agendas,omitempty"`
-	}
-
-	// XXX this is big hack to add the selected choice to GetVoteInfoResult
-	// so we can get around the limitations of templates
-	vi, _ := json.Marshal(controller.voteInfo)
-	agendasSelected := new(GetVoteInfoResultWithSelected)
 	choicesSelected := choicesForAgendas(uint16(user.VoteBits), controller.voteInfo)
-	json.Unmarshal(vi, agendasSelected)
 
-	for i := range agendasSelected.Agendas {
-		for choice := range agendasSelected.Agendas[i].Choices {
-			if agendasSelected.Agendas[i].Choices[choice].Bits == choicesSelected[i] {
-				agendasSelected.Agendas[i].Choices[choice].Selected = 1
-			} else {
-				agendasSelected.Agendas[i].Choices[choice].Selected = 0
-			}
-		}
+	for k, v := range choicesSelected {
+		strk := strconv.Itoa(k)
+		c.Env["Agenda"+strk+"Selected"] = v
 	}
-
-	c.Env["Agendas"] = agendasSelected.Agendas
+	c.Env["Agendas"] = controller.voteInfo.Agendas
 	c.Env["FlashError"] = session.Flashes("votingError")
 	c.Env["FlashSuccess"] = session.Flashes("votingSuccess")
 	c.Env["IsVoting"] = true
