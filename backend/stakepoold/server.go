@@ -140,6 +140,7 @@ func runMain() int {
 
 	log.Infof("Version: %s", version())
 	log.Infof("Network: %s", activeNetParams.Params.Name)
+	log.Infof("Home dir: %s", cfg.HomeDir)
 
 	// Create the data directory in case it does not exist.
 	err = os.MkdirAll(cfg.DataDir, 0700)
