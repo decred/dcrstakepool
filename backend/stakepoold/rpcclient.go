@@ -123,18 +123,18 @@ func nodeSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 		return nil, err
 	}
 
-	res, err := ctx.nodeConnection.SendRawTransaction(newTx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return ctx.nodeConnection.SendRawTransaction(newTx, false)
 }
 
 func walletCreateVote(ctx *appContext, blockHash *chainhash.Hash, blockHeight int64, ticketHash *chainhash.Hash, msa string) (string, error) {
 	// look up the voting config for this user's ticket
-	votebitsToUse := ctx.userVotingConfig[msa].VoteBits
-	votebitsVersionToUse := ctx.userVotingConfig[msa].VoteBitsVersion
+	userVotingConfig, ok := ctx.userVotingConfig[msa]
+	if !ok {
+		log.Errorf("Unknown multisig address %s. Cannot create vote.", msa)
+		// do not return; vote with defaults
+	}
+	votebitsToUse := userVotingConfig.VoteBits
+	votebitsVersionToUse := userVotingConfig.VoteBitsVersion
 
 	// if the user's voting config has a vote version that is different from our
 	// global vote version that we plucked from dcrwallet walletinfo then just
@@ -143,8 +143,8 @@ func walletCreateVote(ctx *appContext, blockHash *chainhash.Hash, blockHeight in
 		votebitsToUse = ctx.votingConfig.VoteBits
 		log.Infof("userid %v multisigaddress %v vote version mismatch user %v "+
 			"stakepoold %v using votebits %d",
-			ctx.userVotingConfig[msa].Userid,
-			ctx.userVotingConfig[msa].MultiSigAddress, votebitsVersionToUse,
+			userVotingConfig.Userid,
+			userVotingConfig.MultiSigAddress, votebitsVersionToUse,
 			ctx.votingConfig.VoteVersion, votebitsToUse)
 	}
 
@@ -170,12 +170,7 @@ func walletSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 		return nil, err
 	}
 
-	res, err := ctx.walletConnection.SendRawTransaction(newTx, false)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return ctx.walletConnection.SendRawTransaction(newTx, false)
 }
 
 func walletFetchUserTickets(ctx *appContext) map[string]UserTickets {
