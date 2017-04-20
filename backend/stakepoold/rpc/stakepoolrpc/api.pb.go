@@ -9,6 +9,10 @@ It is generated from these files:
 	api.proto
 
 It has these top-level messages:
+	PingRequest
+	PingResponse
+	UpdateVotingPrefsRequest
+	UpdateVotingPrefsResponse
 	VersionRequest
 	VersionResponse
 	VoteOptionsConfigRequest
@@ -36,13 +40,53 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type PingRequest struct {
+}
+
+func (m *PingRequest) Reset()                    { *m = PingRequest{} }
+func (m *PingRequest) String() string            { return proto.CompactTextString(m) }
+func (*PingRequest) ProtoMessage()               {}
+func (*PingRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+type PingResponse struct {
+}
+
+func (m *PingResponse) Reset()                    { *m = PingResponse{} }
+func (m *PingResponse) String() string            { return proto.CompactTextString(m) }
+func (*PingResponse) ProtoMessage()               {}
+func (*PingResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+type UpdateVotingPrefsRequest struct {
+	Userid int64 `protobuf:"varint,1,opt,name=Userid" json:"Userid,omitempty"`
+}
+
+func (m *UpdateVotingPrefsRequest) Reset()                    { *m = UpdateVotingPrefsRequest{} }
+func (m *UpdateVotingPrefsRequest) String() string            { return proto.CompactTextString(m) }
+func (*UpdateVotingPrefsRequest) ProtoMessage()               {}
+func (*UpdateVotingPrefsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *UpdateVotingPrefsRequest) GetUserid() int64 {
+	if m != nil {
+		return m.Userid
+	}
+	return 0
+}
+
+type UpdateVotingPrefsResponse struct {
+}
+
+func (m *UpdateVotingPrefsResponse) Reset()                    { *m = UpdateVotingPrefsResponse{} }
+func (m *UpdateVotingPrefsResponse) String() string            { return proto.CompactTextString(m) }
+func (*UpdateVotingPrefsResponse) ProtoMessage()               {}
+func (*UpdateVotingPrefsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
 type VersionRequest struct {
 }
 
 func (m *VersionRequest) Reset()                    { *m = VersionRequest{} }
 func (m *VersionRequest) String() string            { return proto.CompactTextString(m) }
 func (*VersionRequest) ProtoMessage()               {}
-func (*VersionRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*VersionRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 type VersionResponse struct {
 	VersionString string `protobuf:"bytes,1,opt,name=version_string,json=versionString" json:"version_string,omitempty"`
@@ -56,7 +100,7 @@ type VersionResponse struct {
 func (m *VersionResponse) Reset()                    { *m = VersionResponse{} }
 func (m *VersionResponse) String() string            { return proto.CompactTextString(m) }
 func (*VersionResponse) ProtoMessage()               {}
-func (*VersionResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*VersionResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
 func (m *VersionResponse) GetVersionString() string {
 	if m != nil {
@@ -106,7 +150,7 @@ type VoteOptionsConfigRequest struct {
 func (m *VoteOptionsConfigRequest) Reset()                    { *m = VoteOptionsConfigRequest{} }
 func (m *VoteOptionsConfigRequest) String() string            { return proto.CompactTextString(m) }
 func (*VoteOptionsConfigRequest) ProtoMessage()               {}
-func (*VoteOptionsConfigRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*VoteOptionsConfigRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
 type VoteOptionsConfigResponse struct {
 	VoteInfo    string `protobuf:"bytes,1,opt,name=VoteInfo" json:"VoteInfo,omitempty"`
@@ -116,7 +160,7 @@ type VoteOptionsConfigResponse struct {
 func (m *VoteOptionsConfigResponse) Reset()                    { *m = VoteOptionsConfigResponse{} }
 func (m *VoteOptionsConfigResponse) String() string            { return proto.CompactTextString(m) }
 func (*VoteOptionsConfigResponse) ProtoMessage()               {}
-func (*VoteOptionsConfigResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (*VoteOptionsConfigResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
 func (m *VoteOptionsConfigResponse) GetVoteInfo() string {
 	if m != nil {
@@ -133,6 +177,10 @@ func (m *VoteOptionsConfigResponse) GetVoteVersion() uint32 {
 }
 
 func init() {
+	proto.RegisterType((*PingRequest)(nil), "stakepoolrpc.PingRequest")
+	proto.RegisterType((*PingResponse)(nil), "stakepoolrpc.PingResponse")
+	proto.RegisterType((*UpdateVotingPrefsRequest)(nil), "stakepoolrpc.UpdateVotingPrefsRequest")
+	proto.RegisterType((*UpdateVotingPrefsResponse)(nil), "stakepoolrpc.UpdateVotingPrefsResponse")
 	proto.RegisterType((*VersionRequest)(nil), "stakepoolrpc.VersionRequest")
 	proto.RegisterType((*VersionResponse)(nil), "stakepoolrpc.VersionResponse")
 	proto.RegisterType((*VoteOptionsConfigRequest)(nil), "stakepoolrpc.VoteOptionsConfigRequest")
@@ -146,6 +194,140 @@ var _ grpc.ClientConn
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
+
+// Client API for StakepooldService service
+
+type StakepooldServiceClient interface {
+	// Queries
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
+	VoteOptionsConfig(ctx context.Context, in *VoteOptionsConfigRequest, opts ...grpc.CallOption) (*VoteOptionsConfigResponse, error)
+	// Control
+	UpdateVotingPrefs(ctx context.Context, in *UpdateVotingPrefsRequest, opts ...grpc.CallOption) (*UpdateVotingPrefsResponse, error)
+}
+
+type stakepooldServiceClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewStakepooldServiceClient(cc *grpc.ClientConn) StakepooldServiceClient {
+	return &stakepooldServiceClient{cc}
+}
+
+func (c *stakepooldServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	out := new(PingResponse)
+	err := grpc.Invoke(ctx, "/stakepoolrpc.StakepooldService/Ping", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *stakepooldServiceClient) VoteOptionsConfig(ctx context.Context, in *VoteOptionsConfigRequest, opts ...grpc.CallOption) (*VoteOptionsConfigResponse, error) {
+	out := new(VoteOptionsConfigResponse)
+	err := grpc.Invoke(ctx, "/stakepoolrpc.StakepooldService/VoteOptionsConfig", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *stakepooldServiceClient) UpdateVotingPrefs(ctx context.Context, in *UpdateVotingPrefsRequest, opts ...grpc.CallOption) (*UpdateVotingPrefsResponse, error) {
+	out := new(UpdateVotingPrefsResponse)
+	err := grpc.Invoke(ctx, "/stakepoolrpc.StakepooldService/UpdateVotingPrefs", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for StakepooldService service
+
+type StakepooldServiceServer interface {
+	// Queries
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
+	VoteOptionsConfig(context.Context, *VoteOptionsConfigRequest) (*VoteOptionsConfigResponse, error)
+	// Control
+	UpdateVotingPrefs(context.Context, *UpdateVotingPrefsRequest) (*UpdateVotingPrefsResponse, error)
+}
+
+func RegisterStakepooldServiceServer(s *grpc.Server, srv StakepooldServiceServer) {
+	s.RegisterService(&_StakepooldService_serviceDesc, srv)
+}
+
+func _StakepooldService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StakepooldServiceServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/stakepoolrpc.StakepooldService/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StakepooldServiceServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StakepooldService_VoteOptionsConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VoteOptionsConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StakepooldServiceServer).VoteOptionsConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/stakepoolrpc.StakepooldService/VoteOptionsConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StakepooldServiceServer).VoteOptionsConfig(ctx, req.(*VoteOptionsConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StakepooldService_UpdateVotingPrefs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateVotingPrefsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StakepooldServiceServer).UpdateVotingPrefs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/stakepoolrpc.StakepooldService/UpdateVotingPrefs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StakepooldServiceServer).UpdateVotingPrefs(ctx, req.(*UpdateVotingPrefsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _StakepooldService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "stakepoolrpc.StakepooldService",
+	HandlerType: (*StakepooldServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Ping",
+			Handler:    _StakepooldService_Ping_Handler,
+		},
+		{
+			MethodName: "VoteOptionsConfig",
+			Handler:    _StakepooldService_VoteOptionsConfig_Handler,
+		},
+		{
+			MethodName: "UpdateVotingPrefs",
+			Handler:    _StakepooldService_UpdateVotingPrefs_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api.proto",
+}
 
 // Client API for VersionService service
 
@@ -211,91 +393,33 @@ var _VersionService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "api.proto",
 }
 
-// Client API for VoteOptionsConfigService service
-
-type VoteOptionsConfigServiceClient interface {
-	VoteOptionsConfig(ctx context.Context, in *VoteOptionsConfigRequest, opts ...grpc.CallOption) (*VoteOptionsConfigResponse, error)
-}
-
-type voteOptionsConfigServiceClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewVoteOptionsConfigServiceClient(cc *grpc.ClientConn) VoteOptionsConfigServiceClient {
-	return &voteOptionsConfigServiceClient{cc}
-}
-
-func (c *voteOptionsConfigServiceClient) VoteOptionsConfig(ctx context.Context, in *VoteOptionsConfigRequest, opts ...grpc.CallOption) (*VoteOptionsConfigResponse, error) {
-	out := new(VoteOptionsConfigResponse)
-	err := grpc.Invoke(ctx, "/stakepoolrpc.VoteOptionsConfigService/VoteOptionsConfig", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// Server API for VoteOptionsConfigService service
-
-type VoteOptionsConfigServiceServer interface {
-	VoteOptionsConfig(context.Context, *VoteOptionsConfigRequest) (*VoteOptionsConfigResponse, error)
-}
-
-func RegisterVoteOptionsConfigServiceServer(s *grpc.Server, srv VoteOptionsConfigServiceServer) {
-	s.RegisterService(&_VoteOptionsConfigService_serviceDesc, srv)
-}
-
-func _VoteOptionsConfigService_VoteOptionsConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(VoteOptionsConfigRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(VoteOptionsConfigServiceServer).VoteOptionsConfig(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/stakepoolrpc.VoteOptionsConfigService/VoteOptionsConfig",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(VoteOptionsConfigServiceServer).VoteOptionsConfig(ctx, req.(*VoteOptionsConfigRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _VoteOptionsConfigService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "stakepoolrpc.VoteOptionsConfigService",
-	HandlerType: (*VoteOptionsConfigServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "VoteOptionsConfig",
-			Handler:    _VoteOptionsConfigService_VoteOptionsConfig_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "api.proto",
-}
-
 func init() { proto.RegisterFile("api.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 302 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0xc1, 0x4e, 0x32, 0x31,
-	0x14, 0x85, 0x33, 0xff, 0x2f, 0x28, 0x57, 0x41, 0x6d, 0x5c, 0xd4, 0x89, 0x1a, 0x42, 0xa2, 0xb2,
-	0x62, 0x81, 0x8f, 0x60, 0x62, 0xe2, 0xc2, 0x98, 0x40, 0x42, 0x74, 0x45, 0x0a, 0x73, 0xc1, 0xea,
-	0xd0, 0x5b, 0xdb, 0xc2, 0xda, 0x57, 0xf3, 0xcd, 0xcc, 0xb4, 0x65, 0x32, 0x2a, 0xc4, 0xdd, 0x9c,
-	0xef, 0x4c, 0xe6, 0x9e, 0x73, 0x32, 0xd0, 0x10, 0x5a, 0xf6, 0xb4, 0x21, 0x47, 0xec, 0xc0, 0x3a,
-	0xf1, 0x86, 0x9a, 0x28, 0x37, 0x7a, 0xda, 0x39, 0x82, 0xd6, 0x08, 0x8d, 0x95, 0xa4, 0x06, 0xf8,
-	0xbe, 0x44, 0xeb, 0x3a, 0x9f, 0x09, 0x1c, 0x96, 0xc8, 0x6a, 0x52, 0x16, 0xd9, 0x25, 0xb4, 0x56,
-	0x01, 0x8d, 0xad, 0x33, 0x52, 0xcd, 0x79, 0xd2, 0x4e, 0xba, 0x8d, 0x41, 0x33, 0xd2, 0xa1, 0x87,
-	0xec, 0x04, 0x6a, 0x0b, 0xf1, 0x4a, 0x86, 0xff, 0x6b, 0x27, 0xdd, 0xe6, 0x20, 0x08, 0x4f, 0xa5,
-	0x22, 0xc3, 0xff, 0x47, 0x5a, 0x88, 0x82, 0x6a, 0xe1, 0xa6, 0x2f, 0x7c, 0x27, 0x50, 0x2f, 0xd8,
-	0x05, 0x80, 0x36, 0x68, 0x30, 0x47, 0x61, 0x91, 0xd7, 0xfc, 0x91, 0x0a, 0x29, 0x82, 0x4c, 0x96,
-	0x32, 0xcf, 0xc6, 0x0b, 0x74, 0x22, 0x13, 0x4e, 0xf0, 0x7a, 0x08, 0xe2, 0xe9, 0x43, 0x84, 0x9d,
-	0x14, 0xf8, 0x88, 0x1c, 0x3e, 0x6a, 0x27, 0x49, 0xd9, 0x5b, 0x52, 0x33, 0x39, 0x5f, 0xf7, 0x7b,
-	0x86, 0xd3, 0x0d, 0x5e, 0x2c, 0x9a, 0xc2, 0x5e, 0x61, 0xde, 0xab, 0x19, 0xc5, 0x8a, 0xa5, 0x66,
-	0x6d, 0xd8, 0x2f, 0x9e, 0xe3, 0x36, 0xb1, 0x63, 0x15, 0xf5, 0x9f, 0xca, 0x31, 0x87, 0x68, 0x56,
-	0x72, 0x8a, 0xec, 0x0e, 0x76, 0x23, 0x61, 0x67, 0xbd, 0xea, 0xf0, 0xbd, 0xef, 0xab, 0xa7, 0xe7,
-	0x5b, 0xdc, 0x90, 0xab, 0xff, 0x91, 0x6c, 0x68, 0xb4, 0x3e, 0x92, 0xc1, 0xf1, 0x2f, 0x8f, 0x5d,
-	0xfd, 0xf8, 0xe0, 0x96, 0x39, 0xd2, 0xeb, 0x3f, 0xdf, 0x0b, 0x11, 0x26, 0x75, 0xff, 0xfb, 0xdc,
-	0x7c, 0x05, 0x00, 0x00, 0xff, 0xff, 0x9b, 0x85, 0xe8, 0xcd, 0x4b, 0x02, 0x00, 0x00,
+	// 387 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x93, 0xcb, 0x6e, 0xe2, 0x30,
+	0x14, 0x86, 0x15, 0x6e, 0x33, 0x1c, 0x2e, 0x33, 0x58, 0xa3, 0x91, 0xc9, 0x5c, 0x84, 0x22, 0xcd,
+	0x0c, 0x2b, 0x16, 0xcc, 0xba, 0xab, 0x4a, 0x95, 0xba, 0xa8, 0x8a, 0x82, 0x40, 0xed, 0x0a, 0x19,
+	0x72, 0xa0, 0x6e, 0xc1, 0x76, 0x6d, 0xc3, 0xe3, 0xf4, 0x5d, 0xfa, 0x66, 0x55, 0x12, 0x93, 0x86,
+	0x4b, 0xd4, 0x5d, 0xfe, 0xef, 0xd8, 0xfe, 0xcf, 0x2d, 0x50, 0x67, 0x8a, 0x0f, 0x94, 0x96, 0x56,
+	0x92, 0xa6, 0xb1, 0xec, 0x09, 0x95, 0x94, 0x6b, 0xad, 0x16, 0x41, 0x0b, 0x1a, 0x23, 0x2e, 0x56,
+	0x21, 0x3e, 0x6f, 0xd1, 0xd8, 0xa0, 0x0d, 0xcd, 0x54, 0x1a, 0x25, 0x85, 0xc1, 0x60, 0x08, 0x74,
+	0xa2, 0x22, 0x66, 0x71, 0x2a, 0x2d, 0x17, 0xab, 0x91, 0xc6, 0xa5, 0x71, 0x67, 0xc9, 0x77, 0xa8,
+	0x4d, 0x0c, 0x6a, 0x1e, 0x51, 0xaf, 0xe7, 0xf5, 0xcb, 0xa1, 0x53, 0xc1, 0x0f, 0xe8, 0x9e, 0xb9,
+	0xe3, 0x1e, 0xfc, 0x0a, 0xed, 0x29, 0x6a, 0xc3, 0xa5, 0xd8, 0x5b, 0xbe, 0x7a, 0xf0, 0x25, 0x43,
+	0xe9, 0x29, 0xf2, 0x07, 0xda, 0xbb, 0x14, 0xcd, 0x8c, 0xd5, 0x5c, 0xac, 0x12, 0x8b, 0x7a, 0xd8,
+	0x72, 0x74, 0x9c, 0x40, 0xf2, 0x0d, 0xaa, 0x1b, 0xf6, 0x28, 0x35, 0x2d, 0xf5, 0xbc, 0x7e, 0x2b,
+	0x4c, 0x45, 0x42, 0xb9, 0x90, 0x9a, 0x96, 0x1d, 0x8d, 0x45, 0x4c, 0x15, 0xb3, 0x8b, 0x07, 0x5a,
+	0x49, 0x69, 0x22, 0xc8, 0x6f, 0x00, 0xa5, 0x51, 0xe3, 0x1a, 0x99, 0x41, 0x5a, 0x4d, 0x4c, 0x72,
+	0x24, 0x4e, 0x64, 0xbe, 0xe5, 0xeb, 0x68, 0xb6, 0x41, 0xcb, 0x22, 0x66, 0x19, 0xad, 0xa5, 0x89,
+	0x24, 0xf4, 0xc6, 0xc1, 0xc0, 0x07, 0x3a, 0x95, 0x16, 0x6f, 0x95, 0xe5, 0x52, 0x98, 0x4b, 0x29,
+	0x96, 0x3c, 0x6b, 0xe9, 0x3d, 0x74, 0xcf, 0xc4, 0x5c, 0xa1, 0x3e, 0x7c, 0x8e, 0x83, 0xd7, 0x62,
+	0x29, 0x5d, 0x89, 0x99, 0x26, 0x3d, 0x68, 0xc4, 0xdf, 0xae, 0x37, 0xae, 0xc6, 0x3c, 0x1a, 0xbe,
+	0x94, 0xa0, 0x33, 0xde, 0x4f, 0x33, 0x1a, 0xa3, 0xde, 0xf1, 0x05, 0x92, 0x0b, 0xa8, 0xc4, 0x33,
+	0x24, 0xdd, 0x41, 0x7e, 0xd2, 0x83, 0xdc, 0x98, 0x7d, 0xff, 0x5c, 0xc8, 0xa5, 0x14, 0x41, 0xe7,
+	0x24, 0x5f, 0xf2, 0xf7, 0xf0, 0x42, 0x51, 0xb1, 0xfe, 0xbf, 0x0f, 0xcf, 0xbd, 0xbb, 0x9c, 0x2c,
+	0xc9, 0xb1, 0x4b, 0xd1, 0xe6, 0x1d, 0xbb, 0x14, 0x6e, 0xdb, 0xf0, 0x2e, 0xdb, 0xb6, 0x7d, 0x73,
+	0xae, 0xe0, 0x93, 0x23, 0xe4, 0xe7, 0x51, 0xae, 0x07, 0x6b, 0xe9, 0xff, 0x2a, 0x88, 0xa6, 0x2f,
+	0xcf, 0x6b, 0xc9, 0xcf, 0xf4, 0xff, 0x2d, 0x00, 0x00, 0xff, 0xff, 0xa9, 0xe8, 0x00, 0x5c, 0x59,
+	0x03, 0x00, 0x00,
 }

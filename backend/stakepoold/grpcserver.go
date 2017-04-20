@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
+	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrutil"
 
 	"github.com/decred/dcrstakepool/backend/stakepoold/voteoptions"
@@ -154,7 +155,7 @@ func openRPCKeyPair() (tls.Certificate, error) {
 	return tls.LoadX509KeyPair(cfg.RPCCert, cfg.RPCKey)
 }
 
-func startGRPCServers(vo *voteoptions.VoteOptions) (*grpc.Server, error) {
+func startGRPCServers(u *userdata.UserData, vo *voteoptions.VoteOptions) (*grpc.Server, error) {
 	var (
 		server  *grpc.Server
 		keyPair tls.Certificate
@@ -174,7 +175,7 @@ func startGRPCServers(vo *voteoptions.VoteOptions) (*grpc.Server, error) {
 	creds := credentials.NewServerTLSFromCert(&keyPair)
 	server = grpc.NewServer(grpc.Creds(creds))
 	rpcserver.StartVersionService(server)
-	rpcserver.StartVoteOptionsConfigService(vo, server)
+	rpcserver.StartStakepooldService(u, vo, server)
 	for _, lis := range listeners {
 		lis := lis
 		go func() {

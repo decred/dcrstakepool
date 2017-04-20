@@ -18,12 +18,11 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrstakepool/backend/stakepoold/voteoptions"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/wallet/udb"
-
-	"database/sql"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -31,8 +30,7 @@ import (
 type appContext struct {
 	sync.RWMutex
 	// locking required
-	ticketsMSA       map[chainhash.Hash]string   // [ticket]multisigaddr
-	userVotingConfig map[string]UserVotingConfig // [multisigaddr]
+	ticketsMSA map[chainhash.Hash]string // [ticket]multisigaddr
 
 	// no locking required
 	blockheight        int64
@@ -44,19 +42,12 @@ type appContext struct {
 	wg                 sync.WaitGroup // wait group for go routine exits
 	quit               chan struct{}
 	reload             chan struct{}
+	userData           *userdata.UserData
 	walletConnection   *dcrrpcclient.Client
 	votingConfig       *VotingConfig
 	winningTicketsChan chan WinningTicketsForBlock
 	testing            bool // enabled only for testing
 
-}
-
-// UserVotingConfig contains per-user voting preferences.
-type UserVotingConfig struct {
-	Userid          int64
-	MultiSigAddress string
-	VoteBits        uint16
-	VoteBitsVersion uint32
 }
 
 // VotingConfig contains global voting defaults.
@@ -200,11 +191,10 @@ func runMain() int {
 	// loadData()
 	// if ticket/user voting prefs -> enable voting -> refresh
 	// if no ticket/user voting prefs -> pull from db/wallets -> enable voting
-	userVotingConfig, err := dbFetchUserVotingConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
-	if err != nil {
-		log.Infof("could not obtain voting config: %v", err)
-		return 12 // wtf
-	}
+
+	var userdata = &userdata.UserData{}
+	userdata.DBSetConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	userdata.Update()
 
 	ctx := &appContext{
 		blockheight:        0,
@@ -213,7 +203,7 @@ func runMain() int {
 		params:             activeNetParams.Params,
 		quit:               make(chan struct{}),
 		reload:             make(chan struct{}),
-		userVotingConfig:   userVotingConfig,
+		userData:           userdata,
 		walletConnection:   walletConn,
 		votingConfig:       &votingConfig,
 		winningTicketsChan: make(chan WinningTicketsForBlock),
@@ -274,7 +264,7 @@ func runMain() int {
 		return 11
 	}
 
-	startGRPCServers(vo)
+	startGRPCServers(userdata, vo)
 
 	// Only accept a single CTRL+C
 	c := make(chan os.Signal, 1)
@@ -303,64 +293,6 @@ func runMain() int {
 
 func main() {
 	os.Exit(runMain())
-}
-
-func dbFetchUserVotingConfig(user string, password string, hostname string, port string, database string) (map[string]UserVotingConfig, error) {
-	var (
-		Userid          int64
-		MultiSigAddress string
-		VoteBits        int64
-		VoteBitsVersion int64
-	)
-
-	userInfo := map[string]UserVotingConfig{}
-
-	db, err := sql.Open("mysql", fmt.Sprint(user, ":", password, "@(", hostname, ":", port, ")/", database, "?charset=utf8mb4"))
-	if err != nil {
-		log.Errorf("Unable to open db: %v", err)
-		return userInfo, err
-	}
-
-	// sql.Open just validates its arguments without creating a connection
-	// Verify that the data source name is valid with Ping:
-	if err = db.Ping(); err != nil {
-		log.Errorf("Unable to establish connection to db: %v", err)
-		return userInfo, err
-	}
-
-	rows, err := db.Query("SELECT UserId, MultiSigAddress, VoteBits, VoteBitsVersion FROM Users WHERE MultiSigAddress <> ''")
-	if err != nil {
-		log.Errorf("Unable to query db: %v", err)
-		return userInfo, err
-	}
-
-	count := 0
-	defer rows.Close()
-	for rows.Next() {
-		err := rows.Scan(&Userid, &MultiSigAddress, &VoteBits, &VoteBitsVersion)
-		if err != nil {
-			log.Errorf("Unable to scan row %v", err)
-			continue
-		}
-		userInfo[MultiSigAddress] = UserVotingConfig{
-			Userid:          Userid,
-			MultiSigAddress: MultiSigAddress,
-			VoteBits:        uint16(VoteBits),
-			VoteBitsVersion: uint32(VoteBitsVersion),
-		}
-		count++
-	}
-
-	err = db.Close()
-	if err != nil {
-		log.Errorf("Unable to close database: %v", err)
-		return userInfo, err
-	}
-
-	userNoun := pickNoun(count, "user", "users")
-	log.Infof("fetch voting config for %d %s", count, userNoun)
-
-	return userInfo, nil
 }
 
 // saveData saves all the global data to a file so they can be read back

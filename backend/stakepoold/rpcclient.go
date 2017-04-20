@@ -129,7 +129,9 @@ func nodeSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 func walletCreateVote(ctx *appContext, blockHash *chainhash.Hash, blockHeight int64, ticketHash *chainhash.Hash, msa string) (string, error) {
 	ctx.RLock()
 	// look up the voting config for this user's ticket
-	voteCfg, ok := ctx.userVotingConfig[msa]
+
+	uvc := ctx.userData.Get()
+	voteCfg, ok := uvc[msa]
 	if !ok {
 		log.Errorf("Unknown multisig address %s. Creating vote with "+
 			"defaults.", msa)
@@ -182,14 +184,7 @@ func walletSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 }
 
 func walletFetchUserTickets(ctx *appContext) map[chainhash.Hash]string {
-	// This is suboptimal to copy and needs fixing.
-	users := make(map[string]UserVotingConfig)
-	ctx.RLock()
-	for k, v := range ctx.userVotingConfig {
-		users[k] = v
-	}
-	ctx.RUnlock()
-
+	users := ctx.userData.Get()
 	userTickets := make(map[chainhash.Hash]string)
 
 	type promise struct {

@@ -21,13 +21,14 @@ import (
 	"google.golang.org/grpc"
 
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
+	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrstakepool/backend/stakepoold/voteoptions"
 )
 
 // Public API version constants
 const (
-	semverString = "1.0.0"
-	semverMajor  = 1
+	semverString = "2.0.0"
+	semverMajor  = 2
 	semverMinor  = 0
 	semverPatch  = 0
 )
@@ -52,18 +53,35 @@ func (*versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*pb.
 	}, nil
 }
 
+// StakepooldServer provides RPC clients with the ability to query the RPC
+// server for the current VoteVersion and VoteInfo which contains options
+type stakepooldServer struct {
+	u *userdata.UserData
+}
+
 // voteOptionsServer provides RPC clients with the ability to query the RPC
 // server for the current VoteVersion and VoteInfo which contains options
 type voteOptionsConfigServer struct {
 }
 
-// StartVoteOptionsConfigService creates an implementation of the VoteOptionsService
-// and registers
-func StartVoteOptionsConfigService(vo *voteoptions.VoteOptions, server *grpc.Server) {
-	pb.RegisterVoteOptionsConfigServiceServer(server, &voteOptionsConfigServer{})
+// StartStakepooldService creates an implementation of the StakepooldService
+// and registers it.
+func StartStakepooldService(u *userdata.UserData, vo *voteoptions.VoteOptions, server *grpc.Server) {
+	pb.RegisterStakepooldServiceServer(server, &stakepooldServer{
+		u: u,
+	})
 }
 
-func (v *voteOptionsConfigServer) VoteOptionsConfig(ctx context.Context, req *pb.VoteOptionsConfigRequest) (*pb.VoteOptionsConfigResponse, error) {
+func (s *stakepooldServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.PingResponse, error) {
+	return &pb.PingResponse{}, nil
+}
+
+func (s *stakepooldServer) UpdateVotingPrefs(ctx context.Context, req *pb.UpdateVotingPrefsRequest) (*pb.UpdateVotingPrefsResponse, error) {
+	s.u.Update()
+	return &pb.UpdateVotingPrefsResponse{}, nil
+}
+
+func (s *stakepooldServer) VoteOptionsConfig(ctx context.Context, req *pb.VoteOptionsConfigRequest) (*pb.VoteOptionsConfigResponse, error) {
 	// TODO remove this hack once decrediton/paymetheus testing is done
 	// TODO switch to using chainparams?
 	voteInfo := []string{
