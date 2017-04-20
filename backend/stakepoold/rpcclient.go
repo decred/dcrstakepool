@@ -130,7 +130,7 @@ func walletCreateVote(ctx *appContext, blockHash *chainhash.Hash, blockHeight in
 	// look up the voting config for this user's ticket
 	userVotingConfig, ok := ctx.userVotingConfig[msa]
 	if !ok {
-		log.Errorf("Unknown multisig address %s. Cannot create vote.", msa)
+		log.Errorf("Unknown multisig address %s. Creating vote with defaults.", msa)
 		// do not return; vote with defaults
 	}
 	votebitsToUse := userVotingConfig.VoteBits
