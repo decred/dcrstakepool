@@ -173,8 +173,8 @@ func walletSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 	return ctx.walletConnection.SendRawTransaction(newTx, false)
 }
 
-func walletFetchUserTickets(ctx *appContext) map[string]UserTickets {
-	userTickets := map[string]UserTickets{}
+func walletFetchUserTickets(ctx *appContext) map[string]string {
+	userTickets := make(map[string]string)
 
 	ticketcount := 0
 	usercount := 0
@@ -192,27 +192,20 @@ func walletFetchUserTickets(ctx *appContext) map[string]UserTickets {
 			continue
 		}
 		if spui != nil && len(spui.Tickets) > 0 {
-			tickets := make([]*chainhash.Hash, 0)
 			for _, ticket := range spui.Tickets {
 				switch ticket.Status {
 				case "live":
 					hash, err := chainhash.NewHashFromStr(ticket.Ticket)
 					if err != nil {
 						log.Infof("invalid ticket %v", err)
-					} else {
-						tickets = append(tickets, hash)
+						continue
 					}
+
+					userTickets[hash.String()] = ctx.userVotingConfig[msa].MultiSigAddress
+					ticketcount++
 				}
 			}
-			if len(tickets) > 0 {
-				userTickets[msa] = UserTickets{
-					Userid:          ctx.userVotingConfig[msa].Userid,
-					MultiSigAddress: ctx.userVotingConfig[msa].MultiSigAddress,
-					Tickets:         tickets,
-				}
-				usercount++
-				ticketcount = ticketcount + len(tickets)
-			}
+			usercount++
 		}
 	}
 

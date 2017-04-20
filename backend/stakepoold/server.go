@@ -1,3 +1,7 @@
+// Copyright (c) 2017 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -33,18 +37,12 @@ type appContext struct {
 	nodeConnection     *dcrrpcclient.Client
 	params             *chaincfg.Params
 	quit               chan struct{}
-	userTickets        map[string]UserTickets
-	userVotingConfig   map[string]UserVotingConfig
+	tickets            map[string]string           // [ticket]multisigaddr
+	userVotingConfig   map[string]UserVotingConfig // [multisigaddr]
 	walletConnection   *dcrrpcclient.Client
 	votingConfig       *VotingConfig
 	winningTicketsChan chan WinningTicketsForBlock
-}
-
-// UserTickets contains each user's tickets.
-type UserTickets struct {
-	Userid          int64
-	MultiSigAddress string
-	Tickets         []*chainhash.Hash
+	testing            bool // enabled only for testing
 }
 
 // UserVotingConfig contains per-user voting preferences.
@@ -212,9 +210,10 @@ func runMain() int {
 		walletConnection:   walletConn,
 		votingConfig:       &votingConfig,
 		winningTicketsChan: make(chan WinningTicketsForBlock),
+		testing:            false,
 	}
 
-	ctx.userTickets = walletFetchUserTickets(ctx)
+	ctx.tickets = walletFetchUserTickets(ctx)
 
 	// Daemon client connection
 	nodeConn, nodeVer, err := connectNodeRPC(ctx, cfg)
@@ -381,45 +380,65 @@ func (ctx *appContext) loadData() {
 	defer ctx.Unlock()
 }
 
-func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
-	blockHash := wt.blockHash
-	blockHeight := wt.blockHeight
+func (ctx *appContext) sendTickets(blockHash, ticket *chainhash.Hash, msa string, height int64) error {
+	sstx, err := walletCreateVote(ctx, blockHash, height, ticket, msa)
+	if err != nil {
+		return fmt.Errorf("failed to create vote: %v", err)
+	}
 
+	_, err = nodeSendVote(ctx, sstx)
+	if err != nil {
+		return fmt.Errorf("failed to vote: %v", err)
+	}
+
+	return nil
+}
+
+func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
+	work := false
 	txStrs := make([]string, 0, len(wt.winningTickets))
 	for _, ticket := range wt.winningTickets {
-		txStrs = append(txStrs, ticket.String())
-		for msa := range ctx.userTickets {
-			if !sliceContains(ctx.userTickets[msa].Tickets, ticket) {
-				continue
+		tS := ticket.String()
+		txStrs = append(txStrs, tS)
+		t, ok := ctx.tickets[tS]
+		if !ok {
+			log.Debugf("unmanaged winning ticket: %v", tS)
+			if ctx.testing {
+				panic("boom")
 			}
+			continue
+		}
 
-			log.Infof("winningTicket %v for height %v hash %v is "+
-				"present on wallet", ticket, blockHeight,
-				blockHash)
-			sstx, err := walletCreateVote(ctx, blockHash,
-				blockHeight, ticket, msa)
-			if err != nil {
-				log.Infof("failed to create vote: %v", err)
-				continue
-			}
+		log.Infof("winning ticket %v height %v block hash %v msa %v",
+			ticket, wt.blockHeight, wt.blockHash, t)
 
-			log.Infof("created vote %v", sstx)
-			txHex, err := nodeSendVote(ctx, sstx)
+		if !ctx.testing {
+			err := ctx.sendTickets(wt.blockHash, ticket, t,
+				wt.blockHeight)
 			if err != nil {
-				log.Infof("failed to vote: %v", err)
-			} else {
-				log.Infof("sent vote ok hex %v", txHex)
+				log.Infof("%v", err)
 			}
 		}
+		work = true
 	}
 	log.Debugf("OnWinningTickets from %v tickets for height %v: %v",
-		wt.host, blockHeight, strings.Join(txStrs, ", "))
+		wt.host, wt.blockHeight, strings.Join(txStrs, ", "))
+
+	// Short circuit expensive load.
+	if !work {
+		return
+	}
 	// TODO we don't want to do this every block.  otherwise if 2 blocks
 	// come in close together, we may vote late on the 2nd block.
 	// maybe a config option that does it on even/odd blocks so not all
 	// wallets are updating every block?
 	// we also don't want to do this from the notification handler.
-	ctx.userTickets = walletFetchUserTickets(ctx)
+	//
+	// @marcopeereboom: We can do this but we need to send it a precious
+	// list vs all the things.
+	if !ctx.testing {
+		ctx.tickets = walletFetchUserTickets(ctx)
+	}
 }
 
 func (ctx *appContext) winningTicketHandler() {
