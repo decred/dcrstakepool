@@ -387,21 +387,26 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	for _, ticket := range wt.winningTickets {
 		txStrs = append(txStrs, ticket.String())
 		for msa := range ctx.userTickets {
-			if sliceContains(ctx.userTickets[msa].Tickets, ticket) {
-				log.Infof("winningTicket %v for height %v hash %v is present on wallet",
-					ticket, blockHeight, blockHash)
-				sstx, err := walletCreateVote(ctx, blockHash, blockHeight, ticket, msa)
-				if err != nil {
-					log.Infof("failed to create vote: %v", err)
-				} else {
-					log.Infof("created vote %v", sstx)
-					txHex, err := nodeSendVote(ctx, sstx)
-					if err != nil {
-						log.Infof("failed to vote: %v", err)
-					} else {
-						log.Infof("sent vote ok hex %v", txHex)
-					}
-				}
+			if !sliceContains(ctx.userTickets[msa].Tickets, ticket) {
+				continue
+			}
+
+			log.Infof("winningTicket %v for height %v hash %v is "+
+				"present on wallet", ticket, blockHeight,
+				blockHash)
+			sstx, err := walletCreateVote(ctx, blockHash,
+				blockHeight, ticket, msa)
+			if err != nil {
+				log.Infof("failed to create vote: %v", err)
+				continue
+			}
+
+			log.Infof("created vote %v", sstx)
+			txHex, err := nodeSendVote(ctx, sstx)
+			if err != nil {
+				log.Infof("failed to vote: %v", err)
+			} else {
+				log.Infof("sent vote ok hex %v", txHex)
 			}
 		}
 	}
