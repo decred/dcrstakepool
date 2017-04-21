@@ -395,7 +395,6 @@ func (ctx *appContext) sendTickets(blockHash, ticket *chainhash.Hash, msa string
 }
 
 func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
-	work := false
 	txStrs := make([]string, 0, len(wt.winningTickets))
 	for _, ticket := range wt.winningTickets {
 		tS := ticket.String()
@@ -419,23 +418,17 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 				log.Infof("%v", err)
 			}
 		}
-		work = true
 	}
 	log.Debugf("OnWinningTickets from %v tickets for height %v: %v",
 		wt.host, wt.blockHeight, strings.Join(txStrs, ", "))
 
-	// Short circuit expensive load.
-	if !work {
-		return
-	}
 	// TODO we don't want to do this every block.  otherwise if 2 blocks
 	// come in close together, we may vote late on the 2nd block.
 	// maybe a config option that does it on even/odd blocks so not all
 	// wallets are updating every block?
 	// we also don't want to do this from the notification handler.
 	//
-	// @marcopeereboom: We can do this but we need to send it a precious
-	// list vs all the things.
+	// @marcopeereboom: We have to do this every block just not here.
 	if !ctx.testing {
 		ctx.tickets = walletFetchUserTickets(ctx)
 	}
