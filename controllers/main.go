@@ -1853,8 +1853,8 @@ func IsValidVoteBits(userVoteBits uint16, voteInfo dcrjson.GetVoteInfoResult) bo
 		return true
 	}
 
-	// All blocks invalid isn't allowed anymore
-	if userVoteBits == 0 {
+	// check if last block invalid is set at all
+	if userVoteBits&1 == 0 {
 		return false
 	}
 
