@@ -4,10 +4,14 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/decred/dcrd/chaincfg"
+	"github.com/decred/dcrd/chaincfg/chainhash"
 )
 
 func TestCalculateFeeAddresses(t *testing.T) {
@@ -57,5 +61,51 @@ func TestCalculateFeeAddresses(t *testing.T) {
 	}
 	if len(addrs) != 0 {
 		t.Errorf("expected empty map, actual length %d", len(addrs))
+	}
+}
+
+func randomBytes(length int) []byte {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err.Error())
+	}
+	return b
+}
+
+var (
+	c  *appContext
+	wt WinningTicketsForBlock
+)
+
+func init() {
+
+	c = &appContext{
+		tickets: make(map[string]string),
+		testing: true,
+	}
+
+	// Create a pool of tickets around expected size
+	ticketCount := 49000
+	userCount := 10000
+	for i := 0; i < ticketCount; i++ {
+		b := randomBytes(4)
+		uid := int(binary.LittleEndian.Uint32(b)) % userCount
+		msa := strconv.Itoa(uid | 1<<31)
+		ticket := &chainhash.Hash{b[0], b[1], b[2], b[3]}
+
+		// use ticket as the key
+		c.tickets[ticket.String()] = msa
+
+		// last 5 tickets win
+		if i > ticketCount-6 {
+			wt.winningTickets = append(wt.winningTickets, ticket)
+		}
+	}
+}
+
+func BenchmarkProcessWinningTickets(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		c.processWinningTickets(wt)
 	}
 }
