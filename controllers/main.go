@@ -1858,6 +1858,12 @@ func IsValidVoteBits(userVoteBits uint16, voteInfo dcrjson.GetVoteInfoResult) bo
 		return false
 	}
 
+	// now we must check if last block invalid is set in combination
+	// with other votebits
+	if userVoteBits&1 == 0 {
+		return false
+	}
+
 	usedBits := uint16(1)
 	for i := range voteInfo.Agendas {
 		masked := userVoteBits & voteInfo.Agendas[i].Mask
