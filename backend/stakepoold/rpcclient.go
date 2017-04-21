@@ -1,3 +1,7 @@
+// Copyright (c) 2017 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -178,7 +182,7 @@ func walletFetchUserTickets(ctx *appContext) map[string]string {
 
 	ticketcount := 0
 	usercount := 0
-	for msa := range ctx.userVotingConfig {
+	for msa, userVotingConfig := range ctx.userVotingConfig {
 		addr, err := dcrutil.DecodeAddress(msa, ctx.params)
 		if err != nil {
 			log.Infof("unable to decode multisig address: %v", err)
@@ -188,7 +192,7 @@ func walletFetchUserTickets(ctx *appContext) map[string]string {
 		spui, err := ctx.walletConnection.StakePoolUserInfo(addr)
 		if err != nil {
 			log.Errorf("unable to fetch tickets for userid %v multisigaddr %v: %v",
-				ctx.userVotingConfig[msa].Userid, msa, err)
+				userVotingConfig.Userid, msa, err)
 			continue
 		}
 		if spui != nil && len(spui.Tickets) > 0 {
@@ -201,7 +205,7 @@ func walletFetchUserTickets(ctx *appContext) map[string]string {
 						continue
 					}
 
-					userTickets[hash.String()] = ctx.userVotingConfig[msa].MultiSigAddress
+					userTickets[hash.String()] = userVotingConfig.MultiSigAddress
 					ticketcount++
 				}
 			}

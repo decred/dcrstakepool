@@ -5,6 +5,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/decred/dcrd/chaincfg"
@@ -22,8 +24,6 @@ import (
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/wallet/udb"
-
-	"database/sql"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -395,6 +395,9 @@ func (ctx *appContext) sendTickets(blockHash, ticket *chainhash.Hash, msa string
 }
 
 func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
+	timeStart := time.Now()
+	votesSent := 0
+
 	txStrs := make([]string, 0, len(wt.winningTickets))
 	for _, ticket := range wt.winningTickets {
 		tS := ticket.String()
@@ -416,9 +419,13 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 				wt.blockHeight)
 			if err != nil {
 				log.Infof("%v", err)
+				continue
 			}
+			votesSent++
 		}
 	}
+	log.Infof("Took %v to process and send %d votes",
+		time.Since(timeStart), votesSent)
 	log.Debugf("OnWinningTickets from %v tickets for height %v: %v",
 		wt.host, wt.blockHeight, strings.Join(txStrs, ", "))
 
