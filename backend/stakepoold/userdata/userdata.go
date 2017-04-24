@@ -17,7 +17,7 @@ type DBConfig struct {
 
 // UserData stores the current snapshot of the user voting config.
 type UserData struct {
-	sync.Mutex
+	sync.RWMutex
 	DBConfig         *DBConfig
 	UserVotingConfig map[string]UserVotingConfig // [multisigaddr]
 }
@@ -30,7 +30,10 @@ type UserVotingConfig struct {
 	VoteBitsVersion uint32
 }
 
-func (u *UserData) FetchUserVotingConfig() map[string]UserVotingConfig {
+// MySQLFetchUserVotingConfig fetches the voting preferences of all users
+// who have completed registration of the pool by submitting an address
+// and generating a multisig ticket address.
+func (u *UserData) MySQLFetchUserVotingConfig() map[string]UserVotingConfig {
 	var (
 		Userid          int64
 		MultiSigAddress string
@@ -82,7 +85,7 @@ func (u *UserData) FetchUserVotingConfig() map[string]UserVotingConfig {
 	}
 
 	userNoun := pickNoun(count, "user", "users")
-	log.Infof("fetch voting config for %d %s", count, userNoun)
+	log.Infof("fetched voting config for %d %s", count, userNoun)
 
 	return userInfo
 }
@@ -103,15 +106,15 @@ func (u *UserData) DBSetConfig(DBUser string, DBPassword string, DBHost string, 
 
 // Get returns the current user data.
 func (u *UserData) Get() map[string]UserVotingConfig {
-	u.Lock()
+	u.RLock()
 	data := u.UserVotingConfig
-	u.Unlock()
+	u.RUnlock()
 	return data
 }
 
 // Update updates the current user data.
 func (u *UserData) Update() error {
-	newData := u.FetchUserVotingConfig()
+	newData := u.MySQLFetchUserVotingConfig()
 	if newData == nil {
 		return errors.New("unable to fetch user data")
 	}
