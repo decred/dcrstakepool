@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/decred/dcrd/chaincfg"
@@ -29,20 +30,26 @@ import (
 )
 
 type appContext struct {
-	sync.Mutex
+	sync.RWMutex
+	// locking required
+	tickets          map[string]string           // [ticket]multisigaddr
+	userVotingConfig map[string]UserVotingConfig // [multisigaddr]
+
+	// no locking required
 	blockheight        int64
 	coldwalletextpub   *hdkeychain.ExtendedKey
 	dataPath           string
 	feeAddrs           map[string]struct{}
 	nodeConnection     *dcrrpcclient.Client
 	params             *chaincfg.Params
+	wg                 sync.WaitGroup // wait group for go routine exits
 	quit               chan struct{}
-	tickets            map[string]string           // [ticket]multisigaddr
-	userVotingConfig   map[string]UserVotingConfig // [multisigaddr]
+	reload             chan struct{}
 	walletConnection   *dcrrpcclient.Client
 	votingConfig       *VotingConfig
 	winningTicketsChan chan WinningTicketsForBlock
 	testing            bool // enabled only for testing
+
 }
 
 // UserVotingConfig contains per-user voting preferences.
@@ -55,7 +62,6 @@ type UserVotingConfig struct {
 
 // VotingConfig contains global voting defaults.
 type VotingConfig struct {
-	sync.Mutex
 	VoteBits         uint16
 	VoteBitsExtended string
 	VoteInfo         *dcrjson.GetVoteInfoResult
@@ -71,9 +77,6 @@ type WinningTicketsForBlock struct {
 
 var (
 	cfg *config
-
-	// WaitGroup for the monitor goroutines
-	wg sync.WaitGroup
 )
 
 // calculateFeeAddresses decodes the string of stake pool payment addresses
@@ -198,7 +201,11 @@ func runMain() int {
 	// loadData()
 	// if ticket/user voting prefs -> enable voting -> refresh
 	// if no ticket/user voting prefs -> pull from db/wallets -> enable voting
-	userVotingConfig := dbFetchUserVotingConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	userVotingConfig, err := dbFetchUserVotingConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	if err != nil {
+		log.Infof("could not obtain voting config: %v", err)
+		return 12 // wtf
+	}
 
 	ctx := &appContext{
 		blockheight:        0,
@@ -206,6 +213,7 @@ func runMain() int {
 		feeAddrs:           feeAddrs,
 		params:             activeNetParams.Params,
 		quit:               make(chan struct{}),
+		reload:             make(chan struct{}),
 		userVotingConfig:   userVotingConfig,
 		walletConnection:   walletConn,
 		votingConfig:       &votingConfig,
@@ -284,11 +292,12 @@ func runMain() int {
 		return
 	}()
 
-	wg.Add(2)
+	ctx.wg.Add(2)
 	go ctx.winningTicketHandler()
+	go ctx.reloadHandler()
 
 	// Wait for CTRL+C to signal goroutines to terminate via quit channel.
-	wg.Wait()
+	ctx.wg.Wait()
 
 	return 0
 }
@@ -297,7 +306,7 @@ func main() {
 	os.Exit(runMain())
 }
 
-func dbFetchUserVotingConfig(user string, password string, hostname string, port string, database string) map[string]UserVotingConfig {
+func dbFetchUserVotingConfig(user string, password string, hostname string, port string, database string) (map[string]UserVotingConfig, error) {
 	var (
 		Userid          int64
 		MultiSigAddress string
@@ -310,20 +319,20 @@ func dbFetchUserVotingConfig(user string, password string, hostname string, port
 	db, err := sql.Open("mysql", fmt.Sprint(user, ":", password, "@(", hostname, ":", port, ")/", database, "?charset=utf8mb4"))
 	if err != nil {
 		log.Errorf("Unable to open db: %v", err)
-		return userInfo
+		return userInfo, err
 	}
 
 	// sql.Open just validates its arguments without creating a connection
 	// Verify that the data source name is valid with Ping:
 	if err = db.Ping(); err != nil {
 		log.Errorf("Unable to establish connection to db: %v", err)
-		return userInfo
+		return userInfo, err
 	}
 
 	rows, err := db.Query("SELECT UserId, MultiSigAddress, VoteBits, VoteBitsVersion FROM Users WHERE MultiSigAddress <> ''")
 	if err != nil {
 		log.Errorf("Unable to query db: %v", err)
-		return userInfo
+		return userInfo, err
 	}
 
 	count := 0
@@ -346,12 +355,13 @@ func dbFetchUserVotingConfig(user string, password string, hostname string, port
 	err = db.Close()
 	if err != nil {
 		log.Errorf("Unable to close database: %v", err)
+		return userInfo, err
 	}
 
 	userNoun := pickNoun(count, "user", "users")
 	log.Infof("fetch voting config for %d %s", count, userNoun)
 
-	return userInfo
+	return userInfo, nil
 }
 
 // saveData saves all the global data to a file so they can be read back
@@ -395,6 +405,9 @@ func (ctx *appContext) sendTickets(blockHash, ticket *chainhash.Hash, msa string
 }
 
 func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
+	ctx.RLock()
+	defer ctx.RUnlock()
+
 	txStrs := make([]string, 0, len(wt.winningTickets))
 	for _, ticket := range wt.winningTickets {
 		tS := ticket.String()
@@ -422,28 +435,40 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	log.Debugf("OnWinningTickets from %v tickets for height %v: %v",
 		wt.host, wt.blockHeight, strings.Join(txStrs, ", "))
 
-	// TODO we don't want to do this every block.  otherwise if 2 blocks
-	// come in close together, we may vote late on the 2nd block.
-	// maybe a config option that does it on even/odd blocks so not all
-	// wallets are updating every block?
-	// we also don't want to do this from the notification handler.
-	//
-	// @marcopeereboom: We have to do this every block just not here.
-	if !ctx.testing {
-		ctx.tickets = walletFetchUserTickets(ctx)
+	ctx.reload <- struct{}{}
+}
+
+func (ctx *appContext) reloadHandler() {
+	defer ctx.wg.Done()
+
+	for {
+		select {
+		case <-ctx.reload:
+			start := time.Now()
+			newTickets := walletFetchUserTickets(ctx)
+			end := time.Now()
+
+			// replace tickets
+			ctx.Lock()
+			ctx.tickets = newTickets
+			ctx.Unlock()
+
+			log.Infof("walletFetchUserTickets: %v", end.Sub(start))
+		case <-ctx.quit:
+			return
+		}
 	}
 }
 
 func (ctx *appContext) winningTicketHandler() {
-	defer wg.Done()
+	defer ctx.wg.Done()
 
-out:
 	for {
 		select {
 		case wt := <-ctx.winningTicketsChan:
 			go ctx.processWinningTickets(wt)
 		case <-ctx.quit:
-			break out
+			return
 		}
 	}
 }
