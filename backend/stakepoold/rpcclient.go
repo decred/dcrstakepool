@@ -127,6 +127,9 @@ func nodeSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 }
 
 func walletCreateVote(ctx *appContext, blockHash *chainhash.Hash, blockHeight int64, ticketHash *chainhash.Hash, msa string) (string, error) {
+	ctx.RLock()
+	defer ctx.RUnlock()
+
 	// look up the voting config for this user's ticket
 	userVotingConfig, ok := ctx.userVotingConfig[msa]
 	if !ok {
@@ -174,39 +177,60 @@ func walletSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 }
 
 func walletFetchUserTickets(ctx *appContext) map[string]string {
+	ctx.RLock()
+	defer ctx.RUnlock()
+
+	users := ctx.userVotingConfig
 	userTickets := make(map[string]string)
 
-	ticketcount := 0
-	usercount := 0
-	for msa := range ctx.userVotingConfig {
+	type promise struct {
+		dcrrpcclient.FutureStakePoolUserInfoResult
+		msa string
+	}
+	promises := make([]promise, 0, len(users))
+	for msa, v := range users {
 		addr, err := dcrutil.DecodeAddress(msa, ctx.params)
 		if err != nil {
-			log.Infof("unable to decode multisig address: %v", err)
+			log.Infof("Could not decode multisig address %v for %v: %v",
+				msa, v.Userid, err)
 			continue
 		}
 
-		spui, err := ctx.walletConnection.StakePoolUserInfo(addr)
+		promises = append(promises, promise{
+			ctx.walletConnection.StakePoolUserInfoAsync(addr), msa})
+	}
+
+	var (
+		ticketcount, usercount int
+	)
+
+	for _, p := range promises {
+		spui, err := p.Receive()
 		if err != nil {
-			log.Errorf("unable to fetch tickets for userid %v multisigaddr %v: %v",
-				ctx.userVotingConfig[msa].Userid, msa, err)
+			log.Errorf("unable to fetch tickets for user %v multisigaddr %v: %v",
+				users[p.msa].Userid, p.msa, err)
 			continue
 		}
-		if spui != nil && len(spui.Tickets) > 0 {
-			for _, ticket := range spui.Tickets {
-				switch ticket.Status {
-				case "live":
-					hash, err := chainhash.NewHashFromStr(ticket.Ticket)
-					if err != nil {
-						log.Infof("invalid ticket %v", err)
-						continue
-					}
 
-					userTickets[hash.String()] = ctx.userVotingConfig[msa].MultiSigAddress
-					ticketcount++
-				}
-			}
-			usercount++
+		if spui == nil || len(spui.Tickets) <= 0 {
+			continue
 		}
+
+		for _, ticket := range spui.Tickets {
+			if ticket.Status != "live" {
+				continue
+			}
+
+			hash, err := chainhash.NewHashFromStr(ticket.Ticket)
+			if err != nil {
+				log.Infof("invalid ticket %v", err)
+				continue
+			}
+
+			userTickets[hash.String()] = users[p.msa].MultiSigAddress
+			ticketcount++
+		}
+		usercount++
 	}
 
 	ticketNoun := pickNoun(ticketcount, "ticket", "tickets")
