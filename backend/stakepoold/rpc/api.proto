@@ -5,7 +5,6 @@ package stakepoolrpc;
 service StakepooldService {
 	// Queries
 	rpc Ping (PingRequest) returns (PingResponse);
-	rpc VoteOptionsConfig (VoteOptionsConfigRequest) returns (VoteOptionsConfigResponse);
 
 	// Control
 	rpc UpdateVotingPrefs (UpdateVotingPrefsRequest) returns (UpdateVotingPrefsResponse);
@@ -31,10 +30,4 @@ message VersionResponse {
 	uint32 patch = 4;
 	string prerelease = 5;
 	string build_metadata = 6;
-}
-
-message VoteOptionsConfigRequest {}
-message VoteOptionsConfigResponse {
-	string VoteInfo = 1;
-	uint32 VoteVersion = 2;
 }

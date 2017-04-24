@@ -1,5 +1,5 @@
 hash: 22579d3226386f0deb227919c4cb6f0e69be7551d69bb7cba48ca1b2b97e8642
-updated: 2017-04-18T09:13:07.671352545-05:00
+updated: 2017-04-26T14:29:42.15087597-05:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
@@ -20,7 +20,7 @@ imports:
 - name: github.com/decred/blake256
   version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: ff07aac47f0477f0021bc667dd7a794e67f4abd0
+  version: 5c3e0d6454001c8d14fcf06be94381d93991aaea
   subpackages:
   - blockchain
   - blockchain/internal/dbnamespace
@@ -47,7 +47,7 @@ imports:
   - base58
   - hdkeychain
 - name: github.com/decred/dcrwallet
-  version: 66c410e7b976b22a7943280ab10e82d944b351a7
+  version: a642114a124c6174130d528d9d33fe69128d2688
   subpackages:
   - apperrors
   - chain
@@ -67,7 +67,7 @@ imports:
 - name: github.com/go-gorp/gorp
   version: 390956328094c74d7c75a7e71a4d17e9297ed90e
 - name: github.com/go-sql-driver/mysql
-  version: 9dee4ca50b83acdf57a35fb9e6fb4be640afa2f3
+  version: 15dbaaedd46b79251eaa9c8ed5f280d28978bb3f
 - name: github.com/golang/protobuf
   version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
   subpackages:
@@ -90,7 +90,7 @@ imports:
   - web/middleware
   - web/mutil
 - name: golang.org/x/crypto
-  version: efac7f277b17c19894091e358c6130cb6bd51117
+  version: c7af5bf2638a1164f2eb5467c39c6cffbd13a02e
   subpackages:
   - bcrypt
   - blowfish
@@ -101,7 +101,7 @@ imports:
   - salsa20/salsa
   - scrypt
 - name: golang.org/x/net
-  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
+  version: da118f7b8e5954f39d0d2130ab35d4bf0e3cb344
   subpackages:
   - context
   - http2
@@ -111,7 +111,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/text
-  version: f4b4367115ec2de254587813edaa901bc1c723a8
+  version: a9a820217f98f7c8a207ec1e45a874e1fe12c478
   subpackages:
   - secure/bidirule
   - transform
@@ -126,6 +126,7 @@ imports:
   subpackages:
   - codes
   - credentials
+  - grpclb/grpc_lb_v1
   - grpclog
   - internal
   - keepalive

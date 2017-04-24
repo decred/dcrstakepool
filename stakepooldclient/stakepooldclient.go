@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-var requiredStakepooldAPI = semver{major: 2, minor: 0, patch: 0}
+var requiredStakepooldAPI = semver{major: 3, minor: 0, patch: 0}
 
 func ConnectStakepooldGRPC(stakepooldHosts []string, stakepooldCerts []string, serverID int) (*grpc.ClientConn, error) {
 	log.Infof("Attempting to connect to stakepoold gRPC %s using "+
@@ -45,17 +45,6 @@ func ConnectStakepooldGRPC(stakepooldHosts []string, stakepooldCerts []string, s
 	}
 
 	return conn, nil
-}
-
-func StakepooldGetVoteOptions(conn *grpc.ClientConn) (uint32, string, error) {
-	c := pb.NewStakepooldServiceClient(conn)
-	voteOptionsRequest := &pb.VoteOptionsConfigRequest{}
-	voteOptionsResponse, err := c.VoteOptionsConfig(context.Background(), voteOptionsRequest)
-	if err != nil {
-		return 0, "", err
-	}
-
-	return voteOptionsResponse.VoteVersion, voteOptionsResponse.VoteInfo, err
 }
 
 func StakepooldUpdateVotingPrefs(conn *grpc.ClientConn, userid int64) error {

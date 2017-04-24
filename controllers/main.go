@@ -78,7 +78,6 @@ type MainController struct {
 	smtpUsername         string
 	smtpPassword         string
 	version              string
-	voteInfo             dcrjson.GetVoteInfoResult
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
 }
@@ -120,8 +119,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	smtpUsername string, smtpPassword string, version string,
 	walletHosts []string, walletCerts []string, walletUsers []string,
 	walletPasswords []string, minServers int, realIPHeader string,
-	votingXpubStr string, voteInfo dcrjson.GetVoteInfoResult,
-	voteVersion uint32) (*MainController, error) {
+	votingXpubStr string) (*MainController, error) {
 
 	// Parse the extended public key and the pool fees.
 	feeKey, err := hdkeychain.NewKeyFromString(feeXpubStr)
@@ -169,10 +167,16 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		smtpUsername:         smtpUsername,
 		smtpPassword:         smtpPassword,
 		version:              version,
-		voteInfo:             voteInfo,
-		voteVersion:          voteVersion,
 		votingXpub:           voteKey,
 	}
+
+	voteVersion, err := mc.GetVoteVersion()
+	if err != nil || voteVersion == 0 {
+		cErr := fmt.Errorf("Failed to get wallets' Vote Version: %v", err)
+		return nil, cErr
+	}
+
+	mc.voteVersion = voteVersion
 
 	return mc, nil
 }
@@ -431,7 +435,7 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 	}
 	userVoteBits := uint16(vbi)
 
-	if !IsValidVoteBits(userVoteBits, controller.voteInfo) {
+	if !controller.IsValidVoteBits(userVoteBits) {
 		return nil, codes.InvalidArgument, "voting error", errors.New("votebits invalid for current agendas")
 	}
 
@@ -570,9 +574,19 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 	return err
 }
 
+// GetVoteVersion
+func (controller *MainController) GetVoteVersion() (uint32, error) {
+	voteVersion, err := checkWalletsVoteVersion(controller.rpcServers)
+	if err != nil {
+		return 0, err
+	}
+
+	return voteVersion, err
+}
+
 // CheckAndResetUserVoteBits reset users VoteBits if the VoteVersion has
 // changed or if the stored VoteBits are somehow invalid.
-func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap, voteVersion uint32, voteInfo dcrjson.GetVoteInfoResult) {
+func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap) {
 	defaultVoteBits := uint16(1)
 	userMax := models.GetUserMax(dbMap)
 	for userid := int64(1); userid <= userMax; userid++ {
@@ -584,16 +598,16 @@ func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap, v
 
 		// Reset the user's voting preferences if the Vote Version changed
 		// since they no longer apply
-		if uint32(user.VoteBitsVersion) != voteVersion {
+		if uint32(user.VoteBitsVersion) != controller.voteVersion {
 			oldVoteBitsVersion := user.VoteBitsVersion
-			_, err := helpers.UpdateVoteBitsVersionByID(dbMap, userid, voteVersion)
+			_, err := helpers.UpdateVoteBitsVersionByID(dbMap, userid, controller.voteVersion)
 			if err != nil {
 				log.Errorf("failed to update VoteBitsVersion for uid %v: %v",
 					userid, err)
 				continue
 			} else {
 				log.Infof("updated VoteBitsVersion from %v to %v for uid %v",
-					oldVoteBitsVersion, voteVersion, userid)
+					oldVoteBitsVersion, controller.voteVersion, userid)
 			}
 			if uint16(user.VoteBits) != defaultVoteBits {
 				oldVoteBits := user.VoteBits
@@ -609,7 +623,7 @@ func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap, v
 		} else {
 			// Validate that the votebits are valid for the agendas of the current
 			// vote version
-			if !IsValidVoteBits(uint16(user.VoteBits), voteInfo) {
+			if !controller.IsValidVoteBits(uint16(user.VoteBits)) {
 				oldVoteBits := user.VoteBits
 				_, err := helpers.UpdateVoteBitsByID(dbMap, userid, defaultVoteBits)
 				if err != nil {
@@ -1775,13 +1789,13 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 
 	t := controller.GetTemplate(c)
 
-	choicesSelected := choicesForAgendas(uint16(user.VoteBits), controller.voteInfo)
+	choicesSelected := controller.choicesForAgendas(uint16(user.VoteBits))
 
 	for k, v := range choicesSelected {
 		strk := strconv.Itoa(k)
 		c.Env["Agenda"+strk+"Selected"] = v
 	}
-	c.Env["Agendas"] = controller.voteInfo.Agendas
+	c.Env["Agendas"] = controller.getAgendas()
 	c.Env["FlashError"] = session.Flashes("votingError")
 	c.Env["FlashSuccess"] = session.Flashes("votingSuccess")
 	c.Env["IsVoting"] = true
@@ -1811,7 +1825,9 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 	// last block valid
 	generatedVoteBits |= 1
 
-	for i := range controller.voteInfo.Agendas {
+	deployments := controller.getAgendas()
+
+	for i := range deployments {
 		agendaVal := r.FormValue("agenda" + strconv.Itoa(i))
 		avi, err := strconv.Atoi(agendaVal)
 		if err != nil {
@@ -1821,7 +1837,7 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 		generatedVoteBits |= uint16(avi)
 	}
 
-	isValid := IsValidVoteBits(generatedVoteBits, controller.voteInfo)
+	isValid := controller.IsValidVoteBits(generatedVoteBits)
 	if !isValid {
 		session.AddFlash("generated votebits were invalid", "votingError")
 		return "/voting", http.StatusSeeOther
@@ -1853,16 +1869,19 @@ func (controller *MainController) Logout(c web.C, r *http.Request) (string, int)
 	return "/", http.StatusSeeOther
 }
 
-func choicesForAgendas(userVoteBits uint16, voteInfo dcrjson.GetVoteInfoResult) map[int]uint16 {
+func (controller *MainController) choicesForAgendas(userVoteBits uint16) map[int]uint16 {
 	choicesSelected := make(map[int]uint16)
 
-	for i := range voteInfo.Agendas {
-		masked := userVoteBits & voteInfo.Agendas[i].Mask
+	deployments := controller.getAgendas()
+
+	for i := range deployments {
+		d := &deployments[i]
+		masked := userVoteBits & d.Vote.Mask
 		var valid bool
-		for choice := range voteInfo.Agendas[i].Choices {
-			if masked == voteInfo.Agendas[i].Choices[choice].Bits {
+		for choice := range d.Vote.Choices {
+			if masked == d.Vote.Choices[choice].Bits {
 				valid = true
-				choicesSelected[i] = voteInfo.Agendas[i].Choices[choice].Bits
+				choicesSelected[i] = d.Vote.Choices[choice].Bits
 			}
 		}
 		if !valid {
@@ -1873,8 +1892,17 @@ func choicesForAgendas(userVoteBits uint16, voteInfo dcrjson.GetVoteInfoResult) 
 	return choicesSelected
 }
 
+func (controller *MainController) getAgendas() []chaincfg.ConsensusDeployment {
+	if controller.params.Deployments == nil {
+		return nil
+	}
+
+	return controller.params.Deployments[controller.voteVersion]
+
+}
+
 // IsValidVoteBits returns an error if voteBits are not valid for agendas
-func IsValidVoteBits(userVoteBits uint16, voteInfo dcrjson.GetVoteInfoResult) bool {
+func (controller *MainController) IsValidVoteBits(userVoteBits uint16) bool {
 	// All blocks valid is OK
 	if userVoteBits == 1 {
 		return true
@@ -1886,12 +1914,14 @@ func IsValidVoteBits(userVoteBits uint16, voteInfo dcrjson.GetVoteInfoResult) bo
 	}
 
 	usedBits := uint16(1)
-	for i := range voteInfo.Agendas {
-		masked := userVoteBits & voteInfo.Agendas[i].Mask
+	deployments := controller.getAgendas()
+	for i := range deployments {
+		d := &deployments[i]
+		masked := userVoteBits & d.Vote.Mask
 		var valid bool
-		for choice := range voteInfo.Agendas[i].Choices {
-			usedBits |= voteInfo.Agendas[i].Choices[choice].Bits
-			if masked == voteInfo.Agendas[i].Choices[choice].Bits {
+		for choice := range d.Vote.Choices {
+			usedBits |= d.Vote.Choices[choice].Bits
+			if masked == d.Vote.Choices[choice].Bits {
 				valid = true
 			}
 		}
