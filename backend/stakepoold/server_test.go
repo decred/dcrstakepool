@@ -81,8 +81,8 @@ var (
 func init() {
 
 	c = &appContext{
-		tickets: make(map[string]string),
-		testing: true,
+		ticketsMSA: make(map[chainhash.Hash]string),
+		testing:    true,
 	}
 
 	// Create a pool of tickets around expected size
@@ -95,7 +95,7 @@ func init() {
 		ticket := &chainhash.Hash{b[0], b[1], b[2], b[3]}
 
 		// use ticket as the key
-		c.tickets[ticket.String()] = msa
+		c.ticketsMSA[*ticket] = msa
 
 		// last 5 tickets win
 		if i > ticketCount-6 {

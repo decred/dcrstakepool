@@ -128,32 +128,37 @@ func nodeSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 
 func walletCreateVote(ctx *appContext, blockHash *chainhash.Hash, blockHeight int64, ticketHash *chainhash.Hash, msa string) (string, error) {
 	ctx.RLock()
-	defer ctx.RUnlock()
-
 	// look up the voting config for this user's ticket
-	userVotingConfig, ok := ctx.userVotingConfig[msa]
+	voteCfg, ok := ctx.userVotingConfig[msa]
 	if !ok {
-		log.Errorf("Unknown multisig address %s. Creating vote with defaults.", msa)
+		log.Errorf("Unknown multisig address %s. Creating vote with "+
+			"defaults.", msa)
 		// do not return; vote with defaults
 	}
-	votebitsToUse := userVotingConfig.VoteBits
-	votebitsVersionToUse := userVotingConfig.VoteBitsVersion
+	ctx.RUnlock()
 
-	// if the user's voting config has a vote version that is different from our
-	// global vote version that we plucked from dcrwallet walletinfo then just
-	// use the default votebits of 1
-	if votebitsVersionToUse != ctx.votingConfig.VoteVersion {
-		votebitsToUse = ctx.votingConfig.VoteBits
-		log.Infof("userid %v multisigaddress %v vote version mismatch user %v "+
-			"stakepoold %v using votebits %d",
-			userVotingConfig.Userid,
-			userVotingConfig.MultiSigAddress, votebitsVersionToUse,
-			ctx.votingConfig.VoteVersion, votebitsToUse)
+	voteBits := voteCfg.VoteBits
+
+	// if the user's voting config has a vote version that is different
+	// from our global vote version that we plucked from dcrwallet
+	// walletinfo then just use the default votebits of 1
+	//
+	// ctx.votingConfig.VoteVersion SHALL be concurrent safe
+	if voteCfg.VoteBitsVersion != ctx.votingConfig.VoteVersion {
+		voteBits = ctx.votingConfig.VoteBits
+		log.Infof("userid %v multisigaddress %v vote version "+
+			"mismatch user %v stakepoold %v using votebits %d",
+			voteCfg.Userid, voteCfg.MultiSigAddress,
+			voteCfg.VoteBitsVersion, ctx.votingConfig.VoteVersion,
+			voteBits)
 	}
 
-	log.Infof("calling GenerateVote with blockHash %v blockHeight %v ticketHash %v votebitsToUse %v voteBitsExt %v",
-		blockHash, blockHeight, ticketHash, votebitsToUse, ctx.votingConfig.VoteBitsExtended)
-	res, err := ctx.walletConnection.GenerateVote(blockHash, blockHeight, ticketHash, votebitsToUse, ctx.votingConfig.VoteBitsExtended)
+	log.Infof("GenerateVote block %v height %v ticket %v bits %v ext %v",
+		blockHash, blockHeight, ticketHash, voteBits,
+		ctx.votingConfig.VoteBitsExtended)
+	/// XXX this needs to become an Async call.
+	res, err := ctx.walletConnection.GenerateVote(blockHash, blockHeight,
+		ticketHash, voteBits, ctx.votingConfig.VoteBitsExtended)
 	if err != nil {
 		return "", err
 	}
@@ -176,12 +181,16 @@ func walletSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 	return ctx.walletConnection.SendRawTransaction(newTx, false)
 }
 
-func walletFetchUserTickets(ctx *appContext) map[string]string {
+func walletFetchUserTickets(ctx *appContext) map[chainhash.Hash]string {
+	// This is suboptimal to copy and needs fixing.
+	users := make(map[string]UserVotingConfig)
 	ctx.RLock()
-	defer ctx.RUnlock()
+	for k, v := range ctx.userVotingConfig {
+		users[k] = v
+	}
+	ctx.RUnlock()
 
-	users := ctx.userVotingConfig
-	userTickets := make(map[string]string)
+	userTickets := make(map[chainhash.Hash]string)
 
 	type promise struct {
 		dcrrpcclient.FutureStakePoolUserInfoResult
@@ -227,7 +236,7 @@ func walletFetchUserTickets(ctx *appContext) map[string]string {
 				continue
 			}
 
-			userTickets[hash.String()] = users[p.msa].MultiSigAddress
+			userTickets[*hash] = users[p.msa].MultiSigAddress
 			ticketcount++
 		}
 		usercount++
