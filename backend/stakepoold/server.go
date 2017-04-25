@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -32,7 +31,7 @@ import (
 type appContext struct {
 	sync.RWMutex
 	// locking required
-	tickets          map[string]string           // [ticket]multisigaddr
+	ticketsMSA       map[chainhash.Hash]string   // [ticket]multisigaddr
 	userVotingConfig map[string]UserVotingConfig // [multisigaddr]
 
 	// no locking required
@@ -221,7 +220,7 @@ func runMain() int {
 		testing:            false,
 	}
 
-	ctx.tickets = walletFetchUserTickets(ctx)
+	ctx.ticketsMSA = walletFetchUserTickets(ctx)
 
 	// Daemon client connection
 	nodeConn, nodeVer, err := connectNodeRPC(ctx, cfg)
@@ -405,16 +404,30 @@ func (ctx *appContext) sendTickets(blockHash, ticket *chainhash.Hash, msa string
 }
 
 func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
-	ctx.RLock()
-	defer ctx.RUnlock()
+	// We always have to reload so signal the other end on the way out.
+	// Maybe we can change this to a go routine so that we are not gated on
+	// the function finishing first.  Reason it is defered now is to make
+	// sure the wallet isn't busy while processing the higher priority
+	// voting activity.
+	defer func() {
+		// Don't block on messaging.  We want to make sure we can
+		// handle the next call ASAP.
+		select {
+		case ctx.reload <- struct{}{}:
+		default:
+			// We log this in order to detect if we potentially
+			// have a deadlock.
+			log.Infof("Reload message not sent")
+		}
+	}()
 
-	txStrs := make([]string, 0, len(wt.winningTickets))
 	for _, ticket := range wt.winningTickets {
-		tS := ticket.String()
-		txStrs = append(txStrs, tS)
-		t, ok := ctx.tickets[tS]
+		// Look up multi sig address.
+		ctx.RLock()
+		msa, ok := ctx.ticketsMSA[*ticket]
+		ctx.RUnlock()
 		if !ok {
-			log.Debugf("unmanaged winning ticket: %v", tS)
+			log.Debugf("unmanaged winning ticket: %v", ticket)
 			if ctx.testing {
 				panic("boom")
 			}
@@ -422,20 +435,18 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		}
 
 		log.Infof("winning ticket %v height %v block hash %v msa %v",
-			ticket, wt.blockHeight, wt.blockHash, t)
+			ticket, wt.blockHeight, wt.blockHash, msa)
 
-		if !ctx.testing {
-			err := ctx.sendTickets(wt.blockHash, ticket, t,
-				wt.blockHeight)
-			if err != nil {
-				log.Infof("%v", err)
-			}
+		// When testing we don't send the tickets.
+		if ctx.testing {
+			continue
+		}
+
+		err := ctx.sendTickets(wt.blockHash, ticket, msa, wt.blockHeight)
+		if err != nil {
+			log.Infof("%v", err)
 		}
 	}
-	log.Debugf("OnWinningTickets from %v tickets for height %v: %v",
-		wt.host, wt.blockHeight, strings.Join(txStrs, ", "))
-
-	ctx.reload <- struct{}{}
 }
 
 func (ctx *appContext) reloadHandler() {
@@ -450,7 +461,7 @@ func (ctx *appContext) reloadHandler() {
 
 			// replace tickets
 			ctx.Lock()
-			ctx.tickets = newTickets
+			ctx.ticketsMSA = newTickets
 			ctx.Unlock()
 
 			log.Infof("walletFetchUserTickets: %v", end.Sub(start))
