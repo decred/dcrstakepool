@@ -56,6 +56,7 @@ func (*versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*pb.
 // StakepooldServer provides RPC clients with the ability to query the RPC
 // server for the current VoteVersion and VoteInfo which contains options
 type stakepooldServer struct {
+	c chan struct{}
 	u *userdata.UserData
 }
 
@@ -66,9 +67,9 @@ type voteOptionsConfigServer struct {
 
 // StartStakepooldService creates an implementation of the StakepooldService
 // and registers it.
-func StartStakepooldService(u *userdata.UserData, vo *voteoptions.VoteOptions, server *grpc.Server) {
+func StartStakepooldService(c chan struct{}, vo *voteoptions.VoteOptions, server *grpc.Server) {
 	pb.RegisterStakepooldServiceServer(server, &stakepooldServer{
-		u: u,
+		c: c,
 	})
 }
 
@@ -77,7 +78,17 @@ func (s *stakepooldServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.P
 }
 
 func (s *stakepooldServer) UpdateVotingPrefs(ctx context.Context, req *pb.UpdateVotingPrefsRequest) (*pb.UpdateVotingPrefsResponse, error) {
-	s.u.Update()
+	defer func() {
+		// Don't block on messaging.  We want to make sure we can
+		// handle the next call ASAP.
+		select {
+		case s.c <- struct{}{}:
+		default:
+			// We log this in order to detect if we potentially
+			// have a deadlock.
+			log.Infof("Reload user config message not sent")
+		}
+	}()
 	return &pb.UpdateVotingPrefsResponse{}, nil
 }
 

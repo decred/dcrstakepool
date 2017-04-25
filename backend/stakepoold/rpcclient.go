@@ -8,6 +8,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrutil"
 )
 
@@ -129,9 +130,7 @@ func nodeSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 func walletCreateVote(ctx *appContext, blockHash *chainhash.Hash, blockHeight int64, ticketHash *chainhash.Hash, msa string) (string, error) {
 	ctx.RLock()
 	// look up the voting config for this user's ticket
-
-	uvc := ctx.userData.Get()
-	voteCfg, ok := uvc[msa]
+	voteCfg, ok := ctx.userVotingConfig[msa]
 	if !ok {
 		log.Errorf("Unknown multisig address %s. Creating vote with "+
 			"defaults.", msa)
@@ -184,7 +183,14 @@ func walletSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
 }
 
 func walletFetchUserTickets(ctx *appContext) map[chainhash.Hash]string {
-	users := ctx.userData.Get()
+	// This is suboptimal to copy and needs fixing.
+	users := make(map[string]userdata.UserVotingConfig)
+	ctx.RLock()
+	for k, v := range ctx.userVotingConfig {
+		users[k] = v
+	}
+	ctx.RUnlock()
+
 	userTickets := make(map[chainhash.Hash]string)
 
 	type promise struct {

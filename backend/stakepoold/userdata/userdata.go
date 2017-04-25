@@ -2,7 +2,6 @@ package userdata
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"sync"
 )
@@ -33,7 +32,7 @@ type UserVotingConfig struct {
 // MySQLFetchUserVotingConfig fetches the voting preferences of all users
 // who have completed registration of the pool by submitting an address
 // and generating a multisig ticket address.
-func (u *UserData) MySQLFetchUserVotingConfig() map[string]UserVotingConfig {
+func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, error) {
 	var (
 		Userid          int64
 		MultiSigAddress string
@@ -46,20 +45,20 @@ func (u *UserData) MySQLFetchUserVotingConfig() map[string]UserVotingConfig {
 	db, err := sql.Open("mysql", fmt.Sprint(u.DBConfig.DBUser, ":", u.DBConfig.DBPassword, "@(", u.DBConfig.DBHost, ":", u.DBConfig.DBPort, ")/", u.DBConfig.DBName, "?charset=utf8mb4"))
 	if err != nil {
 		log.Errorf("Unable to open db: %v", err)
-		return userInfo
+		return userInfo, err
 	}
 
 	// sql.Open just validates its arguments without creating a connection
 	// Verify that the data source name is valid with Ping:
 	if err = db.Ping(); err != nil {
 		log.Errorf("Unable to establish connection to db: %v", err)
-		return userInfo
+		return userInfo, err
 	}
 
 	rows, err := db.Query("SELECT UserId, MultiSigAddress, VoteBits, VoteBitsVersion FROM Users WHERE MultiSigAddress <> ''")
 	if err != nil {
 		log.Errorf("Unable to query db: %v", err)
-		return userInfo
+		return userInfo, err
 	}
 
 	count := 0
@@ -80,14 +79,7 @@ func (u *UserData) MySQLFetchUserVotingConfig() map[string]UserVotingConfig {
 	}
 
 	err = db.Close()
-	if err != nil {
-		log.Errorf("Unable to close database: %v", err)
-	}
-
-	userNoun := pickNoun(count, "user", "users")
-	log.Infof("fetched voting config for %d %s", count, userNoun)
-
-	return userInfo
+	return userInfo, err
 }
 
 // DBSetConfig sets the database configuration.
@@ -102,25 +94,4 @@ func (u *UserData) DBSetConfig(DBUser string, DBPassword string, DBHost string, 
 	u.Lock()
 	u.DBConfig = dbconfig
 	u.Unlock()
-}
-
-// Get returns the current user data.
-func (u *UserData) Get() map[string]UserVotingConfig {
-	u.RLock()
-	data := u.UserVotingConfig
-	u.RUnlock()
-	return data
-}
-
-// Update updates the current user data.
-func (u *UserData) Update() error {
-	newData := u.MySQLFetchUserVotingConfig()
-	if newData == nil {
-		return errors.New("unable to fetch user data")
-	}
-
-	u.Lock()
-	u.UserVotingConfig = newData
-	u.Unlock()
-	return nil
 }

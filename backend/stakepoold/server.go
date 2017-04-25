@@ -30,7 +30,8 @@ import (
 type appContext struct {
 	sync.RWMutex
 	// locking required
-	ticketsMSA map[chainhash.Hash]string // [ticket]multisigaddr
+	ticketsMSA       map[chainhash.Hash]string            // [ticket]multisigaddr
+	userVotingConfig map[string]userdata.UserVotingConfig // [multisigaddr]
 
 	// no locking required
 	blockheight        int64
@@ -41,13 +42,13 @@ type appContext struct {
 	params             *chaincfg.Params
 	wg                 sync.WaitGroup // wait group for go routine exits
 	quit               chan struct{}
-	reload             chan struct{}
+	reloadTickets      chan struct{}
+	reloadUserConfig   chan struct{}
 	userData           *userdata.UserData
-	walletConnection   *dcrrpcclient.Client
 	votingConfig       *VotingConfig
+	walletConnection   *dcrrpcclient.Client
 	winningTicketsChan chan WinningTicketsForBlock
 	testing            bool // enabled only for testing
-
 }
 
 // VotingConfig contains global voting defaults.
@@ -194,7 +195,12 @@ func runMain() int {
 
 	var userdata = &userdata.UserData{}
 	userdata.DBSetConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
-	userdata.Update()
+
+	userVotingConfig, err := userdata.MySQLFetchUserVotingConfig()
+	if err != nil {
+		log.Infof("could not obtain voting config: %v", err)
+		return 12 // wtf
+	}
 
 	ctx := &appContext{
 		blockheight:        0,
@@ -202,10 +208,12 @@ func runMain() int {
 		feeAddrs:           feeAddrs,
 		params:             activeNetParams.Params,
 		quit:               make(chan struct{}),
-		reload:             make(chan struct{}),
+		reloadUserConfig:   make(chan struct{}),
+		reloadTickets:      make(chan struct{}),
 		userData:           userdata,
-		walletConnection:   walletConn,
+		userVotingConfig:   userVotingConfig,
 		votingConfig:       &votingConfig,
+		walletConnection:   walletConn,
 		winningTicketsChan: make(chan WinningTicketsForBlock),
 		testing:            false,
 	}
@@ -264,7 +272,7 @@ func runMain() int {
 		return 11
 	}
 
-	startGRPCServers(userdata, vo)
+	startGRPCServers(ctx.reloadUserConfig, vo)
 
 	// Only accept a single CTRL+C
 	c := make(chan os.Signal, 1)
@@ -281,9 +289,10 @@ func runMain() int {
 		return
 	}()
 
-	ctx.wg.Add(2)
+	ctx.wg.Add(3)
 	go ctx.winningTicketHandler()
-	go ctx.reloadHandler()
+	go ctx.reloadTicketsHandler()
+	go ctx.reloadUserConfigHandler()
 
 	// Wait for CTRL+C to signal goroutines to terminate via quit channel.
 	ctx.wg.Wait()
@@ -345,11 +354,11 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		// Don't block on messaging.  We want to make sure we can
 		// handle the next call ASAP.
 		select {
-		case ctx.reload <- struct{}{}:
+		case ctx.reloadTickets <- struct{}{}:
 		default:
 			// We log this in order to detect if we potentially
 			// have a deadlock.
-			log.Infof("Reload message not sent")
+			log.Infof("Reload tickets message not sent")
 		}
 	}()
 
@@ -381,12 +390,12 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	}
 }
 
-func (ctx *appContext) reloadHandler() {
+func (ctx *appContext) reloadTicketsHandler() {
 	defer ctx.wg.Done()
 
 	for {
 		select {
-		case <-ctx.reload:
+		case <-ctx.reloadTickets:
 			start := time.Now()
 			newTickets := walletFetchUserTickets(ctx)
 			end := time.Now()
@@ -397,6 +406,33 @@ func (ctx *appContext) reloadHandler() {
 			ctx.Unlock()
 
 			log.Infof("walletFetchUserTickets: %v", end.Sub(start))
+		case <-ctx.quit:
+			return
+		}
+	}
+}
+
+func (ctx *appContext) reloadUserConfigHandler() {
+	defer ctx.wg.Done()
+
+	for {
+		select {
+		case <-ctx.reloadUserConfig:
+			start := time.Now()
+			newUserConfig, err := ctx.userData.MySQLFetchUserVotingConfig()
+			end := time.Now()
+			log.Infof("MySQLFetchUserVotingConfig: %v", end.Sub(start))
+
+			if err != nil {
+				log.Errorf("unable to reload user config due to db error: %v",
+					err)
+				continue
+			}
+
+			// replace UserVotingConfig
+			ctx.Lock()
+			ctx.userVotingConfig = newUserConfig
+			ctx.Unlock()
 		case <-ctx.quit:
 			return
 		}
