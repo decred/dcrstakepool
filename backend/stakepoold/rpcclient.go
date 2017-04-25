@@ -11,7 +11,7 @@ import (
 	"github.com/decred/dcrutil"
 )
 
-var requiredChainServerAPI = semver{major: 2, minor: 0, patch: 0}
+var requiredChainServerAPI = semver{major: 3, minor: 0, patch: 0}
 var requiredWalletAPI = semver{major: 3, minor: 0, patch: 0}
 
 func connectNodeRPC(ctx *appContext, cfg *config) (*dcrrpcclient.Client, semver, error) {
