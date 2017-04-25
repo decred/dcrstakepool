@@ -2,13 +2,26 @@ syntax = "proto3";
 
 package stakepoolrpc;
 
+service StakepooldService {
+	// Queries
+	rpc Ping (PingRequest) returns (PingResponse);
+	rpc VoteOptionsConfig (VoteOptionsConfigRequest) returns (VoteOptionsConfigResponse);
+
+	// Control
+	rpc UpdateVotingPrefs (UpdateVotingPrefsRequest) returns (UpdateVotingPrefsResponse);
+}
+
 service VersionService {
 	rpc Version (VersionRequest) returns (VersionResponse);
 }
 
-service VoteOptionsConfigService {
-	rpc VoteOptionsConfig (VoteOptionsConfigRequest) returns (VoteOptionsConfigResponse);
+message PingRequest {}
+message PingResponse {}
+
+message UpdateVotingPrefsRequest {
+	int64 Userid = 1;
 }
+message UpdateVotingPrefsResponse {}
 
 message VersionRequest {}
 message VersionResponse {

@@ -12,6 +12,7 @@ import (
 	"github.com/btcsuite/seelog"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/models"
+	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 )
 
@@ -20,19 +21,19 @@ import (
 // add a reference here, to the subsystemLoggers map, and the useLogger
 // function.
 var (
-	backendLog     = seelog.Disabled
-	controllersLog = btclog.Disabled
-	grpcLog        = btclog.Disabled
-	log            = btclog.Disabled
-	modelsLog      = btclog.Disabled
-	systemLog      = btclog.Disabled
+	backendLog          = seelog.Disabled
+	controllersLog      = btclog.Disabled
+	log                 = btclog.Disabled
+	modelsLog           = btclog.Disabled
+	stakepooldclientLog = btclog.Disabled
+	systemLog           = btclog.Disabled
 )
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
 var subsystemLoggers = map[string]btclog.Logger{
 	"DCRS": log,
 	"CNTL": controllersLog,
-	"GRPC": grpcLog,
+	"GRPC": stakepooldclientLog,
 	"MODL": modelsLog,
 	"SYTM": systemLog,
 }
@@ -51,6 +52,9 @@ func useLogger(subsystemID string, logger btclog.Logger) {
 	case "CNTL":
 		controllersLog = logger
 		controllers.UseLogger(logger)
+	case "GRPC":
+		stakepooldclientLog = logger
+		stakepooldclient.UseLogger(logger)
 	case "MODL":
 		modelsLog = logger
 		models.UseLogger(logger)

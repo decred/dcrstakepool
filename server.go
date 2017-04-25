@@ -15,6 +15,7 @@ import (
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/controllers"
+	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 
 	"github.com/zenazn/goji/graceful"
@@ -109,19 +110,20 @@ func runMain() int {
 	if activeNetParams.Params.Name == "mainnet" {
 		voteVersion = 3
 	}
+
+	grpcConnections := make([]*grpc.ClientConn, len(cfg.StakepooldHosts))
 	voteVersions := make([]uint32, len(cfg.StakepooldHosts))
 
 	if cfg.EnableStakepoold {
-		nodeConnections := make([]*grpc.ClientConn, len(cfg.StakepooldHosts))
 		voteInfos := make([]string, len(cfg.StakepooldHosts))
 
 		for i := range cfg.StakepooldHosts {
-			nodeConnections[i], err = connectStakepooldGRPC(cfg, i)
+			grpcConnections[i], err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts, i)
 			if err != nil {
 				log.Errorf("Failed to connect to stakepoold host %d: %v", i, err)
 				return 8
 			}
-			voteVersions[i], voteInfos[i], err = stakepooldGetVoteOptions(nodeConnections[i])
+			voteVersions[i], voteInfos[i], err = stakepooldclient.StakepooldGetVoteOptions(grpcConnections[i])
 			if err != nil {
 				log.Errorf("Failed to retrieve stakepoold voting config from host %d: %v", i, err)
 				return 9
@@ -156,12 +158,13 @@ func runMain() int {
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
 		cfg.AdminIPs, cfg.APISecret, APIVersionsSupported, cfg.BaseURL,
-		cfg.ClosePool, cfg.ClosePoolMsg, cfg.ColdWalletExtPub, cfg.PoolEmail,
-		cfg.PoolFees, cfg.PoolLink, cfg.RecaptchaSecret, cfg.RecaptchaSitekey,
-		cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
-		cfg.Version, cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers,
-		cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader,
-		cfg.VotingWalletExtPub, voteInfo, voteVersion)
+		cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
+		cfg.ColdWalletExtPub, grpcConnections, cfg.PoolEmail, cfg.PoolFees,
+		cfg.PoolLink, cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.SMTPFrom,
+		cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.Version,
+		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords,
+		cfg.MinServers, cfg.RealIPHeader, cfg.VotingWalletExtPub, voteInfo,
+		voteVersion)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to initialize the main controller: %v",
@@ -174,6 +177,15 @@ func runMain() int {
 	// reset votebits if Vote Version changed or if the stored VoteBits are
 	// somehow invalid
 	controller.CheckAndResetUserVoteBits(application.DbMap, voteVersion, voteInfo)
+	if cfg.EnableStakepoold {
+		for i := range grpcConnections {
+			err = stakepooldclient.StakepooldUpdateVotingPrefs(grpcConnections[i], 0)
+			if err != nil {
+				log.Errorf("Failed to update stakepoold voting cfg for all users on host %d: %v", i, err)
+				return 9
+			}
+		}
+	}
 
 	err = controller.RPCSync(application.DbMap)
 	if err != nil {

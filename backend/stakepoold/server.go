@@ -18,12 +18,11 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrstakepool/backend/stakepoold/voteoptions"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/wallet/udb"
-
-	"database/sql"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -31,8 +30,8 @@ import (
 type appContext struct {
 	sync.RWMutex
 	// locking required
-	ticketsMSA       map[chainhash.Hash]string   // [ticket]multisigaddr
-	userVotingConfig map[string]UserVotingConfig // [multisigaddr]
+	ticketsMSA       map[chainhash.Hash]string            // [ticket]multisigaddr
+	userVotingConfig map[string]userdata.UserVotingConfig // [multisigaddr]
 
 	// no locking required
 	blockheight        int64
@@ -43,20 +42,13 @@ type appContext struct {
 	params             *chaincfg.Params
 	wg                 sync.WaitGroup // wait group for go routine exits
 	quit               chan struct{}
-	reload             chan struct{}
-	walletConnection   *dcrrpcclient.Client
+	reloadTickets      chan struct{}
+	reloadUserConfig   chan struct{}
+	userData           *userdata.UserData
 	votingConfig       *VotingConfig
+	walletConnection   *dcrrpcclient.Client
 	winningTicketsChan chan WinningTicketsForBlock
 	testing            bool // enabled only for testing
-
-}
-
-// UserVotingConfig contains per-user voting preferences.
-type UserVotingConfig struct {
-	Userid          int64
-	MultiSigAddress string
-	VoteBits        uint16
-	VoteBitsVersion uint32
 }
 
 // VotingConfig contains global voting defaults.
@@ -200,7 +192,11 @@ func runMain() int {
 	// loadData()
 	// if ticket/user voting prefs -> enable voting -> refresh
 	// if no ticket/user voting prefs -> pull from db/wallets -> enable voting
-	userVotingConfig, err := dbFetchUserVotingConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+
+	var userdata = &userdata.UserData{}
+	userdata.DBSetConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+
+	userVotingConfig, err := userdata.MySQLFetchUserVotingConfig()
 	if err != nil {
 		log.Infof("could not obtain voting config: %v", err)
 		return 12 // wtf
@@ -212,10 +208,12 @@ func runMain() int {
 		feeAddrs:           feeAddrs,
 		params:             activeNetParams.Params,
 		quit:               make(chan struct{}),
-		reload:             make(chan struct{}),
+		reloadUserConfig:   make(chan struct{}),
+		reloadTickets:      make(chan struct{}),
+		userData:           userdata,
 		userVotingConfig:   userVotingConfig,
-		walletConnection:   walletConn,
 		votingConfig:       &votingConfig,
+		walletConnection:   walletConn,
 		winningTicketsChan: make(chan WinningTicketsForBlock),
 		testing:            false,
 	}
@@ -274,7 +272,7 @@ func runMain() int {
 		return 11
 	}
 
-	startGRPCServers(vo)
+	startGRPCServers(ctx.reloadUserConfig, vo)
 
 	// Only accept a single CTRL+C
 	c := make(chan os.Signal, 1)
@@ -291,9 +289,10 @@ func runMain() int {
 		return
 	}()
 
-	ctx.wg.Add(2)
+	ctx.wg.Add(3)
 	go ctx.winningTicketHandler()
-	go ctx.reloadHandler()
+	go ctx.reloadTicketsHandler()
+	go ctx.reloadUserConfigHandler()
 
 	// Wait for CTRL+C to signal goroutines to terminate via quit channel.
 	ctx.wg.Wait()
@@ -303,64 +302,6 @@ func runMain() int {
 
 func main() {
 	os.Exit(runMain())
-}
-
-func dbFetchUserVotingConfig(user string, password string, hostname string, port string, database string) (map[string]UserVotingConfig, error) {
-	var (
-		Userid          int64
-		MultiSigAddress string
-		VoteBits        int64
-		VoteBitsVersion int64
-	)
-
-	userInfo := map[string]UserVotingConfig{}
-
-	db, err := sql.Open("mysql", fmt.Sprint(user, ":", password, "@(", hostname, ":", port, ")/", database, "?charset=utf8mb4"))
-	if err != nil {
-		log.Errorf("Unable to open db: %v", err)
-		return userInfo, err
-	}
-
-	// sql.Open just validates its arguments without creating a connection
-	// Verify that the data source name is valid with Ping:
-	if err = db.Ping(); err != nil {
-		log.Errorf("Unable to establish connection to db: %v", err)
-		return userInfo, err
-	}
-
-	rows, err := db.Query("SELECT UserId, MultiSigAddress, VoteBits, VoteBitsVersion FROM Users WHERE MultiSigAddress <> ''")
-	if err != nil {
-		log.Errorf("Unable to query db: %v", err)
-		return userInfo, err
-	}
-
-	count := 0
-	defer rows.Close()
-	for rows.Next() {
-		err := rows.Scan(&Userid, &MultiSigAddress, &VoteBits, &VoteBitsVersion)
-		if err != nil {
-			log.Errorf("Unable to scan row %v", err)
-			continue
-		}
-		userInfo[MultiSigAddress] = UserVotingConfig{
-			Userid:          Userid,
-			MultiSigAddress: MultiSigAddress,
-			VoteBits:        uint16(VoteBits),
-			VoteBitsVersion: uint32(VoteBitsVersion),
-		}
-		count++
-	}
-
-	err = db.Close()
-	if err != nil {
-		log.Errorf("Unable to close database: %v", err)
-		return userInfo, err
-	}
-
-	userNoun := pickNoun(count, "user", "users")
-	log.Infof("fetch voting config for %d %s", count, userNoun)
-
-	return userInfo, nil
 }
 
 // saveData saves all the global data to a file so they can be read back
@@ -413,11 +354,11 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		// Don't block on messaging.  We want to make sure we can
 		// handle the next call ASAP.
 		select {
-		case ctx.reload <- struct{}{}:
+		case ctx.reloadTickets <- struct{}{}:
 		default:
 			// We log this in order to detect if we potentially
 			// have a deadlock.
-			log.Infof("Reload message not sent")
+			log.Infof("Reload tickets message not sent")
 		}
 	}()
 
@@ -449,12 +390,12 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	}
 }
 
-func (ctx *appContext) reloadHandler() {
+func (ctx *appContext) reloadTicketsHandler() {
 	defer ctx.wg.Done()
 
 	for {
 		select {
-		case <-ctx.reload:
+		case <-ctx.reloadTickets:
 			start := time.Now()
 			newTickets := walletFetchUserTickets(ctx)
 			end := time.Now()
@@ -465,6 +406,33 @@ func (ctx *appContext) reloadHandler() {
 			ctx.Unlock()
 
 			log.Infof("walletFetchUserTickets: %v", end.Sub(start))
+		case <-ctx.quit:
+			return
+		}
+	}
+}
+
+func (ctx *appContext) reloadUserConfigHandler() {
+	defer ctx.wg.Done()
+
+	for {
+		select {
+		case <-ctx.reloadUserConfig:
+			start := time.Now()
+			newUserConfig, err := ctx.userData.MySQLFetchUserVotingConfig()
+			end := time.Now()
+			log.Infof("MySQLFetchUserVotingConfig: %v", end.Sub(start))
+
+			if err != nil {
+				log.Errorf("unable to reload user config due to db error: %v",
+					err)
+				continue
+			}
+
+			// replace UserVotingConfig
+			ctx.Lock()
+			ctx.userVotingConfig = newUserConfig
+			ctx.Unlock()
 		case <-ctx.quit:
 			return
 		}

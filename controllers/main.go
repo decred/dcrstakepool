@@ -19,6 +19,7 @@ import (
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/poolapi"
+	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
@@ -27,6 +28,7 @@ import (
 	"github.com/haisum/recaptcha"
 	"github.com/zenazn/goji/web"
 
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
 
@@ -60,7 +62,9 @@ type MainController struct {
 	baseURL              string
 	closePool            bool
 	closePoolMsg         string
+	enableStakepoold     bool
 	feeXpub              *hdkeychain.ExtendedKey
+	grpcConnections      []*grpc.ClientConn
 	poolEmail            string
 	poolFees             float64
 	poolLink             string
@@ -109,10 +113,11 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 // NewMainController is the constructor for the entire controller routing.
 func NewMainController(params *chaincfg.Params, adminIPs []string,
 	APISecret string, APIVersionsSupported []int, baseURL string,
-	closePool bool, closePoolMsg string, feeXpubStr string, poolEmail string,
+	closePool bool, closePoolMsg string, enablestakepoold bool,
+	feeXpubStr string, grpcConnections []*grpc.ClientConn, poolEmail string,
 	poolFees float64, poolLink string, recaptchaSecret string,
-	recaptchaSiteKey string, smtpFrom string,
-	smtpHost string, smtpUsername string, smtpPassword string, version string,
+	recaptchaSiteKey string, smtpFrom string, smtpHost string,
+	smtpUsername string, smtpPassword string, version string,
 	walletHosts []string, walletCerts []string, walletUsers []string,
 	walletPasswords []string, minServers int, realIPHeader string,
 	votingXpubStr string, voteInfo dcrjson.GetVoteInfoResult,
@@ -148,7 +153,9 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		baseURL:              baseURL,
 		closePool:            closePool,
 		closePoolMsg:         closePoolMsg,
+		enableStakepoold:     enablestakepoold,
 		feeXpub:              feeKey,
+		grpcConnections:      grpcConnections,
 		poolEmail:            poolEmail,
 		poolFees:             poolFees,
 		poolLink:             poolLink,
@@ -323,6 +330,8 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
+	controller.TriggerStakepooldUpdate(c.Env["APIUserID"].(int64))
+
 	return nil, codes.OK, "address successfully imported", nil
 }
 
@@ -431,7 +440,9 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 		return nil, codes.Internal, "voting error", errors.New("failed to update voting prefs in database")
 	}
 
-	// TODO should notify stakepoold via gRPC to update user/voting config
+	if uint16(oldVoteBits) != userVoteBits {
+		controller.TriggerStakepooldUpdate(c.Env["APIUserID"].(int64))
+	}
 
 	log.Infof("updated voteBits for user %d from %d to %d",
 		user.Id, oldVoteBits, userVoteBits)
@@ -472,6 +483,20 @@ func (controller *MainController) SendMail(emailaddress string, subject string, 
 		log.Errorf("Error sending email to %v", err)
 	}
 	return err
+}
+
+// TriggerStakepooldUpdate informs stakepoold via gRPC that an update for user
+// information/voting preferences needs to be performed.
+func (controller *MainController) TriggerStakepooldUpdate(userid int64) error {
+	if controller.enableStakepoold {
+		for i := range controller.grpcConnections {
+			err := stakepooldclient.StakepooldUpdateVotingPrefs(controller.grpcConnections[i], userid)
+			if err != nil {
+				log.Errorf("Failed to update stakepoold voting cfg for all users on host %d: %v", i, err)
+			}
+		}
+	}
+	return nil
 }
 
 // FeeAddressForUserID generates a unique payout address per used ID for
@@ -777,6 +802,8 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	models.UpdateUserByID(dbMap, uid64, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
+
+	controller.TriggerStakepooldUpdate(user.Id)
 
 	return "/tickets", http.StatusSeeOther
 }
@@ -1458,8 +1485,6 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 		session.AddFlash("A verification email has been sent to "+email, "signupSuccess")
 	}
 
-	// TODO should notify stakepoold via gRPC to update user/voting config
-
 	return controller.SignUp(c, r)
 }
 
@@ -1809,7 +1834,9 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 		return "/voting", http.StatusSeeOther
 	}
 
-	// TODO should notify stakepoold via gRPC to update user/voting config
+	if uint16(oldVoteBits) != generatedVoteBits {
+		controller.TriggerStakepooldUpdate(user.Id)
+	}
 
 	log.Infof("updated voteBits for user %d from %d to %d",
 		user.Id, oldVoteBits, generatedVoteBits)

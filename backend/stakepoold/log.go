@@ -11,6 +11,7 @@ import (
 	"github.com/btcsuite/btclog"
 	"github.com/btcsuite/seelog"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
+	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
 
 // Loggers per subsytem.  Note that backendLog is a seelog logger that all of
@@ -20,6 +21,7 @@ import (
 var (
 	backendLog = seelog.Disabled
 	clientLog  = btclog.Disabled
+	dbLog      = btclog.Disabled
 	grpcLog    = btclog.Disabled
 	log        = btclog.Disabled
 )
@@ -27,6 +29,7 @@ var (
 // subsystemLoggers maps each subsystem identifier to its associated logger.
 var subsystemLoggers = map[string]btclog.Logger{
 	"RPCC": clientLog,
+	"DB":   dbLog,
 	"GRPC": grpcLog,
 	"STPK": log,
 }
@@ -56,6 +59,9 @@ func useLogger(subsystemID string, logger btclog.Logger) {
 	subsystemLoggers[subsystemID] = logger
 
 	switch subsystemID {
+	case "DB":
+		dbLog = logger
+		userdata.UseLogger(logger)
 	case "STPK":
 		log = logger
 	case "GRPC":

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package rpcserver
+package stakepooldclient
 
 import "github.com/btcsuite/btclog"
 
@@ -22,13 +22,4 @@ func DisableLog() {
 // using btclog.
 func UseLogger(logger btclog.Logger) {
 	log = logger
-}
-
-// pickNoun returns the singular or plural form of a noun depending
-// on the count n.
-func pickNoun(n int, singular, plural string) string {
-	if n == 1 {
-		return singular
-	}
-	return plural
 }

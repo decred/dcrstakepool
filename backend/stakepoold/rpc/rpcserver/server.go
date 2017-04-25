@@ -26,8 +26,8 @@ import (
 
 // Public API version constants
 const (
-	semverString = "1.0.0"
-	semverMajor  = 1
+	semverString = "2.0.0"
+	semverMajor  = 2
 	semverMinor  = 0
 	semverPatch  = 0
 )
@@ -52,18 +52,45 @@ func (*versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*pb.
 	}, nil
 }
 
+// StakepooldServer provides RPC clients with the ability to query the RPC
+// server for the current VoteVersion and VoteInfo which contains options
+type stakepooldServer struct {
+	c chan struct{}
+}
+
 // voteOptionsServer provides RPC clients with the ability to query the RPC
 // server for the current VoteVersion and VoteInfo which contains options
 type voteOptionsConfigServer struct {
 }
 
-// StartVoteOptionsConfigService creates an implementation of the VoteOptionsService
-// and registers
-func StartVoteOptionsConfigService(vo *voteoptions.VoteOptions, server *grpc.Server) {
-	pb.RegisterVoteOptionsConfigServiceServer(server, &voteOptionsConfigServer{})
+// StartStakepooldService creates an implementation of the StakepooldService
+// and registers it.
+func StartStakepooldService(c chan struct{}, vo *voteoptions.VoteOptions, server *grpc.Server) {
+	pb.RegisterStakepooldServiceServer(server, &stakepooldServer{
+		c: c,
+	})
 }
 
-func (v *voteOptionsConfigServer) VoteOptionsConfig(ctx context.Context, req *pb.VoteOptionsConfigRequest) (*pb.VoteOptionsConfigResponse, error) {
+func (s *stakepooldServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.PingResponse, error) {
+	return &pb.PingResponse{}, nil
+}
+
+func (s *stakepooldServer) UpdateVotingPrefs(ctx context.Context, req *pb.UpdateVotingPrefsRequest) (*pb.UpdateVotingPrefsResponse, error) {
+	defer func() {
+		// Don't block on messaging.  We want to make sure we can
+		// handle the next call ASAP.
+		select {
+		case s.c <- struct{}{}:
+		default:
+			// We log this in order to detect if we potentially
+			// have a deadlock.
+			log.Infof("Reload user config message not sent")
+		}
+	}()
+	return &pb.UpdateVotingPrefsResponse{}, nil
+}
+
+func (s *stakepooldServer) VoteOptionsConfig(ctx context.Context, req *pb.VoteOptionsConfigRequest) (*pb.VoteOptionsConfigResponse, error) {
 	// TODO remove this hack once decrediton/paymetheus testing is done
 	// TODO switch to using chainparams?
 	voteInfo := []string{
