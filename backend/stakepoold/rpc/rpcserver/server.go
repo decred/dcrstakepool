@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc"
 
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
-	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrstakepool/backend/stakepoold/voteoptions"
 )
 
@@ -57,7 +56,6 @@ func (*versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*pb.
 // server for the current VoteVersion and VoteInfo which contains options
 type stakepooldServer struct {
 	c chan struct{}
-	u *userdata.UserData
 }
 
 // voteOptionsServer provides RPC clients with the ability to query the RPC
