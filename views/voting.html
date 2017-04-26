@@ -13,32 +13,29 @@
 
     <!-- AGENDAS -->
     <h2>Agendas</h2>
+    {{with .Agendas}}
     <form method="post" class="form-horizontal">
-	    <div class="form-group">
-	      <label class="control-label col-sm-2" for="lastblockvalid">Last Block Valid - Whether or not the last block was valid.</label>
-	      <div class="col-sm-13">
-	        <select class="form-control" name="lastblockvalid" id="lastblockvalid" disabled><option value=1>Yes</option></select>
-	      </div>
-	    </div>
-      {{with .Agendas}}
-        {{ range $i, $data := . }}
-          <div class="form-group">
-            <label class="control-label col-sm-2" for="agenda{{$i}}">{{$data.Id}} - {{$data.Description}}</label>
-            <div class="col-sm-13">
-              <select class="form-control" name="agenda{{$i}}" id="{{ $data.Id }}">
-                {{ range $j, $choicesdata := $data.Choices}}
-                  <option value="{{$choicesdata.Bits}}"{{if eq $choicesdata.Bits (index $ (print "Agenda" $i "Selected"))}} selected{{end}}>{{$choicesdata.Description}}</option>
-                {{end}}
-              </select>
-            </div>
+      {{ range $i, $data := . }}
+        <div class="form-group">
+          <label class="control-label col-sm-2" for="agenda{{$i}}">{{$data.Vote.Id}} - {{$data.Vote.Description}}</label>
+          <div class="col-sm-13">
+            <select class="form-control" name="agenda{{$i}}" id="agenda{{$i}}">
+              {{ range $j, $choicesdata := $data.Vote.Choices}}
+                <option value="{{$choicesdata.Bits}}"{{if eq $choicesdata.Bits (index $ (print "Agenda" $i "Selected"))}} selected{{end}}>{{$choicesdata.Description}}</option>
+              {{end}}
+            </select>
           </div>
-        {{end}}
+        </div>
       {{end}}
-	    <div class="form-group">
-         <button id="updateVoting" name="updateVoting" class="btn btn-primary">Update Voting Preferences</button>
-	    </div>
-	    <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-	  </form>
+    <div class="form-group">
+        <button id="updateVoting" name="updateVoting" class="btn btn-primary">Update Voting Preferences</button>
+    </div>
+    <input type="hidden" name="{{$.CsrfKey}}" value={{$.CsrfToken}}>
+    </form>
+    {{else}}
+    <p><strong>There are no active agendas to vote on currently.</strong></p>
+    {{end}}
+
 
   </div>
 

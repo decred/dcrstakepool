@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/gorilla/context"
 
-	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/stakepooldclient"
@@ -103,56 +101,15 @@ func runMain() int {
 	// Supported API versions are advertised in the API stats result
 	APIVersionsSupported := []int{1, 2}
 
-	// TODO maybe better to just use agenda info from chainparams?
-	var voteInfo dcrjson.GetVoteInfoResult
-	// TODO remove this hack once stakepoold is mandatory
-	voteVersion := uint32(4)
-	if activeNetParams.Params.Name == "mainnet" {
-		voteVersion = 3
-	}
-
 	grpcConnections := make([]*grpc.ClientConn, len(cfg.StakepooldHosts))
-	voteVersions := make([]uint32, len(cfg.StakepooldHosts))
 
 	if cfg.EnableStakepoold {
-		voteInfos := make([]string, len(cfg.StakepooldHosts))
-
 		for i := range cfg.StakepooldHosts {
 			grpcConnections[i], err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts, i)
 			if err != nil {
 				log.Errorf("Failed to connect to stakepoold host %d: %v", i, err)
 				return 8
 			}
-			voteVersions[i], voteInfos[i], err = stakepooldclient.StakepooldGetVoteOptions(grpcConnections[i])
-			if err != nil {
-				log.Errorf("Failed to retrieve stakepoold voting config from host %d: %v", i, err)
-				return 9
-			}
-		}
-
-		for i := range cfg.StakepooldHosts {
-			if i == 0 {
-				continue
-			}
-
-			if voteInfos[i] != voteInfos[i-1] {
-				log.Errorf("voteInfo mismatch host %d has %v while host %d has %v",
-					i, voteInfos[i], i-1, voteInfos[i-1])
-				return 10
-			}
-			if voteVersions[i] != voteVersions[i-1] {
-				log.Errorf("voteVersion mismatch host %d has %d while host %d has %d",
-					i, voteVersions[i], i-1, voteVersions[i-1])
-				return 11
-			}
-		}
-
-		voteVersion = voteVersions[0]
-
-		err = json.Unmarshal([]byte(voteInfos[0]), &voteInfo)
-		if err != nil {
-			log.Errorf("Unable to unmarshal voteInfo: %v", err)
-			return 12
 		}
 	}
 
@@ -163,8 +120,7 @@ func runMain() int {
 		cfg.PoolLink, cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.SMTPFrom,
 		cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.Version,
 		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords,
-		cfg.MinServers, cfg.RealIPHeader, cfg.VotingWalletExtPub, voteInfo,
-		voteVersion)
+		cfg.MinServers, cfg.RealIPHeader, cfg.VotingWalletExtPub)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to initialize the main controller: %v",
@@ -176,7 +132,7 @@ func runMain() int {
 
 	// reset votebits if Vote Version changed or if the stored VoteBits are
 	// somehow invalid
-	controller.CheckAndResetUserVoteBits(application.DbMap, voteVersion, voteInfo)
+	controller.CheckAndResetUserVoteBits(application.DbMap)
 	if cfg.EnableStakepoold {
 		for i := range grpcConnections {
 			err = stakepooldclient.StakepooldUpdateVotingPrefs(grpcConnections[i], 0)

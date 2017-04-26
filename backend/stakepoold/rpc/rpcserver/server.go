@@ -21,13 +21,12 @@ import (
 	"google.golang.org/grpc"
 
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
-	"github.com/decred/dcrstakepool/backend/stakepoold/voteoptions"
 )
 
 // Public API version constants
 const (
-	semverString = "2.0.0"
-	semverMajor  = 2
+	semverString = "3.0.0"
+	semverMajor  = 3
 	semverMinor  = 0
 	semverPatch  = 0
 )
@@ -52,20 +51,15 @@ func (*versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*pb.
 	}, nil
 }
 
-// StakepooldServer provides RPC clients with the ability to query the RPC
-// server for the current VoteVersion and VoteInfo which contains options
+// StakepooldServer provides RPC clients with the ability to trigger updates
+// to the user voting config
 type stakepooldServer struct {
 	c chan struct{}
 }
 
-// voteOptionsServer provides RPC clients with the ability to query the RPC
-// server for the current VoteVersion and VoteInfo which contains options
-type voteOptionsConfigServer struct {
-}
-
 // StartStakepooldService creates an implementation of the StakepooldService
 // and registers it.
-func StartStakepooldService(c chan struct{}, vo *voteoptions.VoteOptions, server *grpc.Server) {
+func StartStakepooldService(c chan struct{}, server *grpc.Server) {
 	pb.RegisterStakepooldServiceServer(server, &stakepooldServer{
 		c: c,
 	})
@@ -88,111 +82,4 @@ func (s *stakepooldServer) UpdateVotingPrefs(ctx context.Context, req *pb.Update
 		}
 	}()
 	return &pb.UpdateVotingPrefsResponse{}, nil
-}
-
-func (s *stakepooldServer) VoteOptionsConfig(ctx context.Context, req *pb.VoteOptionsConfigRequest) (*pb.VoteOptionsConfigResponse, error) {
-	// TODO remove this hack once decrediton/paymetheus testing is done
-	// TODO switch to using chainparams?
-	voteInfo := []string{
-		`{
-  "currentheight": 121740,
-  "startheight": 116992,
-  "endheight": 125055,
-  "hash": "00000000000000d6eb790b4983a0e36a0cb47e0ea97c898af6a4d23491737262",
-  "voteversion": 4,
-  "quorum": 4032,
-  "totalvotes": 0,
-  "agendas": [
-    {
-      "id": "lnsupport",
-      "description": "Should decred add Lightning Support (LN)?",
-      "mask": 6,
-      "starttime": 1496275200,
-      "expiretime": 1504224000,
-      "status": "defined",
-      "quorumprogress": 0,
-      "choices": [
-        {
-          "id": "abstain",
-          "description": "abstain voting for change",
-          "bits": 0,
-          "isignore": true,
-          "isno": false,
-          "count": 0,
-          "progress": 0
-        },
-        {
-          "id": "no",
-          "description": "reject adding LN support",
-          "bits": 2,
-          "isignore": false,
-          "isno": true,
-          "count": 0,
-          "progress": 0
-        },
-        {
-          "id": "yes",
-          "description": "accept adding LN support",
-          "bits": 4,
-          "isignore": false,
-          "isno": false,
-          "count": 0,
-          "progress": 0
-        }
-      ]
-    },
-    {
-      "id": "sdiffalgorithm",
-      "description": "Should decred adopt the new SDiff algorithm?",
-      "mask": 24,
-      "starttime": 1496275200,
-      "expiretime": 1504224000,
-      "status": "defined",
-      "quorumprogress": 0,
-      "choices": [
-        {
-          "id": "abstain",
-          "description": "abstain voting for change",
-          "bits": 0,
-          "isignore": true,
-          "isno": false,
-          "count": 0,
-          "progress": 0
-        },
-        {
-          "id": "no",
-          "description": "reject new SDiff algorithm",
-          "bits": 8,
-          "isignore": false,
-          "isno": true,
-          "count": 0,
-          "progress": 0
-        },
-        {
-          "id": "yes",
-          "description": "accept new SDiff algorithm",
-          "bits": 16,
-          "isignore": false,
-          "isno": false,
-          "count": 0,
-          "progress": 0
-        }
-      ]
-    }
-  ]
-}`,
-		`{
-  "currentheight": 15222,
-  "startheight": 10848,
-  "endheight": 15887,
-  "hash": "000000000331d42fd0ba79466e9381582013c7dc99f136057e1854018d49ace7",
-  "voteversion": 4,
-  "quorum": 2520,
-  "totalvotes": 21109
-}`}
-
-	return &pb.VoteOptionsConfigResponse{
-		VoteInfo:    voteInfo[0],
-		VoteVersion: 4,
-	}, nil
 }

@@ -1,5 +1,5 @@
 hash: 22579d3226386f0deb227919c4cb6f0e69be7551d69bb7cba48ca1b2b97e8642
-updated: 2017-04-18T09:13:07.671352545-05:00
+updated: 2017-04-26T14:29:42.15087597-05:00
 imports:
 - name: github.com/btcsuite/btclog
   version: 73889fb79bd687870312b6e40effcecffbd57d30
@@ -20,7 +20,7 @@ imports:
 - name: github.com/decred/blake256
   version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: ff07aac47f0477f0021bc667dd7a794e67f4abd0
+  version: 5c3e0d6454001c8d14fcf06be94381d93991aaea
   subpackages:
   - blockchain
   - blockchain/internal/dbnamespace
@@ -47,7 +47,7 @@ imports:
   - base58
   - hdkeychain
 - name: github.com/decred/dcrwallet
-  version: 66c410e7b976b22a7943280ab10e82d944b351a7
+  version: a642114a124c6174130d528d9d33fe69128d2688
   subpackages:
   - apperrors
   - chain

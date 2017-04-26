@@ -13,13 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrstakepool/backend/stakepoold/voteoptions"
 	"github.com/decred/dcrutil"
 	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/wallet/udb"
@@ -244,35 +242,7 @@ func runMain() int {
 	}
 	ctx.blockheight = height
 
-	// Get voteinfo for VoteVersion from wallet
-	voteInfo, err := nodeConn.GetVoteInfo(votingConfig.VoteVersion)
-	if err = nodeConn.NotifyWinningTickets(); err != nil {
-		fmt.Printf("Failed to register daemon RPC client for  "+
-			"winning tickets notifications: %s\n", err.Error())
-		return 9
-	}
-
-	votingConfig.VoteInfo = voteInfo
-	log.Infof("VotingConfig: VoteInfo %v",
-		spew.Sdump(votingConfig.VoteInfo))
-
-	voteinfoString, err := json.Marshal(votingConfig.VoteInfo)
-	if err != nil {
-		log.Errorf("unable to encode VoteInfo: %v", err)
-		return 10
-	}
-
-	voCfg := &voteoptions.Config{
-		VoteInfo:    string(voteinfoString),
-		VoteVersion: votingConfig.VoteVersion,
-	}
-	vo, err := voteoptions.NewVoteOptions(voCfg)
-	if err != nil {
-		log.Errorf("NewVoteOptions failed: %v", err)
-		return 11
-	}
-
-	startGRPCServers(ctx.reloadUserConfig, vo)
+	startGRPCServers(ctx.reloadUserConfig)
 
 	// Only accept a single CTRL+C
 	c := make(chan os.Signal, 1)
