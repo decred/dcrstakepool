@@ -242,6 +242,12 @@ func runMain() int {
 	}
 	ctx.blockheight = height
 
+	if err = nodeConn.NotifyWinningTickets(); err != nil {
+		fmt.Printf("Failed to register daemon RPC client for  "+
+			"winning tickets notifications: %s\n", err.Error())
+		return 9
+	}
+
 	startGRPCServers(ctx.reloadUserConfig)
 
 	// Only accept a single CTRL+C
