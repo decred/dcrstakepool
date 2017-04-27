@@ -1,12 +1,10 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrutil"
@@ -110,76 +108,6 @@ func connectWalletRPC(cfg *config) (*dcrrpcclient.Client, semver, error) {
 	}
 
 	return dcrwClient, walletVer, nil
-}
-
-func nodeSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
-	buf, err := hex.DecodeString(hexTx)
-	if err != nil {
-		log.Errorf("DecodeString failed: %v", err)
-		return nil, err
-	}
-	newTx := wire.NewMsgTx()
-	err = newTx.FromBytes(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	return ctx.nodeConnection.SendRawTransaction(newTx, false)
-}
-
-func walletCreateVote(ctx *appContext, blockHash *chainhash.Hash, blockHeight int64, ticketHash *chainhash.Hash, msa string) (string, error) {
-	ctx.RLock()
-	// look up the voting config for this user's ticket
-	voteCfg, ok := ctx.userVotingConfig[msa]
-	if !ok {
-		log.Errorf("Unknown multisig address %s. Creating vote with "+
-			"defaults.", msa)
-		// do not return; vote with defaults
-	}
-	ctx.RUnlock()
-
-	voteBits := voteCfg.VoteBits
-
-	// if the user's voting config has a vote version that is different
-	// from our global vote version that we plucked from dcrwallet
-	// walletinfo then just use the default votebits of 1
-	//
-	// ctx.votingConfig.VoteVersion SHALL be concurrent safe
-	if voteCfg.VoteBitsVersion != ctx.votingConfig.VoteVersion {
-		voteBits = ctx.votingConfig.VoteBits
-		log.Infof("userid %v multisigaddress %v vote version "+
-			"mismatch user %v stakepoold %v using votebits %d",
-			voteCfg.Userid, voteCfg.MultiSigAddress,
-			voteCfg.VoteBitsVersion, ctx.votingConfig.VoteVersion,
-			voteBits)
-	}
-
-	log.Infof("GenerateVote block %v height %v ticket %v bits %v ext %v",
-		blockHash, blockHeight, ticketHash, voteBits,
-		ctx.votingConfig.VoteBitsExtended)
-	/// XXX this needs to become an Async call.
-	res, err := ctx.walletConnection.GenerateVote(blockHash, blockHeight,
-		ticketHash, voteBits, ctx.votingConfig.VoteBitsExtended)
-	if err != nil {
-		return "", err
-	}
-
-	return res.Hex, nil
-}
-
-func walletSendVote(ctx *appContext, hexTx string) (*chainhash.Hash, error) {
-	buf, err := hex.DecodeString(hexTx)
-	if err != nil {
-		log.Errorf("DecodeString failed: %v", err)
-		return nil, err
-	}
-	newTx := wire.NewMsgTx()
-	err = newTx.FromBytes(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	return ctx.walletConnection.SendRawTransaction(newTx, false)
 }
 
 func walletFetchUserTickets(ctx *appContext) map[chainhash.Hash]string {
