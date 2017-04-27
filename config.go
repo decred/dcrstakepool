@@ -493,20 +493,6 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	if len(cfg.StakepooldHosts) == 0 {
-		str := "%s: stakepooldhosts is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.StakepooldCerts) == 0 {
-		str := "%s: stakepooldcerts is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
 	if len(cfg.VotingWalletExtPub) == 0 {
 		str := "%s: votingwalletextpub is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -544,8 +530,6 @@ func loadConfig() (*config, []string, error) {
 
 	// Convert comma separated list into a slice
 	cfg.AdminIPs = strings.Split(cfg.AdminIPs[0], ",")
-	cfg.StakepooldHosts = strings.Split(cfg.StakepooldHosts[0], ",")
-	cfg.StakepooldCerts = strings.Split(cfg.StakepooldCerts[0], ",")
 	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
 	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
 	cfg.WalletPasswords = strings.Split(cfg.WalletPasswords[0], ",")
@@ -604,6 +588,23 @@ func loadConfig() (*config, []string, error) {
 			fmt.Fprintln(os.Stderr, err)
 			return nil, nil, err
 		}
+
+		if len(cfg.StakepooldHosts) == 0 {
+			str := "%s: stakepooldhosts is not set in config"
+			err := fmt.Errorf(str, funcName)
+			fmt.Fprintln(os.Stderr, err)
+			return nil, nil, err
+		}
+
+		if len(cfg.StakepooldCerts) == 0 {
+			str := "%s: stakepooldcerts is not set in config"
+			err := fmt.Errorf(str, funcName)
+			fmt.Fprintln(os.Stderr, err)
+			return nil, nil, err
+		}
+
+		cfg.StakepooldHosts = strings.Split(cfg.StakepooldHosts[0], ",")
+		cfg.StakepooldCerts = strings.Split(cfg.StakepooldCerts[0], ",")
 
 		// Add default stakepoold port for the active network if there's
 		// no port specified
