@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
+	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrutil"
@@ -306,21 +308,9 @@ func (ctx *appContext) loadData() {
 	defer ctx.Unlock()
 }
 
-func (ctx *appContext) sendTickets(blockHash, ticket *chainhash.Hash, msa string, height int64) error {
-	sstx, err := walletCreateVote(ctx, blockHash, height, ticket, msa)
-	if err != nil {
-		return fmt.Errorf("failed to create vote: %v", err)
-	}
-
-	_, err = nodeSendVote(ctx, sstx)
-	if err != nil {
-		return fmt.Errorf("failed to vote: %v", err)
-	}
-
-	return nil
-}
-
 func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
+	loopStart := time.Now()
+
 	// We always have to reload so signal the other end on the way out.
 	// Maybe we can change this to a go routine so that we are not gated on
 	// the function finishing first.  Reason it is defered now is to make
@@ -338,11 +328,17 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		}
 	}()
 
+	type winner struct {
+		msa    string                    // multisig
+		ticket *chainhash.Hash           // Willy Wonka
+		config userdata.UserVotingConfig // voting config
+	}
+	winners := make([]winner, 0, len(wt.winningTickets))
+
+	ctx.RLock()
 	for _, ticket := range wt.winningTickets {
 		// Look up multi sig address.
-		ctx.RLock()
 		msa, ok := ctx.ticketsMSA[*ticket]
-		ctx.RUnlock()
 		if !ok {
 			log.Debugf("unmanaged winning ticket: %v", ticket)
 			if ctx.testing {
@@ -351,19 +347,83 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 			continue
 		}
 
-		log.Infof("winning ticket %v height %v block hash %v msa %v",
-			ticket, wt.blockHeight, wt.blockHash, msa)
+		voteCfg, ok := ctx.userVotingConfig[msa]
+		if !ok {
+			// Use defaults if not found.
+			log.Warnf("vote config not found for %v using default",
+				msa)
+			defaultVoteCfg := &userdata.UserVotingConfig{
+				Userid:          0,
+				MultiSigAddress: msa,
+				VoteBits:        ctx.votingConfig.VoteBits,
+				VoteBitsVersion: ctx.votingConfig.VoteVersion,
+			}
+			voteCfg = *defaultVoteCfg
+		} else {
+			// If the user's voting config has a vote version that
+			// is different from our global vote version that we
+			// plucked from dcrwallet walletinfo then just use the
+			// default votebits.
+			if voteCfg.VoteBitsVersion !=
+				ctx.votingConfig.VoteVersion {
 
-		// When testing we don't send the tickets.
-		if ctx.testing {
+				voteCfg.VoteBits = ctx.votingConfig.VoteBits
+				log.Infof("userid %v multisigaddress %v vote "+
+					"version mismatch user %v stakepoold "+
+					"%v using votebits %d",
+					voteCfg.Userid, voteCfg.MultiSigAddress,
+					voteCfg.VoteBitsVersion,
+					ctx.votingConfig.VoteVersion,
+					voteCfg.VoteBits)
+			}
+		}
+
+		winners = append(winners, winner{
+			msa:    msa,
+			ticket: ticket,
+			config: voteCfg,
+		})
+	}
+	ctx.RUnlock()
+
+	// When testing we don't send the tickets.
+	if ctx.testing {
+		return
+	}
+
+	for winnersCount, w := range winners {
+		voteStart := time.Now()
+		log.Infof("winning ticket %v height %v block hash %v msa %v",
+			w.ticket, wt.blockHeight, wt.blockHash, w.msa)
+
+		res, err := ctx.walletConnection.GenerateVote(wt.blockHash, wt.blockHeight,
+			w.ticket, w.config.VoteBits, ctx.votingConfig.VoteBitsExtended)
+		if err != nil {
+			log.Errorf("failed to create vote: %v", err)
 			continue
 		}
 
-		err := ctx.sendTickets(wt.blockHash, ticket, msa, wt.blockHeight)
+		buf, err := hex.DecodeString(res.Hex)
 		if err != nil {
-			log.Infof("%v", err)
+			log.Errorf("DecodeString failed: %v", err)
+			continue
 		}
+		newTx := wire.NewMsgTx()
+		err = newTx.FromBytes(buf)
+		if err != nil {
+			log.Errorf("FromBytes failed: %v", err)
+			continue
+		}
+
+		_, err = ctx.nodeConnection.SendRawTransaction(newTx, false)
+		if err != nil {
+			log.Infof("failed to vote: %v", err)
+		}
+		voteEnd := time.Now()
+		log.Infof("voted ticket %d in %v", winnersCount+1, voteEnd.Sub(voteStart))
 	}
+	loopEnd := time.Now()
+	log.Infof("processWinningTickets took %v", loopEnd.Sub(loopStart))
 }
 
 func (ctx *appContext) reloadTicketsHandler() {
