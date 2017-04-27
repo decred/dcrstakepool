@@ -330,7 +330,7 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 
 	type winner struct {
 		msa    string                    // multisig
-		ticket *chainhash.Hash           // Willy Wonka
+		ticket *chainhash.Hash           // ticket
 		config userdata.UserVotingConfig // voting config
 	}
 	winners := make([]winner, 0, len(wt.winningTickets))
