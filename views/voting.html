@@ -17,8 +17,8 @@
     <form method="post" class="form-horizontal">
       {{ range $i, $data := . }}
         <div class="form-group">
-          <label class="control-label col-sm-2" for="agenda{{$i}}">{{$data.Vote.Id}} - {{$data.Vote.Description}}</label>
-          <div class="col-sm-13">
+          <label class="control-label col-sm-15" for="agenda{{$i}}">{{$data.Vote.Id}} - {{$data.Vote.Description}}</label>
+          <div class="col-sm-15">
             <select class="form-control" name="agenda{{$i}}" id="agenda{{$i}}">
               {{ range $j, $choicesdata := $data.Vote.Choices}}
                 <option value="{{$choicesdata.Bits}}"{{if eq $choicesdata.Bits (index $ (print "Agenda" $i "Selected"))}} selected{{end}}>{{$choicesdata.Description}}</option>
