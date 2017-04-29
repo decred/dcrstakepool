@@ -16,7 +16,6 @@ import (
 
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
@@ -54,9 +53,8 @@ type appContext struct {
 // VotingConfig contains global voting defaults.
 type VotingConfig struct {
 	VoteBits         uint16
-	VoteBitsExtended string
-	VoteInfo         *dcrjson.GetVoteInfoResult
 	VoteVersion      uint32
+	VoteBitsExtended string
 }
 
 type WinningTicketsForBlock struct {
@@ -352,13 +350,12 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 			// Use defaults if not found.
 			log.Warnf("vote config not found for %v using default",
 				msa)
-			defaultVoteCfg := &userdata.UserVotingConfig{
+			voteCfg = userdata.UserVotingConfig{
 				Userid:          0,
 				MultiSigAddress: msa,
 				VoteBits:        ctx.votingConfig.VoteBits,
 				VoteBitsVersion: ctx.votingConfig.VoteVersion,
 			}
-			voteCfg = *defaultVoteCfg
 		} else {
 			// If the user's voting config has a vote version that
 			// is different from our global vote version that we
@@ -419,11 +416,9 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		if err != nil {
 			log.Infof("failed to vote: %v", err)
 		}
-		voteEnd := time.Now()
-		log.Infof("voted ticket %d in %v", winnersCount+1, voteEnd.Sub(voteStart))
+		log.Infof("voted ticket %d in %v", winnersCount+1, time.Since(voteStart))
 	}
-	loopEnd := time.Now()
-	log.Infof("processWinningTickets took %v", loopEnd.Sub(loopStart))
+	log.Infof("processWinningTickets took %v", time.Since(loopStart))
 }
 
 func (ctx *appContext) reloadTicketsHandler() {
