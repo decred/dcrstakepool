@@ -268,23 +268,24 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.InvalidArgument, "address error", errors.New("incorrect address type")
 	}
 
-	if controller.RPCIsStopped() {
-		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
-	}
-	pooladdress, err := controller.rpcServers.GetNewAddress()
+	// Get the ticket address for this user
+	pooladdress, err := controller.TicketAddressForUserID(int(c.Env["APIUserID"].(int64)))
 	if err != nil {
-		controller.handlePotentialFatalError("GetNewAddress", err)
+		log.Errorf("unexpected error deriving ticket addr: %s", err.Error())
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	if controller.RPCIsStopped() {
-		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
-	}
 	poolValidateAddress, err := controller.rpcServers.ValidateAddress(pooladdress)
 	if err != nil {
-		controller.handlePotentialFatalError("ValidateAddress pooladdress", err)
+		log.Errorf("unable to validate address: %v", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
+	if !poolValidateAddress.IsMine {
+		log.Errorf("unable to validate ismine for pool ticket addr: %s",
+			err.Error())
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	}
+
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
 	p, err := dcrutil.DecodeAddress(poolPubKeyAddr, controller.params)
