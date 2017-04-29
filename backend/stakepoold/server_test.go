@@ -7,11 +7,13 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	mrand "math/rand"
 	"strconv"
 	"testing"
 
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
 
 func TestCalculateFeeAddresses(t *testing.T) {
@@ -73,6 +75,15 @@ func randomBytes(length int) []byte {
 	return b
 }
 
+func randString(n int) string {
+	b := make([]byte, n)
+	const addressLetters = "123456789abcdefghijkmnpQRSTUVWXYZ"
+	for i := range b {
+		b[i] = addressLetters[mrand.Intn(len(addressLetters))]
+	}
+	return string(b)
+}
+
 var (
 	c  *appContext
 	wt WinningTicketsForBlock
@@ -82,12 +93,30 @@ func init() {
 
 	c = &appContext{
 		ticketsMSA: make(map[chainhash.Hash]string),
-		testing:    true,
+		votingConfig: &VotingConfig{
+			VoteBits:         1,
+			VoteBitsExtended: "05000000",
+			VoteVersion:      5,
+		},
+		userVotingConfig: make(map[string]userdata.UserVotingConfig),
+		testing:          true,
+	}
+
+	// Create users
+	userCount := 10000
+	// leave out last 5, as they will be inserted when tickets are generated
+	for i := 0; i < userCount-5; i++ {
+		msa := "Tc" + randString(33)
+		c.userVotingConfig[msa] = userdata.UserVotingConfig{
+			Userid:          int64(i),
+			MultiSigAddress: msa,
+			VoteBits:        c.votingConfig.VoteBits,
+			VoteBitsVersion: c.votingConfig.VoteVersion,
+		}
 	}
 
 	// Create a pool of tickets around expected size
 	ticketCount := 49000
-	userCount := 10000
 	for i := 0; i < ticketCount; i++ {
 		b := randomBytes(4)
 		uid := int(binary.LittleEndian.Uint32(b)) % userCount
@@ -100,6 +129,7 @@ func init() {
 		// last 5 tickets win
 		if i > ticketCount-6 {
 			wt.winningTickets = append(wt.winningTickets, ticket)
+			c.userVotingConfig[msa] = userdata.UserVotingConfig{}
 		}
 	}
 }
