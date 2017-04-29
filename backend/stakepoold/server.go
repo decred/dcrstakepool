@@ -16,7 +16,6 @@ import (
 
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
@@ -56,7 +55,6 @@ type VotingConfig struct {
 	VoteBits         uint16
 	VoteVersion      uint32
 	VoteBitsExtended string
-	VoteInfo         *dcrjson.GetVoteInfoResult
 }
 
 type WinningTicketsForBlock struct {
