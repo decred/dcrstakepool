@@ -333,6 +333,9 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	}
 	winners := make([]winner, 0, len(wt.winningTickets))
 
+	// @marcopeereboom: may be worth transmitting the winner over a channel
+	// to commence processing right away.  The loop seems tight enough for
+	// that not to be needed but it can be converted if needed.
 	ctx.RLock()
 	for _, ticket := range wt.winningTickets {
 		// Look up multi sig address.
@@ -388,18 +391,22 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		return
 	}
 
-	for winnersCount, w := range winners {
-		voteStart := time.Now()
-		log.Infof("winning ticket %v height %v block hash %v msa %v",
-			w.ticket, wt.blockHeight, wt.blockHash, w.msa)
+	// Do all the chatter aync for extra vroom.
+	gvaPromise := make([]dcrrpcclient.FutureGenerateVoteResult, 0,
+		len(winners))
+	for _, w := range winners {
+		gvaPromise = append(gvaPromise,
+			ctx.walletConnection.GenerateVoteAsync(wt.blockHash,
+				wt.blockHeight, w.ticket, w.config.VoteBits,
+				ctx.votingConfig.VoteBitsExtended))
+	}
 
-		res, err := ctx.walletConnection.GenerateVote(wt.blockHash, wt.blockHeight,
-			w.ticket, w.config.VoteBits, ctx.votingConfig.VoteBitsExtended)
+	for _, gva := range gvaPromise {
+		res, err := gva.Receive()
 		if err != nil {
-			log.Errorf("failed to create vote: %v", err)
+			log.Errorf("XXX DecodeString failed: %v", err)
 			continue
 		}
-
 		buf, err := hex.DecodeString(res.Hex)
 		if err != nil {
 			log.Errorf("DecodeString failed: %v", err)
@@ -416,8 +423,12 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		if err != nil {
 			log.Infof("failed to vote: %v", err)
 		}
-		log.Infof("voted ticket %d in %v", winnersCount+1, time.Since(voteStart))
+		//log.Infof("voted ticket %d in %v", winnersCount+1, time.Since(voteStart))
 	}
+
+	//log.Infof("winning ticket %v height %v block hash %v msa %v",
+	//	w.ticket, wt.blockHeight, wt.blockHash, w.msa)
+
 	log.Infof("processWinningTickets took %v", time.Since(loopStart))
 }
 
