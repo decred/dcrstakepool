@@ -460,7 +460,7 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 			if w.err == nil {
 				w.err = errSuccess
 			}
-			log.Infof("winning ticket %v %v msa %v: %v",
+			log.Infof("winning ticket %v msa %v: %v",
 				w.ticket, w.msa, w.err)
 		}
 	}()
