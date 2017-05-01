@@ -271,7 +271,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 	// Get the ticket address for this user
 	pooladdress, err := controller.TicketAddressForUserID(int(c.Env["APIUserID"].(int64)))
 	if err != nil {
-		log.Errorf("unexpected error deriving ticket addr: %s", err.Error())
+		log.Errorf("unable to derive ticket address: %v", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
@@ -281,8 +281,8 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 	if !poolValidateAddress.IsMine {
-		log.Errorf("unable to validate ismine for pool ticket addr: %s",
-			err.Error())
+		log.Errorf("unable to validate ismine for pool ticket address: %s",
+			pooladdress.String())
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
@@ -740,7 +740,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	// Get the ticket address for this user
 	pooladdress, err := controller.TicketAddressForUserID(int(uid64))
 	if err != nil {
-		log.Errorf("unexpected error deriving ticket addr: %s", err.Error())
+		log.Errorf("unable to derive ticket address: %v", err)
 		session.AddFlash("Unable to derive ticket address", "address")
 		return controller.Address(c, r)
 	}
@@ -755,8 +755,8 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return "/error", http.StatusSeeOther
 	}
 	if !poolValidateAddress.IsMine {
-		log.Errorf("unable to validate ismine for pool ticket addr: %s",
-			err.Error())
+		log.Errorf("unable to validate ismine for pool ticket address: %s",
+			pooladdress.String())
 		session.AddFlash("Unable to validate pool ticket address", "address")
 		return controller.Address(c, r)
 	}
