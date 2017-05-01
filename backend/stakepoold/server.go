@@ -392,38 +392,46 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	}
 
 	// Do all the chatter aync for extra vroom.
-	gvaPromise := make([]dcrrpcclient.FutureGenerateVoteResult, 0,
+	gvaPromises := make([]dcrrpcclient.FutureGenerateVoteResult, 0,
 		len(winners))
 	for _, w := range winners {
-		gvaPromise = append(gvaPromise,
+		gvaPromises = append(gvaPromises,
 			ctx.walletConnection.GenerateVoteAsync(wt.blockHash,
 				wt.blockHeight, w.ticket, w.config.VoteBits,
 				ctx.votingConfig.VoteBitsExtended))
 	}
 
-	for _, gva := range gvaPromise {
+	rawPromises := make([]dcrrpcclient.FutureSendRawTransactionResult, 0,
+		len(winners))
+	for _, gva := range gvaPromises {
 		res, err := gva.Receive()
 		if err != nil {
-			log.Errorf("XXX DecodeString failed: %v", err)
+			log.Errorf("GenerateVote: %v", err)
 			continue
 		}
 		buf, err := hex.DecodeString(res.Hex)
 		if err != nil {
-			log.Errorf("DecodeString failed: %v", err)
+			log.Errorf("DecodeString: %v", err)
 			continue
 		}
 		newTx := wire.NewMsgTx()
 		err = newTx.FromBytes(buf)
 		if err != nil {
-			log.Errorf("FromBytes failed: %v", err)
+			log.Errorf("FromBytes: %v", err)
 			continue
 		}
 
-		_, err = ctx.nodeConnection.SendRawTransaction(newTx, false)
+		rawPromises = append(rawPromises,
+			ctx.nodeConnection.SendRawTransactionAsync(newTx,
+				false))
+	}
+
+	for _, raw := range rawPromises {
+		_, err := raw.Receive()
 		if err != nil {
 			log.Infof("failed to vote: %v", err)
+			continue
 		}
-		//log.Infof("voted ticket %d in %v", winnersCount+1, time.Since(voteStart))
 	}
 
 	//log.Infof("winning ticket %v height %v block hash %v msa %v",
