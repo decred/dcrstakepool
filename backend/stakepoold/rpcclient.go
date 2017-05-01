@@ -110,7 +110,7 @@ func connectWalletRPC(cfg *config) (*dcrrpcclient.Client, semver, error) {
 	return dcrwClient, walletVer, nil
 }
 
-func walletFetchUserTickets(ctx *appContext) map[chainhash.Hash]string {
+func walletFetchUserTickets(ctx *appContext) (map[chainhash.Hash]string, string) {
 	// This is suboptimal to copy and needs fixing.
 	users := make(map[string]userdata.UserVotingConfig)
 	ctx.RLock()
@@ -174,8 +174,6 @@ func walletFetchUserTickets(ctx *appContext) map[chainhash.Hash]string {
 	ticketNoun := pickNoun(ticketcount, "ticket", "tickets")
 	userNoun := pickNoun(usercount, "user", "users")
 
-	log.Infof("loaded %v %v for %v %v",
+	return userTickets, fmt.Sprintf("loaded %v %v for %v %v",
 		ticketcount, ticketNoun, usercount, userNoun)
-
-	return userTickets
 }

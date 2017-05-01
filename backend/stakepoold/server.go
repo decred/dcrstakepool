@@ -216,7 +216,7 @@ func runMain() int {
 		testing:            false,
 	}
 
-	ctx.ticketsMSA = walletFetchUserTickets(ctx)
+	ctx.ticketsMSA, _ = walletFetchUserTickets(ctx)
 
 	// Daemon client connection
 	nodeConn, nodeVer, err := connectNodeRPC(ctx, cfg)
@@ -439,7 +439,7 @@ func (ctx *appContext) reloadTicketsHandler() {
 		select {
 		case <-ctx.reloadTickets:
 			start := time.Now()
-			newTickets := walletFetchUserTickets(ctx)
+			newTickets, msg := walletFetchUserTickets(ctx)
 			end := time.Now()
 
 			// replace tickets
@@ -447,7 +447,8 @@ func (ctx *appContext) reloadTicketsHandler() {
 			ctx.ticketsMSA = newTickets
 			ctx.Unlock()
 
-			log.Infof("walletFetchUserTickets: %v", end.Sub(start))
+			log.Infof("walletFetchUserTickets: %v %v", msg,
+				end.Sub(start))
 		case <-ctx.quit:
 			return
 		}
