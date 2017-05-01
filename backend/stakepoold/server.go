@@ -441,6 +441,7 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 
 	// Wait for wallet to complete raw transaction sends.
 	for k, raw := range rawPromises {
+		// XXX k is wrong
 		if winners[k].err != nil {
 			continue
 		}
