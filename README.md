@@ -37,7 +37,8 @@ vote on their behalf when the ticket is selected.
 - Follow the mainnet directions. The stake version on testnet is 5 and there
   is 1 agenda.
 - Enable MySQL access from the stakepoold hosts.
-- Configure stakepoold by editing stakepoold.conf.  You should place stakepoold
+- Configure stakepoold by copying sample-stakepoold.conf to
+  ~/.stakepoold/stakepoold.conf and editing it.  You should place stakepoold
   on the same server as dcrd/dcrwallet so stakepoold can talk to them via
   loopback to lower latency as much as possible.
 - Copy stakepoold certs to the dcrstakepool server and set
