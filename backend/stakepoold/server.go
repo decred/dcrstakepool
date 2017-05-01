@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
@@ -65,7 +67,8 @@ type WinningTicketsForBlock struct {
 }
 
 var (
-	cfg *config
+	cfg        *config
+	errSuccess = errors.New("success")
 )
 
 // calculateFeeAddresses decodes the string of stake pool payment addresses
@@ -216,7 +219,7 @@ func runMain() int {
 		testing:            false,
 	}
 
-	ctx.ticketsMSA = walletFetchUserTickets(ctx)
+	ctx.ticketsMSA, _ = walletFetchUserTickets(ctx)
 
 	// Daemon client connection
 	nodeConn, nodeVer, err := connectNodeRPC(ctx, cfg)
@@ -306,12 +309,59 @@ func (ctx *appContext) loadData() {
 	defer ctx.Unlock()
 }
 
+// winner contains all the bits and pieces required to vote and to print
+// statistics after usage.
+type winner struct {
+	msa      string                    // multisig
+	ticket   *chainhash.Hash           // ticket
+	config   userdata.UserVotingConfig // voting config
+	duration time.Duration             // overall vote duration
+	err      error                     // log errors along the way
+}
+
+// vote Generates a vote and send it off to the network.  This is a go routine!
+func (ctx *appContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, blockHeight int64, w *winner) {
+	start := time.Now()
+
+	defer func() {
+		w.duration = time.Since(start)
+		wg.Done()
+	}()
+
+	// Ask wallet to generate vote result.
+	var res *dcrjson.GenerateVoteResult
+	res, w.err = ctx.walletConnection.GenerateVote(blockHash, blockHeight,
+		w.ticket, w.config.VoteBits, ctx.votingConfig.VoteBitsExtended)
+	if w.err != nil {
+		return
+	}
+
+	// Create raw transaction.
+	var buf []byte
+	buf, w.err = hex.DecodeString(res.Hex)
+	if w.err != nil {
+		return
+	}
+	newTx := wire.NewMsgTx()
+	w.err = newTx.FromBytes(buf)
+	if w.err != nil {
+		return
+	}
+
+	// Ask wallet to transmit raw transaction.
+	_, w.err = ctx.nodeConnection.SendRawTransaction(newTx, false)
+}
+
+// processWinningTickets is called every time a new block comes in to handle
+// voting.  The function requires ASAP processing for each vote and therefore
+// it is not sequential and hard to read.  This is unfortunate but a reality of
+// speeding up code.
 func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
-	loopStart := time.Now()
+	start := time.Now()
 
 	// We always have to reload so signal the other end on the way out.
 	// Maybe we can change this to a go routine so that we are not gated on
-	// the function finishing first.  Reason it is defered now is to make
+	// the function finishing first.  Reason it is deferred now is to make
 	// sure the wallet isn't busy while processing the higher priority
 	// voting activity.
 	defer func() {
@@ -326,12 +376,10 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		}
 	}()
 
-	type winner struct {
-		msa    string                    // multisig
-		ticket *chainhash.Hash           // ticket
-		config userdata.UserVotingConfig // voting config
-	}
-	winners := make([]winner, 0, len(wt.winningTickets))
+	// We use pointer because it is the fastest accessor.
+	winners := make([]*winner, 0, len(wt.winningTickets))
+
+	var wg sync.WaitGroup // wait group for go routine exits
 
 	ctx.RLock()
 	for _, ticket := range wt.winningTickets {
@@ -348,7 +396,7 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		voteCfg, ok := ctx.userVotingConfig[msa]
 		if !ok {
 			// Use defaults if not found.
-			log.Warnf("vote config not found for %v using default",
+			log.Warnf("vote config not found for %v using defaults",
 				msa)
 			voteCfg = userdata.UserVotingConfig{
 				Userid:          0,
@@ -375,50 +423,44 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 			}
 		}
 
-		winners = append(winners, winner{
+		w := &winner{
 			msa:    msa,
 			ticket: ticket,
 			config: voteCfg,
-		})
+		}
+		winners = append(winners, w)
+
+		// When testing we don't send the tickets.
+		if ctx.testing {
+			continue
+		}
+
+		wg.Add(1)
+		go ctx.vote(&wg, wt.blockHash, wt.blockHeight, w)
 	}
 	ctx.RUnlock()
 
-	// When testing we don't send the tickets.
-	if ctx.testing {
-		return
-	}
+	wg.Wait()
 
-	for winnersCount, w := range winners {
-		voteStart := time.Now()
-		log.Infof("winning ticket %v height %v block hash %v msa %v",
-			w.ticket, wt.blockHeight, wt.blockHash, w.msa)
+	end := time.Now()
 
-		res, err := ctx.walletConnection.GenerateVote(wt.blockHash, wt.blockHeight,
-			w.ticket, w.config.VoteBits, ctx.votingConfig.VoteBitsExtended)
-		if err != nil {
-			log.Errorf("failed to create vote: %v", err)
-			continue
+	// Log ticket information outside of the handler.
+	go func() {
+		var winnerCount, loserCount int
+		for _, w := range winners {
+			if w.err == nil {
+				winnerCount++
+				w.err = errSuccess
+			} else {
+				loserCount++
+			}
+			log.Infof("winning ticket %v msa %v duration %v: %v",
+				w.ticket, w.msa, w.duration, w.err)
 		}
-
-		buf, err := hex.DecodeString(res.Hex)
-		if err != nil {
-			log.Errorf("DecodeString failed: %v", err)
-			continue
-		}
-		newTx := wire.NewMsgTx()
-		err = newTx.FromBytes(buf)
-		if err != nil {
-			log.Errorf("FromBytes failed: %v", err)
-			continue
-		}
-
-		_, err = ctx.nodeConnection.SendRawTransaction(newTx, false)
-		if err != nil {
-			log.Infof("failed to vote: %v", err)
-		}
-		log.Infof("voted ticket %d in %v", winnersCount+1, time.Since(voteStart))
-	}
-	log.Infof("processWinningTickets took %v", time.Since(loopStart))
+		log.Infof("processWinningTickets: height %v block %v "+
+			"duration %v success %v failure %v", wt.blockHeight,
+			wt.blockHash, end.Sub(start), winnerCount, loserCount)
+	}()
 }
 
 func (ctx *appContext) reloadTicketsHandler() {
@@ -428,7 +470,7 @@ func (ctx *appContext) reloadTicketsHandler() {
 		select {
 		case <-ctx.reloadTickets:
 			start := time.Now()
-			newTickets := walletFetchUserTickets(ctx)
+			newTickets, msg := walletFetchUserTickets(ctx)
 			end := time.Now()
 
 			// replace tickets
@@ -436,7 +478,8 @@ func (ctx *appContext) reloadTicketsHandler() {
 			ctx.ticketsMSA = newTickets
 			ctx.Unlock()
 
-			log.Infof("walletFetchUserTickets: %v", end.Sub(start))
+			log.Infof("walletFetchUserTickets: %v %v", msg,
+				end.Sub(start))
 		case <-ctx.quit:
 			return
 		}
@@ -450,13 +493,15 @@ func (ctx *appContext) reloadUserConfigHandler() {
 		select {
 		case <-ctx.reloadUserConfig:
 			start := time.Now()
-			newUserConfig, err := ctx.userData.MySQLFetchUserVotingConfig()
+			newUserConfig, err :=
+				ctx.userData.MySQLFetchUserVotingConfig()
 			end := time.Now()
-			log.Infof("MySQLFetchUserVotingConfig: %v", end.Sub(start))
+			log.Infof("MySQLFetchUserVotingConfig: %v",
+				end.Sub(start))
 
 			if err != nil {
-				log.Errorf("unable to reload user config due to db error: %v",
-					err)
+				log.Errorf("unable to reload user config due "+
+					"to db error: %v", err)
 				continue
 			}
 
