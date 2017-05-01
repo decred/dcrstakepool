@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -65,7 +66,8 @@ type WinningTicketsForBlock struct {
 }
 
 var (
-	cfg *config
+	cfg        *config
+	errSuccess = errors.New("success")
 )
 
 // calculateFeeAddresses decodes the string of stake pool payment addresses
@@ -306,12 +308,16 @@ func (ctx *appContext) loadData() {
 	defer ctx.Unlock()
 }
 
+// processWinningTickets is called every time a new block comes in to handle
+// voting.  The function requires ASAP processing for each vote and therefore
+// it is not sequential and hard to read.  This is unfortunate but a reality of
+// speeding up code.
 func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
-	loopStart := time.Now()
+	start := time.Now()
 
 	// We always have to reload so signal the other end on the way out.
 	// Maybe we can change this to a go routine so that we are not gated on
-	// the function finishing first.  Reason it is defered now is to make
+	// the function finishing first.  Reason it is deferred now is to make
 	// sure the wallet isn't busy while processing the higher priority
 	// voting activity.
 	defer func() {
@@ -330,12 +336,14 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		msa    string                    // multisig
 		ticket *chainhash.Hash           // ticket
 		config userdata.UserVotingConfig // voting config
+		err    error                     // log errors along the way
 	}
 	winners := make([]winner, 0, len(wt.winningTickets))
 
 	// @marcopeereboom: may be worth transmitting the winner over a channel
 	// to commence processing right away.  The loop seems tight enough for
 	// that not to be needed but it can be converted if needed.
+	// Another idea is to create a go routine per winner.
 	ctx.RLock()
 	for _, ticket := range wt.winningTickets {
 		// Look up multi sig address.
@@ -391,10 +399,13 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		return
 	}
 
-	// Do all the chatter aync for extra vroom.
+	// We break up all post-processing in order to call all wallet
+	// functions asynchronous.  This is to minimize network chatter and
+	// therefore reducing latency.
 	gvaPromises := make([]dcrrpcclient.FutureGenerateVoteResult, 0,
 		len(winners))
 	for _, w := range winners {
+		// Ask wallet to generate vote result.
 		gvaPromises = append(gvaPromises,
 			ctx.walletConnection.GenerateVoteAsync(wt.blockHash,
 				wt.blockHeight, w.ticket, w.config.VoteBits,
@@ -403,41 +414,57 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 
 	rawPromises := make([]dcrrpcclient.FutureSendRawTransactionResult, 0,
 		len(winners))
-	for _, gva := range gvaPromises {
+	for k, gva := range gvaPromises {
+		// Receive vote results and post-process.
 		res, err := gva.Receive()
 		if err != nil {
-			log.Errorf("GenerateVote: %v", err)
+			winners[k].err = err
 			continue
 		}
 		buf, err := hex.DecodeString(res.Hex)
 		if err != nil {
-			log.Errorf("DecodeString: %v", err)
+			winners[k].err = err
 			continue
 		}
 		newTx := wire.NewMsgTx()
 		err = newTx.FromBytes(buf)
 		if err != nil {
-			log.Errorf("FromBytes: %v", err)
+			winners[k].err = err
 			continue
 		}
 
+		// Ask wallet to transmit raw transaction.
 		rawPromises = append(rawPromises,
 			ctx.nodeConnection.SendRawTransactionAsync(newTx,
 				false))
 	}
 
-	for _, raw := range rawPromises {
+	// Wait for wallet to complete raw transaction sends.
+	for k, raw := range rawPromises {
+		if winners[k].err != nil {
+			continue
+		}
 		_, err := raw.Receive()
 		if err != nil {
-			log.Infof("failed to vote: %v", err)
+			winners[k].err = err
 			continue
 		}
 	}
 
-	//log.Infof("winning ticket %v height %v block hash %v msa %v",
-	//	w.ticket, wt.blockHeight, wt.blockHash, w.msa)
+	end := time.Now()
 
-	log.Infof("processWinningTickets took %v", time.Since(loopStart))
+	// Log winning ticket information outside of the handler.
+	go func() {
+		log.Infof("processWinningTickets: height %v block %v time %v",
+			wt.blockHeight, wt.blockHash, end.Sub(start))
+		for _, w := range winners {
+			if w.err == nil {
+				w.err = errSuccess
+			}
+			log.Infof("winning ticket %v %v msa %v: %v",
+				w.ticket, w.msa, w.err)
+		}
+	}()
 }
 
 func (ctx *appContext) reloadTicketsHandler() {
