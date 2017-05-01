@@ -1,85 +1,51 @@
 dcrstakepool
 ====
 
-dcrstakepool is a minimalist web application which provides a method for
-allowing users to purchase tickets and have a pool of wallet servers redeem and
-vote on the user's behalf.
+dcrstakepool is a web application which coordinates generating 1-of-2 multisig
+addresses on a pool of [dcrwallet](https://github.com/decred/dcrwallet) servers
+so users can purchase [proof-of-stake tickets](https://docs.decred.org/mining/proof-of-stake/)
+on the [Decred](https://decred.org/) network and have the pool of wallet servers
+vote on their behalf when the ticket is selected.
 
-## Version History
-- 1.1.0 - Work-In-Progress migration of voting from dcrwallet to stakepoold.
-  * Addresses for generating the 1-of-2 multisig for the ticket address are now
-    derived from votingwalletextpub rather than calling getnewaddress.
-  * Setting individual votebits on tickets has been removed in favor of setting
-    a global voting preference per stake version that is used by a voting daemon
-    called stakepoold.  This is currently wrapped behind the enablestakepoold
-    option and is only available on testnet.
-- 1.0.0 - Major changes/improvements.
-  * API is now at v1 status.  API Tokens are generated for all users with a
-    verified email address when upgrading.  Tokens are generated for new
-    users on demand when visiting the Settings page which displays their token.
-    Authenticated users may use the API to submit a public key address and to
-    retrieve ticket purchasing information.  The stake pool's stats are also
-    available through the API without authentication.
-- 0.0.4 - Major changes/improvements.
-  * config.toml is no longer required as the options in that file have been
-    migrated to dcrstakepool.conf.
-  * Automatic syncing of scripts, tickets, and vote bits is now performed at
-    startup.  Syncing of vote bits is a long process and can be skipped with the
-    SkipVoteBitsSync flag/configuration value.
-  * Temporary wallet connectivity errors are now handled much more gracefully.
-  * A preliminary v0.1 API was added.
-- 0.0.3 - More expected/basic web application functionality added.
-  * SMTPHost now defaults to an empty string so a stake pool can be used for
-    development or testing purposes without a configured mail server.  The
-    contents of the emails are sent through the logger so links can still be
-    followed.
-  * Upon sign up, users now have an email sent with a validation link.
-    They will not be able to sign in until they verify.
-  * New settings page that allows users to change their email address/password.
-  * Bug fix to HeightRegistered migration for users who signed up but never
-    submitted an address would not be able to login.
-- 0.0.2 - Minor improvements/feature addition
-  * The importscript RPC is now called with the current block height at the
-    time of user registration. Previously, importscript triggered a rescan
-    for transactions from the genesis block.  Since the user just registered,
-    there won't be any transactions present.  A new HeightRegistered column
-    is automatically added to the Users table.  A default value of 15346 is
-    used for existing users who already had a multisigscript generated.
-    This can be adjusted to a more reasonable value for you pool by running
-    the following MySQL query:
-    ```UPDATE Users SET HeightRegistered = NEWVALUE WHERE HeightRegistered = 15346;```
-  * Users may now reset their password by specifying an email address and
-    clicking a link that they will receive via email.  You will need to
-    add a proper configuration for your mail server for it to work properly.
-    The various SMTP options can be seen in **sample-dcrstakepool.conf**.
-  * User instructions on the address and ticket pages were updated.
-  * SpentBy link added to the voted tickets display.
-- 0.0.1 - Initial release for mainnet operations
+## 1.1.0 Release notes
+  * Per-ticket votebits were removed in favor of per-user voting preferences.
+    A voting page was added and the API upgraded to v2 to support getting and
+    setting user voting preferences.
+  * Addresses from the wallet servers which are needed for generating the 1-of-2
+    multisig ticket address are now derived from the new votingwalletextpub
+    config option. This removes the need to call getnewaddress on each wallet.
+  * An experimental daemon (stakepoold) that votes according to user preference
+    is available for testing on testnet. This daemon is not for use on mainnet
+    at this time.
 
-## v1.1.0 Architecture
+## 1.1.0 Mainnet Upgrade Guide
 
-![Stake Pool Architecture](https://i.imgur.com/2JDA9dl.png)
-
-- It is highly recommended to use 3 dcrd+dcrwallet+stakepoold nodes for
-  production use on mainnet.
-- The architecture is subject to change more in the future to lessen the
-  dependence on dcrwallet and MySQL.
-
-## v1.1.0 Migration Guide (Work-In-Progress/Subject To Change)
-
+- Upgrade to dcrwallet 1.0.0 or later. The deprecated enablestakemining option
+  was removed.  Replace enablestakemining with enablevoting if it is still
+  present in dcrwallet.conf.
 - Set votingwalletextpub in dcrstakepool.conf by getting the masterpubkey from
   the default account on a voting wallet per the instructions below.
-- Start dcrstakepool without any stakepoold options set. VoteBits and VoteBitsVersion
-  columns will be added to MySQL.
-- Ensure that dcrstakepool is functioning normally.
+- [Update](#updating) dcrstakepool and its dependencies.
+- Start dcrstakepool. Verify that VoteBits and VoteBitsVersion
+  columns were added to MySQL.  You should see the VoteBitsVersion being
+  adjusted for all users to the stake version that dcrwallet is configured to
+  use for voting (currently 4 on mainnet).  Also verify that the voting page
+  shows the 2 mainnet agendas that are up for vote.
+
+## 1.1.0 Testnet/stakepoold Guide (Work-In-Progress/Subject To Change)
+
+- Follow the mainnet directions. The stake version on testnet is 5 and there
+  is 1 agenda.
 - Enable MySQL access from the stakepoold hosts.
-- Configure stakepoold by editing stakepoold.conf.  You should place stakepoold
-  on the same server as dcrd/dcrwallet so stakepoold can talk to them via loopback
-  to lower latency as much as possible.
+- Configure stakepoold by copying sample-stakepoold.conf to
+  ~/.stakepoold/stakepoold.conf and editing it.  You should place stakepoold
+  on the same server as dcrd/dcrwallet so stakepoold can talk to them via
+  loopback to lower latency as much as possible.
 - Copy stakepoold certs to the dcrstakepool server and set
   enablestakepoold=true, stakepooldhosts, stakepooldcerts.
-- Once stakepoold is running to your satisfaction, disable enablevoting=1 in
+- Once stakepoold is setup and verified to be voting, disable enablevoting=1 in
   dcrwallet.conf and restart dcrwallet.
+- **Please share your stakepoold performance data!**
 
 ## Requirements
 
@@ -304,3 +270,47 @@ is used for this project.
 ## License
 
 dcrstakepool is licensed under the [copyfree](http://copyfree.org) ISC License.
+
+## Version History
+- 1.0.0 - Major changes/improvements.
+  * API is now at v1 status.  API Tokens are generated for all users with a
+    verified email address when upgrading.  Tokens are generated for new
+    users on demand when visiting the Settings page which displays their token.
+    Authenticated users may use the API to submit a public key address and to
+    retrieve ticket purchasing information.  The stake pool's stats are also
+    available through the API without authentication.
+- 0.0.4 - Major changes/improvements.
+  * config.toml is no longer required as the options in that file have been
+    migrated to dcrstakepool.conf.
+  * Automatic syncing of scripts, tickets, and vote bits is now performed at
+    startup.  Syncing of vote bits is a long process and can be skipped with the
+    SkipVoteBitsSync flag/configuration value.
+  * Temporary wallet connectivity errors are now handled much more gracefully.
+  * A preliminary v0.1 API was added.
+- 0.0.3 - More expected/basic web application functionality added.
+  * SMTPHost now defaults to an empty string so a stake pool can be used for
+    development or testing purposes without a configured mail server.  The
+    contents of the emails are sent through the logger so links can still be
+    followed.
+  * Upon sign up, users now have an email sent with a validation link.
+    They will not be able to sign in until they verify.
+  * New settings page that allows users to change their email address/password.
+  * Bug fix to HeightRegistered migration for users who signed up but never
+    submitted an address would not be able to login.
+- 0.0.2 - Minor improvements/feature addition
+  * The importscript RPC is now called with the current block height at the
+    time of user registration. Previously, importscript triggered a rescan
+    for transactions from the genesis block.  Since the user just registered,
+    there won't be any transactions present.  A new HeightRegistered column
+    is automatically added to the Users table.  A default value of 15346 is
+    used for existing users who already had a multisigscript generated.
+    This can be adjusted to a more reasonable value for you pool by running
+    the following MySQL query:
+    ```UPDATE Users SET HeightRegistered = NEWVALUE WHERE HeightRegistered = 15346;```
+  * Users may now reset their password by specifying an email address and
+    clicking a link that they will receive via email.  You will need to
+    add a proper configuration for your mail server for it to work properly.
+    The various SMTP options can be seen in **sample-dcrstakepool.conf**.
+  * User instructions on the address and ticket pages were updated.
+  * SpentBy link added to the voted tickets display.
+- 0.0.1 - Initial release for mainnet operations
