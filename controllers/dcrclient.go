@@ -3,7 +3,6 @@
 package controllers
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -23,8 +22,7 @@ import (
 type functionName int
 
 const (
-	getNewAddressFn functionName = iota
-	validateAddressFn
+	validateAddressFn functionName = iota
 	createMultisigFn
 	importScriptFn
 	ticketsForAddressFn
@@ -50,17 +48,6 @@ var (
 	// account as a string.
 	defaultAccountName = "default"
 )
-
-// getNewAddressResponse
-type getNewAddressResponse struct {
-	address dcrutil.Address
-	err     error
-}
-
-// getNewAddressMsg
-type getNewAddressMsg struct {
-	reply chan getNewAddressResponse
-}
 
 // validateAddressResponse
 type validateAddressResponse struct {
@@ -182,10 +169,6 @@ out:
 		select {
 		case m := <-w.msgChan:
 			switch msg := m.(type) {
-			case getNewAddressMsg:
-				resp := w.executeInSequence(getNewAddressFn, msg)
-				respTyped := resp.(*getNewAddressResponse)
-				msg.reply <- *respTyped
 			case validateAddressMsg:
 				resp := w.executeInSequence(validateAddressFn, msg)
 				respTyped := resp.(*validateAddressResponse)
@@ -239,60 +222,6 @@ out:
 // executeInSequence is the mainhandler of all the incoming client functions.
 func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) interface{} {
 	switch fn {
-	case getNewAddressFn:
-		resp := new(getNewAddressResponse)
-		addrs := make([]dcrutil.Address, w.serversLen)
-		connectCount := 0
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				continue
-			}
-			addr, err := s.GetNewAddress("default")
-			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
-				err != dcrrpcclient.ErrClientShutdown) {
-				log.Infof("getNewAddressFn failure on server %v: %v", i, err)
-				resp.err = err
-				return resp
-			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
-				err == dcrrpcclient.ErrClientShutdown) {
-				addrs[i] = nil
-				continue
-			}
-			connectCount++
-			addrs[i] = addr
-		}
-
-		if connectCount < w.minServers {
-			log.Errorf("Unable to check any servers for getNewAddressFn")
-			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v", connectCount, w.minServers)
-			return resp
-		}
-
-		for i := 0; i < w.serversLen; i++ {
-			if i == w.serversLen-1 {
-				break
-			}
-			if addrs[i] == nil || addrs[i+1] == nil {
-				continue
-			}
-			if !bytes.Equal(addrs[i].ScriptAddress(),
-				addrs[i+1].ScriptAddress()) {
-				log.Infof("getNewAddressFn nonequiv failure on servers "+
-					"%v, %v (%v != %v)", i, i+1, addrs[i].ScriptAddress(),
-					addrs[i+1].ScriptAddress())
-				resp.err = fmt.Errorf("non equivalent address returned")
-				return resp
-			}
-		}
-
-		for i := range addrs {
-			if addrs[i] != nil {
-				resp.address = addrs[i]
-				break
-			}
-		}
-		return resp
-
 	case validateAddressFn:
 		vam := msg.(validateAddressMsg)
 		resp := new(validateAddressResponse)
@@ -831,23 +760,6 @@ func (w *walletSvrManager) checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoR
 		}
 	}
 	return true
-}
-
-// GetNewAddress
-//
-// This should return equivalent results from all wallet RPCs. If this
-// encounters a failure, it should be considered fatal.
-func (w *walletSvrManager) GetNewAddress() (dcrutil.Address, error) {
-	// Assert that all servers are online.
-	_, err := w.connected()
-	if err != nil {
-		return nil, connectionError(err)
-	}
-
-	reply := make(chan getNewAddressResponse)
-	w.msgChan <- getNewAddressMsg{reply: reply}
-	response := <-reply
-	return response.address, response.err
 }
 
 // ValidateAddress
