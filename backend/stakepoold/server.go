@@ -337,6 +337,10 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		ticket *chainhash.Hash           // ticket
 		config userdata.UserVotingConfig // voting config
 		err    error                     // log errors along the way
+
+		// Future promises.
+		gva dcrrpcclient.FutureGenerateVoteResult
+		raw dcrrpcclient.FutureSendRawTransactionResult
 	}
 	winners := make([]winner, 0, len(wt.winningTickets))
 
@@ -402,21 +406,17 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	// We break up all post-processing in order to call all wallet
 	// functions asynchronous.  This is to minimize network chatter and
 	// therefore reducing latency.
-	gvaPromises := make([]dcrrpcclient.FutureGenerateVoteResult, 0,
-		len(winners))
-	for _, w := range winners {
+	for k, w := range winners {
 		// Ask wallet to generate vote result.
-		gvaPromises = append(gvaPromises,
+		winners[k].gva =
 			ctx.walletConnection.GenerateVoteAsync(wt.blockHash,
 				wt.blockHeight, w.ticket, w.config.VoteBits,
-				ctx.votingConfig.VoteBitsExtended))
+				ctx.votingConfig.VoteBitsExtended)
 	}
 
-	rawPromises := make([]dcrrpcclient.FutureSendRawTransactionResult, 0,
-		len(winners))
-	for k, gva := range gvaPromises {
+	for k := range winners {
 		// Receive vote results and post-process.
-		res, err := gva.Receive()
+		res, err := winners[k].gva.Receive()
 		if err != nil {
 			winners[k].err = err
 			continue
@@ -434,18 +434,16 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		}
 
 		// Ask wallet to transmit raw transaction.
-		rawPromises = append(rawPromises,
-			ctx.nodeConnection.SendRawTransactionAsync(newTx,
-				false))
+		winners[k].raw =
+			ctx.nodeConnection.SendRawTransactionAsync(newTx, false)
 	}
 
 	// Wait for wallet to complete raw transaction sends.
-	for k, raw := range rawPromises {
-		// XXX k is wrong
+	for k := range winners {
 		if winners[k].err != nil {
 			continue
 		}
-		_, err := raw.Receive()
+		_, err := winners[k].raw.Receive()
 		if err != nil {
 			winners[k].err = err
 			continue
