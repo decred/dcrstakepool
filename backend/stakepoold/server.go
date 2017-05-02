@@ -342,7 +342,8 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		gva dcrrpcclient.FutureGenerateVoteResult
 		raw dcrrpcclient.FutureSendRawTransactionResult
 	}
-	winners := make([]winner, 0, len(wt.winningTickets))
+	// We use pointer because it simply is the fastest accessor.
+	winners := make([]*winner, 0, len(wt.winningTickets))
 
 	// @marcopeereboom: may be worth transmitting the winner over a channel
 	// to commence processing right away.  The loop seems tight enough for
@@ -390,7 +391,7 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 			}
 		}
 
-		winners = append(winners, winner{
+		winners = append(winners, &winner{
 			msa:    msa,
 			ticket: ticket,
 			config: voteCfg,
@@ -406,49 +407,46 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	// We break up all post-processing in order to call all wallet
 	// functions asynchronous.  This is to minimize network chatter and
 	// therefore reducing latency.
-	for k, w := range winners {
+	for _, w := range winners {
 		// Ask wallet to generate vote result.
-		winners[k].gva =
+		w.gva =
 			ctx.walletConnection.GenerateVoteAsync(wt.blockHash,
 				wt.blockHeight, w.ticket, w.config.VoteBits,
 				ctx.votingConfig.VoteBitsExtended)
 	}
 
-	// We mix k and w for performance reasons.  Dereferencing winners[k]
-	// takes ~4x longer.  We therefore use w[k] only when assigning values.
-	// This trick is used throughout the remainder of this function.
-	for k, w := range winners {
+	for _, w := range winners {
 		// Receive vote results and post-process.
 		res, err := w.gva.Receive()
 		if err != nil {
-			winners[k].err = err
+			w.err = err
 			continue
 		}
 		buf, err := hex.DecodeString(res.Hex)
 		if err != nil {
-			winners[k].err = err
+			w.err = err
 			continue
 		}
 		newTx := wire.NewMsgTx()
 		err = newTx.FromBytes(buf)
 		if err != nil {
-			winners[k].err = err
+			w.err = err
 			continue
 		}
 
 		// Ask wallet to transmit raw transaction.
-		winners[k].raw =
+		w.raw =
 			ctx.nodeConnection.SendRawTransactionAsync(newTx, false)
 	}
 
 	// Wait for wallet to complete raw transaction sends.
-	for k, w := range winners {
+	for _, w := range winners {
 		if w.err != nil {
 			continue
 		}
 		_, err := w.raw.Receive()
 		if err != nil {
-			winners[k].err = err
+			w.err = err
 			continue
 		}
 	}
