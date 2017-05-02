@@ -414,9 +414,12 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 				ctx.votingConfig.VoteBitsExtended)
 	}
 
-	for k := range winners {
+	// We mix k and w for performance reasons.  Dereferencing winners[k]
+	// takes ~4x longer.  We therefore use w[k] only when assigning values.
+	// This trick is used throughout the remainder of this function.
+	for k, w := range winners {
 		// Receive vote results and post-process.
-		res, err := winners[k].gva.Receive()
+		res, err := w.gva.Receive()
 		if err != nil {
 			winners[k].err = err
 			continue
@@ -439,11 +442,11 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	}
 
 	// Wait for wallet to complete raw transaction sends.
-	for k := range winners {
-		if winners[k].err != nil {
+	for k, w := range winners {
+		if w.err != nil {
 			continue
 		}
-		_, err := winners[k].raw.Receive()
+		_, err := w.raw.Receive()
 		if err != nil {
 			winners[k].err = err
 			continue
@@ -496,13 +499,15 @@ func (ctx *appContext) reloadUserConfigHandler() {
 		select {
 		case <-ctx.reloadUserConfig:
 			start := time.Now()
-			newUserConfig, err := ctx.userData.MySQLFetchUserVotingConfig()
+			newUserConfig, err :=
+				ctx.userData.MySQLFetchUserVotingConfig()
 			end := time.Now()
-			log.Infof("MySQLFetchUserVotingConfig: %v", end.Sub(start))
+			log.Infof("MySQLFetchUserVotingConfig: %v",
+				end.Sub(start))
 
 			if err != nil {
-				log.Errorf("unable to reload user config due to db error: %v",
-					err)
+				log.Errorf("unable to reload user config due "+
+					"to db error: %v", err)
 				continue
 			}
 
