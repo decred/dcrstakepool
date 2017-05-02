@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -65,7 +66,8 @@ type WinningTicketsForBlock struct {
 }
 
 var (
-	cfg *config
+	cfg        *config
+	errSuccess = errors.New("success")
 )
 
 // calculateFeeAddresses decodes the string of stake pool payment addresses
@@ -216,7 +218,7 @@ func runMain() int {
 		testing:            false,
 	}
 
-	ctx.ticketsMSA = walletFetchUserTickets(ctx)
+	ctx.ticketsMSA, _ = walletFetchUserTickets(ctx)
 
 	// Daemon client connection
 	nodeConn, nodeVer, err := connectNodeRPC(ctx, cfg)
@@ -306,12 +308,16 @@ func (ctx *appContext) loadData() {
 	defer ctx.Unlock()
 }
 
+// processWinningTickets is called every time a new block comes in to handle
+// voting.  The function requires ASAP processing for each vote and therefore
+// it is not sequential and hard to read.  This is unfortunate but a reality of
+// speeding up code.
 func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
-	loopStart := time.Now()
+	start := time.Now()
 
 	// We always have to reload so signal the other end on the way out.
 	// Maybe we can change this to a go routine so that we are not gated on
-	// the function finishing first.  Reason it is defered now is to make
+	// the function finishing first.  Reason it is deferred now is to make
 	// sure the wallet isn't busy while processing the higher priority
 	// voting activity.
 	defer func() {
@@ -330,9 +336,19 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		msa    string                    // multisig
 		ticket *chainhash.Hash           // ticket
 		config userdata.UserVotingConfig // voting config
-	}
-	winners := make([]winner, 0, len(wt.winningTickets))
+		err    error                     // log errors along the way
 
+		// Future promises.
+		gva dcrrpcclient.FutureGenerateVoteResult
+		raw dcrrpcclient.FutureSendRawTransactionResult
+	}
+	// We use pointer because it simply is the fastest accessor.
+	winners := make([]*winner, 0, len(wt.winningTickets))
+
+	// @marcopeereboom: may be worth transmitting the winner over a channel
+	// to commence processing right away.  The loop seems tight enough for
+	// that not to be needed but it can be converted if needed.
+	// Another idea is to create a go routine per winner.
 	ctx.RLock()
 	for _, ticket := range wt.winningTickets {
 		// Look up multi sig address.
@@ -375,7 +391,7 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 			}
 		}
 
-		winners = append(winners, winner{
+		winners = append(winners, &winner{
 			msa:    msa,
 			ticket: ticket,
 			config: voteCfg,
@@ -388,37 +404,67 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		return
 	}
 
-	for winnersCount, w := range winners {
-		voteStart := time.Now()
-		log.Infof("winning ticket %v height %v block hash %v msa %v",
-			w.ticket, wt.blockHeight, wt.blockHash, w.msa)
+	// We break up all post-processing in order to call all wallet
+	// functions asynchronous.  This is to minimize network chatter and
+	// therefore reducing latency.
+	for _, w := range winners {
+		// Ask wallet to generate vote result.
+		w.gva =
+			ctx.walletConnection.GenerateVoteAsync(wt.blockHash,
+				wt.blockHeight, w.ticket, w.config.VoteBits,
+				ctx.votingConfig.VoteBitsExtended)
+	}
 
-		res, err := ctx.walletConnection.GenerateVote(wt.blockHash, wt.blockHeight,
-			w.ticket, w.config.VoteBits, ctx.votingConfig.VoteBitsExtended)
+	for _, w := range winners {
+		// Receive vote results and post-process.
+		res, err := w.gva.Receive()
 		if err != nil {
-			log.Errorf("failed to create vote: %v", err)
+			w.err = err
 			continue
 		}
-
 		buf, err := hex.DecodeString(res.Hex)
 		if err != nil {
-			log.Errorf("DecodeString failed: %v", err)
+			w.err = err
 			continue
 		}
 		newTx := wire.NewMsgTx()
 		err = newTx.FromBytes(buf)
 		if err != nil {
-			log.Errorf("FromBytes failed: %v", err)
+			w.err = err
 			continue
 		}
 
-		_, err = ctx.nodeConnection.SendRawTransaction(newTx, false)
-		if err != nil {
-			log.Infof("failed to vote: %v", err)
-		}
-		log.Infof("voted ticket %d in %v", winnersCount+1, time.Since(voteStart))
+		// Ask wallet to transmit raw transaction.
+		w.raw =
+			ctx.nodeConnection.SendRawTransactionAsync(newTx, false)
 	}
-	log.Infof("processWinningTickets took %v", time.Since(loopStart))
+
+	// Wait for wallet to complete raw transaction sends.
+	for _, w := range winners {
+		if w.err != nil {
+			continue
+		}
+		_, err := w.raw.Receive()
+		if err != nil {
+			w.err = err
+			continue
+		}
+	}
+
+	end := time.Now()
+
+	// Log winning ticket information outside of the handler.
+	go func() {
+		log.Infof("processWinningTickets: height %v block %v time %v",
+			wt.blockHeight, wt.blockHash, end.Sub(start))
+		for _, w := range winners {
+			if w.err == nil {
+				w.err = errSuccess
+			}
+			log.Infof("winning ticket %v msa %v: %v",
+				w.ticket, w.msa, w.err)
+		}
+	}()
 }
 
 func (ctx *appContext) reloadTicketsHandler() {
@@ -428,7 +474,7 @@ func (ctx *appContext) reloadTicketsHandler() {
 		select {
 		case <-ctx.reloadTickets:
 			start := time.Now()
-			newTickets := walletFetchUserTickets(ctx)
+			newTickets, msg := walletFetchUserTickets(ctx)
 			end := time.Now()
 
 			// replace tickets
@@ -436,7 +482,8 @@ func (ctx *appContext) reloadTicketsHandler() {
 			ctx.ticketsMSA = newTickets
 			ctx.Unlock()
 
-			log.Infof("walletFetchUserTickets: %v", end.Sub(start))
+			log.Infof("walletFetchUserTickets: %v %v", msg,
+				end.Sub(start))
 		case <-ctx.quit:
 			return
 		}
@@ -450,13 +497,15 @@ func (ctx *appContext) reloadUserConfigHandler() {
 		select {
 		case <-ctx.reloadUserConfig:
 			start := time.Now()
-			newUserConfig, err := ctx.userData.MySQLFetchUserVotingConfig()
+			newUserConfig, err :=
+				ctx.userData.MySQLFetchUserVotingConfig()
 			end := time.Now()
-			log.Infof("MySQLFetchUserVotingConfig: %v", end.Sub(start))
+			log.Infof("MySQLFetchUserVotingConfig: %v",
+				end.Sub(start))
 
 			if err != nil {
-				log.Errorf("unable to reload user config due to db error: %v",
-					err)
+				log.Errorf("unable to reload user config due "+
+					"to db error: %v", err)
 				continue
 			}
 
