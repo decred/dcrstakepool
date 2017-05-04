@@ -1562,6 +1562,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 		Connected       bool
 		DaemonConnected bool
 		Unlocked        bool
+		EnableVoting    bool
 	}
 	walletPageInfo := make([]WalletInfoPage, len(walletInfo))
 	connectedWallets := 0

@@ -1,48 +1,56 @@
 {{define "status"}}
-<div class="panel panel-default">
-	<div class="panel-heading" style="background-color: #222; color: #ffffff;">
-		<h4 class="panel-title">Status</h4>
-	</div>
-	<div class="panel-body" style="background-color: #333; color: #ffffff;">
-	{{if not .WalletInfo}}
-	<p><span style="font-size: larger;"><b>Error receiving walletinfo</b></span></p>
-	{{end}}
-	{{if .WalletInfo}}
-	<table id="walletinfo" class="table table-condensed datatablesort">
-		<thead>
-			<tr>
-				<th>Wallet Number</th>
-				<th>Connected</th>
-				<th>DaemonConnected</th>
-				<th>TicketMaxPrice</th>
-				<th>BalanceToMaintain</th>
-				<th>StakeMining</th>
-			</tr>
-		</thead>
-		<tbody>
-		{{ range $i, $data := .WalletInfo }}
-			<tr>
-				{{ if $data.Connected }}
-				<td>{{$i}}</td>
-				<td>{{ $data.Connected }}</td>
-				<td>{{ $data.DaemonConnected }}</td>
-				<td>{{ $data.TicketMaxPrice }}</td>
-				<td>{{ $data.BalanceToMaintain }}</td>
-				<td>{{ $data.StakeMining }}</td> 
-				{{else}}
-				<td>{{$i}}</td>
-				<td>{{ $data.Connected }}</td>
-				<td></td>
-				<td></td>
-				<td></td>
-				<td></td>
+<div class="wrapper">
+ <div class="row">
+
+  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
+    {{if .Error}}<div class="well well-notification  orange-notification">{{.Error}}</div>{{end}}
+    {{range .Flash}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
+    {{range .FlashWarn}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
+  </div>
+ 
+  <div class="col-sm-15 col-md-10 text-left center-block">
+
+	<div class="panel panel-default panel-control">
+		<div class="panel-heading">
+			<h4 class="panel-title">Status</h4>
+		</div>
+		<div class="panel-body">
+			{{if not .WalletInfo}}
+			<p><span style="font-size: larger;"><b>Error receiving walletinfo</b></span></p>
+			{{end}}
+			{{if .WalletInfo}}
+			<table id="walletinfo" class="table table-condensed datatablesort responsive">
+				<thead>
+					<tr>
+						<th>Wallet Number</th>
+						<th>Connected</th>
+						<th>DaemonConnected</th>
+						<th>EnableVoting</th>
+					</tr>
+				</thead>
+				<tbody>
+				{{ range $i, $data := .WalletInfo }}
+					<tr>
+						{{ if $data.Connected }}
+						<td>{{$i}}</td>
+						<td>{{ $data.Connected }}</td>
+						<td>{{ $data.DaemonConnected }}</td>
+						<td>{{ $data.EnableVoting }}</td> 
+						{{else}}
+						<td>{{$i}}</td>
+						<td>{{ $data.Connected }}</td>
+						<td></td>
+						<td></td>
+						{{end}}
+					</tr>
 				{{end}}
-			</tr>
-		{{end}}
-		</tbody>
-	</table>
-	{{end}}
-	<p>RPC Status: {{ .RPCStatus }}
-</div>
-</div>
+				</tbody>
+			</table>
+			{{end}}
+			<p>RPC Status: {{ .RPCStatus }}
+		</div><!-- panel-body -->
+	</div><!-- panel-default -->
+  </div><!-- center-block -->
+</div><!-- row -->
+</div><!-- wrapper -->
 {{end}}
