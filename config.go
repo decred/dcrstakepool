@@ -582,13 +582,6 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	if cfg.EnableStakepoold {
-		if activeNetParams.Name == "mainnet" {
-			str := "%s: enablestakepoold is not ready for production"
-			err := fmt.Errorf(str, funcName)
-			fmt.Fprintln(os.Stderr, err)
-			return nil, nil, err
-		}
-
 		if len(cfg.StakepooldHosts) == 0 {
 			str := "%s: stakepooldhosts is not set in config"
 			err := fmt.Errorf(str, funcName)
