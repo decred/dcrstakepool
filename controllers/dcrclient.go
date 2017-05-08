@@ -995,11 +995,6 @@ type walletSvrManager struct {
 	msgChan  chan interface{}
 	wg       sync.WaitGroup
 	quit     chan struct{}
-
-	// ticketDataLock is a mutex for vote bits set/get calls.
-	ticketDataLock sync.RWMutex
-	//ticketTryLock     chan struct{}
-	ticketDataBlocker int32
 }
 
 // Start begins the core block handler which processes block and inv messages.
