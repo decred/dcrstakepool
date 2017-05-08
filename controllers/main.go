@@ -1642,6 +1642,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	ticketInfoInvalid := map[int]TicketInfoInvalid{}
 	ticketInfoLive := map[int]TicketInfoLive{}
+	ticketInfoExpired := map[int]TicketInfoHistoric{}
 	ticketInfoMissed := map[int]TicketInfoHistoric{}
 	ticketInfoVoted := map[int]TicketInfoHistoric{}
 
@@ -1705,6 +1706,12 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 					Ticket:       ticket.Ticket,
 					TicketHeight: ticket.TicketHeight,
 				}
+			case "expired":
+				ticketInfoExpired[idx] = TicketInfoHistoric{
+					Ticket:        ticket.Ticket,
+					SpentByHeight: ticket.SpentByHeight,
+					TicketHeight:  ticket.TicketHeight,
+				}
 			case "missed":
 				ticketInfoMissed[idx] = TicketInfoHistoric{
 					Ticket:        ticket.Ticket,
@@ -1728,6 +1735,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	c.Env["TicketsInvalid"] = ticketInfoInvalid
 	c.Env["TicketsLive"] = ticketInfoLive
+	c.Env["TicketsExpired"] = ticketInfoExpired
 	c.Env["TicketsMissed"] = ticketInfoMissed
 	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets := controller.Parse(t, "tickets", c.Env)

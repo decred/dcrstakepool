@@ -179,7 +179,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			<p><strong>No missed tickets.</strong></p>
 			{{end}}
 			{{if .TicketsMissed}}
-			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool. Expired tickets will also show up here.</div>
+			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool.</div>
 			<div class="table-responsive">
 			<table id="ticketsmissed" class="table table-condensed datatablesort responsive">
 			<thead>
@@ -198,6 +198,50 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsMissed }}<tr>
+				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td>{{$data.SpentByHeight}}</td>
+				<td>{{$data.TicketHeight}}</td>
+				</tr>{{end}}
+			</tbody>
+			</table>
+			</div>
+			{{end}}
+      </div>
+    </div>
+  </div>
+
+<!-- BEGIN EXPIRED TICKETS-->
+  <div class="panel panel-default panel-control">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-expiredlist">
+        Expired Tickets</a>
+      </h4>
+    </div>
+    <div id="collapse-expiredlist" class="panel-collapse collapse">
+      <div class="panel-body">
+			{{if not .TicketsExpired}}
+			<p><strong>No expired tickets.</strong></p>
+			{{end}}
+			{{if .TicketsExpired}}
+			<div class="table-responsive">
+			<table id="ticketsexpired" class="table table-condensed datatablesort responsive">
+			<thead>
+				<tr>
+					<th>Ticket</th>
+					<th>SpentByHeight</th>
+					<th>TicketHeight</th>
+				</tr>
+			</thead>
+			<tfoot>
+				<tr>
+					<th>Ticket</th>
+					<th>SpentByHeight</th>
+					<th>TicketHeight</th>
+				</tr>
+			</tfoot>
+			<tbody>
+			{{ range $i, $data := .TicketsExpired }}<tr>
 				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				<td>{{$data.SpentByHeight}}</td>
 				<td>{{$data.TicketHeight}}</td>
