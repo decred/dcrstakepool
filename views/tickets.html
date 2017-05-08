@@ -74,7 +74,10 @@ ticketbuyer.maxpriceabsolute=58
 			<p>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</p>
 <pre>
 dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 58 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre>
-			<p>Will purchase a ticket delegated to the pool and an address from the voting account using funds from the default account only if the current network price for a ticket is less than 58.0 coins.</p>
+			<p>Will purchase a ticket delegated to the the multisig address which
+				allows either your or the pool to vote when the ticket is called. This
+				uses funds from the default account only if the current network price
+				for a ticket is less than 58.0 coins.</p>
       </div>
     </div>
   </div>
