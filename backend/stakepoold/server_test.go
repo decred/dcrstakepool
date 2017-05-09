@@ -92,7 +92,7 @@ var (
 func init() {
 
 	c = &appContext{
-		ticketsMSA: make(map[chainhash.Hash]string),
+		liveTicketsMSA: make(map[chainhash.Hash]string),
 		votingConfig: &VotingConfig{
 			VoteBits:         1,
 			VoteBitsExtended: "05000000",
@@ -124,7 +124,7 @@ func init() {
 		ticket := &chainhash.Hash{b[0], b[1], b[2], b[3]}
 
 		// use ticket as the key
-		c.ticketsMSA[*ticket] = msa
+		c.liveTicketsMSA[*ticket] = msa
 
 		// last 5 tickets win
 		if i > ticketCount-6 {
