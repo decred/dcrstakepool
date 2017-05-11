@@ -251,7 +251,9 @@ func runMain() int {
 		return 9
 	}
 
-	startGRPCServers(ctx.reloadUserConfig)
+	if !cfg.NoRPCListen {
+		startGRPCServers(ctx.reloadUserConfig)
+	}
 
 	// Only accept a single CTRL+C
 	c := make(chan os.Signal, 1)
@@ -272,6 +274,18 @@ func runMain() int {
 	go ctx.winningTicketHandler()
 	go ctx.reloadTicketsHandler()
 	go ctx.reloadUserConfigHandler()
+
+	if cfg.NoRPCListen {
+		// Initial reload of user voting config
+		ctx.reloadUserConfig <- struct{}{}
+		// Start reloading when a ticker fires
+		userConfigTicker := time.NewTicker(time.Second * 240)
+		go func() {
+			for range userConfigTicker.C {
+				ctx.reloadUserConfig <- struct{}{}
+			}
+		}()
+	}
 
 	// Wait for CTRL+C to signal goroutines to terminate via quit channel.
 	ctx.wg.Wait()
@@ -312,11 +326,13 @@ func (ctx *appContext) loadData() {
 // winner contains all the bits and pieces required to vote and to print
 // statistics after usage.
 type winner struct {
-	msa      string                    // multisig
-	ticket   *chainhash.Hash           // ticket
-	config   userdata.UserVotingConfig // voting config
-	duration time.Duration             // overall vote duration
-	err      error                     // log errors along the way
+	msa          string                    // multisig
+	ticket       *chainhash.Hash           // ticket
+	config       userdata.UserVotingConfig // voting config
+	signDuration time.Duration
+	sendDuration time.Duration
+	duration     time.Duration // overall vote duration
+	err          error         // log errors along the way
 }
 
 // vote Generates a vote and send it off to the network.  This is a go routine!
@@ -335,6 +351,7 @@ func (ctx *appContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 	if w.err != nil {
 		return
 	}
+	w.signDuration = time.Since(start)
 
 	// Create raw transaction.
 	var buf []byte
@@ -349,7 +366,9 @@ func (ctx *appContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 	}
 
 	// Ask wallet to transmit raw transaction.
+	startSend := time.Now()
 	_, w.err = ctx.nodeConnection.SendRawTransaction(newTx, false)
+	w.sendDuration = time.Since(startSend)
 }
 
 // processWinningTickets is called every time a new block comes in to handle
@@ -454,8 +473,9 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 			} else {
 				loserCount++
 			}
-			log.Infof("winning ticket %v msa %v duration %v: %v",
-				w.ticket, w.msa, w.duration, w.err)
+			log.Infof("winning ticket %v msa %v duration %v (%v + %v [+ %v]): %v",
+				w.ticket, w.msa, w.duration, w.signDuration, w.sendDuration,
+				w.duration-w.signDuration-w.sendDuration, w.err)
 		}
 		log.Infof("processWinningTickets: height %v block %v "+
 			"duration %v success %v failure %v", wt.blockHeight,

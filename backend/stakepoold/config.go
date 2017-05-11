@@ -77,7 +77,8 @@ type config struct {
 	WalletPassword   string  `long:"walletpassword" description:"Password for wallet server"`
 	WalletCert       string  `long:"walletcert" description:"Certificate path for wallet server"`
 	Version          string
-	RPCListeners     []string `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 9109, testnet: 19109)"`
+	NoRPCListen      bool     `long:"norpclisten" description:"Do not start a gRPC server. User voting preferences update on a ticker"`
+	RPCListeners     []string `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 9113, testnet: 19113)"`
 	RPCCert          string   `long:"rpccert" description:"File containing the certificate file"`
 	RPCKey           string   `long:"rpckey" description:"File containing the certificate key"`
 }
