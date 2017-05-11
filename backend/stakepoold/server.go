@@ -251,7 +251,9 @@ func runMain() int {
 		return 9
 	}
 
-	startGRPCServers(ctx.reloadUserConfig)
+	if !cfg.NoRPCListen {
+		startGRPCServers(ctx.reloadUserConfig)
+	}
 
 	// Only accept a single CTRL+C
 	c := make(chan os.Signal, 1)
@@ -272,6 +274,18 @@ func runMain() int {
 	go ctx.winningTicketHandler()
 	go ctx.reloadTicketsHandler()
 	go ctx.reloadUserConfigHandler()
+
+	if cfg.NoRPCListen {
+		// Initial reload of user voting config
+		ctx.reloadUserConfig <- struct{}{}
+		// Start reloading when a ticker fires
+		userConfigTicker := time.NewTicker(time.Second * 240)
+		go func() {
+			for range userConfigTicker.C {
+				ctx.reloadUserConfig <- struct{}{}
+			}
+		}()
+	}
 
 	// Wait for CTRL+C to signal goroutines to terminate via quit channel.
 	ctx.wg.Wait()
