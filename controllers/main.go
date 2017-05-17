@@ -1583,6 +1583,7 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 		walletPageInfo[i] = WalletInfoPage{
 			Connected:       true,
 			DaemonConnected: v.DaemonConnected,
+			EnableVoting:    v.Voting,
 			Unlocked:        v.Unlocked,
 		}
 	}
