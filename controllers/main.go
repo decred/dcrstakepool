@@ -207,6 +207,8 @@ func (controller *MainController) API(c web.C, r *http.Request) *system.APIRespo
 		switch command {
 		case "getpurchaseinfo":
 			data, code, response, err = controller.APIPurchaseInfo(c, r)
+		case "networkstakeinfo":
+			data, code, response, err = controller.APINetworkStakeInfo(c, r)
 		case "stats":
 			data, code, response, err = controller.APIStats(c, r)
 		default:
@@ -363,6 +365,51 @@ func (controller *MainController) APIPurchaseInfo(c web.C,
 	}
 
 	return purchaseInfo, codes.OK, "purchaseinfo successfully retrieved", nil
+}
+
+// APINetworkStakeInfo fetches various network PoS related info
+func (controller *MainController) APINetworkStakeInfo(c web.C,
+	r *http.Request) (*poolapi.NetworkStakeInfo, codes.Code, string, error) {
+	dbMap := controller.GetDbMap(c)
+
+	if c.Env["APIUserID"] == nil {
+		return nil, codes.Unauthenticated, "networkStakeInfo error", errors.New("invalid api token")
+	}
+
+	user, _ := models.GetUserById(dbMap, c.Env["APIUserID"].(int64))
+
+	if len(user.UserPubKeyAddr) == 0 {
+		return nil, codes.FailedPrecondition, "networkStakeInfo error", errors.New("no address submitted")
+	}
+
+	esd, err := controller.rpcServers.EstimateStakeDiff()
+	if err != nil {
+		log.Infof("RPC EstimateStakeDifficulty failed: %v", err)
+		return nil, codes.Unavailable, "stats error", errors.New("RPC server error")
+	}
+
+	_, height, err := controller.rpcServers.GetBestBlock()
+	if err != nil {
+		log.Infof("RPC GetBestBlock failed: %v", err)
+		return nil, codes.Unavailable, "stats error", errors.New("RPC server error")
+	}
+
+	gsd, err := controller.rpcServers.GetStakeDiff()
+	if err != nil {
+		log.Infof("RPC GetStakeDifficulty failed: %v", err)
+		return nil, codes.Unavailable, "stats error", errors.New("RPC server error")
+	}
+
+	networkStakeInfo := &poolapi.NetworkStakeInfo{
+		Height:       height,
+		TicketPrice:  gsd.CurrentStakeDifficulty,
+		NextEstimate: esd.Expected,
+		NextMin:      esd.Min,
+		NextMax:      esd.Max,
+		WindowIndex:  uint32(height%controller.params.StakeDiffWindowSize) + 1,
+	}
+
+	return networkStakeInfo, codes.OK, "networkStakeInfo successfully retrieved", nil
 }
 
 // APIStats is an API version of the stats page

@@ -28,6 +28,8 @@ const (
 	ticketsForAddressFn
 	getTxOutFn
 	getStakeInfoFn
+	estimateStakeDiffFn
+	getStakeDiffFn
 	connectedFn
 	stakePoolUserInfoFn
 	getBestBlockFn
@@ -38,6 +40,9 @@ var (
 	// access the wallet and update the stake information instead
 	// of returning cached stake information.
 	cacheTimerStakeInfo = 5 * time.Minute
+
+	cacheTimerEstimateStakeDiff = 1 * time.Minute
+	cacheTimerGetStakeDiff      = 1 * time.Minute
 
 	// cacheTimerGetTickets is the duration of time after which to
 	// access the wallet and update the ticket list for an address
@@ -122,6 +127,28 @@ type getStakeInfoMsg struct {
 	reply chan getStakeInfoResponse
 }
 
+// estimateStakeDiffResponse
+type estimateStakeDiffResponse struct {
+	stakeDiffEstimate *dcrjson.EstimateStakeDiffResult
+	err               error
+}
+
+// estimateStakeDiffMsg
+type estimateStakeDiffMsg struct {
+	reply chan estimateStakeDiffResponse
+}
+
+// getStakeDiffResponse
+type getStakeDiffResponse struct {
+	stakeDiffs *dcrjson.GetStakeDifficultyResult
+	err        error
+}
+
+// getStakeDiffMsg
+type getStakeDiffMsg struct {
+	reply chan getStakeDiffResponse
+}
+
 // connectedResponse
 type connectedResponse struct {
 	walletInfo []*dcrjson.WalletInfoResult
@@ -192,6 +219,14 @@ out:
 			case getStakeInfoMsg:
 				resp := w.executeInSequence(getStakeInfoFn, msg)
 				respTyped := resp.(*getStakeInfoResponse)
+				msg.reply <- *respTyped
+			case estimateStakeDiffMsg:
+				resp := w.executeInSequence(estimateStakeDiffFn, msg)
+				respTyped := resp.(*estimateStakeDiffResponse)
+				msg.reply <- *respTyped
+			case getStakeDiffMsg:
+				resp := w.executeInSequence(getStakeDiffFn, msg)
+				respTyped := resp.(*getStakeDiffResponse)
 				msg.reply <- *respTyped
 			case connectedMsg:
 				resp := w.executeInSequence(connectedFn, msg)
@@ -510,6 +545,66 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				break
 			}
 		}
+		return resp
+
+	case estimateStakeDiffFn:
+		resp := new(estimateStakeDiffResponse)
+
+		var esdr *dcrjson.EstimateStakeDiffResult
+
+		for i, s := range w.servers {
+			if w.servers[i] == nil {
+				continue
+			}
+			var err error
+			esdr, err = s.EstimateStakeDiff(nil)
+			if err != nil {
+				log.Warnf("estimateStakeDiffFn failure on server %v: %v", i, err)
+				esdr = nil
+				continue
+			}
+
+			break
+		}
+
+		if esdr == nil {
+			log.Errorf("Unable to check any servers for estimateStakeDiffFn")
+			resp.err = fmt.Errorf("not processing command; servers failed to respond with success")
+			return resp
+		}
+
+		resp.stakeDiffEstimate = esdr
+
+		return resp
+
+	case getStakeDiffFn:
+		resp := new(getStakeDiffResponse)
+
+		var gsdr *dcrjson.GetStakeDifficultyResult
+
+		for i, s := range w.servers {
+			if w.servers[i] == nil {
+				continue
+			}
+			var err error
+			gsdr, err = s.GetStakeDifficulty()
+			if err != nil {
+				log.Warnf("getStakeDiffFn failure on server %v: %v", i, err)
+				gsdr = nil
+				continue
+			}
+
+			break
+		}
+
+		if gsdr == nil {
+			log.Errorf("Unable to check any servers for getStakeDiffFn")
+			resp.err = fmt.Errorf("not processing command; servers failed to respond with success")
+			return resp
+		}
+
+		resp.stakeDiffs = gsdr
+
 		return resp
 
 	// connectedFn actually requests walletinfo from the wallet and makes
@@ -945,6 +1040,72 @@ func (w *walletSvrManager) GetStakeInfo() (*dcrjson.GetStakeInfoResult, error) {
 	return w.getStakeInfo()
 }
 
+func (w *walletSvrManager) estimateStakeDiff() (*dcrjson.EstimateStakeDiffResult, error) {
+	// Less than five minutes has elapsed since the last call. Return
+	// the previously cached stake information.
+	if time.Since(w.cachedEstimateStakeDiffTimer) < cacheTimerEstimateStakeDiff {
+		return w.cachedEstimateStakeDiff, nil
+	}
+
+	reply := make(chan estimateStakeDiffResponse)
+	w.msgChan <- estimateStakeDiffMsg{
+		reply: reply,
+	}
+	response := <-reply
+
+	// If there was an error, return the error and do not reset the timer
+	if response.err != nil {
+		return nil, response.err
+	}
+
+	// Cache the response for future use and reset the timer
+	w.cachedEstimateStakeDiff = response.stakeDiffEstimate
+	w.cachedEstimateStakeDiffTimer = time.Now()
+
+	return response.stakeDiffEstimate, nil
+}
+
+// EstimateStakeDiff is the concurrency safe, exported version of estimateStakeDiff.
+func (w *walletSvrManager) EstimateStakeDiff() (*dcrjson.EstimateStakeDiffResult, error) {
+	w.cachedEstimateStakeDiffMutex.Lock()
+	defer w.cachedEstimateStakeDiffMutex.Unlock()
+
+	return w.estimateStakeDiff()
+}
+
+func (w *walletSvrManager) getStakeDiff() (*dcrjson.GetStakeDifficultyResult, error) {
+	// Less than five minutes has elapsed since the last call. Return
+	// the previously cached stake information.
+	if time.Since(w.cachedGetStakeDiffTimer) < cacheTimerGetStakeDiff {
+		return w.cachedGetStakeDiff, nil
+	}
+
+	reply := make(chan getStakeDiffResponse)
+	w.msgChan <- getStakeDiffMsg{
+		reply: reply,
+	}
+	response := <-reply
+
+	// If there was an error, return the error and do not reset the timer
+	if response.err != nil {
+		return nil, response.err
+	}
+
+	// Cache the response for future use and reset the timer
+	w.cachedGetStakeDiff = response.stakeDiffs
+	w.cachedGetStakeDiffTimer = time.Now()
+
+	return response.stakeDiffs, nil
+}
+
+// GetStakeDiff is the concurrency safe, exported version of getStakeDiff.
+func (w *walletSvrManager) GetStakeDiff() (*dcrjson.GetStakeDifficultyResult, error) {
+	w.cachedGetStakeDiffMutex.Lock()
+	defer w.cachedGetStakeDiffMutex.Unlock()
+
+	return w.getStakeDiff()
+}
+
 // getTicketsCacheData is a TicketsForAddressResult that also contains a time
 // at which TicketsForAddress was last called. The results should only update.
 type getTicketsCacheData struct {
@@ -980,6 +1141,14 @@ type walletSvrManager struct {
 	cachedStakeInfo      *dcrjson.GetStakeInfoResult
 	cachedStakeInfoTimer time.Time
 	cachedStakeInfoMutex sync.Mutex
+
+	cachedEstimateStakeDiff      *dcrjson.EstimateStakeDiffResult
+	cachedEstimateStakeDiffTimer time.Time
+	cachedEstimateStakeDiffMutex sync.Mutex
+
+	cachedGetStakeDiff      *dcrjson.GetStakeDifficultyResult
+	cachedGetStakeDiffTimer time.Time
+	cachedGetStakeDiffMutex sync.Mutex
 
 	// cachedGetTicketsMap caches TicketsForAddress responses and
 	// is used to only provide new calls to the wallet RPC after a

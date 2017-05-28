@@ -45,3 +45,12 @@ type Stats struct {
 	UserCountActive      int64   `json:"UserCountActive"`
 	Version              string  `json:"Version"`
 }
+
+type NetworkStakeInfo struct {
+	Height       int64   `json:"Height"`
+	TicketPrice  float64 `json:"TicketPrice"`
+	NextEstimate float64 `json:"NextEstimate"`
+	NextMin      float64 `json:"NextMin"`
+	NextMax      float64 `json:"NextMax"`
+	WindowIndex  uint32  `json:"WindowIndex"`
+}
