@@ -370,18 +370,6 @@ func (controller *MainController) APIPurchaseInfo(c web.C,
 // APINetworkStakeInfo fetches various network PoS related info
 func (controller *MainController) APINetworkStakeInfo(c web.C,
 	r *http.Request) (*poolapi.NetworkStakeInfo, codes.Code, string, error) {
-	dbMap := controller.GetDbMap(c)
-
-	if c.Env["APIUserID"] == nil {
-		return nil, codes.Unauthenticated, "networkStakeInfo error", errors.New("invalid api token")
-	}
-
-	user, _ := models.GetUserById(dbMap, c.Env["APIUserID"].(int64))
-
-	if len(user.UserPubKeyAddr) == 0 {
-		return nil, codes.FailedPrecondition, "networkStakeInfo error", errors.New("no address submitted")
-	}
-
 	esd, err := controller.rpcServers.EstimateStakeDiff()
 	if err != nil {
 		log.Infof("RPC EstimateStakeDifficulty failed: %v", err)
