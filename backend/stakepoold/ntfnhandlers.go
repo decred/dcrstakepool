@@ -30,12 +30,3 @@ func getWalletNtfnHandlers(cfg *config) *dcrrpcclient.NotificationHandlers {
 		},
 	}
 }
-
-func sliceContains(s []*chainhash.Hash, e *chainhash.Hash) bool {
-	for _, a := range s {
-		if a.IsEqual(e) {
-			return true
-		}
-	}
-	return false
-}
