@@ -1067,17 +1067,6 @@ func (w *walletSvrManager) CheckWalletsReady() error {
 	return nil
 }
 
-func getMinedTickets(cl *dcrrpcclient.Client, th []*chainhash.Hash) []*chainhash.Hash {
-	var ticketHashesMined []*chainhash.Hash
-	for _, th := range th {
-		res, err := cl.GetRawTransactionVerbose(th)
-		if err == nil && res.Confirmations > 0 {
-			ticketHashesMined = append(ticketHashesMined, th)
-		}
-	}
-	return ticketHashesMined
-}
-
 // GetUnspentUserTickets gets live and immature tickets for a stakepool user
 func (w *walletSvrManager) GetUnspentUserTickets(userMultiSigAddress dcrutil.Address) ([]*chainhash.Hash, error) {
 	// live tickets only

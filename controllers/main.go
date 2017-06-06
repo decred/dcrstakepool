@@ -31,12 +31,6 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// disapproveBlockMask checks to see if the votebits have been set to No.
-const disapproveBlockMask = 0x0000
-
-// approveBlockMask checks to see if votebits have been set to Yes.
-const approveBlockMask = 0x0001
-
 const signupEmailTemplate = "A request for an account for __URL__\r\n" +
 	"was made from __REMOTEIP__ for this email address.\r\n\n" +
 	"If you made this request, follow the link below:\r\n\n" +

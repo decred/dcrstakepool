@@ -49,8 +49,6 @@ var (
 	defaultConfigFile   = filepath.Join(dcrstakepoolHomeDir, defaultConfigFilename)
 	defaultDataDir      = filepath.Join(dcrstakepoolHomeDir, defaultDataDirname)
 	defaultLogDir       = filepath.Join(dcrstakepoolHomeDir, defaultLogDirname)
-	defaultRPCKeyFile   = filepath.Join(dcrstakepoolHomeDir, "rpc.key")
-	defaultRPCCertFile  = filepath.Join(dcrstakepoolHomeDir, "rpc.cert")
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used

@@ -25,7 +25,6 @@ const (
 	defaultLogLevel       = "info"
 	defaultLogDirname     = "logs"
 	defaultLogFilename    = "stakepoold.log"
-	defaultCookieSecure   = false
 	defaultPoolFees       = 5
 )
 
