@@ -1548,7 +1548,8 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	if !stringSliceContains(controller.adminIPs, remoteIP) {
-		return "/error", http.StatusSeeOther
+		log.Warnf("unauthorized /status request from %v", remoteIP)
+		return "", http.StatusUnauthorized
 	}
 
 	// Attempt to query wallet statuses
