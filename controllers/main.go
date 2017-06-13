@@ -1662,8 +1662,8 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
 
 	if user.MultiSigAddress == "" {
-		c.Env["Error"] = "No multisig data has been generated"
 		log.Info("Multisigaddress empty")
+		return "/address", http.StatusSeeOther
 	}
 
 	if controller.RPCIsStopped() {
@@ -1673,8 +1673,8 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	// Get P2SH Address
 	multisig, err := dcrutil.DecodeAddress(user.MultiSigAddress, controller.params)
 	if err != nil {
-		c.Env["Error"] = "Invalid multisig data in database"
 		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
+		return "/error", http.StatusSeeOther
 	}
 
 	log.Infof("Tickets GET from %v, multisig %v", remoteIP,
