@@ -133,9 +133,8 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
     </div>
     <div id="collapse-votedlist" class="panel-collapse collapse {{if .TicketsVoted}}in{{end}}">
       <div class="panel-body">
-			{{if not .TicketsVoted}}
-			<p><strong>Number of voted tickets: {{.TicketsCount}}.</strong></p>
-			{{end}}
+			<p><strong>{{.TicketsVotedCount}} total tickets voted ({{.TicketsVotedArchivedCount}} archived and not shown).</strong></p>
+			
 			{{if .TicketsVoted}}
 			<div class="table-responsive">
 			<table id="ticketsvoted" class="table table-condensed datatablesort responsive">

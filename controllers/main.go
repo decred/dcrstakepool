@@ -1736,6 +1736,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		c.Env["Flash"] = session.Flashes("main")
 		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
 	}
+	minVotedHeight := height - maxVotedAge
 
 	// If the user has tickets, get their info
 	if spui != nil && len(spui.Tickets) > 0 {
@@ -1760,7 +1761,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 				})
 			case "voted":
 				numVoted++
-				if int64(ticket.SpentByHeight)+maxVotedAge >= height {
+				if int64(ticket.SpentByHeight) >= minVotedHeight {
 					ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
 						Ticket:        ticket.Ticket,
 						SpentBy:       ticket.SpentBy,
@@ -1787,7 +1788,8 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	c.Env["TicketsLive"] = ticketInfoLive
 	c.Env["TicketsExpired"] = ticketInfoExpired
 	c.Env["TicketsMissed"] = ticketInfoMissed
-	c.Env["TicketsCount"] = numVoted
+	c.Env["TicketsVotedCount"] = numVoted
+	c.Env["TicketsVotedArchivedCount"] = numVoted - len(ticketInfoVoted)
 	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets := controller.Parse(t, "tickets", c.Env)
 
