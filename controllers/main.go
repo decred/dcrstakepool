@@ -1664,9 +1664,8 @@ type TicketInfoInvalid struct {
 // TicketInfoLive represents live or immature (mined) tickets that have yet to
 // be spent by either a vote or revocation.
 type TicketInfoLive struct {
-	Ticket       string
 	TicketHeight uint32
-	VoteBits     uint16
+	Ticket       string
 }
 
 // Tickets renders the tickets page.
@@ -1728,6 +1727,9 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
 	}
 
+	log.Debugf(":: StakePoolUserInfo (msa = %v) execution time: %v",
+		user.MultiSigAddress, time.Since(start))
+
 	_, height, err := w.GetBestBlock()
 	if err != nil {
 		log.Infof("RPC GetBestBlock failed: %v", err)
@@ -1743,8 +1745,8 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 			switch ticket.Status {
 			case "live":
 				ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
-					Ticket:       ticket.Ticket,
 					TicketHeight: ticket.TicketHeight,
+					Ticket:       ticket.Ticket,
 				})
 			case "expired":
 				ticketInfoExpired = append(ticketInfoExpired, TicketInfoHistoric{
