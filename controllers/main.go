@@ -1671,6 +1671,8 @@ type TicketInfoLive struct {
 // Tickets renders the tickets page.
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
 
+	maxVotedAge := int64(4096)
+
 	var ticketInfoInvalid []TicketInfoInvalid
 	var ticketInfoLive []TicketInfoLive
 	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
@@ -1727,6 +1729,14 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
 	}
 
+	_, height, err := w.GetBestBlock()
+	if err != nil {
+		log.Infof("RPC GetBestBlock failed: %v", err)
+		session.AddFlash("Unable to get best block height", "main")
+		c.Env["Flash"] = session.Flashes("main")
+		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
+	}
+
 	// If the user has tickets, get their info
 	if spui != nil && len(spui.Tickets) > 0 {
 		for _, ticket := range spui.Tickets {
@@ -1750,12 +1760,14 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 				})
 			case "voted":
 				numVoted++
-				// 	ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
-				// 		Ticket:        ticket.Ticket,
-				// 		SpentBy:       ticket.SpentBy,
-				// 		SpentByHeight: ticket.SpentByHeight,
-				// 		TicketHeight:  ticket.TicketHeight,
-				// 	})
+				if int64(ticket.SpentByHeight)+maxVotedAge >= height {
+					ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
+						Ticket:        ticket.Ticket,
+						SpentBy:       ticket.SpentBy,
+						SpentByHeight: ticket.SpentByHeight,
+						TicketHeight:  ticket.TicketHeight,
+					})
+				}
 			}
 		}
 
@@ -1768,7 +1780,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	sort.Sort(ByTicketHeight(ticketInfoLive))
 
 	// Sort historic (voted and revoked) tickets
-	//sort.Sort(BySpentByHeight(ticketInfoVoted))
+	sort.Sort(BySpentByHeight(ticketInfoVoted))
 	sort.Sort(BySpentByHeight(ticketInfoMissed))
 
 	c.Env["TicketsInvalid"] = ticketInfoInvalid
