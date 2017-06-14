@@ -1718,7 +1718,9 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	w := controller.rpcServers
 	// TODO: Tell the user if there is a cool-down
 
-	spui, err := w.StakePoolUserInfo(multisig)
+	start := time.Now()
+
+	spui, err := w.StakePoolUserInfo(multisig, true)
 	if err != nil {
 		// Render page with message to try again later
 		log.Infof("RPC StakePoolUserInfo failed: %v", err)
