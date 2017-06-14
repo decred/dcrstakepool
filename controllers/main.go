@@ -74,6 +74,7 @@ type MainController struct {
 	version              string
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
+	maxVotedAge          int64
 }
 
 func randToken() string {
@@ -107,13 +108,12 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 func NewMainController(params *chaincfg.Params, adminIPs []string,
 	APISecret string, APIVersionsSupported []int, baseURL string,
 	closePool bool, closePoolMsg string, enablestakepoold bool,
-	feeXpubStr string, grpcConnections []*grpc.ClientConn, poolEmail string,
-	poolFees float64, poolLink string, recaptchaSecret string,
-	recaptchaSiteKey string, smtpFrom string, smtpHost string,
-	smtpUsername string, smtpPassword string, version string,
-	walletHosts []string, walletCerts []string, walletUsers []string,
-	walletPasswords []string, minServers int, realIPHeader string,
-	votingXpubStr string) (*MainController, error) {
+	feeXpubStr string, grpcConnections []*grpc.ClientConn,
+	poolFees float64, poolEmail, poolLink, recaptchaSecret, recaptchaSiteKey string,
+	smtpFrom, smtpHost, smtpUsername, smtpPassword, version string,
+	walletHosts, walletCerts, walletUsers, walletPasswords []string,
+	minServers int, realIPHeader, votingXpubStr string,
+	maxVotedAge int64) (*MainController, error) {
 
 	// Parse the extended public key and the pool fees.
 	feeKey, err := hdkeychain.NewKeyFromString(feeXpubStr)
@@ -162,6 +162,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		smtpPassword:         smtpPassword,
 		version:              version,
 		votingXpub:           voteKey,
+		maxVotedAge:          maxVotedAge,
 	}
 
 	voteVersion, err := mc.GetVoteVersion()
@@ -1671,8 +1672,6 @@ type TicketInfoLive struct {
 // Tickets renders the tickets page.
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
 
-	maxVotedAge := int64(4096)
-
 	var ticketInfoInvalid []TicketInfoInvalid
 	var ticketInfoLive []TicketInfoLive
 	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
@@ -1736,7 +1735,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		c.Env["Flash"] = session.Flashes("main")
 		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
 	}
-	minVotedHeight := height - maxVotedAge
+	minVotedHeight := height - controller.maxVotedAge
 
 	// If the user has tickets, get their info
 	if spui != nil && len(spui.Tickets) > 0 {
