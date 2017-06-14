@@ -1674,6 +1674,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	var ticketInfoInvalid []TicketInfoInvalid
 	var ticketInfoLive []TicketInfoLive
 	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
+	var numVoted int
 
 	responseHeaderMap := make(map[string]string)
 	c.Env["ResponseHeaderMap"] = responseHeaderMap
@@ -1748,12 +1749,13 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 					TicketHeight:  ticket.TicketHeight,
 				})
 			case "voted":
-				ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
-					Ticket:        ticket.Ticket,
-					SpentBy:       ticket.SpentBy,
-					SpentByHeight: ticket.SpentByHeight,
-					TicketHeight:  ticket.TicketHeight,
-				})
+				numVoted++
+				// 	ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
+				// 		Ticket:        ticket.Ticket,
+				// 		SpentBy:       ticket.SpentBy,
+				// 		SpentByHeight: ticket.SpentByHeight,
+				// 		TicketHeight:  ticket.TicketHeight,
+				// 	})
 			}
 		}
 
@@ -1766,13 +1768,14 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	sort.Sort(ByTicketHeight(ticketInfoLive))
 
 	// Sort historic (voted and revoked) tickets
-	sort.Sort(BySpentByHeight(ticketInfoVoted))
+	//sort.Sort(BySpentByHeight(ticketInfoVoted))
 	sort.Sort(BySpentByHeight(ticketInfoMissed))
 
 	c.Env["TicketsInvalid"] = ticketInfoInvalid
 	c.Env["TicketsLive"] = ticketInfoLive
 	c.Env["TicketsExpired"] = ticketInfoExpired
 	c.Env["TicketsMissed"] = ticketInfoMissed
+	c.Env["TicketsCount"] = numVoted
 	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets := controller.Parse(t, "tickets", c.Env)
 
@@ -1939,3 +1942,11 @@ func (controller *MainController) IsValidVoteBits(userVoteBits uint16) bool {
 	return userVoteBits&^usedBits == 0
 }
 
+func stringSliceContains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}

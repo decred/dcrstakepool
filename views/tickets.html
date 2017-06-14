@@ -134,7 +134,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
     <div id="collapse-votedlist" class="panel-collapse collapse {{if .TicketsVoted}}in{{end}}">
       <div class="panel-body">
 			{{if not .TicketsVoted}}
-			<p><strong>No voted tickets.</strong></p>
+			<p><strong>Number of voted tickets: {{.TicketsCount}}.</strong></p>
 			{{end}}
 			{{if .TicketsVoted}}
 			<div class="table-responsive">
