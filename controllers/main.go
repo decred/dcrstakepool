@@ -1716,7 +1716,6 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		user.MultiSigAddress)
 
 	w := controller.rpcServers
-	// TODO: Tell the user if there is a cool-down
 
 	start := time.Now()
 
@@ -1732,6 +1731,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	log.Debugf(":: StakePoolUserInfo (msa = %v) execution time: %v",
 		user.MultiSigAddress, time.Since(start))
 
+	// Compute the oldest (min) ticket spend height to include in the table
 	_, height, err := w.GetBestBlock()
 	if err != nil {
 		log.Infof("RPC GetBestBlock failed: %v", err)
@@ -1780,8 +1780,10 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		}
 	}
 
-	// Sort live tickets
-	sort.Sort(ByTicketHeight(ticketInfoLive))
+	// Sort live tickets. This is commented because the JS tables will perform
+	// their own sorting anyway. However, depending on the UI implementation, it
+	// may be desirable to sort it here.
+	// sort.Sort(ByTicketHeight(ticketInfoLive))
 
 	// Sort historic (voted and revoked) tickets
 	sort.Sort(BySpentByHeight(ticketInfoVoted))
