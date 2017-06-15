@@ -25,5 +25,4 @@ func TestGetNetworkName(t *testing.T) {
 		t.Errorf("Incorrect network name: expected %s, got %s", "mainnet",
 			netName)
 	}
-
 }

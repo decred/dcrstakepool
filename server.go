@@ -116,11 +116,12 @@ func runMain() int {
 	controller, err := controllers.NewMainController(activeNetParams.Params,
 		cfg.AdminIPs, cfg.APISecret, APIVersionsSupported, cfg.BaseURL,
 		cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
-		cfg.ColdWalletExtPub, grpcConnections, cfg.PoolEmail, cfg.PoolFees,
+		cfg.ColdWalletExtPub, grpcConnections, cfg.PoolFees, cfg.PoolEmail,
 		cfg.PoolLink, cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.SMTPFrom,
 		cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.Version,
 		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords,
-		cfg.MinServers, cfg.RealIPHeader, cfg.VotingWalletExtPub)
+		cfg.MinServers, cfg.RealIPHeader, cfg.VotingWalletExtPub,
+		cfg.MaxVotedAge)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to initialize the main controller: %v",

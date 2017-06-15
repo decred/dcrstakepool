@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/smtp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -73,6 +74,7 @@ type MainController struct {
 	version              string
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
+	maxVotedAge          int64
 }
 
 func randToken() string {
@@ -106,13 +108,12 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 func NewMainController(params *chaincfg.Params, adminIPs []string,
 	APISecret string, APIVersionsSupported []int, baseURL string,
 	closePool bool, closePoolMsg string, enablestakepoold bool,
-	feeXpubStr string, grpcConnections []*grpc.ClientConn, poolEmail string,
-	poolFees float64, poolLink string, recaptchaSecret string,
-	recaptchaSiteKey string, smtpFrom string, smtpHost string,
-	smtpUsername string, smtpPassword string, version string,
-	walletHosts []string, walletCerts []string, walletUsers []string,
-	walletPasswords []string, minServers int, realIPHeader string,
-	votingXpubStr string) (*MainController, error) {
+	feeXpubStr string, grpcConnections []*grpc.ClientConn,
+	poolFees float64, poolEmail, poolLink, recaptchaSecret, recaptchaSiteKey string,
+	smtpFrom, smtpHost, smtpUsername, smtpPassword, version string,
+	walletHosts, walletCerts, walletUsers, walletPasswords []string,
+	minServers int, realIPHeader, votingXpubStr string,
+	maxVotedAge int64) (*MainController, error) {
 
 	// Parse the extended public key and the pool fees.
 	feeKey, err := hdkeychain.NewKeyFromString(feeXpubStr)
@@ -161,6 +162,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		smtpPassword:         smtpPassword,
 		version:              version,
 		votingXpub:           voteKey,
+		maxVotedAge:          maxVotedAge,
 	}
 
 	voteVersion, err := mc.GetVoteVersion()
@@ -1617,29 +1619,62 @@ func (controller *MainController) Status(c web.C, r *http.Request) (string, int)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
+// ByTicketHeight type implements sort.Sort for types with a TicketHeight field.
+// This includes all valid tickets, including spend tickets.
+type ByTicketHeight []TicketInfoLive
+
+func (a ByTicketHeight) Len() int {
+	return len(a)
+}
+func (a ByTicketHeight) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a ByTicketHeight) Less(i, j int) bool {
+	return a[i].TicketHeight < a[j].TicketHeight
+}
+
+// BySpentByHeight type implements sort.Sort for types with a SpentByHeight
+// field, namely TicketInfoHistoric, the type for voted/missed/expired tickets.
+type BySpentByHeight []TicketInfoHistoric
+
+func (a BySpentByHeight) Len() int {
+	return len(a)
+}
+func (a BySpentByHeight) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a BySpentByHeight) Less(i, j int) bool {
+	return a[i].SpentByHeight < a[j].SpentByHeight
+}
+
+// TicketInfoHistoric represents spent tickets, either voted or revoked.
+type TicketInfoHistoric struct {
+	Ticket        string
+	SpentBy       string
+	SpentByHeight uint32
+	TicketHeight  uint32
+}
+
+// TicketInfoInvalid represents tickets that were not added by the wallets for
+// any reason (e.g. incorrect subsidy address or pool fees).
+type TicketInfoInvalid struct {
+	Ticket string
+}
+
+// TicketInfoLive represents live or immature (mined) tickets that have yet to
+// be spent by either a vote or revocation.
+type TicketInfoLive struct {
+	TicketHeight uint32
+	Ticket       string
+}
+
 // Tickets renders the tickets page.
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
-	type TicketInfoHistoric struct {
-		Ticket        string
-		SpentBy       string
-		SpentByHeight uint32
-		TicketHeight  uint32
-	}
 
-	type TicketInfoInvalid struct {
-		Ticket string
-	}
-
-	type TicketInfoLive struct {
-		Ticket       string
-		TicketHeight uint32
-	}
-
-	ticketInfoInvalid := map[int]TicketInfoInvalid{}
-	ticketInfoLive := map[int]TicketInfoLive{}
-	ticketInfoExpired := map[int]TicketInfoHistoric{}
-	ticketInfoMissed := map[int]TicketInfoHistoric{}
-	ticketInfoVoted := map[int]TicketInfoHistoric{}
+	var ticketInfoInvalid []TicketInfoInvalid
+	var ticketInfoLive []TicketInfoLive
+	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
+	var numVoted int
 
 	responseHeaderMap := make(map[string]string)
 	c.Env["ResponseHeaderMap"] = responseHeaderMap
@@ -1681,9 +1716,10 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		user.MultiSigAddress)
 
 	w := controller.rpcServers
-	// TODO: Tell the user if there is a cool-down
 
-	spui, err := w.StakePoolUserInfo(multisig)
+	start := time.Now()
+
+	spui, err := w.StakePoolUserInfo(multisig, true)
 	if err != nil {
 		// Render page with message to try again later
 		log.Infof("RPC StakePoolUserInfo failed: %v", err)
@@ -1692,46 +1728,73 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
 	}
 
+	log.Debugf(":: StakePoolUserInfo (msa = %v) execution time: %v",
+		user.MultiSigAddress, time.Since(start))
+
+	// Compute the oldest (min) ticket spend height to include in the table
+	_, height, err := w.GetBestBlock()
+	if err != nil {
+		log.Infof("RPC GetBestBlock failed: %v", err)
+		session.AddFlash("Unable to get best block height", "main")
+		c.Env["Flash"] = session.Flashes("main")
+		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
+	}
+	minVotedHeight := height - controller.maxVotedAge
+
 	// If the user has tickets, get their info
 	if spui != nil && len(spui.Tickets) > 0 {
-		for idx, ticket := range spui.Tickets {
+		for _, ticket := range spui.Tickets {
 			switch ticket.Status {
 			case "live":
-				ticketInfoLive[idx] = TicketInfoLive{
-					Ticket:       ticket.Ticket,
+				ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
 					TicketHeight: ticket.TicketHeight,
-				}
+					Ticket:       ticket.Ticket,
+				})
 			case "expired":
-				ticketInfoExpired[idx] = TicketInfoHistoric{
+				ticketInfoExpired = append(ticketInfoExpired, TicketInfoHistoric{
 					Ticket:        ticket.Ticket,
 					SpentByHeight: ticket.SpentByHeight,
 					TicketHeight:  ticket.TicketHeight,
-				}
+				})
 			case "missed":
-				ticketInfoMissed[idx] = TicketInfoHistoric{
+				ticketInfoMissed = append(ticketInfoMissed, TicketInfoHistoric{
 					Ticket:        ticket.Ticket,
 					SpentByHeight: ticket.SpentByHeight,
 					TicketHeight:  ticket.TicketHeight,
-				}
+				})
 			case "voted":
-				ticketInfoVoted[idx] = TicketInfoHistoric{
-					Ticket:        ticket.Ticket,
-					SpentBy:       ticket.SpentBy,
-					SpentByHeight: ticket.SpentByHeight,
-					TicketHeight:  ticket.TicketHeight,
+				numVoted++
+				if int64(ticket.SpentByHeight) >= minVotedHeight {
+					ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
+						Ticket:        ticket.Ticket,
+						SpentBy:       ticket.SpentBy,
+						SpentByHeight: ticket.SpentByHeight,
+						TicketHeight:  ticket.TicketHeight,
+					})
 				}
 			}
 		}
 
-		for idx, ticket := range spui.InvalidTickets {
-			ticketInfoInvalid[idx] = TicketInfoInvalid{ticket}
+		for _, ticket := range spui.InvalidTickets {
+			ticketInfoInvalid = append(ticketInfoInvalid, TicketInfoInvalid{ticket})
 		}
 	}
+
+	// Sort live tickets. This is commented because the JS tables will perform
+	// their own sorting anyway. However, depending on the UI implementation, it
+	// may be desirable to sort it here.
+	// sort.Sort(ByTicketHeight(ticketInfoLive))
+
+	// Sort historic (voted and revoked) tickets
+	sort.Sort(BySpentByHeight(ticketInfoVoted))
+	sort.Sort(BySpentByHeight(ticketInfoMissed))
 
 	c.Env["TicketsInvalid"] = ticketInfoInvalid
 	c.Env["TicketsLive"] = ticketInfoLive
 	c.Env["TicketsExpired"] = ticketInfoExpired
 	c.Env["TicketsMissed"] = ticketInfoMissed
+	c.Env["TicketsVotedCount"] = numVoted
+	c.Env["TicketsVotedArchivedCount"] = numVoted - len(ticketInfoVoted)
 	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets := controller.Parse(t, "tickets", c.Env)
 

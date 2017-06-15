@@ -141,8 +141,9 @@ type stakePoolUserInfoResponse struct {
 
 // stakePoolUserInfoMsg
 type stakePoolUserInfoMsg struct {
-	userAddr dcrutil.Address
-	reply    chan stakePoolUserInfoResponse
+	userAddr          dcrutil.Address
+	reply             chan stakePoolUserInfoResponse
+	takeFirstResponse bool
 }
 
 // getBestBlockResponse
@@ -572,6 +573,23 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case stakePoolUserInfoFn:
 		spuim := msg.(stakePoolUserInfoMsg)
 		resp := new(stakePoolUserInfoResponse)
+		// Taking first response, continuing on error
+		if spuim.takeFirstResponse {
+			for i, s := range w.servers {
+				spuir, err := s.StakePoolUserInfo(spuim.userAddr)
+				if err != nil {
+					log.Infof("stakePoolUserInfoFn failure on server %v: %v", i, err)
+					resp.err = err
+					continue
+				}
+				resp.err = nil
+				resp.userInfo = spuir
+				return resp
+			}
+			log.Warnf("All wallet servers failed to respond for StakePoolUserInfo.")
+			return resp
+		}
+		// Getting each wallet's response, checking for "syncness"
 		spuirs := make([]*dcrjson.StakePoolUserInfoResult, w.serversLen)
 		// use connectCount to increment total number of successful responses
 		// if we have > 0 then we proceed as though nothing is wrong for the user
@@ -880,11 +898,12 @@ func (w *walletSvrManager) GetTxOut(hash *chainhash.Hash, idx uint32) (*dcrjson.
 // This can race depending on what wallet is currently processing, so failures
 // from this function should NOT cause fatal errors on the web server like the
 // other RPC client calls.
-func (w *walletSvrManager) StakePoolUserInfo(userAddr dcrutil.Address) (*dcrjson.StakePoolUserInfoResult, error) {
+func (w *walletSvrManager) StakePoolUserInfo(userAddr dcrutil.Address, takeFirstResponse bool) (*dcrjson.StakePoolUserInfoResult, error) {
 	reply := make(chan stakePoolUserInfoResponse)
 	w.msgChan <- stakePoolUserInfoMsg{
-		userAddr: userAddr,
-		reply:    reply,
+		userAddr:          userAddr,
+		reply:             reply,
+		takeFirstResponse: takeFirstResponse,
 	}
 	response := <-reply
 	return response.userInfo, response.err
@@ -1075,7 +1094,7 @@ func (w *walletSvrManager) GetUnspentUserTickets(userMultiSigAddress dcrutil.Add
 	// TicketsForAddress returns all tickets, not just live, when wallet is
 	// queried rather than just the node. With StakePoolUserInfo, "live" status
 	// includes immature, but not spent.
-	spui, err := w.StakePoolUserInfo(userMultiSigAddress)
+	spui, err := w.StakePoolUserInfo(userMultiSigAddress, false)
 	if err != nil {
 		return tickethashes, err
 	}
