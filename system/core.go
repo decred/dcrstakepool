@@ -151,6 +151,8 @@ func (application *Application) Route(controller interface{}, route string) web.
 			io.WriteString(w, body)
 		case http.StatusSeeOther, http.StatusFound:
 			http.Redirect(w, r, body, code)
+		case http.StatusUnauthorized:
+			http.Error(w, http.StatusText(403), 403)
 		case http.StatusInternalServerError:
 			http.Error(w, http.StatusText(500), 500)
 		}
