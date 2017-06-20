@@ -52,7 +52,11 @@ func runMain() int {
 	log.Infof("Version: %s", version())
 	log.Infof("Network: %s", activeNetParams.Params.Name)
 
-	defer backendLog.Flush()
+	defer func() {
+		if logRotator != nil {
+			logRotator.Close()
+		}
+	}()
 
 	var application = &system.Application{}
 

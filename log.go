@@ -6,28 +6,65 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/btcsuite/btclog"
-	"github.com/btcsuite/seelog"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
+	"github.com/jrick/logrotate/rotator"
 )
 
-// Loggers per subsytem.  Note that backendLog is a seelog logger that all of
-// the subsystem loggers route their messages to.  When adding new subsystems,
-// add a reference here, to the subsystemLoggers map, and the useLogger
-// function.
+// logWriter implements an io.Writer that outputs to both standard output and
+// the write-end pipe of an initialized log rotator.
+type logWriter struct{}
+
+func (logWriter) Write(p []byte) (n int, err error) {
+	os.Stdout.Write(p)
+	logRotatorPipe.Write(p)
+	return len(p), nil
+}
+
+// Loggers per subsystem.  A single backend logger is created and all subsytem
+// loggers created from it will write to the backend.  When adding new
+// subsystems, add the subsystem logger variable here and to the
+// subsystemLoggers map.
+//
+// Loggers can not be used before the log rotator has been initialized with a
+// log file.  This must be performed early during application startup by calling
+// initLogRotator.
 var (
-	backendLog          = seelog.Disabled
-	controllersLog      = btclog.Disabled
-	log                 = btclog.Disabled
-	modelsLog           = btclog.Disabled
-	stakepooldclientLog = btclog.Disabled
-	systemLog           = btclog.Disabled
+
+	// backendLog is the logging backend used to create all subsystem loggers.
+	// The backend must not be used before the log rotator has been initialized,
+	// or data races and/or nil pointer dereferences will occur.
+	backendLog = btclog.NewBackend(logWriter{})
+
+	// logRotator is one of the logging outputs.  It should be closed on
+	// application shutdown.
+	logRotator *rotator.Rotator
+
+	// logRotatorPipe is the write-end pipe for writing to the log rotator.  It
+	// is written to by the Write method of the logWriter type.
+	logRotatorPipe *io.PipeWriter
+
+	controllersLog      = backendLog.Logger("CNTL")
+	log                 = backendLog.Logger("DCRS")
+	modelsLog           = backendLog.Logger("MODL")
+	stakepooldclientLog = backendLog.Logger("GRPC")
+	systemLog           = backendLog.Logger("SYTM")
 )
+
+// Initialize package-global logger variables.
+func init() {
+	controllers.UseLogger(controllersLog)
+	models.UseLogger(modelsLog)
+	stakepooldclient.UseLogger(stakepooldclientLog)
+	system.UseLogger(systemLog)
+}
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
 var subsystemLoggers = map[string]btclog.Logger{
@@ -38,55 +75,27 @@ var subsystemLoggers = map[string]btclog.Logger{
 	"SYTM": systemLog,
 }
 
-// useLogger updates the logger references for subsystemID to logger.  Invalid
-// subsystems are ignored.
-func useLogger(subsystemID string, logger btclog.Logger) {
-	if _, ok := subsystemLoggers[subsystemID]; !ok {
-		return
-	}
-	subsystemLoggers[subsystemID] = logger
-
-	switch subsystemID {
-	case "DCRS":
-		log = logger
-	case "CNTL":
-		controllersLog = logger
-		controllers.UseLogger(logger)
-	case "GRPC":
-		stakepooldclientLog = logger
-		stakepooldclient.UseLogger(logger)
-	case "MODL":
-		modelsLog = logger
-		models.UseLogger(logger)
-	case "SYTM":
-		systemLog = logger
-		system.UseLogger(logger)
-	}
-}
-
-// initSeelogLogger initializes a new seelog logger that is used as the backend
-// for all logging subsytems.
-func initSeelogLogger(logFile string) {
-	config := `
-        <seelog type="adaptive" mininterval="2000000" maxinterval="100000000"
-                critmsgcount="500" minlevel="trace">
-                <outputs formatid="all">
-                        <console />
-                        <rollingfile type="size" filename="%s" maxsize="10485760" maxrolls="3" />
-                </outputs>
-                <formats>
-                        <format id="all" format="%%Time %%Date [%%LEV] %%Msg%%n" />
-                </formats>
-        </seelog>`
-	config = fmt.Sprintf(config, logFile)
-
-	logger, err := seelog.LoggerFromConfigAsString(config)
+// initLogRotator initializes the logging rotater to write logs to logFile and
+// create roll files in the same directory.  It must be called before the
+// package-global log rotater variables are used.
+func initLogRotator(logFile string) {
+	logDir, _ := filepath.Split(logFile)
+	err := os.MkdirAll(logDir, 0700)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create logger: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to create log directory: %v\n", err)
+		os.Exit(1)
+	}
+	pr, pw := io.Pipe()
+	r, err := rotator.New(pr, logFile, 10*1024, false, 3)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create file rotator: %v\n", err)
 		os.Exit(1)
 	}
 
-	backendLog = logger
+	go r.Run()
+
+	logRotator = r
+	logRotatorPipe = pw
 }
 
 // setLogLevel sets the logging level for provided subsystem.  Invalid
@@ -99,17 +108,8 @@ func setLogLevel(subsystemID string, logLevel string) {
 		return
 	}
 
-	// Default to info if the log level is invalid.
-	level, ok := btclog.LogLevelFromString(logLevel)
-	if !ok {
-		level = btclog.InfoLvl
-	}
-
-	// Create new logger for the subsystem if needed.
-	if logger == btclog.Disabled {
-		logger = btclog.NewSubsystemLogger(backendLog, subsystemID+": ")
-		useLogger(subsystemID, logger)
-	}
+	// Defaults to info if the log level is invalid.
+	level, _ := btclog.LevelFromString(logLevel)
 	logger.SetLevel(level)
 }
 

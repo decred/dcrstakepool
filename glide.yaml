@@ -2,7 +2,6 @@ package: github.com/decred/dcrstakepool
 import:
 - package: github.com/btcsuite/btclog
 - package: github.com/btcsuite/go-flags
-- package: github.com/btcsuite/seelog
 - package: github.com/davecgh/go-spew
   subpackages:
   - spew
@@ -45,3 +44,6 @@ import:
   - codes
   - credentials
   - grpclog
+- package: github.com/jrick/logrotate
+  subpackages:
+  - rotator

@@ -3,6 +3,7 @@ package system
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"html/template"
 	"io"
 	"net/http"
@@ -164,7 +165,7 @@ func saveSession(c web.C, w http.ResponseWriter, r *http.Request) error {
 	if session, exists := c.Env["Session"]; exists {
 		return session.(*sessions.Session).Save(r, w)
 	}
-	return log.Errorf("Session not available")
+	return errors.New("Session not available")
 }
 
 // APIHandler executes an API processing function that provides an *APIResponse
