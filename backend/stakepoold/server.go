@@ -271,7 +271,6 @@ func runMain() int {
 		log.Infof("CTRL+C hit.  Closing goroutines.")
 		//saveData(ctx)
 		close(ctx.quit)
-		return
 	}()
 
 	ctx.wg.Add(3)

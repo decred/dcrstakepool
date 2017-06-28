@@ -1,12 +1,12 @@
 hash: b5a90eed086645c55dcbc833f06e494590dee0fa95b3ff31aaea5e079c81cea1
-updated: 2017-06-20T14:32:28.9277967-04:00
+updated: 2017-06-28T16:07:28.893474-04:00
 imports:
 - name: github.com/agl/ed25519
   version: 278e1ec8e8a6e017cd07577924d6766039146ced
   subpackages:
   - edwards25519
 - name: github.com/btcsuite/btclog
-  version: 30bef3d5a6b4600e2129de8b6527ffcc1ee397ca
+  version: 84c8d2346e9fc8c7b947e243b9c24e6df9fd206a
 - name: github.com/btcsuite/go-flags
   version: 6c288d648c1cc1befcb90cb5511dcacf64ae8e61
 - name: github.com/btcsuite/go-socks
@@ -22,7 +22,7 @@ imports:
 - name: github.com/decred/blake256
   version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: ce4b77d3d9e3a4d3393e1fa3baeee5679cad518d
+  version: 713164983204ef44185aa4cd6a48fed096188d46
   subpackages:
   - blockchain
   - blockchain/internal/dbnamespace
@@ -49,13 +49,12 @@ imports:
   - base58
   - hdkeychain
 - name: github.com/decred/dcrwallet
-  version: 56954e8ce2d801e35d5df5524d32983268dc64c2
+  version: fdc45f39a468305fa966b6c7407a7d813a3311ca
   subpackages:
   - apperrors
   - chain
   - internal/zero
   - snacl
-  - wallet/txrules
   - wallet/udb
   - walletdb
 - name: github.com/dgrijalva/jwt-go
@@ -78,7 +77,7 @@ imports:
 - name: github.com/haisum/recaptcha
   version: 7d3b8053900e7a0f549a11e800649a5fa950700f
 - name: github.com/jrick/logrotate
-  version: 4ed05ed86ef17d10ff99cce77481e0fcf6f2c7b0
+  version: a93b200c26cbae3bb09dd0dc2c7c7fe1468a034a
   subpackages:
   - rotator
 - name: github.com/zenazn/goji
@@ -90,7 +89,7 @@ imports:
   - web/middleware
   - web/mutil
 - name: golang.org/x/crypto
-  version: adbae1b6b6fb4b02448a0fc0dbbc9ba2b95b294d
+  version: 84f24dfdf3c414ed893ca1b318d0045ef5a1f607
   subpackages:
   - bcrypt
   - blowfish
@@ -101,7 +100,7 @@ imports:
   - salsa20/salsa
   - scrypt
 - name: golang.org/x/net
-  version: fe686d45ea04bc1bd4eff6a52865ce8757320325
+  version: 8663ed5da4fd087c3cfb99a996e628b72e2f0948
   subpackages:
   - context
   - http2
@@ -111,7 +110,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/text
-  version: 4e9ab9ee170f2a39bd66c92b3e0a47ff47a4bc77
+  version: 6353ef0f924300eea566d3438817aa4d3374817e
   subpackages:
   - secure/bidirule
   - transform
