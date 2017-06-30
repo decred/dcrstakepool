@@ -40,11 +40,20 @@
     <div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive}}in{{end}}">
       <div class="panel-body">
 			<p><strong><u>Step 1</u></strong></p>
+			<p><strong>The official Decred GUI wallets
+        <a href="https://decred.org/downloads/#paymetheus">Paymetheus</a>
+        (Windows) or <a href="https://decred.org/downloads/#decrediton">Decrediton</a>
+        (macOS/Linux) are the recommended way to use stake pools.  All you need to get started
+        is to copy and paste the API Token from the <a href="/settings">Settings Page</a>.  More
+        comprehensive guides are available for
+        <a href="https://docs.decred.org/getting-started/user-guides/using-paymetheus/">Paymetheus</a>
+        and <a href="https://docs.decred.org/getting-started/user-guides/decrediton-setup/">Decrediton</a>.
+				There is also a more general overview of the staking process available
+				<a href="https://docs.decred.org/mining/proof-of-stake/#automatic-purchasing-of-tickets" target="_blank">here</a>.</strong></p>
 			<p><strong>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</strong>
-			<a href="https://github.com/decred/decred-release/releases/latest" target="_blank"><span aria-label="Download Decred Installer"> &#8675; Installer</a> |
-			<a href="https://github.com/decred/decred-binaries/releases/latest" target="_blank"><span aria-label="Download Decred Binaries"> &#8675; Binaries</a></p>
-
-			</p>
+			<a href="https://decred.org/downloads/" target="_blank"><span aria-label="Decred Downloads Page"> &#8675; Decred Downloads Page</span></a>
+			The <a href="https://docs.decred.org/getting-started/user-guides/dcrwallet-tickets/">dcrwallet instructions</a>
+      are the most helpful if you wish to continue on the command-line path.</p>
 			<p><strong><u>Step 2</u></strong></p>
 			<p>Your P2SH multisignature script for delegating votes has been generated. Please first import it locally into your wallet using <b>dcrctl</b> for safe keeping, so you can recover your funds and vote in the unlikely event of a pool failure:</p>
 
@@ -66,8 +75,7 @@ ticketaddress={{ .User.MultiSigAddress }}
 [Ticket Buyer Options]
 ticketbuyer.maxpriceabsolute=58
 </pre>
-            <p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the pool address.</p>
-            <p>See <a href="https://docs.decred.org/mining/proof-of-stake/#automatic-purchasing-of-tickets" target="_blank">documentation</a> for more options.</p>
+      <p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the pool address.</p>
 
 			<p><strong>Option B - dcrwallet - Manual purchasing</strong> (Not recommended)</p>
 			<p>Start a wallet with funds available and manually purchase tickets with the following command using <strong>dcrctl</strong>:</p>
@@ -104,18 +112,18 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 					<th>TicketHeight</th>
 				</tr>
 			</thead>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsLive }}<tr>
 				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				<td>{{ $data.TicketHeight }}</td>
 				</tr>{{end}}
 			</tbody>
+			<tfoot>
+				<tr>
+					<th>Ticket</th>
+					<th>TicketHeight</th>
+				</tr>
+			</tfoot>
 			</table>
 			</div>
 			{{end}}
@@ -145,13 +153,6 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 					<th>TicketHeight</th>
 				</tr>
 			</thead>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsVoted }}<tr>
 				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
@@ -159,6 +160,13 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
 			</tbody>
+			<tfoot>
+				<tr>
+					<th>Ticket</th>
+					<th>SpentByHeight</th>
+					<th>TicketHeight</th>
+				</tr>
+			</tfoot>
 			</table>
 			</div>
 			{{end}}
@@ -191,13 +199,6 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 					<th>TicketHeight</th>
 				</tr>
 			</thead>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsMissed }}<tr>
 				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
@@ -205,6 +206,13 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
 			</tbody>
+			<tfoot>
+				<tr>
+					<th>Ticket</th>
+					<th>SpentByHeight</th>
+					<th>TicketHeight</th>
+				</tr>
+			</tfoot>
 			</table>
 			</div>
 			{{end}}
@@ -235,13 +243,6 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 					<th>TicketHeight</th>
 				</tr>
 			</thead>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsExpired }}<tr>
 				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
@@ -249,6 +250,13 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
 			</tbody>
+			<tfoot>
+				<tr>
+					<th>Ticket</th>
+					<th>SpentByHeight</th>
+					<th>TicketHeight</th>
+				</tr>
+			</tfoot>
 			</table>
 			</div>
 			{{end}}
@@ -280,16 +288,16 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 					<th>Ticket</th>
 				</tr>
 			</thead>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-				</tr>
-			</tfoot>
 			<tbody>
 			{{ range $i, $data := .TicketsInvalid }}<tr>
 				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				</tr>{{end}}
 			</tbody>
+			<tfoot>
+				<tr>
+					<th>Ticket</th>
+				</tr>
+			</tfoot>
 			</table>
 			</div>
 			{{end}}

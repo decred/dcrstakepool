@@ -5,23 +5,31 @@
     {{if .SMTPDisabled }}<div class="well well-notification  orange-notification">Mail server not configured.  You will not receive an email change verification link.</div>{{end}}
     {{range .FlashError}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
     {{range .FlashSuccess}}<div class="well well-notification green-notification">{{.}}</div>{{end}}
- 
-{{if .ShowInstructions }}  <div class="well well-notification  orange-notification">
-To start staking, you need to submit a public key address.<br>
-    You may do so on the <a href="/address">Address</a> page or by downloading
-    <a href="https://github.com/decred/decred-binaries/releases/latest">Paymetheus</a>
-   <!-- <span class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top" title="Paymetheus is the official Decred GUI wallet for Windows. Search for 'msi' on the downloads page to find it.">
-    </span> --> and pasting the API Token below into Paymetheus.
   </div>
-{{end}}
 
-
+  <div class="col-sm-15 col-md-10 text-left center-block">
+      {{if .ShowInstructions }}
+      <p><strong>To start staking, you need to submit a public key address.  This can be
+      done automatically by the GUI wallets Decrediton and Paymetheus (see below).
+      You may also proceed by following the command-line instructions on the
+      <a href="/address">Address Page</a>.</strong></p><br>
+      {{end}}
+        <p><strong>The official Decred GUI wallets
+        <a href="https://decred.org/downloads/#paymetheus">Paymetheus</a>
+        (Windows) or <a href="https://decred.org/downloads/#decrediton">Decrediton</a>
+        (macOS/Linux) are the recommended way to use stake pools.  All you need to get started
+        is to copy and paste the API Token below when prompted.  More
+        comprehensive guides are available for
+        <a href="https://docs.decred.org/getting-started/user-guides/using-paymetheus/">Paymetheus</a>
+        and <a href="https://docs.decred.org/getting-started/user-guides/decrediton-setup/">Decrediton</a>.
+        There is also a more general overview of the staking process available
+				<a href="https://docs.decred.org/mining/proof-of-stake/#automatic-purchasing-of-tickets" target="_blank">here</a>.</strong></p>
   </div>
- 
+
   <div class="col-sm-15 col-md-10 text-left center-block">
     <h1>Settings</h1>
  
-	<p><strong>Api Token:</strong></p>
+	<p><strong>API Token:</strong></p>
 	<pre>{{ .APIToken }}</pre>
 <hr />
 
@@ -30,7 +38,7 @@ To start staking, you need to submit a public key address.<br>
 	 <div class="form-group">
 	  <label class="control-label col-sm-2" for="email">New Email:</label>
 	<div class="col-sm-13">
-	  <input type="email" name="email" placeholder="New Email Address" type="email" class="form-control" required>
+	  <input id="email" name="email" placeholder="New Email Address" type="email" class="form-control" required>
 	</div>
 	 </div>
 	 <div class="form-group">
