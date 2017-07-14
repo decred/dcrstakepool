@@ -2,14 +2,33 @@
 <div class="wrapper">
     <div class="row">
   <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-    {{range .Flash}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
+    {{range .Flash}}<div class="well well-notification orange-notification">{{.}}</div>{{end}}
   </div>
     <div class="col-sm-15 col-md-10 text-left center-block">
        <h1>{{if .User.MultiSigAddress }}Address Submitted{{else}}Submit Address{{end}}</h1>
+     <p><strong>When you submit an address, the stake pool binds that address
+        from your wallet together with an address from the stake pool's voting
+        wallet.  This is done by creating a 1-of-2 multisignature script which
+        lets you, the pool, or both parties vote.  This "binding" of the wallets
+        means that if you ever delete your current wallet and create a new
+        wallet with a different seed, importing your multisignature script will
+        not work because it contains an address that is not present in your new
+        wallet.  Please contact your stake pool administrator or support staff
+        if you need to re-register with a new address from a new wallet.</strong></p>
 {{if .User.MultiSigAddress}}
      <div style="overflow:auto">
-        <p>Your public key address has been accepted and cannot be changed at this time.</p>
-        <p><b>Public Key Address:</b></p><p>{{ .User.UserPubKeyAddr }}</p>
+        <p><span style="font-size: larger;"><strong>Your public key address has
+        been accepted and registration is complete.  Please contact your stake
+        pool administrator or support staff if you need to re-register with a
+        new address from a new wallet.</strong></span></p>
+        <p><strong>Public Key Address:</strong> &nbsp;<strong>{{ .User.UserPubKeyAddr }}</strong></p>
+        <p><strong>If you wish to verify that this address belongs to your
+        wallet, you may run the following command:</strong></p>
+        <div class="cmd"><pre>
+$ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet validateaddress {{ .User.UserPubKeyAddr }}
+        </pre></div>
+        <p><strong>In the result, you will see fields such as "ismine" and
+        "account" if the address is present.</strong></p>
      </div>
 {{ else }}
         <p><strong>The official Decred GUI wallets
@@ -28,7 +47,7 @@
 
         <p>The directions below require that you
         have setup the Decred software and have obtained Decred that you can
-        purchase tickets with. The
+        purchase tickets with.  The
         <a href="https://docs.decred.org/getting-started/beginner-guide/">Getting Started</a>
         section of the <a href="https://docs.decred.org/">Decred Docs website</a>
         has operating system specific directions that covers all of the necessary
@@ -68,9 +87,9 @@ $ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet validateaddress 
         <p>Copy and paste the <b>pubkeyaddr</b>
         that starts with
         <b>{{ if eq .Network "mainnet"}}D{{end}}{{ if eq .Network "testnet"}}T{{end}}k</b>
-        into the form below. Once your 1-of-2 multisig P2SH address has been generated,
+        into the form below. If the registration process is successful, then
         instructions will be given on how to purchase tickets that the pool and
-        yourself can use to vote.</p>
+        yourself can vote with when called upon to do so by the network.</p>
 
                 <form method="post" class="form-horizontal">
                         <div class="form-group">
