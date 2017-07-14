@@ -55,37 +55,51 @@
 			The <a href="https://docs.decred.org/getting-started/user-guides/dcrwallet-tickets/">dcrwallet instructions</a>
       are the most helpful if you wish to continue on the command-line path.</p>
 			<p><strong><u>Step 2</u></strong></p>
-			<p>Your P2SH multisignature script for delegating votes has been generated. Please first import it locally into your wallet using <b>dcrctl</b> for safe keeping, so you can recover your funds and vote in the unlikely event of a pool failure:</p>
+			<p>Your multisignature script for delegating votes has been generated.
+			Please first import it locally into your wallet using <b>dcrctl</b> for
+			safe keeping, so you can recover your funds and vote in the unlikely
+			event of a pool failure:</p>
 
 			<p>dcrctl --wallet importscript "script"</p>
 			<p>For example:</p>
 			<div class="cmd"><pre>$ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet importscript {{ .User.MultiSigScript }}</pre></div>
 
-			<p>After successfully importing the script into your wallet, you may generate tickets delegated to the pool in either of two ways:</p>
+			<p>After successfully importing the script into your wallet, you may
+				purchase tickets with voting rights delegated to the pool in either of
+				two ways:</p>
 
 			<p><strong><u>Step 3</u></strong></p>
-			<p><strong>Option A - dcrwallet - Automatic purchasing</strong> (Recommended)</p>
+			<p><strong>Option A - dcrwallet - Automatic purchasing</strong></p>
 			<p>Stop dcrwallet if it is currently running and add the following to <strong>dcrwallet.conf</strong>:</p>
 <pre>
 [Application Options]
-enableticketbuyer=1
+enableticketbuyer=true
 pooladdress={{ .User.UserFeeAddr }}
 poolfees={{ .PoolFees }}
 ticketaddress={{ .User.MultiSigAddress }}
 [Ticket Buyer Options]
-ticketbuyer.maxpriceabsolute=58
+ticketbuyer.maxpriceabsolute=100
 </pre>
       <p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the pool address.</p>
 
-			<p><strong>Option B - dcrwallet - Manual purchasing</strong> (Not recommended)</p>
+			<p><strong>Option B - dcrwallet - Manual purchasing</strong></p>
 			<p>Start a wallet with funds available and manually purchase tickets with the following command using <strong>dcrctl</strong>:</p>
 			<p>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</p>
 <pre>
-dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 58 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre>
+dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 100 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre>
 			<p>Will purchase a ticket delegated to the the multisig address which
 				allows either your or the pool to vote when the ticket is called. This
 				uses funds from the default account only if the current network price
-				for a ticket is less than 58.0 coins.</p>
+				for a ticket is less than 100.0 coins.</p>
+
+			<p><strong><u>Step 4 (Optional)</u></strong></p>
+			<p><strong>Voting</strong></p>
+			<p>If you wish to cast votes yourself, please review the guides
+			<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#how-to-vote">How To Vote</a>
+			and
+			<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#solo-voting">Solo-Voting</a>.
+			The preferences you set on this stake pool's <a href="/voting">voting page</a>
+			only affect the stake pool's voting wallets and not your own.</p>
       </div>
     </div>
   </div>
