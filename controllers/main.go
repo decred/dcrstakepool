@@ -253,7 +253,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.InvalidArgument, "address error", errors.New("address too long")
 	}
 
-	u, err := dcrutil.DecodeAddress(userPubKeyAddr, controller.params)
+	u, err := dcrutil.DecodeAddress(userPubKeyAddr)
 	if err != nil {
 		return nil, codes.InvalidArgument, "address error", errors.New("couldn't decode address")
 	}
@@ -283,7 +283,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
-	p, err := dcrutil.DecodeAddress(poolPubKeyAddr, controller.params)
+	p, err := dcrutil.DecodeAddress(poolPubKeyAddr)
 	if err != nil {
 		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
@@ -720,7 +720,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// Get dcrutil.Address for user from pubkey address string
-	u, err := dcrutil.DecodeAddress(userPubKeyAddr, controller.params)
+	u, err := dcrutil.DecodeAddress(userPubKeyAddr)
 	if err != nil {
 		session.AddFlash("Couldn't decode address", "address")
 		return controller.Address(c, r)
@@ -758,7 +758,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
 	// Get back Address from pool's new pubkey address
-	p, err := dcrutil.DecodeAddress(poolPubKeyAddr, controller.params)
+	p, err := dcrutil.DecodeAddress(poolPubKeyAddr)
 	if err != nil {
 		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
 		return "/error", http.StatusSeeOther
@@ -1707,7 +1707,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	}
 
 	// Get P2SH Address
-	multisig, err := dcrutil.DecodeAddress(user.MultiSigAddress, controller.params)
+	multisig, err := dcrutil.DecodeAddress(user.MultiSigAddress)
 	if err != nil {
 		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
 		return "/error", http.StatusSeeOther
