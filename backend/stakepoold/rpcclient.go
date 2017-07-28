@@ -127,7 +127,7 @@ func walletFetchUserTickets(ctx *appContext) (map[chainhash.Hash]string, string)
 	}
 	promises := make([]promise, 0, len(users))
 	for msa, v := range users {
-		addr, err := dcrutil.DecodeAddress(msa, ctx.params)
+		addr, err := dcrutil.DecodeAddress(msa)
 		if err != nil {
 			log.Infof("Could not decode multisig address %v for %v: %v",
 				msa, v.Userid, err)

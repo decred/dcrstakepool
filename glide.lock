@@ -1,5 +1,5 @@
 hash: b5a90eed086645c55dcbc833f06e494590dee0fa95b3ff31aaea5e079c81cea1
-updated: 2017-06-28T16:07:28.893474-04:00
+updated: 2017-07-24T22:24:28.484246226Z
 imports:
 - name: github.com/agl/ed25519
   version: 278e1ec8e8a6e017cd07577924d6766039146ced
@@ -16,13 +16,13 @@ imports:
 - name: github.com/btcsuite/websocket
   version: 31079b6807923eb23992c421b114992b95131b55
 - name: github.com/davecgh/go-spew
-  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/decred/blake256
   version: a840e32d7c31fe2e0218607334cb120a683951a4
 - name: github.com/decred/dcrd
-  version: 713164983204ef44185aa4cd6a48fed096188d46
+  version: 21df6b7664d20e0a47f3c4cbdd5757aac7de8843
   subpackages:
   - blockchain
   - blockchain/internal/dbnamespace
@@ -42,14 +42,14 @@ imports:
   - txscript
   - wire
 - name: github.com/decred/dcrrpcclient
-  version: e7732bfa71b4b098494fa0ce62d42fded970c393
+  version: 5dcd9e5b9cf04d8c624f6068f18c4195d19907d3
 - name: github.com/decred/dcrutil
-  version: a5fab53cab39b793142c8453caa4c6f83bc152d4
+  version: 58e046aab848365647c44b295f4fab078fbc3392
   subpackages:
   - base58
   - hdkeychain
 - name: github.com/decred/dcrwallet
-  version: fdc45f39a468305fa966b6c7407a7d813a3311ca
+  version: f1abdda1589328df91c34f55ce9bd18e3b90344a
   subpackages:
   - apperrors
   - chain
@@ -89,7 +89,7 @@ imports:
   - web/middleware
   - web/mutil
 - name: golang.org/x/crypto
-  version: 84f24dfdf3c414ed893ca1b318d0045ef5a1f607
+  version: 6914964337150723782436d56b3f21610a74ce7b
   subpackages:
   - bcrypt
   - blowfish
@@ -121,10 +121,11 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 8050b9cbc271307e5a716a9d782803d09b0d6f2d
+  version: 172ccacff3cfbddedcf1ba5ea06cda943bc976c1
   subpackages:
   - codes
   - credentials
+  - grpclb/grpc_lb_v1
   - grpclog
   - internal
   - keepalive
