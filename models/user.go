@@ -304,7 +304,9 @@ func addColumn(dbMap *gorp.DbMap, db string, table string, columnToAdd string,
 		columnToAdd + "'")
 	checkErr(err, "checking whether column"+columnToAdd+" exists failed")
 	if s == "" {
-		_, err = dbMap.Exec("ALTER TABLE Users ADD COLUMN `" +
+		// TODO would be nice to use parameter binding here but gorp seems to
+		// only provide that for select queries
+		_, err = dbMap.Exec("ALTER TABLE `" + table + "` ADD COLUMN `" +
 			columnToAdd + "` " + dataSpec + " AFTER `" + colAfter + "`")
 		checkErr(err, "adding new column "+columnToAdd+" failed")
 		if defaultQry != "" {
