@@ -28,7 +28,7 @@ import (
 // possibly also the key in PEM format to the paths specified by the config.  If
 // successful, the new keypair is returned.
 func generateRPCKeyPair(writeKey bool) (tls.Certificate, error) {
-	log.Infof("Generating TLS certificates...")
+	log.Info("Generating TLS certificates...")
 
 	// Create directories for cert and key files if they do not yet exist.
 	certDir, _ := filepath.Split(cfg.RPCCert)

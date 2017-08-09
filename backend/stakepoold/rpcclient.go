@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrutil"
+	"github.com/decred/dcrwallet/wallet/txrules"
 )
 
 var requiredChainServerAPI = semver{major: 3, minor: 1, patch: 0}
@@ -110,70 +113,202 @@ func connectWalletRPC(cfg *config) (*dcrrpcclient.Client, semver, error) {
 	return dcrwClient, walletVer, nil
 }
 
-func walletFetchUserTickets(ctx *appContext) (map[chainhash.Hash]string, string) {
+// nodeCheckTicketFee evaluates a stake pool ticket to see if it's
+// acceptable to the stake pool. The ticket must pay out to the stake
+// pool cold wallet, and must have a sufficient fee.
+// This function is a port of evaluateStakePoolTicket in dcrwallet which plucks
+// the in/out amounts from the RPC response rather than the wallet's record.
+// Stake pool fee tests are present in dcrwallet/wallet/txrules.
+func nodeCheckTicketFee(ctx *appContext, txhex string, blockhash string) (bool, error) {
+	// Create raw transaction.
+	var buf []byte
+	buf, err := hex.DecodeString(txhex)
+	if err != nil {
+		return false, fmt.Errorf("DecodeString failed: %v", err)
+	}
+	res, err := ctx.nodeConnection.DecodeRawTransaction(buf)
+	if err != nil {
+		return false, fmt.Errorf("DecodeRawTransaction failed: %v", err)
+	}
+
+	bhash, err := chainhash.NewHashFromStr(blockhash)
+	if err != nil {
+		return false, fmt.Errorf("NewHashFromStr failed for %v: %v", blockhash, err)
+	}
+	gbh, err := ctx.nodeConnection.GetBlockHeader(bhash)
+	if err != nil {
+		return false, fmt.Errorf("GetBlockHeader failed for %v: %v", bhash, err)
+	}
+
+	// Check the first commitment output (Vout[1])
+	// and ensure that the address found there exists
+	// in the list of approved addresses. Also ensure
+	// that the fee exists and is of the amount
+	// requested by the pool.
+
+	commitAmt := dcrutil.Amount(0)
+	feeAddr := ""
+	feeAddrValid := false
+	ticketValue, err := dcrutil.NewAmount(res.Vout[0].Value)
+	if err != nil {
+		return false, fmt.Errorf("NewAmount failed: %v", err)
+	}
+
+	for i := range res.Vout {
+		switch res.Vout[i].ScriptPubKey.Type {
+		case "sstxcommitment":
+			for j := range res.Vout[i].ScriptPubKey.Addresses {
+				feeAddr = res.Vout[i].ScriptPubKey.Addresses[j]
+				_, exists := ctx.feeAddrs[feeAddr]
+				if !exists {
+					continue
+				}
+				feeAddrValid = true
+				feeAmount, err := dcrutil.NewAmount(*res.Vout[i].ScriptPubKey.CommitAmt)
+				if err != nil {
+					return false, fmt.Errorf("NewAmount failed: %v", err)
+				}
+				commitAmt = feeAmount
+				break
+			}
+		}
+	}
+
+	in := dcrutil.Amount(0)
+	for i := range res.Vout {
+		switch res.Vout[i].ScriptPubKey.Type {
+		case "sstxcommitment":
+			amount, err := dcrutil.NewAmount(*res.Vout[i].ScriptPubKey.CommitAmt)
+			if err != nil {
+				return false, fmt.Errorf("NewAmount failed: %v", err)
+			}
+			in += amount
+		}
+	}
+
+	out := dcrutil.Amount(0)
+	for i := range res.Vout {
+		amount, err := dcrutil.NewAmount(res.Vout[i].Value)
+		if err != nil {
+			return false, fmt.Errorf("NewAmount failed: %v", err)
+		}
+		out += amount
+	}
+	fees := in - out
+
+	if !feeAddrValid {
+		log.Warnf("Unknown pool commitment address %s for ticket %v",
+			feeAddr, res.Txid)
+		return false, nil
+	}
+
+	// Calculate the fee required based on the current
+	// height and the required amount from the pool.
+	feeNeeded := txrules.StakePoolTicketFee(ticketValue, fees,
+		int32(gbh.Height), ctx.feePercent, ctx.params)
+	if commitAmt < feeNeeded {
+		log.Warnf("User %s submitted ticket %v which has less fees than "+
+			"are required to use this stake pool and is being skipped "+
+			"(required: %v, found %v)", feeAddr, res.Txid, feeNeeded, fees)
+
+		// Reject the entire transaction if it didn't
+		// pay the pool server fees.
+		return false, nil
+	}
+
+	log.Debugf("Accepted valid stake pool ticket %v committing %v in fees",
+		res.Txid, commitAmt)
+
+	return true, nil
+}
+
+func walletGetTickets(ctx *appContext) map[chainhash.Hash]string {
 	// This is suboptimal to copy and needs fixing.
-	users := make(map[string]userdata.UserVotingConfig)
+	userVotingConfig := make(map[string]userdata.UserVotingConfig)
 	ctx.RLock()
 	for k, v := range ctx.userVotingConfig {
-		users[k] = v
+		userVotingConfig[k] = v
 	}
 	ctx.RUnlock()
 
+	ticketsIgnoredCount := 0
+	ticketsManuallyAddedCount := 0
+
 	userTickets := make(map[chainhash.Hash]string)
 
+	log.Info("Running GetTickets, this may take awhile...")
+	timenow := time.Now()
+	tickets, err := ctx.walletConnection.GetTickets(false)
+	log.Infof("GetTickets: took %v", time.Since(timenow))
+
+	if err != nil {
+		log.Warnf("GetTickets failed: %v", err)
+		return userTickets
+	}
+
 	type promise struct {
-		dcrrpcclient.FutureStakePoolUserInfoResult
-		msa string
+		dcrrpcclient.FutureGetTransactionResult
 	}
-	promises := make([]promise, 0, len(users))
-	for msa, v := range users {
-		addr, err := dcrutil.DecodeAddress(msa)
-		if err != nil {
-			log.Infof("Could not decode multisig address %v for %v: %v",
-				msa, v.Userid, err)
-			continue
-		}
+	promises := make([]promise, 0, len(tickets))
 
-		promises = append(promises, promise{
-			ctx.walletConnection.StakePoolUserInfoAsync(addr), msa})
+	log.Debugf("setting up GetTransactionAsync for %v tickets", len(tickets))
+	for _, ticket := range tickets {
+		// lookup ownership of each ticket
+		promises = append(promises, promise{ctx.walletConnection.GetTransactionAsync(ticket)})
 	}
 
-	var (
-		ticketcount, usercount int
-	)
-
+	counter := 0
 	for _, p := range promises {
-		spui, err := p.Receive()
+		counter++
+		log.Debugf("Receiving GetTransaction result for ticket %v/%v", counter, len(tickets))
+		gt, err := p.Receive()
 		if err != nil {
-			log.Errorf("unable to fetch tickets for user %v multisigaddr %v: %v",
-				users[p.msa].Userid, p.msa, err)
+			// All tickets should exist and be able to be looked up
+			log.Warnf("GetTransaction error: %v", err)
 			continue
 		}
-
-		if spui == nil || len(spui.Tickets) <= 0 {
-			continue
-		}
-
-		for _, ticket := range spui.Tickets {
-			if ticket.Status != "live" {
+		for i := range gt.Details {
+			_, ok := userVotingConfig[gt.Details[i].Address]
+			if !ok {
+				log.Warnf("Could not map ticket %v to a user, user %v doesn't exist", gt.TxID, gt.Details[i].Address)
 				continue
 			}
 
-			hash, err := chainhash.NewHashFromStr(ticket.Ticket)
+			hash, err := chainhash.NewHashFromStr(gt.TxID)
 			if err != nil {
-				log.Infof("invalid ticket %v", err)
+				log.Warnf("invalid ticket %v", err)
 				continue
 			}
 
-			userTickets[*hash] = users[p.msa].MultiSigAddress
-			ticketcount++
+			// stake pool mode in dcrwallet works by checking the fee when the
+			// ticket is first seen.  If the fee is too low, the ticket is
+			// placed in the invalid bucket.  Otherwise, the ticket is added
+			// to the wallet.
+			// When stake pool-specific functionality in dcrwallet is removed,
+			// most likely all tickets, whether they pay the correct fee or not,
+			// will end up in live tickets list.
+			// So we need to check if the ticket is in the low fee list first
+			// before doing normal fee processing.
+			_, isManuallyAdded := ctx.manuallyAddedTicketsMSA[*hash]
+			if isManuallyAdded {
+				ticketsManuallyAddedCount++
+				userTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
+			} else {
+				ticketFeesValid, err := nodeCheckTicketFee(ctx, gt.Hex, gt.BlockHash)
+				if ticketFeesValid {
+					userTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
+				} else {
+					ticketsIgnoredCount++
+					log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
+						*hash, ctx.userVotingConfig[gt.Details[i].Address].MultiSigAddress, ticketFeesValid, err)
+				}
+			}
+			break
 		}
-		usercount++
 	}
 
-	ticketNoun := pickNoun(ticketcount, "ticket", "tickets")
-	userNoun := pickNoun(usercount, "user", "users")
+	log.Infof("tickets loaded -- total %v ignored %v manuallyadded %v",
+		len(userTickets), ticketsIgnoredCount, ticketsManuallyAddedCount)
 
-	return userTickets, fmt.Sprintf("loaded %v %v for %v %v",
-		ticketcount, ticketNoun, usercount, userNoun)
+	return userTickets
 }
