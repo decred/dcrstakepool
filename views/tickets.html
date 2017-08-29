@@ -286,7 +286,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
         Invalid Tickets</a>
       </h4>
     </div>
-    <div id="collapse-invalidlist" class="panel-collapse collapse">
+    <div id="collapse-invalidlist" class="panel-collapse collapse {{if .TicketsInvalid }}in{{end}}">
       <div class="panel-body">
 			{{if not .TicketsInvalid}}
 			<p><strong>No tickets.</strong></p>
