@@ -231,9 +231,6 @@ func walletGetTickets(ctx *appContext) map[chainhash.Hash]string {
 	}
 	ctx.RUnlock()
 
-	ticketsIgnoredCount := 0
-	ticketsManuallyAddedCount := 0
-
 	userTickets := make(map[chainhash.Hash]string)
 
 	log.Info("Running GetTickets, this may take awhile...")
@@ -280,35 +277,17 @@ func walletGetTickets(ctx *appContext) map[chainhash.Hash]string {
 				continue
 			}
 
-			// stake pool mode in dcrwallet works by checking the fee when the
-			// ticket is first seen.  If the fee is too low, the ticket is
-			// placed in the invalid bucket.  Otherwise, the ticket is added
-			// to the wallet.
-			// When stake pool-specific functionality in dcrwallet is removed,
-			// most likely all tickets, whether they pay the correct fee or not,
-			// will end up in live tickets list.
-			// So we need to check if the ticket is in the low fee list first
-			// before doing normal fee processing.
-			_, isManuallyAdded := ctx.manuallyAddedTicketsMSA[*hash]
-			if isManuallyAdded {
-				ticketsManuallyAddedCount++
-				userTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
-			} else {
-				ticketFeesValid, err := nodeCheckTicketFee(ctx, gt.Hex, gt.BlockHash)
-				if ticketFeesValid {
-					userTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
-				} else {
-					ticketsIgnoredCount++
-					log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
-						*hash, ctx.userVotingConfig[gt.Details[i].Address].MultiSigAddress, ticketFeesValid, err)
-				}
-			}
+			// we could check fees here but they are currently checked by
+			// dcrwallet.  too-low-fee tickets won't show up in GetTickets
+			// output until they have been manually added via the addticket
+			// RPC
+			log.Debugf("added ticket %s for %s", *hash, gt.Details[i].Address)
+			userTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
 			break
 		}
 	}
 
-	log.Infof("tickets loaded -- total %v ignored %v manuallyadded %v",
-		len(userTickets), ticketsIgnoredCount, ticketsManuallyAddedCount)
+	log.Infof("%d live tickets ready for voting", len(userTickets))
 
 	return userTickets
 }
