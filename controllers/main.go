@@ -1775,7 +1775,9 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 				}
 			}
 		}
+	}
 
+	if spui != nil && len(spui.InvalidTickets) > 0 {
 		for _, ticket := range spui.InvalidTickets {
 			ticketInfoInvalid = append(ticketInfoInvalid, TicketInfoInvalid{ticket})
 		}
