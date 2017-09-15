@@ -49,10 +49,7 @@ type appContext struct {
 	newTicketsChan         chan NewTicketsForBlock
 	nodeConnection         *dcrrpcclient.Client
 	params                 *chaincfg.Params
-	lastBlockSeenHash      *chainhash.Hash
-	lastBlockSeenHeight    int64
 	wg                     sync.WaitGroup // wait group for go routine exits
-	wgNeedToVote           sync.WaitGroup
 	quit                   chan struct{}
 	reloadTickets          chan struct{}
 	reloadUserConfig       chan struct{}
@@ -116,7 +113,6 @@ var (
 	}
 	ticketTypeNew         = "New"
 	ticketTypeSpentMissed = "SpentMissed"
-	votingTargetTime      = 100 * time.Millisecond
 )
 
 // calculateFeeAddresses decodes the string of stake pool payment addresses
@@ -730,9 +726,6 @@ func (ctx *appContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 func (ctx *appContext) processNewTickets(nt NewTicketsForBlock) {
 	start := time.Now()
-	ctx.wgNeedToVote.Wait()
-	log.Debugf("processNewTickets: NeedToVote wait time was %v",
-		time.Since(start))
 
 	// We use pointer because it is the fastest accessor.
 	newtickets := make([]*ticketMetadata, 0, len(nt.newTickets))
@@ -796,9 +789,6 @@ func (ctx *appContext) processNewTickets(nt NewTicketsForBlock) {
 
 func (ctx *appContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock) {
 	start := time.Now()
-	ctx.wgNeedToVote.Wait()
-	log.Debugf("processSpentMissedTickets: NeedToVote wait time was %v",
-		time.Since(start))
 
 	// We use pointer because it is the fastest accessor.
 	smtickets := make([]*ticketMetadata, 0, len(smt.smTickets))
@@ -950,8 +940,6 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	ctx.RUnlock()
 
 	wg.Wait()
-
-	ctx.wgNeedToVote.Done()
 
 	// Log ticket information outside of the handler.
 	go func() {
