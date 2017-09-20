@@ -2,12 +2,8 @@ package: github.com/decred/dcrstakepool
 import:
 - package: github.com/btcsuite/btclog
 - package: github.com/btcsuite/go-flags
-- package: github.com/davecgh/go-spew
-  subpackages:
-  - spew
 - package: github.com/decred/dcrd
   subpackages:
-  - blockchain/stake
   - chaincfg
   - chaincfg/chainhash
   - dcrjson
@@ -18,6 +14,7 @@ import:
   - hdkeychain
 - package: github.com/decred/dcrwallet
   subpackages:
+  - wallet/txrules
   - wallet/udb
 - package: github.com/dgrijalva/jwt-go
 - package: github.com/go-gorp/gorp
@@ -28,6 +25,9 @@ import:
 - package: github.com/gorilla/context
 - package: github.com/gorilla/sessions
 - package: github.com/haisum/recaptcha
+- package: github.com/jrick/logrotate
+  subpackages:
+  - rotator
 - package: github.com/zenazn/goji
   subpackages:
   - graceful
@@ -44,6 +44,3 @@ import:
   - codes
   - credentials
   - grpclog
-- package: github.com/jrick/logrotate
-  subpackages:
-  - rotator

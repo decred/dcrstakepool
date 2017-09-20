@@ -1,5 +1,5 @@
-hash: b5a90eed086645c55dcbc833f06e494590dee0fa95b3ff31aaea5e079c81cea1
-updated: 2017-07-24T22:24:28.484246226Z
+hash: d6014fae89f9b7095a048bc10a6745101cbf61343768d93b0e2c259021ed7339
+updated: 2017-09-22T12:38:59.377701305-05:00
 imports:
 - name: github.com/agl/ed25519
   version: 278e1ec8e8a6e017cd07577924d6766039146ced
@@ -15,14 +15,10 @@ imports:
   - socks
 - name: github.com/btcsuite/websocket
   version: 31079b6807923eb23992c421b114992b95131b55
-- name: github.com/davecgh/go-spew
-  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
-  subpackages:
-  - spew
-- name: github.com/decred/blake256
-  version: a840e32d7c31fe2e0218607334cb120a683951a4
+- name: github.com/dchest/blake256
+  version: dee3fe6eb0e98dc774a94fc231f85baf7c29d360
 - name: github.com/decred/dcrd
-  version: 21df6b7664d20e0a47f3c4cbdd5757aac7de8843
+  version: 1500e972e2b0f0a687bc83308c868708ca5f7c16
   subpackages:
   - blockchain
   - blockchain/internal/dbnamespace
@@ -42,19 +38,20 @@ imports:
   - txscript
   - wire
 - name: github.com/decred/dcrrpcclient
-  version: 5dcd9e5b9cf04d8c624f6068f18c4195d19907d3
+  version: bd992834efae9f8a81842221a634f4af22b77a0f
 - name: github.com/decred/dcrutil
-  version: 58e046aab848365647c44b295f4fab078fbc3392
+  version: ddbde93f65ab0692e54ed8a5ad325fa2e8af4daa
   subpackages:
   - base58
   - hdkeychain
 - name: github.com/decred/dcrwallet
-  version: f1abdda1589328df91c34f55ce9bd18e3b90344a
+  version: cf426bf26d89e6b0c750bd0cdb0f2b2635eecda9
   subpackages:
   - apperrors
   - chain
   - internal/zero
   - snacl
+  - wallet/txrules
   - wallet/udb
   - walletdb
 - name: github.com/dgrijalva/jwt-go
