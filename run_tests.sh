@@ -22,16 +22,16 @@ set -ex
 GOVERSION=${1:-1.9}
 REPO=dcrstakepool
 
-TESTCMD="test -z \"\$(gometalinter --disable-all \
+TESTDIRS=$(go list ./... | grep -v '/vendor/')
+TESTCMD="test -z \"\$(gometalinter --vendor --disable-all \
   --enable=gofmt \
   --enable=vet \
   --enable=gosimple \
   --enable=unconvert \
   --enable=ineffassign \
-  --vendor \
-  --deadline=10m ./... | tee /dev/stderr)\"&& \
+  --deadline=10m ./... | tee /dev/stderr)\" && \
   env GORACE='halt_on_error=1' go test -short -race \
-  \$(glide novendor)"
+  \${TESTDIRS}"
 
 if [ $GOVERSION == "local" ]; then
     eval $TESTCMD
@@ -46,8 +46,8 @@ docker run --rm -it -v $(pwd):/src decred/$DOCKER_IMAGE_TAG /bin/bash -c "\
   rsync -ra --filter=':- .gitignore'  \
   /src/ /go/src/github.com/decred/$REPO/ && \
   cd github.com/decred/$REPO/ && \
-  glide install && \
-  go install \$(glide novendor) && \
+  dep ensure && \
+  go install . && \
   $TESTCMD
 "
 
