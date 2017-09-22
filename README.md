@@ -7,7 +7,7 @@ so users can purchase [proof-of-stake tickets](https://docs.decred.org/mining/pr
 on the [Decred](https://decred.org/) network and have the pool of wallet servers
 vote on their behalf when the ticket is selected.
 
-## v1.1.0 Architecture
+## Architecture
 
 ![Stake Pool Architecture](https://i.imgur.com/2JDA9dl.png)
 
@@ -16,45 +16,54 @@ vote on their behalf when the ticket is selected.
 - The architecture is subject to change in the future to lessen the dependence
   on dcrwallet and MySQL.
 
-## 1.1.0 Release notes
-  * Per-ticket votebits were removed in favor of per-user voting preferences.
-    A voting page was added and the API upgraded to v2 to support getting and
-    setting user voting preferences.
-  * Addresses from the wallet servers which are needed for generating the 1-of-2
-    multisig ticket address are now derived from the new votingwalletextpub
-    config option. This removes the need to call getnewaddress on each wallet.
-  * An experimental daemon (stakepoold) that votes according to user preference
-    is available for testing on testnet. This daemon is not for use on mainnet
-    at this time.
+## 1.1.1 Release Notes
 
-## 1.1.0 Mainnet Upgrade Guide
+- dcrd has a new agenda and the vote version in dcrwallet has been
+  incremented to v5 on mainnet.
+- stakepoold
+  - The ticket list is now maintained by doing an initial GetTicket RPC
+  call and then substracts/adds tickets by processing SpentAndMissed/New
+  ticket notifications from dcrwallet.  This approach is much faster than
+  the old method of calling StakePoolUserInfo for each user.
+  - Bug fixes to the above commit and to accommodate changes in dcrwallet.
+- Status page
+  - StatusUnauthorized error is now thrown rather than a generic one when
+  accessing the page as a non-admin.
+  - Updated to use new design.
+  - Synced dcrwallet walletinfo field list.
+- Tickets page
+  - Performance was greatly improved by skipping display of historic tickets.
+  - Handles users that have only low fee/invalid tickets properly.
+  - Expired tickets are now separated from missed.
+- General markup improvements.
+  - Removed mention of creating a voting account as it has been deprecated.
+  - Instructions were further clarified and updated to strongly recommend the
+    use of Decrediton/Paymetheus.
+  - Fragments of invalid markup were fixed.
 
-1) Upgrade dcrwallet and dcrstakepool
-  * Upgrade to dcrwallet 1.0.0 or later. The deprecated enablestakemining option
-  was removed.  Replace enablestakemining with enablevoting if it is still
-  present in dcrwallet.conf.
-  * Set votingwalletextpub in dcrstakepool.conf by getting the masterpubkey from
-  the default account on a voting wallet per the instructions below.
-  * [Update](#updating) dcrstakepool and its dependencies.
-  * Start dcrstakepool. Verify that VoteBits and VoteBitsVersion
-  columns were added to MySQL.  You should see the VoteBitsVersion being
-  adjusted for all users to the stake version that dcrwallet is configured to
-  use for voting (currently 4 on mainnet).  Also verify that the voting page
-  shows the 2 mainnet agendas that are up for vote.
-2) Enable stakepoold
-  * Enable MySQL access from the stakepoold hosts.
-  * Configure stakepoold by copying sample-stakepoold.conf to
-  ~/.stakepoold/stakepoold.conf and editing it.  You should place stakepoold
-  on the same server as dcrd/dcrwallet so stakepoold can talk to them via
-  loopback to lower latency as much as possible.
-  * Copy stakepoold certs to the dcrstakepool server and set
-  enablestakepoold=true, stakepooldhosts, stakepooldcerts.
-  * Once stakepoold is setup and verified to be voting, disable enablevoting=1 in
-  dcrwallet.conf and restart dcrwallet.
+## 1.1.1 Upgrade Guide
+
+1) Announce maintenance and shut down dcrstakepool.
+2) Perform upgrades on each dcrd+dcrwallet+stakepoold voting cluster one at a
+   time.
+   * Stop stakepoold, dcrwallet, and dcrd.
+   * Upgrade dcrd, dcrwallet to 1.1.0 release binaries or git. If compiling from
+   source, Go 1.9 is recommended to pick up improvements to the Golang runtime.
+   * Restart dcrd, dcrwallet.
+   * Upgrade stakepoold.
+   * Start stakepoold.
+3) Upgrade and start dcrstakepool.  If you are maintaining a fork, note that
+   you need to update the dcrd/chaincfg dependency to a revision that contains
+   the new agenda.
+4) dcrstakepool will reset the votebits for all users to 1 when it detects the
+   new vote version via stakepoold.
+5) Announce maintenance complete after verifying functionality.  If possible,
+   also announce that a new voting agenda is available and users must login
+   to set their preferences for the new agenda.
 
 ## Requirements
 
-- [Go](http://golang.org) 1.7.0 or newer.
+- [Go](http://golang.org) 1.8.3 or newer.
 - MySQL
 - Nginx or other web server to proxy to dcrstakepool
 
@@ -64,7 +73,7 @@ vote on their behalf when the ticket is selected.
 
 Building or updating from source requires the following build dependencies:
 
-- **Go 1.7.0 or newer**
+- **Go 1.8.3 or newer**
 
   Installation instructions can be found here: http://golang.org/doc/install.
   It is recommended to add `$GOPATH/bin` to your `PATH` at this point.
@@ -277,6 +286,16 @@ is used for this project.
 dcrstakepool is licensed under the [copyfree](http://copyfree.org) ISC License.
 
 ## Version History
+- 1.1.0 - Architecture change.
+  * Per-ticket votebits were removed in favor of per-user voting preferences.
+    A voting page was added and the API upgraded to v2 to support getting and
+    setting user voting preferences.
+  * Addresses from the wallet servers which are needed for generating the 1-of-2
+    multisig ticket address are now derived from the new votingwalletextpub
+    config option. This removes the need to call getnewaddress on each wallet.
+  * An experimental daemon (stakepoold) that votes according to user preference
+    is available for testing on testnet. This daemon is not for use on mainnet
+    at this time.
 - 1.0.0 - Major changes/improvements.
   * API is now at v1 status.  API Tokens are generated for all users with a
     verified email address when upgrading.  Tokens are generated for new
