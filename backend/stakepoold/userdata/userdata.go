@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"sync"
+
+	"github.com/decred/dcrd/chaincfg/chainhash"
 )
 
 type DBConfig struct {
@@ -29,15 +31,65 @@ type UserVotingConfig struct {
 	VoteBitsVersion uint32
 }
 
+// MySQLFetchAddedLowFeeTickets fetches any low fee tickets that were
+// manually added by the admin.
+func (u *UserData) MySQLFetchAddedLowFeeTickets() (map[chainhash.Hash]string, error) {
+	var (
+		ticketHashString string
+		ticketAddress    string
+	)
+
+	tickets := make(map[chainhash.Hash]string)
+
+	db, err := sql.Open("mysql", fmt.Sprint(u.DBConfig.DBUser, ":", u.DBConfig.DBPassword, "@(", u.DBConfig.DBHost, ":", u.DBConfig.DBPort, ")/", u.DBConfig.DBName, "?charset=utf8mb4"))
+	if err != nil {
+		log.Errorf("Unable to open db: %v", err)
+		return tickets, err
+	}
+
+	// sql.Open just validates its arguments without creating a connection
+	// Verify that the data source name is valid with Ping:
+	if err = db.Ping(); err != nil {
+		log.Errorf("Unable to establish connection to db: %v", err)
+		return tickets, err
+	}
+
+	rows, err := db.Query("SELECT TicketHash, TicketAddress FROM LowFeeTicket")
+	if err != nil {
+		log.Errorf("Unable to query db: %v", err)
+		return tickets, err
+	}
+
+	count := 0
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&ticketHashString, &ticketAddress)
+		if err != nil {
+			log.Errorf("Unable to scan row %v", err)
+			continue
+		}
+		ticketHash, err := chainhash.NewHashFromStr(ticketHashString)
+		if err != nil {
+			log.Warnf("NewHashFromStr failed for %v: %v", err)
+			continue
+		}
+		tickets[*ticketHash] = ticketAddress
+		count++
+	}
+
+	err = db.Close()
+	return tickets, err
+}
+
 // MySQLFetchUserVotingConfig fetches the voting preferences of all users
 // who have completed registration of the pool by submitting an address
 // and generating a multisig ticket address.
 func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, error) {
 	var (
-		Userid          int64
-		MultiSigAddress string
-		VoteBits        int64
-		VoteBitsVersion int64
+		userid          int64
+		multiSigAddress string
+		voteBits        int64
+		voteBitsVersion int64
 	)
 
 	userInfo := map[string]UserVotingConfig{}
@@ -64,16 +116,16 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 	count := 0
 	defer rows.Close()
 	for rows.Next() {
-		err := rows.Scan(&Userid, &MultiSigAddress, &VoteBits, &VoteBitsVersion)
+		err := rows.Scan(&userid, &multiSigAddress, &voteBits, &voteBitsVersion)
 		if err != nil {
 			log.Errorf("Unable to scan row %v", err)
 			continue
 		}
-		userInfo[MultiSigAddress] = UserVotingConfig{
-			Userid:          Userid,
-			MultiSigAddress: MultiSigAddress,
-			VoteBits:        uint16(VoteBits),
-			VoteBitsVersion: uint32(VoteBitsVersion),
+		userInfo[multiSigAddress] = UserVotingConfig{
+			Userid:          userid,
+			MultiSigAddress: multiSigAddress,
+			VoteBits:        uint16(voteBits),
+			VoteBitsVersion: uint32(voteBitsVersion),
 		}
 		count++
 	}

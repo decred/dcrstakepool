@@ -9,10 +9,20 @@ It is generated from these files:
 	api.proto
 
 It has these top-level messages:
+	GetAddedLowFeeTicketsRequest
+	GetAddedLowFeeTicketsResponse
+	GetIgnoredLowFeeTicketsRequest
+	GetIgnoredLowFeeTicketsResponse
+	GetLiveTicketsRequest
+	GetLiveTicketsResponse
 	PingRequest
 	PingResponse
-	UpdateVotingPrefsRequest
-	UpdateVotingPrefsResponse
+	SetAddedLowFeeTicketsRequest
+	SetAddedLowFeeTicketsResponse
+	SetUserVotingPrefsResponse
+	SetUserVotingPrefsRequest
+	TicketEntry
+	UserVotingConfigEntry
 	VersionRequest
 	VersionResponse
 */
@@ -38,13 +48,85 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type GetAddedLowFeeTicketsRequest struct {
+}
+
+func (m *GetAddedLowFeeTicketsRequest) Reset()                    { *m = GetAddedLowFeeTicketsRequest{} }
+func (m *GetAddedLowFeeTicketsRequest) String() string            { return proto.CompactTextString(m) }
+func (*GetAddedLowFeeTicketsRequest) ProtoMessage()               {}
+func (*GetAddedLowFeeTicketsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+type GetAddedLowFeeTicketsResponse struct {
+	Tickets []*TicketEntry `protobuf:"bytes,1,rep,name=tickets" json:"tickets,omitempty"`
+}
+
+func (m *GetAddedLowFeeTicketsResponse) Reset()                    { *m = GetAddedLowFeeTicketsResponse{} }
+func (m *GetAddedLowFeeTicketsResponse) String() string            { return proto.CompactTextString(m) }
+func (*GetAddedLowFeeTicketsResponse) ProtoMessage()               {}
+func (*GetAddedLowFeeTicketsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *GetAddedLowFeeTicketsResponse) GetTickets() []*TicketEntry {
+	if m != nil {
+		return m.Tickets
+	}
+	return nil
+}
+
+type GetIgnoredLowFeeTicketsRequest struct {
+}
+
+func (m *GetIgnoredLowFeeTicketsRequest) Reset()                    { *m = GetIgnoredLowFeeTicketsRequest{} }
+func (m *GetIgnoredLowFeeTicketsRequest) String() string            { return proto.CompactTextString(m) }
+func (*GetIgnoredLowFeeTicketsRequest) ProtoMessage()               {}
+func (*GetIgnoredLowFeeTicketsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+type GetIgnoredLowFeeTicketsResponse struct {
+	Tickets []*TicketEntry `protobuf:"bytes,1,rep,name=tickets" json:"tickets,omitempty"`
+}
+
+func (m *GetIgnoredLowFeeTicketsResponse) Reset()                    { *m = GetIgnoredLowFeeTicketsResponse{} }
+func (m *GetIgnoredLowFeeTicketsResponse) String() string            { return proto.CompactTextString(m) }
+func (*GetIgnoredLowFeeTicketsResponse) ProtoMessage()               {}
+func (*GetIgnoredLowFeeTicketsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *GetIgnoredLowFeeTicketsResponse) GetTickets() []*TicketEntry {
+	if m != nil {
+		return m.Tickets
+	}
+	return nil
+}
+
+type GetLiveTicketsRequest struct {
+}
+
+func (m *GetLiveTicketsRequest) Reset()                    { *m = GetLiveTicketsRequest{} }
+func (m *GetLiveTicketsRequest) String() string            { return proto.CompactTextString(m) }
+func (*GetLiveTicketsRequest) ProtoMessage()               {}
+func (*GetLiveTicketsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+type GetLiveTicketsResponse struct {
+	Tickets []*TicketEntry `protobuf:"bytes,1,rep,name=tickets" json:"tickets,omitempty"`
+}
+
+func (m *GetLiveTicketsResponse) Reset()                    { *m = GetLiveTicketsResponse{} }
+func (m *GetLiveTicketsResponse) String() string            { return proto.CompactTextString(m) }
+func (*GetLiveTicketsResponse) ProtoMessage()               {}
+func (*GetLiveTicketsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+func (m *GetLiveTicketsResponse) GetTickets() []*TicketEntry {
+	if m != nil {
+		return m.Tickets
+	}
+	return nil
+}
+
 type PingRequest struct {
 }
 
 func (m *PingRequest) Reset()                    { *m = PingRequest{} }
 func (m *PingRequest) String() string            { return proto.CompactTextString(m) }
 func (*PingRequest) ProtoMessage()               {}
-func (*PingRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*PingRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
 type PingResponse struct {
 }
@@ -52,31 +134,135 @@ type PingResponse struct {
 func (m *PingResponse) Reset()                    { *m = PingResponse{} }
 func (m *PingResponse) String() string            { return proto.CompactTextString(m) }
 func (*PingResponse) ProtoMessage()               {}
-func (*PingResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*PingResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
-type UpdateVotingPrefsRequest struct {
-	Userid int64 `protobuf:"varint,1,opt,name=Userid" json:"Userid,omitempty"`
+type SetAddedLowFeeTicketsRequest struct {
+	Tickets []*TicketEntry `protobuf:"bytes,1,rep,name=tickets" json:"tickets,omitempty"`
 }
 
-func (m *UpdateVotingPrefsRequest) Reset()                    { *m = UpdateVotingPrefsRequest{} }
-func (m *UpdateVotingPrefsRequest) String() string            { return proto.CompactTextString(m) }
-func (*UpdateVotingPrefsRequest) ProtoMessage()               {}
-func (*UpdateVotingPrefsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (m *SetAddedLowFeeTicketsRequest) Reset()                    { *m = SetAddedLowFeeTicketsRequest{} }
+func (m *SetAddedLowFeeTicketsRequest) String() string            { return proto.CompactTextString(m) }
+func (*SetAddedLowFeeTicketsRequest) ProtoMessage()               {}
+func (*SetAddedLowFeeTicketsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
-func (m *UpdateVotingPrefsRequest) GetUserid() int64 {
+func (m *SetAddedLowFeeTicketsRequest) GetTickets() []*TicketEntry {
 	if m != nil {
-		return m.Userid
+		return m.Tickets
+	}
+	return nil
+}
+
+type SetAddedLowFeeTicketsResponse struct {
+	Processed bool `protobuf:"varint,1,opt,name=Processed" json:"Processed,omitempty"`
+}
+
+func (m *SetAddedLowFeeTicketsResponse) Reset()                    { *m = SetAddedLowFeeTicketsResponse{} }
+func (m *SetAddedLowFeeTicketsResponse) String() string            { return proto.CompactTextString(m) }
+func (*SetAddedLowFeeTicketsResponse) ProtoMessage()               {}
+func (*SetAddedLowFeeTicketsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+
+func (m *SetAddedLowFeeTicketsResponse) GetProcessed() bool {
+	if m != nil {
+		return m.Processed
+	}
+	return false
+}
+
+type SetUserVotingPrefsResponse struct {
+	Processed bool `protobuf:"varint,1,opt,name=Processed" json:"Processed,omitempty"`
+}
+
+func (m *SetUserVotingPrefsResponse) Reset()                    { *m = SetUserVotingPrefsResponse{} }
+func (m *SetUserVotingPrefsResponse) String() string            { return proto.CompactTextString(m) }
+func (*SetUserVotingPrefsResponse) ProtoMessage()               {}
+func (*SetUserVotingPrefsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+
+func (m *SetUserVotingPrefsResponse) GetProcessed() bool {
+	if m != nil {
+		return m.Processed
+	}
+	return false
+}
+
+type SetUserVotingPrefsRequest struct {
+	UserVotingConfig []*UserVotingConfigEntry `protobuf:"bytes,1,rep,name=user_voting_config,json=userVotingConfig" json:"user_voting_config,omitempty"`
+}
+
+func (m *SetUserVotingPrefsRequest) Reset()                    { *m = SetUserVotingPrefsRequest{} }
+func (m *SetUserVotingPrefsRequest) String() string            { return proto.CompactTextString(m) }
+func (*SetUserVotingPrefsRequest) ProtoMessage()               {}
+func (*SetUserVotingPrefsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+
+func (m *SetUserVotingPrefsRequest) GetUserVotingConfig() []*UserVotingConfigEntry {
+	if m != nil {
+		return m.UserVotingConfig
+	}
+	return nil
+}
+
+type TicketEntry struct {
+	TicketAddress string `protobuf:"bytes,1,opt,name=TicketAddress" json:"TicketAddress,omitempty"`
+	TicketHash    []byte `protobuf:"bytes,2,opt,name=TicketHash,proto3" json:"TicketHash,omitempty"`
+}
+
+func (m *TicketEntry) Reset()                    { *m = TicketEntry{} }
+func (m *TicketEntry) String() string            { return proto.CompactTextString(m) }
+func (*TicketEntry) ProtoMessage()               {}
+func (*TicketEntry) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+
+func (m *TicketEntry) GetTicketAddress() string {
+	if m != nil {
+		return m.TicketAddress
+	}
+	return ""
+}
+
+func (m *TicketEntry) GetTicketHash() []byte {
+	if m != nil {
+		return m.TicketHash
+	}
+	return nil
+}
+
+type UserVotingConfigEntry struct {
+	UserId          int64  `protobuf:"varint,1,opt,name=UserId" json:"UserId,omitempty"`
+	MultiSigAddress string `protobuf:"bytes,2,opt,name=MultiSigAddress" json:"MultiSigAddress,omitempty"`
+	VoteBits        int64  `protobuf:"varint,3,opt,name=VoteBits" json:"VoteBits,omitempty"`
+	VoteBitsVersion int64  `protobuf:"varint,4,opt,name=VoteBitsVersion" json:"VoteBitsVersion,omitempty"`
+}
+
+func (m *UserVotingConfigEntry) Reset()                    { *m = UserVotingConfigEntry{} }
+func (m *UserVotingConfigEntry) String() string            { return proto.CompactTextString(m) }
+func (*UserVotingConfigEntry) ProtoMessage()               {}
+func (*UserVotingConfigEntry) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+
+func (m *UserVotingConfigEntry) GetUserId() int64 {
+	if m != nil {
+		return m.UserId
 	}
 	return 0
 }
 
-type UpdateVotingPrefsResponse struct {
+func (m *UserVotingConfigEntry) GetMultiSigAddress() string {
+	if m != nil {
+		return m.MultiSigAddress
+	}
+	return ""
 }
 
-func (m *UpdateVotingPrefsResponse) Reset()                    { *m = UpdateVotingPrefsResponse{} }
-func (m *UpdateVotingPrefsResponse) String() string            { return proto.CompactTextString(m) }
-func (*UpdateVotingPrefsResponse) ProtoMessage()               {}
-func (*UpdateVotingPrefsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (m *UserVotingConfigEntry) GetVoteBits() int64 {
+	if m != nil {
+		return m.VoteBits
+	}
+	return 0
+}
+
+func (m *UserVotingConfigEntry) GetVoteBitsVersion() int64 {
+	if m != nil {
+		return m.VoteBitsVersion
+	}
+	return 0
+}
 
 type VersionRequest struct {
 }
@@ -84,7 +270,7 @@ type VersionRequest struct {
 func (m *VersionRequest) Reset()                    { *m = VersionRequest{} }
 func (m *VersionRequest) String() string            { return proto.CompactTextString(m) }
 func (*VersionRequest) ProtoMessage()               {}
-func (*VersionRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (*VersionRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
 
 type VersionResponse struct {
 	VersionString string `protobuf:"bytes,1,opt,name=version_string,json=versionString" json:"version_string,omitempty"`
@@ -98,7 +284,7 @@ type VersionResponse struct {
 func (m *VersionResponse) Reset()                    { *m = VersionResponse{} }
 func (m *VersionResponse) String() string            { return proto.CompactTextString(m) }
 func (*VersionResponse) ProtoMessage()               {}
-func (*VersionResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (*VersionResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
 
 func (m *VersionResponse) GetVersionString() string {
 	if m != nil {
@@ -143,10 +329,20 @@ func (m *VersionResponse) GetBuildMetadata() string {
 }
 
 func init() {
+	proto.RegisterType((*GetAddedLowFeeTicketsRequest)(nil), "stakepoolrpc.GetAddedLowFeeTicketsRequest")
+	proto.RegisterType((*GetAddedLowFeeTicketsResponse)(nil), "stakepoolrpc.GetAddedLowFeeTicketsResponse")
+	proto.RegisterType((*GetIgnoredLowFeeTicketsRequest)(nil), "stakepoolrpc.GetIgnoredLowFeeTicketsRequest")
+	proto.RegisterType((*GetIgnoredLowFeeTicketsResponse)(nil), "stakepoolrpc.GetIgnoredLowFeeTicketsResponse")
+	proto.RegisterType((*GetLiveTicketsRequest)(nil), "stakepoolrpc.GetLiveTicketsRequest")
+	proto.RegisterType((*GetLiveTicketsResponse)(nil), "stakepoolrpc.GetLiveTicketsResponse")
 	proto.RegisterType((*PingRequest)(nil), "stakepoolrpc.PingRequest")
 	proto.RegisterType((*PingResponse)(nil), "stakepoolrpc.PingResponse")
-	proto.RegisterType((*UpdateVotingPrefsRequest)(nil), "stakepoolrpc.UpdateVotingPrefsRequest")
-	proto.RegisterType((*UpdateVotingPrefsResponse)(nil), "stakepoolrpc.UpdateVotingPrefsResponse")
+	proto.RegisterType((*SetAddedLowFeeTicketsRequest)(nil), "stakepoolrpc.SetAddedLowFeeTicketsRequest")
+	proto.RegisterType((*SetAddedLowFeeTicketsResponse)(nil), "stakepoolrpc.SetAddedLowFeeTicketsResponse")
+	proto.RegisterType((*SetUserVotingPrefsResponse)(nil), "stakepoolrpc.SetUserVotingPrefsResponse")
+	proto.RegisterType((*SetUserVotingPrefsRequest)(nil), "stakepoolrpc.SetUserVotingPrefsRequest")
+	proto.RegisterType((*TicketEntry)(nil), "stakepoolrpc.TicketEntry")
+	proto.RegisterType((*UserVotingConfigEntry)(nil), "stakepoolrpc.UserVotingConfigEntry")
 	proto.RegisterType((*VersionRequest)(nil), "stakepoolrpc.VersionRequest")
 	proto.RegisterType((*VersionResponse)(nil), "stakepoolrpc.VersionResponse")
 }
@@ -162,10 +358,12 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for StakepooldService service
 
 type StakepooldServiceClient interface {
-	// Queries
+	GetAddedLowFeeTickets(ctx context.Context, in *GetAddedLowFeeTicketsRequest, opts ...grpc.CallOption) (*GetAddedLowFeeTicketsResponse, error)
+	GetIgnoredLowFeeTickets(ctx context.Context, in *GetIgnoredLowFeeTicketsRequest, opts ...grpc.CallOption) (*GetIgnoredLowFeeTicketsResponse, error)
+	GetLiveTickets(ctx context.Context, in *GetLiveTicketsRequest, opts ...grpc.CallOption) (*GetLiveTicketsResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	// Control
-	UpdateVotingPrefs(ctx context.Context, in *UpdateVotingPrefsRequest, opts ...grpc.CallOption) (*UpdateVotingPrefsResponse, error)
+	SetAddedLowFeeTickets(ctx context.Context, in *SetAddedLowFeeTicketsRequest, opts ...grpc.CallOption) (*SetAddedLowFeeTicketsResponse, error)
+	SetUserVotingPrefs(ctx context.Context, in *SetUserVotingPrefsRequest, opts ...grpc.CallOption) (*SetUserVotingPrefsResponse, error)
 }
 
 type stakepooldServiceClient struct {
@@ -174,6 +372,33 @@ type stakepooldServiceClient struct {
 
 func NewStakepooldServiceClient(cc *grpc.ClientConn) StakepooldServiceClient {
 	return &stakepooldServiceClient{cc}
+}
+
+func (c *stakepooldServiceClient) GetAddedLowFeeTickets(ctx context.Context, in *GetAddedLowFeeTicketsRequest, opts ...grpc.CallOption) (*GetAddedLowFeeTicketsResponse, error) {
+	out := new(GetAddedLowFeeTicketsResponse)
+	err := grpc.Invoke(ctx, "/stakepoolrpc.StakepooldService/GetAddedLowFeeTickets", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *stakepooldServiceClient) GetIgnoredLowFeeTickets(ctx context.Context, in *GetIgnoredLowFeeTicketsRequest, opts ...grpc.CallOption) (*GetIgnoredLowFeeTicketsResponse, error) {
+	out := new(GetIgnoredLowFeeTicketsResponse)
+	err := grpc.Invoke(ctx, "/stakepoolrpc.StakepooldService/GetIgnoredLowFeeTickets", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *stakepooldServiceClient) GetLiveTickets(ctx context.Context, in *GetLiveTicketsRequest, opts ...grpc.CallOption) (*GetLiveTicketsResponse, error) {
+	out := new(GetLiveTicketsResponse)
+	err := grpc.Invoke(ctx, "/stakepoolrpc.StakepooldService/GetLiveTickets", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *stakepooldServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
@@ -185,9 +410,18 @@ func (c *stakepooldServiceClient) Ping(ctx context.Context, in *PingRequest, opt
 	return out, nil
 }
 
-func (c *stakepooldServiceClient) UpdateVotingPrefs(ctx context.Context, in *UpdateVotingPrefsRequest, opts ...grpc.CallOption) (*UpdateVotingPrefsResponse, error) {
-	out := new(UpdateVotingPrefsResponse)
-	err := grpc.Invoke(ctx, "/stakepoolrpc.StakepooldService/UpdateVotingPrefs", in, out, c.cc, opts...)
+func (c *stakepooldServiceClient) SetAddedLowFeeTickets(ctx context.Context, in *SetAddedLowFeeTicketsRequest, opts ...grpc.CallOption) (*SetAddedLowFeeTicketsResponse, error) {
+	out := new(SetAddedLowFeeTicketsResponse)
+	err := grpc.Invoke(ctx, "/stakepoolrpc.StakepooldService/SetAddedLowFeeTickets", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *stakepooldServiceClient) SetUserVotingPrefs(ctx context.Context, in *SetUserVotingPrefsRequest, opts ...grpc.CallOption) (*SetUserVotingPrefsResponse, error) {
+	out := new(SetUserVotingPrefsResponse)
+	err := grpc.Invoke(ctx, "/stakepoolrpc.StakepooldService/SetUserVotingPrefs", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -197,14 +431,70 @@ func (c *stakepooldServiceClient) UpdateVotingPrefs(ctx context.Context, in *Upd
 // Server API for StakepooldService service
 
 type StakepooldServiceServer interface {
-	// Queries
+	GetAddedLowFeeTickets(context.Context, *GetAddedLowFeeTicketsRequest) (*GetAddedLowFeeTicketsResponse, error)
+	GetIgnoredLowFeeTickets(context.Context, *GetIgnoredLowFeeTicketsRequest) (*GetIgnoredLowFeeTicketsResponse, error)
+	GetLiveTickets(context.Context, *GetLiveTicketsRequest) (*GetLiveTicketsResponse, error)
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	// Control
-	UpdateVotingPrefs(context.Context, *UpdateVotingPrefsRequest) (*UpdateVotingPrefsResponse, error)
+	SetAddedLowFeeTickets(context.Context, *SetAddedLowFeeTicketsRequest) (*SetAddedLowFeeTicketsResponse, error)
+	SetUserVotingPrefs(context.Context, *SetUserVotingPrefsRequest) (*SetUserVotingPrefsResponse, error)
 }
 
 func RegisterStakepooldServiceServer(s *grpc.Server, srv StakepooldServiceServer) {
 	s.RegisterService(&_StakepooldService_serviceDesc, srv)
+}
+
+func _StakepooldService_GetAddedLowFeeTickets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAddedLowFeeTicketsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StakepooldServiceServer).GetAddedLowFeeTickets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/stakepoolrpc.StakepooldService/GetAddedLowFeeTickets",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StakepooldServiceServer).GetAddedLowFeeTickets(ctx, req.(*GetAddedLowFeeTicketsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StakepooldService_GetIgnoredLowFeeTickets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetIgnoredLowFeeTicketsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StakepooldServiceServer).GetIgnoredLowFeeTickets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/stakepoolrpc.StakepooldService/GetIgnoredLowFeeTickets",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StakepooldServiceServer).GetIgnoredLowFeeTickets(ctx, req.(*GetIgnoredLowFeeTicketsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StakepooldService_GetLiveTickets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLiveTicketsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StakepooldServiceServer).GetLiveTickets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/stakepoolrpc.StakepooldService/GetLiveTickets",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StakepooldServiceServer).GetLiveTickets(ctx, req.(*GetLiveTicketsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _StakepooldService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -225,20 +515,38 @@ func _StakepooldService_Ping_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _StakepooldService_UpdateVotingPrefs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateVotingPrefsRequest)
+func _StakepooldService_SetAddedLowFeeTickets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetAddedLowFeeTicketsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(StakepooldServiceServer).UpdateVotingPrefs(ctx, in)
+		return srv.(StakepooldServiceServer).SetAddedLowFeeTickets(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/stakepoolrpc.StakepooldService/UpdateVotingPrefs",
+		FullMethod: "/stakepoolrpc.StakepooldService/SetAddedLowFeeTickets",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StakepooldServiceServer).UpdateVotingPrefs(ctx, req.(*UpdateVotingPrefsRequest))
+		return srv.(StakepooldServiceServer).SetAddedLowFeeTickets(ctx, req.(*SetAddedLowFeeTicketsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StakepooldService_SetUserVotingPrefs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetUserVotingPrefsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StakepooldServiceServer).SetUserVotingPrefs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/stakepoolrpc.StakepooldService/SetUserVotingPrefs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StakepooldServiceServer).SetUserVotingPrefs(ctx, req.(*SetUserVotingPrefsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -248,12 +556,28 @@ var _StakepooldService_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*StakepooldServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "GetAddedLowFeeTickets",
+			Handler:    _StakepooldService_GetAddedLowFeeTickets_Handler,
+		},
+		{
+			MethodName: "GetIgnoredLowFeeTickets",
+			Handler:    _StakepooldService_GetIgnoredLowFeeTickets_Handler,
+		},
+		{
+			MethodName: "GetLiveTickets",
+			Handler:    _StakepooldService_GetLiveTickets_Handler,
+		},
+		{
 			MethodName: "Ping",
 			Handler:    _StakepooldService_Ping_Handler,
 		},
 		{
-			MethodName: "UpdateVotingPrefs",
-			Handler:    _StakepooldService_UpdateVotingPrefs_Handler,
+			MethodName: "SetAddedLowFeeTickets",
+			Handler:    _StakepooldService_SetAddedLowFeeTickets_Handler,
+		},
+		{
+			MethodName: "SetUserVotingPrefs",
+			Handler:    _StakepooldService_SetUserVotingPrefs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -327,26 +651,45 @@ var _VersionService_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("api.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 324 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x92, 0x4d, 0x4f, 0x72, 0x31,
-	0x10, 0x85, 0x73, 0x5f, 0x3e, 0xde, 0x30, 0x02, 0x4a, 0x63, 0x4c, 0xb9, 0x7e, 0x84, 0xdc, 0x44,
-	0x65, 0xc5, 0x02, 0xd7, 0x6e, 0xdd, 0x99, 0x90, 0x4b, 0x20, 0xee, 0x48, 0xa1, 0x23, 0x56, 0xa1,
-	0xad, 0x6d, 0xe1, 0xb7, 0xb9, 0xf5, 0x9f, 0x99, 0xdb, 0x16, 0x02, 0x11, 0xe2, 0xf2, 0x3c, 0x9d,
-	0x99, 0x33, 0x39, 0x53, 0xa8, 0x31, 0x2d, 0x7a, 0xda, 0x28, 0xa7, 0x48, 0xdd, 0x3a, 0xf6, 0x81,
-	0x5a, 0xa9, 0x85, 0xd1, 0xb3, 0xac, 0x01, 0x27, 0x03, 0x21, 0xe7, 0x39, 0x7e, 0xae, 0xd0, 0xba,
-	0xac, 0x09, 0xf5, 0x20, 0xad, 0x56, 0xd2, 0x62, 0xd6, 0x07, 0x3a, 0xd2, 0x9c, 0x39, 0x1c, 0x2b,
-	0x27, 0xe4, 0x7c, 0x60, 0xf0, 0xd5, 0xc6, 0x5a, 0x72, 0x01, 0xd5, 0x91, 0x45, 0x23, 0x38, 0x4d,
-	0x3a, 0x49, 0xb7, 0x94, 0x47, 0x95, 0x5d, 0x42, 0xfb, 0x40, 0x4f, 0x1c, 0x78, 0x06, 0xcd, 0x31,
-	0x1a, 0x2b, 0x94, 0xdc, 0x58, 0x7e, 0x27, 0x70, 0xba, 0x45, 0xa1, 0x8a, 0xdc, 0x42, 0x73, 0x1d,
-	0xd0, 0xc4, 0x3a, 0x23, 0xe4, 0xdc, 0x5b, 0xd4, 0xf2, 0x46, 0xa4, 0x43, 0x0f, 0xc9, 0x39, 0x54,
-	0x96, 0xec, 0x5d, 0x19, 0xfa, 0xaf, 0x93, 0x74, 0x1b, 0x79, 0x10, 0x9e, 0x0a, 0xa9, 0x0c, 0x2d,
-	0x45, 0x5a, 0x88, 0x82, 0x6a, 0xe6, 0x66, 0x6f, 0xb4, 0x1c, 0xa8, 0x17, 0xe4, 0x06, 0x40, 0x1b,
-	0x34, 0xb8, 0x40, 0x66, 0x91, 0x56, 0xbc, 0xc9, 0x0e, 0x29, 0x16, 0x99, 0xae, 0xc4, 0x82, 0x4f,
-	0x96, 0xe8, 0x18, 0x67, 0x8e, 0xd1, 0x6a, 0x58, 0xc4, 0xd3, 0xe7, 0x08, 0xfb, 0x5f, 0x09, 0xb4,
-	0x86, 0x9b, 0x58, 0xf9, 0x10, 0xcd, 0x5a, 0xcc, 0x90, 0x3c, 0x42, 0xb9, 0x08, 0x93, 0xb4, 0x7b,
-	0xbb, 0x91, 0xf7, 0x76, 0xf2, 0x4e, 0xd3, 0x43, 0x4f, 0x31, 0x04, 0x0e, 0xad, 0x5f, 0x39, 0x92,
-	0xbb, 0xfd, 0x86, 0x63, 0xc7, 0x49, 0xef, 0xff, 0xac, 0x0b, 0x2e, 0xfd, 0x97, 0xed, 0x41, 0x36,
-	0x6b, 0x3f, 0xc1, 0xff, 0x48, 0xc8, 0xd5, 0xfe, 0x94, 0xfd, 0xcb, 0xa5, 0xd7, 0x47, 0x5e, 0xc3,
-	0xe4, 0x69, 0xd5, 0xff, 0xb7, 0x87, 0x9f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x4c, 0x5b, 0x70, 0x0b,
-	0x7c, 0x02, 0x00, 0x00,
+	// 628 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x55, 0xdd, 0x4e, 0xdb, 0x4c,
+	0x10, 0x95, 0xf9, 0x67, 0x20, 0x81, 0x6f, 0xf5, 0x01, 0xc6, 0x0a, 0x34, 0x32, 0x54, 0x8d, 0xfa,
+	0xc3, 0x05, 0xdc, 0x55, 0xe2, 0x82, 0x56, 0x85, 0x22, 0x81, 0x94, 0xda, 0x34, 0xaa, 0xd4, 0x8b,
+	0xc8, 0xd8, 0x83, 0xd9, 0x12, 0xbc, 0xee, 0xee, 0x26, 0x55, 0x9f, 0xa6, 0xcf, 0xd2, 0x77, 0xea,
+	0x03, 0x54, 0xde, 0xb5, 0x43, 0x6c, 0x27, 0x6e, 0x5a, 0xee, 0x3c, 0x67, 0x66, 0xcf, 0x99, 0xdd,
+	0x9d, 0x3d, 0x86, 0x65, 0x2f, 0xa6, 0x07, 0x31, 0x67, 0x92, 0x91, 0x55, 0x21, 0xbd, 0x3b, 0x8c,
+	0x19, 0xeb, 0xf1, 0xd8, 0xb7, 0x77, 0xa1, 0x71, 0x86, 0xf2, 0x24, 0x08, 0x30, 0xb8, 0x60, 0xdf,
+	0x4e, 0x11, 0xaf, 0xa8, 0x7f, 0x87, 0x52, 0x38, 0xf8, 0xb5, 0x8f, 0x42, 0xda, 0x57, 0xb0, 0x33,
+	0x21, 0x2f, 0x62, 0x16, 0x09, 0x24, 0x47, 0xb0, 0x28, 0x35, 0x64, 0x1a, 0xcd, 0xd9, 0xd6, 0xca,
+	0xe1, 0xf6, 0xc1, 0xa8, 0xc0, 0x81, 0xae, 0x7f, 0x17, 0x49, 0xfe, 0xdd, 0xc9, 0x2a, 0xed, 0x26,
+	0xec, 0x9e, 0xa1, 0x3c, 0x0f, 0x23, 0xc6, 0x27, 0xe8, 0x76, 0xe0, 0xc9, 0xc4, 0x8a, 0xc7, 0x28,
+	0x6f, 0xc1, 0xc6, 0x19, 0xca, 0x0b, 0x3a, 0x28, 0x0a, 0x5e, 0xc2, 0x66, 0x31, 0xf1, 0x18, 0x9d,
+	0x1a, 0xac, 0xb4, 0x69, 0x14, 0x66, 0xec, 0x75, 0x58, 0xd5, 0xa1, 0xe6, 0xb4, 0x5d, 0x68, 0xb8,
+	0x15, 0xc7, 0xfe, 0x6f, 0x9a, 0xc7, 0xb0, 0xe3, 0x56, 0xde, 0x55, 0x03, 0x96, 0xdb, 0x9c, 0xf9,
+	0x28, 0x04, 0x06, 0xa6, 0xd1, 0x34, 0x5a, 0x4b, 0xce, 0x03, 0x60, 0xbf, 0x06, 0xcb, 0x45, 0xf9,
+	0x51, 0x20, 0xef, 0x30, 0x49, 0xa3, 0xb0, 0xcd, 0xf1, 0x66, 0xda, 0xb5, 0x11, 0x6c, 0x8f, 0x5b,
+	0xab, 0x37, 0xf3, 0x01, 0x48, 0x5f, 0x20, 0xef, 0x0e, 0x54, 0xaa, 0xeb, 0xb3, 0xe8, 0x86, 0x86,
+	0xe9, 0xbe, 0xf6, 0xf2, 0xfb, 0x7a, 0x60, 0x78, 0xab, 0xaa, 0xf4, 0x0e, 0xd7, 0xfb, 0x05, 0xd8,
+	0x76, 0x61, 0x65, 0xe4, 0x08, 0xc8, 0x3e, 0xd4, 0x74, 0x78, 0x12, 0x04, 0x1c, 0x85, 0x50, 0x0d,
+	0x2e, 0x3b, 0x79, 0x90, 0xec, 0x02, 0x68, 0xe0, 0xbd, 0x27, 0x6e, 0xcd, 0x99, 0xa6, 0xd1, 0x5a,
+	0x75, 0x46, 0x10, 0xfb, 0x87, 0x01, 0x1b, 0x63, 0x1b, 0x20, 0x9b, 0xb0, 0x90, 0x24, 0xce, 0xf5,
+	0xce, 0x67, 0x9d, 0x34, 0x22, 0x2d, 0x58, 0xbb, 0xec, 0xf7, 0x24, 0x75, 0x69, 0x98, 0x29, 0xcf,
+	0x28, 0xe5, 0x22, 0x4c, 0x2c, 0x58, 0xea, 0x30, 0x89, 0x6f, 0xa8, 0x14, 0xe6, 0xac, 0xe2, 0x18,
+	0xc6, 0x09, 0x4b, 0xf6, 0xdd, 0x41, 0x2e, 0x28, 0x8b, 0xcc, 0x39, 0x55, 0x52, 0x84, 0xed, 0x75,
+	0xa8, 0xa7, 0x9f, 0xd9, 0x60, 0xfd, 0x34, 0x60, 0x6d, 0x08, 0xa5, 0x57, 0xf5, 0x14, 0xea, 0x03,
+	0x0d, 0x75, 0x85, 0xe4, 0x34, 0x0a, 0xb3, 0xe3, 0x48, 0x51, 0x57, 0x81, 0xe4, 0x7f, 0x98, 0xbf,
+	0xf7, 0xbe, 0x30, 0xae, 0x5a, 0xae, 0x39, 0x3a, 0x50, 0x28, 0x8d, 0x18, 0x57, 0x5d, 0x26, 0x68,
+	0x12, 0x24, 0x68, 0xec, 0x49, 0xff, 0x56, 0x35, 0x56, 0x73, 0x74, 0x90, 0x1c, 0x68, 0xcc, 0x91,
+	0x63, 0x0f, 0x3d, 0x81, 0xe6, 0xbc, 0x12, 0x19, 0x41, 0x92, 0x46, 0xae, 0xfb, 0xb4, 0x17, 0x74,
+	0xef, 0x51, 0x7a, 0x81, 0x27, 0x3d, 0x73, 0x41, 0x37, 0xa2, 0xd0, 0xcb, 0x14, 0x3c, 0xfc, 0x35,
+	0x07, 0xff, 0xb9, 0xd9, 0x14, 0x04, 0x2e, 0xf2, 0x01, 0xf5, 0x91, 0xc4, 0xea, 0xa5, 0x96, 0xa7,
+	0x99, 0x3c, 0xcf, 0x8f, 0x4c, 0x95, 0x7d, 0x59, 0x2f, 0xa6, 0xaa, 0x4d, 0xcf, 0x6d, 0x00, 0x5b,
+	0x13, 0x3c, 0x87, 0xbc, 0x2c, 0xf1, 0x54, 0x98, 0x97, 0xf5, 0x6a, 0xca, 0xea, 0x54, 0xf7, 0x33,
+	0xd4, 0xf3, 0xd6, 0x43, 0xf6, 0x4a, 0x04, 0x65, 0xc7, 0xb2, 0xf6, 0xab, 0x8b, 0x52, 0xf2, 0x63,
+	0x98, 0x4b, 0x9c, 0x87, 0x14, 0x0c, 0x64, 0xc4, 0x9c, 0x2c, 0x6b, 0x5c, 0x2a, 0x5d, 0x1e, 0xc3,
+	0x86, 0x3b, 0xcd, 0x2d, 0xb8, 0x7f, 0x71, 0x0b, 0xd5, 0x26, 0x15, 0x02, 0x29, 0x5b, 0x09, 0x79,
+	0x56, 0xa2, 0x18, 0x6f, 0x36, 0x56, 0xeb, 0xcf, 0x85, 0x5a, 0xe8, 0xf0, 0xd3, 0xf0, 0x31, 0x65,
+	0x23, 0x77, 0x0a, 0x8b, 0x29, 0x42, 0x1a, 0x79, 0x9a, 0xfc, 0xab, 0xb3, 0x76, 0x26, 0x64, 0x35,
+	0xf3, 0xf5, 0x82, 0xfa, 0xd3, 0x1e, 0xfd, 0x0e, 0x00, 0x00, 0xff, 0xff, 0x93, 0xfb, 0xa1, 0x4d,
+	0x76, 0x07, 0x00, 0x00,
 }

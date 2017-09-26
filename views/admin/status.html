@@ -1,4 +1,4 @@
-{{define "status"}}
+{{define "admin/status"}}
 <div class="wrapper">
  <div class="row">
 
@@ -15,6 +15,24 @@
 			<h4 class="panel-title">Status</h4>
 		</div>
 		<div class="panel-body">
+			{{if .StakepooldInfo}}
+			<table id="stakepooldinfo" class="table table-condensed datatablesort responsive">
+				<thead>
+					<tr>
+						<th>Stakepoold Number</th>
+						<th>GRPC Connection Status</th>
+					</tr>
+				</thead>
+				<tbody>
+				{{ range $i, $data := .StakepooldInfo }}
+					<tr>
+						<td>{{$i}}</td>
+						<td>{{ $data.Status }}</td>
+					</tr>
+				{{end}}
+				</tbody>
+			</table>
+			{{end}}
 			{{if not .WalletInfo}}
 			<p><span style="font-size: larger;"><b>Error receiving walletinfo</b></span></p>
 			{{end}}

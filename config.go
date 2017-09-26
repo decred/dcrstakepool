@@ -104,6 +104,7 @@ type config struct {
 	Version            string
 	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
+	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
 	MinServers         int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
 	EnableStakepoold   bool     `long:"enablestakepoold" description:"Enable communication with stakepoold"`
 	MaxVotedAge        int64    `long:"maxvotedage" description:"Maximum vote age (blocks since vote) to include in voted tickets table"`
@@ -489,6 +490,13 @@ func loadConfig() (*config, []string, error) {
 
 	if len(cfg.AdminIPs) == 0 {
 		str := "%s: adminips is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.AdminUserIDs) == 0 {
+		str := "%s: adminuserids is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err

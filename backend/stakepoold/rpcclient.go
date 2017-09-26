@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -10,7 +9,6 @@ import (
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrwallet/wallet/txrules"
 )
 
 var requiredChainServerAPI = semver{major: 3, minor: 1, patch: 0}
@@ -105,124 +103,17 @@ func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 	walletVer = semver{dcrwVer.Major, dcrwVer.Minor, dcrwVer.Patch}
 
 	if !semverCompatible(requiredWalletAPI, walletVer) {
-		return nil, walletVer, fmt.Errorf("Node JSON-RPC server does not have "+
-			"a compatible API version. Advertises %v but require %v",
-			walletVer, requiredWalletAPI)
+		log.Warnf("Node JSON-RPC server %v does not have "+
+			"a compatible API version. Advertizes %v but require %v",
+			cfg.WalletHost, walletVer, requiredWalletAPI)
 	}
 
 	return dcrwClient, walletVer, nil
 }
 
-// nodeCheckTicketFee evaluates a stake pool ticket to see if it's
-// acceptable to the stake pool. The ticket must pay out to the stake
-// pool cold wallet, and must have a sufficient fee.
-// This function is a port of evaluateStakePoolTicket in dcrwallet which plucks
-// the in/out amounts from the RPC response rather than the wallet's record.
-// Stake pool fee tests are present in dcrwallet/wallet/txrules.
-func nodeCheckTicketFee(ctx *appContext, txhex string, blockhash string) (bool, error) {
-	// Create raw transaction.
-	var buf []byte
-	buf, err := hex.DecodeString(txhex)
-	if err != nil {
-		return false, fmt.Errorf("DecodeString failed: %v", err)
-	}
-	res, err := ctx.nodeConnection.DecodeRawTransaction(buf)
-	if err != nil {
-		return false, fmt.Errorf("DecodeRawTransaction failed: %v", err)
-	}
+func walletGetTickets(ctx *appContext, currentHeight int64) (map[chainhash.Hash]string, map[chainhash.Hash]string) {
+	blockHashToHeightCache := make(map[chainhash.Hash]int32)
 
-	bhash, err := chainhash.NewHashFromStr(blockhash)
-	if err != nil {
-		return false, fmt.Errorf("NewHashFromStr failed for %v: %v", blockhash, err)
-	}
-	gbh, err := ctx.nodeConnection.GetBlockHeader(bhash)
-	if err != nil {
-		return false, fmt.Errorf("GetBlockHeader failed for %v: %v", bhash, err)
-	}
-
-	// Check the first commitment output (Vout[1])
-	// and ensure that the address found there exists
-	// in the list of approved addresses. Also ensure
-	// that the fee exists and is of the amount
-	// requested by the pool.
-
-	commitAmt := dcrutil.Amount(0)
-	feeAddr := ""
-	feeAddrValid := false
-	ticketValue, err := dcrutil.NewAmount(res.Vout[0].Value)
-	if err != nil {
-		return false, fmt.Errorf("NewAmount failed: %v", err)
-	}
-
-	for i := range res.Vout {
-		switch res.Vout[i].ScriptPubKey.Type {
-		case "sstxcommitment":
-			for j := range res.Vout[i].ScriptPubKey.Addresses {
-				feeAddr = res.Vout[i].ScriptPubKey.Addresses[j]
-				_, exists := ctx.feeAddrs[feeAddr]
-				if !exists {
-					continue
-				}
-				feeAddrValid = true
-				feeAmount, err := dcrutil.NewAmount(*res.Vout[i].ScriptPubKey.CommitAmt)
-				if err != nil {
-					return false, fmt.Errorf("NewAmount failed: %v", err)
-				}
-				commitAmt = feeAmount
-				break
-			}
-		}
-	}
-
-	in := dcrutil.Amount(0)
-	for i := range res.Vout {
-		switch res.Vout[i].ScriptPubKey.Type {
-		case "sstxcommitment":
-			amount, err := dcrutil.NewAmount(*res.Vout[i].ScriptPubKey.CommitAmt)
-			if err != nil {
-				return false, fmt.Errorf("NewAmount failed: %v", err)
-			}
-			in += amount
-		}
-	}
-
-	out := dcrutil.Amount(0)
-	for i := range res.Vout {
-		amount, err := dcrutil.NewAmount(res.Vout[i].Value)
-		if err != nil {
-			return false, fmt.Errorf("NewAmount failed: %v", err)
-		}
-		out += amount
-	}
-	fees := in - out
-
-	if !feeAddrValid {
-		log.Warnf("Unknown pool commitment address %s for ticket %v",
-			feeAddr, res.Txid)
-		return false, nil
-	}
-
-	// Calculate the fee required based on the current
-	// height and the required amount from the pool.
-	feeNeeded := txrules.StakePoolTicketFee(ticketValue, fees,
-		int32(gbh.Height), ctx.feePercent, ctx.params)
-	if commitAmt < feeNeeded {
-		log.Warnf("User %s submitted ticket %v which has less fees than "+
-			"are required to use this stake pool and is being skipped "+
-			"(required: %v, found %v)", feeAddr, res.Txid, feeNeeded, fees)
-
-		// Reject the entire transaction if it didn't
-		// pay the pool server fees.
-		return false, nil
-	}
-
-	log.Debugf("Accepted valid stake pool ticket %v committing %v in fees",
-		res.Txid, commitAmt)
-
-	return true, nil
-}
-
-func walletGetTickets(ctx *appContext) map[chainhash.Hash]string {
 	// This is suboptimal to copy and needs fixing.
 	userVotingConfig := make(map[string]userdata.UserVotingConfig)
 	ctx.RLock()
@@ -231,16 +122,18 @@ func walletGetTickets(ctx *appContext) map[chainhash.Hash]string {
 	}
 	ctx.RUnlock()
 
-	userTickets := make(map[chainhash.Hash]string)
+	ignoredLowFeeTickets := make(map[chainhash.Hash]string)
+	liveTickets := make(map[chainhash.Hash]string)
+	normalFee := 0
 
-	log.Info("Running GetTickets, this may take awhile...")
+	log.Info("Calling GetTickets...")
 	timenow := time.Now()
 	tickets, err := ctx.walletConnection.GetTickets(false)
 	log.Infof("GetTickets: took %v", time.Since(timenow))
 
 	if err != nil {
 		log.Warnf("GetTickets failed: %v", err)
-		return userTickets
+		return ignoredLowFeeTickets, liveTickets
 	}
 
 	type promise struct {
@@ -271,23 +164,72 @@ func walletGetTickets(ctx *appContext) map[chainhash.Hash]string {
 				continue
 			}
 
+			addr, err := dcrutil.DecodeAddress(gt.Details[i].Address)
+			if err != nil {
+				log.Warnf("invalid address %v", err)
+				continue
+			}
+
 			hash, err := chainhash.NewHashFromStr(gt.TxID)
 			if err != nil {
 				log.Warnf("invalid ticket %v", err)
 				continue
 			}
 
-			// we could check fees here but they are currently checked by
-			// dcrwallet.  too-low-fee tickets won't show up in GetTickets
-			// output until they have been manually added via the addticket
-			// RPC
-			log.Debugf("added ticket %s for %s", *hash, gt.Details[i].Address)
-			userTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
+			// All tickets are present in the GetTickets response, whether they
+			// pay the correct fee or not.  So we need to verify fees and
+			// sort the tickets into their respective maps.
+			_, isAdded := ctx.addedLowFeeTicketsMSA[*hash]
+			if isAdded {
+				liveTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
+			} else {
+
+				msgTx := MsgTxFromHex(gt.Hex)
+				if msgTx == nil {
+					log.Warnf("MsgTxFromHex failed for %v", gt.Hex)
+					continue
+				}
+
+				// look up the height at which this ticket was purchased
+				var ticketBlockHeight int32
+				ticketBlockHash, err := chainhash.NewHashFromStr(gt.BlockHash)
+				if err != nil {
+					log.Warnf("NewHashFromStr failed for %v: %v", gt.BlockHash, err)
+					continue
+				}
+
+				height, inCache := blockHashToHeightCache[*ticketBlockHash]
+				if inCache {
+					ticketBlockHeight = height
+				} else {
+					gbh, err := ctx.nodeConnection.GetBlockHeader(ticketBlockHash)
+					if err != nil {
+						log.Warnf("GetBlockHeader failed for %v: %v", ticketBlockHash, err)
+						continue
+					}
+
+					blockHashToHeightCache[*ticketBlockHash] = int32(gbh.Height)
+					ticketBlockHeight = int32(gbh.Height)
+				}
+
+				ticketFeesValid, err := evaluateStakePoolTicket(ctx, msgTx, ticketBlockHeight, addr)
+				if ticketFeesValid {
+					normalFee++
+					liveTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
+				} else {
+					ignoredLowFeeTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
+					log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
+						*hash, ctx.userVotingConfig[gt.Details[i].Address].MultiSigAddress, ticketFeesValid, err)
+				}
+			}
 			break
 		}
 	}
 
-	log.Infof("%d live tickets ready for voting", len(userTickets))
+	log.Infof("tickets loaded -- addedLowFee %v ignoredLowFee %v normalFee %v "+
+		"live %v total %v", len(ctx.addedLowFeeTicketsMSA),
+		len(ignoredLowFeeTickets), normalFee, len(liveTickets),
+		len(tickets))
 
-	return userTickets
+	return ignoredLowFeeTickets, liveTickets
 }

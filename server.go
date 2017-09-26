@@ -118,7 +118,7 @@ func runMain() int {
 	}
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.AdminIPs, cfg.APISecret, APIVersionsSupported, cfg.BaseURL,
+		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported, cfg.BaseURL,
 		cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
 		cfg.ColdWalletExtPub, grpcConnections, cfg.PoolFees, cfg.PoolEmail,
 		cfg.PoolLink, cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.SMTPFrom,
@@ -135,16 +135,34 @@ func runMain() int {
 		return 3
 	}
 
-	// reset votebits if Vote Version changed or if the stored VoteBits are
-	// somehow invalid
+	// reset votebits if Vote Version changed or stored VoteBits are invalid
 	controller.CheckAndResetUserVoteBits(application.DbMap)
+
 	if cfg.EnableStakepoold {
+		err = controller.StakepooldUpdateAll(application.DbMap, controllers.StakepooldUpdateKindAll)
+		if err != nil {
+			log.Errorf("TriggerStakepooldUpdates failed: %v", err)
+			return 9
+		}
 		for i := range grpcConnections {
-			err = stakepooldclient.StakepooldUpdateVotingPrefs(grpcConnections[i], 0)
+			addedLowFeeTickets, err := stakepooldclient.StakepooldGetAddedLowFeeTickets(grpcConnections[i])
 			if err != nil {
-				log.Errorf("Failed to update stakepoold voting cfg for all users on host %d: %v", i, err)
+				log.Errorf("GetAddedLowFeeTickets failed on host %d: %v", i, err)
 				return 9
 			}
+			ignoredLowFeeTickets, err := stakepooldclient.StakepooldGetIgnoredLowFeeTickets(grpcConnections[i])
+			if err != nil {
+				log.Errorf("GetIgnoredLowFeeTickets failed on host %d: %v", i, err)
+				return 9
+			}
+			liveTickets, err := stakepooldclient.StakepooldGetLiveTickets(grpcConnections[i])
+			if err != nil {
+				log.Errorf("GetLiveTickets failed on host %d: %v", i, err)
+				return 9
+			}
+			log.Infof("stakepoold %d reports ticket totals of AddedLowFee %v "+
+				"IgnoredLowFee %v Live %v", i, len(addedLowFeeTickets),
+				len(ignoredLowFeeTickets), len(liveTickets))
 		}
 	}
 
@@ -164,6 +182,12 @@ func runMain() int {
 
 	// Home page
 	app.Get("/", application.Route(controller, "Index"))
+
+	// Admin tickets page
+	app.Get("/admintickets", application.Route(controller, "AdminTickets"))
+	app.Post("/admintickets", application.Route(controller, "AdminTicketsPost"))
+	// Admin status page
+	app.Get("/status", application.Route(controller, "AdminStatus"))
 
 	// Address form
 	app.Get("/address", application.Route(controller, "Address"))
@@ -205,9 +229,6 @@ func runMain() int {
 
 	// Stats
 	app.Get("/stats", application.Route(controller, "Stats"))
-
-	// Status
-	app.Get("/status", application.Route(controller, "Status"))
 
 	// Tickets
 	app.Get("/tickets", application.Route(controller, "Tickets"))
