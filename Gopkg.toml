@@ -1,0 +1,72 @@
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/btcsuite/btclog"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/btcsuite/go-flags"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/decred/dcrd"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/decred/dcrrpcclient"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/decred/dcrutil"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/decred/dcrwallet"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/dgrijalva/jwt-go"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/go-gorp/gorp"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/go-sql-driver/mysql"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/golang/protobuf"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/gorilla/context"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/gorilla/sessions"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/haisum/recaptcha"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/jrick/logrotate"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/zenazn/goji"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/net"
+
+[[constraint]]
+  name = "google.golang.org/grpc"
+  version = "v1.6.0"
