@@ -11,7 +11,7 @@ import (
 
 	"github.com/gorilla/context"
 
-	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
@@ -76,7 +76,7 @@ func runMain() int {
 	// SIGUSR1 = Reload html templates (On nix systems)
 	system.ReloadTemplatesSig(application)
 
-	dcrrpcclient.UseLogger(log)
+	rpcclient.UseLogger(log)
 
 	// Setup static files
 	assetHandler := http.StripPrefix("/assets/",

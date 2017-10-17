@@ -22,11 +22,11 @@ import (
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
+	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrd/hdkeychain"
+	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrd/wire"
-	"github.com/decred/dcrrpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrutil"
-	"github.com/decred/dcrutil/hdkeychain"
 	"github.com/decred/dcrwallet/wallet/txrules"
 	"github.com/decred/dcrwallet/wallet/udb"
 
@@ -47,7 +47,7 @@ type appContext struct {
 	feeAddrs               map[string]struct{}
 	feePercent             float64
 	newTicketsChan         chan NewTicketsForBlock
-	nodeConnection         *dcrrpcclient.Client
+	nodeConnection         *rpcclient.Client
 	params                 *chaincfg.Params
 	wg                     sync.WaitGroup // wait group for go routine exits
 	quit                   chan struct{}
@@ -56,7 +56,7 @@ type appContext struct {
 	spentmissedTicketsChan chan SpentMissedTicketsForBlock
 	userData               *userdata.UserData
 	votingConfig           *VotingConfig
-	walletConnection       *dcrrpcclient.Client
+	walletConnection       *rpcclient.Client
 	winningTicketsChan     chan WinningTicketsForBlock
 	testing                bool // enabled only for testing
 }
@@ -211,7 +211,7 @@ func runMain() error {
 		return err
 	}
 
-	dcrrpcclient.UseLogger(clientLog)
+	rpcclient.UseLogger(clientLog)
 
 	var walletVer semver
 	walletConn, walletVer, err := connectWalletRPC(cfg)

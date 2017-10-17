@@ -12,9 +12,9 @@ import (
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
-	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrstakepool/models"
-	"github.com/decred/dcrutil"
 	"github.com/decred/dcrwallet/wallet/udb"
 )
 
@@ -233,13 +233,13 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				continue
 			}
 			vawr, err := s.ValidateAddress(vam.address)
-			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
-				err != dcrrpcclient.ErrClientShutdown) {
+			if err != nil && (err != rpcclient.ErrClientDisconnect &&
+				err != rpcclient.ErrClientShutdown) {
 				log.Infof("validateAddressFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
-			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
-				err == dcrrpcclient.ErrClientShutdown) {
+			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
+				err == rpcclient.ErrClientShutdown) {
 				vawrs[i] = nil
 				continue
 			}
@@ -286,13 +286,13 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				continue
 			}
 			cmsr, err := s.CreateMultisig(cmsm.required, cmsm.addresses)
-			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
-				err != dcrrpcclient.ErrClientShutdown) {
+			if err != nil && (err != rpcclient.ErrClientDisconnect &&
+				err != rpcclient.ErrClientShutdown) {
 				log.Infof("createMultisigFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
-			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
-				err == dcrrpcclient.ErrClientShutdown) {
+			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
+				err == rpcclient.ErrClientShutdown) {
 				cmsrs[i] = nil
 				continue
 			}
@@ -380,13 +380,13 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			// Returns all tickets - even unconfirmed/mempool - when wallet is
 			// queried
 			tfar, err := s.TicketsForAddress(tfam.address)
-			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
-				err != dcrrpcclient.ErrClientShutdown) {
+			if err != nil && (err != rpcclient.ErrClientDisconnect &&
+				err != rpcclient.ErrClientShutdown) {
 				log.Infof("ticketsForAddressFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
-			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
-				err == dcrrpcclient.ErrClientShutdown) {
+			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
+				err == rpcclient.ErrClientShutdown) {
 				tfars[i] = nil
 				continue
 			}
@@ -418,13 +418,13 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				continue
 			}
 			gtor, err := s.GetTxOut(gtom.hash, gtom.idx, true)
-			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
-				err != dcrrpcclient.ErrClientShutdown) {
+			if err != nil && (err != rpcclient.ErrClientDisconnect &&
+				err != rpcclient.ErrClientShutdown) {
 				log.Infof("getTxOutFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
-			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
-				err == dcrrpcclient.ErrClientShutdown) {
+			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
+				err == rpcclient.ErrClientShutdown) {
 				gtors[i] = nil
 				continue
 			}
@@ -470,13 +470,13 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				continue
 			}
 			gsir, err := s.GetStakeInfo()
-			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
-				err != dcrrpcclient.ErrClientShutdown) {
+			if err != nil && (err != rpcclient.ErrClientDisconnect &&
+				err != rpcclient.ErrClientShutdown) {
 				log.Infof("getStakeInfoFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
-			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
-				err == dcrrpcclient.ErrClientShutdown) {
+			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
+				err == rpcclient.ErrClientShutdown) {
 				gsirs[i] = nil
 				continue
 			}
@@ -526,13 +526,13 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				continue
 			}
 			wir, err := s.WalletInfo()
-			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
-				err != dcrrpcclient.ErrClientShutdown) {
+			if err != nil && (err != rpcclient.ErrClientDisconnect &&
+				err != rpcclient.ErrClientShutdown) {
 				log.Infof("connectedFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
-			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
-				err == dcrrpcclient.ErrClientShutdown) {
+			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
+				err == rpcclient.ErrClientShutdown) {
 				wirs[i] = nil
 				continue
 			}
@@ -600,13 +600,13 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				continue
 			}
 			spuir, err := s.StakePoolUserInfo(spuim.userAddr)
-			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
-				err != dcrrpcclient.ErrClientShutdown) {
+			if err != nil && (err != rpcclient.ErrClientDisconnect &&
+				err != rpcclient.ErrClientShutdown) {
 				log.Infof("stakePoolUserInfoFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
-			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
-				err == dcrrpcclient.ErrClientShutdown) {
+			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
+				err == rpcclient.ErrClientShutdown) {
 				spuirs[i] = nil
 				continue
 			}
@@ -639,13 +639,13 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				continue
 			}
 			hash, height, err := s.GetBestBlock()
-			if err != nil && (err != dcrrpcclient.ErrClientDisconnect &&
-				err != dcrrpcclient.ErrClientShutdown) {
+			if err != nil && (err != rpcclient.ErrClientDisconnect &&
+				err != rpcclient.ErrClientShutdown) {
 				log.Infof("getBestBlockFn failure on server %v: %v", i, err)
 				resp.err = err
 				return resp
-			} else if err != nil && (err == dcrrpcclient.ErrClientDisconnect ||
-				err == dcrrpcclient.ErrClientShutdown) {
+			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
+				err == rpcclient.ErrClientShutdown) {
 				continue
 			}
 			resp.bestBlockHeight = height
@@ -980,7 +980,7 @@ func NewGetTicketsCacheData(tfar *dcrjson.TicketsForAddressResult) *getTicketsCa
 // walletSvrManager provides a concurrency safe RPC call manager for handling
 // all incoming wallet server requests.
 type walletSvrManager struct {
-	servers    []*dcrrpcclient.Client
+	servers    []*rpcclient.Client
 	serversLen int
 
 	walletHosts     []string
@@ -1118,7 +1118,7 @@ func (w *walletSvrManager) WalletStatus() ([]*dcrjson.WalletInfoResult, error) {
 	return w.connected()
 }
 
-func getWalletVoteVersion(client *dcrrpcclient.Client) (uint32, error) {
+func getWalletVoteVersion(client *rpcclient.Client) (uint32, error) {
 	wi, err := client.WalletInfo()
 	if err != nil {
 		return 0, err
@@ -1129,7 +1129,7 @@ func getWalletVoteVersion(client *dcrrpcclient.Client) (uint32, error) {
 
 // checkIfWalletConnected checks to see if the passed wallet's client is connected
 // and if the wallet is unlocked.
-func checkIfWalletConnected(client *dcrrpcclient.Client) error {
+func checkIfWalletConnected(client *rpcclient.Client) error {
 	wi, err := client.WalletInfo()
 	if err != nil {
 		return err
@@ -1386,12 +1386,12 @@ func (w *walletSvrManager) ReconnectWalletRPC(serverIndex int) error {
 	return nil
 }
 
-func connectWalletRPC(walletHost string, walletCert string, walletUser string, walletPassword string) (*dcrrpcclient.Client, error) {
+func connectWalletRPC(walletHost string, walletCert string, walletUser string, walletPassword string) (*rpcclient.Client, error) {
 	certs, err := ioutil.ReadFile(walletCert)
 	if err != nil {
 		log.Errorf("Error %v", err)
 	}
-	connCfg := &dcrrpcclient.ConnConfig{
+	connCfg := &rpcclient.ConnConfig{
 		Host:                 walletHost,
 		Endpoint:             "ws",
 		User:                 walletUser,
@@ -1400,7 +1400,7 @@ func connectWalletRPC(walletHost string, walletCert string, walletUser string, w
 		DisableAutoReconnect: true,
 	}
 
-	client, err := dcrrpcclient.New(connCfg, nil)
+	client, err := rpcclient.New(connCfg, nil)
 	if err != nil {
 		return nil, fmt.Errorf("RPC server connection failure on start %v", err)
 	}
@@ -1413,7 +1413,7 @@ func newWalletSvrManager(walletHosts []string, walletCerts []string,
 	walletUsers []string, walletPasswords []string, minServers int) (*walletSvrManager, error) {
 
 	var err error
-	localServers := make([]*dcrrpcclient.Client, len(walletHosts))
+	localServers := make([]*rpcclient.Client, len(walletHosts))
 	for i := range walletHosts {
 		localServers[i], err = connectWalletRPC(walletHosts[i], walletCerts[i], walletUsers[i], walletPasswords[i])
 		if err != nil {

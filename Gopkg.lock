@@ -39,27 +39,21 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/decred/dcrd"
-  packages = ["blockchain","blockchain/internal/dbnamespace","blockchain/internal/progresslog","blockchain/stake","blockchain/stake/internal/dbnamespace","blockchain/stake/internal/ticketdb","blockchain/stake/internal/tickettreap","chaincfg","chaincfg/chainec","chaincfg/chainhash","database","dcrec/edwards","dcrec/secp256k1","dcrec/secp256k1/schnorr","dcrjson","txscript","wire"]
-  revision = "f11fac8134626768ef7b1f278fd4331f004bfb49"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/decred/dcrrpcclient"
+  name = "github.com/decred/base58"
   packages = ["."]
-  revision = "efe7aaf4a0f0616b75e3f3ad8fa494572ff96760"
+  revision = "b3520e187fa8ebe65eb74245408cf4b83e6a65d3"
 
 [[projects]]
   branch = "master"
-  name = "github.com/decred/dcrutil"
-  packages = [".","base58","hdkeychain"]
-  revision = "ddbde93f65ab0692e54ed8a5ad325fa2e8af4daa"
+  name = "github.com/decred/dcrd"
+  packages = ["blockchain","blockchain/internal/dbnamespace","blockchain/internal/progresslog","blockchain/stake","blockchain/stake/internal/dbnamespace","blockchain/stake/internal/ticketdb","blockchain/stake/internal/tickettreap","chaincfg","chaincfg/chainec","chaincfg/chainhash","database","dcrec/edwards","dcrec/secp256k1","dcrec/secp256k1/schnorr","dcrjson","dcrutil","hdkeychain","rpcclient","txscript","wire"]
+  revision = "d27429061b49d400d06505911a1379b8a8246671"
 
 [[projects]]
   branch = "master"
   name = "github.com/decred/dcrwallet"
-  packages = ["apperrors","internal/zero","snacl","wallet/txrules","wallet/udb","walletdb"]
-  revision = "2eb4e777137ccbdfa3defdab2517bdfd65229d57"
+  packages = ["apperrors","internal/helpers","internal/zero","snacl","wallet/txrules","wallet/udb","walletdb"]
+  revision = "2df4002bce8c540907c9a3e2980fc3e5deeba8f6"
 
 [[projects]]
   branch = "master"
@@ -154,6 +148,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "77b79929e7461546bfd510867cd9029fc41425dea8f6ef03e5cc27cac7a39d4e"
+  inputs-digest = "3d0ab29d830f5bc80f1a033eee5142944b9ca74c80092506dd913d4311dccbd8"
   solver-name = "gps-cdcl"
   solver-version = 1

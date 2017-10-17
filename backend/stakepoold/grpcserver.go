@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
-	"github.com/decred/dcrutil"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
