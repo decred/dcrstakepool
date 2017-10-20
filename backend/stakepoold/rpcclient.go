@@ -7,16 +7,16 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrutil"
 	"github.com/decred/dcrwallet/wallet/txrules"
 )
 
 var requiredChainServerAPI = semver{major: 3, minor: 1, patch: 0}
 var requiredWalletAPI = semver{major: 4, minor: 1, patch: 0}
 
-func connectNodeRPC(ctx *appContext, cfg *config) (*dcrrpcclient.Client, semver, error) {
+func connectNodeRPC(ctx *appContext, cfg *config) (*rpcclient.Client, semver, error) {
 	var nodeVer semver
 
 	dcrdCert, err := ioutil.ReadFile(cfg.DcrdCert)
@@ -30,7 +30,7 @@ func connectNodeRPC(ctx *appContext, cfg *config) (*dcrrpcclient.Client, semver,
 		"using certificate located in %s",
 		cfg.DcrdHost, cfg.DcrdUser, cfg.DcrdCert)
 
-	connCfgDaemon := &dcrrpcclient.ConnConfig{
+	connCfgDaemon := &rpcclient.ConnConfig{
 		Host:         cfg.DcrdHost,
 		Endpoint:     "ws", // websocket
 		User:         cfg.DcrdUser,
@@ -39,7 +39,7 @@ func connectNodeRPC(ctx *appContext, cfg *config) (*dcrrpcclient.Client, semver,
 	}
 
 	ntfnHandlers := getNodeNtfnHandlers(ctx, connCfgDaemon)
-	dcrdClient, err := dcrrpcclient.New(connCfgDaemon, ntfnHandlers)
+	dcrdClient, err := rpcclient.New(connCfgDaemon, ntfnHandlers)
 	if err != nil {
 		log.Errorf("Failed to start dcrd RPC client: %s\n", err.Error())
 		return nil, nodeVer, err
@@ -64,7 +64,7 @@ func connectNodeRPC(ctx *appContext, cfg *config) (*dcrrpcclient.Client, semver,
 	return dcrdClient, nodeVer, nil
 }
 
-func connectWalletRPC(cfg *config) (*dcrrpcclient.Client, semver, error) {
+func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 	var walletVer semver
 
 	dcrwCert, err := ioutil.ReadFile(cfg.WalletCert)
@@ -78,7 +78,7 @@ func connectWalletRPC(cfg *config) (*dcrrpcclient.Client, semver, error) {
 		"using certificate located in %s",
 		cfg.WalletHost, cfg.WalletUser, cfg.WalletCert)
 
-	connCfgWallet := &dcrrpcclient.ConnConfig{
+	connCfgWallet := &rpcclient.ConnConfig{
 		Host:         cfg.WalletHost,
 		Endpoint:     "ws",
 		User:         cfg.WalletUser,
@@ -87,7 +87,7 @@ func connectWalletRPC(cfg *config) (*dcrrpcclient.Client, semver, error) {
 	}
 
 	ntfnHandlers := getWalletNtfnHandlers(cfg)
-	dcrwClient, err := dcrrpcclient.New(connCfgWallet, ntfnHandlers)
+	dcrwClient, err := rpcclient.New(connCfgWallet, ntfnHandlers)
 	if err != nil {
 		log.Errorf("Verify that username and password is correct and that "+
 			"rpc.cert is for your wallet: %v", cfg.WalletCert)
@@ -244,7 +244,7 @@ func walletGetTickets(ctx *appContext) map[chainhash.Hash]string {
 	}
 
 	type promise struct {
-		dcrrpcclient.FutureGetTransactionResult
+		rpcclient.FutureGetTransactionResult
 	}
 	promises := make([]promise, 0, len(tickets))
 

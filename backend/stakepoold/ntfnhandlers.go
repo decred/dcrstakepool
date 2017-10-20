@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrrpcclient"
+	"github.com/decred/dcrd/rpcclient"
 )
 
 // Define notification handlers
-func getNodeNtfnHandlers(ctx *appContext, connCfg *dcrrpcclient.ConnConfig) *dcrrpcclient.NotificationHandlers {
-	return &dcrrpcclient.NotificationHandlers{
+func getNodeNtfnHandlers(ctx *appContext, connCfg *rpcclient.ConnConfig) *rpcclient.NotificationHandlers {
+	return &rpcclient.NotificationHandlers{
 		OnNewTickets: func(blockHash *chainhash.Hash, blockHeight int64, stakeDifficulty int64, tickets []*chainhash.Hash) {
 			nt := NewTicketsForBlock{
 				blockHash:   blockHash,
@@ -42,8 +42,8 @@ func getNodeNtfnHandlers(ctx *appContext, connCfg *dcrrpcclient.ConnConfig) *dcr
 	}
 }
 
-func getWalletNtfnHandlers(cfg *config) *dcrrpcclient.NotificationHandlers {
-	return &dcrrpcclient.NotificationHandlers{
+func getWalletNtfnHandlers(cfg *config) *rpcclient.NotificationHandlers {
+	return &rpcclient.NotificationHandlers{
 		OnUnknownNotification: func(method string, params []json.RawMessage) {
 			log.Infof("ignoring notification %v", method)
 		},
