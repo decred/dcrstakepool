@@ -108,18 +108,19 @@ func StartStakepooldService(grpcCommandQueueChan chan *GRPCCommandQueue, server 
 }
 
 func (s *stakepooldServer) processSetCommand(ctx context.Context, cmd *GRPCCommandQueue) error {
-	// Don't block on messaging.  We want to make sure we can
-	// handle the next call ASAP.
+	// send gRPC command to the handler in main
 	select {
 	case s.grpcCommandQueueChan <- cmd:
 		select {
 		case <-cmd.ResponseEmptyChan:
+			// either it worked or there's a deadlock and timeout will happen
 			return nil
 		case <-ctx.Done():
+			// hit the timeout
 			return ctx.Err()
 		}
 	default:
-		// We log this in order to detect if we potentially have a deadlock.
+		// potentially have a deadlock or a closed/invalid channel
 		err := fmt.Errorf("%v: unable to signal stakepoold", cmd.Command.String())
 		log.Debug(err)
 		return err
@@ -129,12 +130,12 @@ func (s *stakepooldServer) processSetCommand(ctx context.Context, cmd *GRPCComma
 func (s *stakepooldServer) processTicketCommand(ctx context.Context, cmd *GRPCCommandQueue) ([]*pb.TicketEntry, error) {
 	tickets := make([]*pb.TicketEntry, 0)
 
-	// Don't block on messaging.  We want to make sure we can
-	// handle the next call ASAP.
+	// send gRPC command to the handler in main
 	select {
 	case s.grpcCommandQueueChan <- cmd:
 		select {
 		case ticketsResponse := <-cmd.ResponseTicketsMSAChan:
+			// format and return the gRPC response
 			for tickethash, msa := range ticketsResponse {
 				tickets = append(tickets, &pb.TicketEntry{
 					TicketAddress: msa,
@@ -143,10 +144,11 @@ func (s *stakepooldServer) processTicketCommand(ctx context.Context, cmd *GRPCCo
 			}
 			return tickets, nil
 		case <-ctx.Done():
+			// hit the timeout
 			return nil, ctx.Err()
 		}
 	default:
-		// We log this in order to detect if we potentially have a deadlock.
+		// potentially have a deadlock or a closed/invalid channel
 		err := fmt.Errorf("%v: unable to signal stakepoold", cmd.Command.String())
 		log.Debug(err)
 		return nil, err
