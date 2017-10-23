@@ -179,7 +179,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 // getNetworkName will strip any suffix from a network name starting with
 // "testnet" (e.g. "testnet2"). This is primarily intended for the tickets page,
 // which generates block explorer links using a value set by the network string,
-// which is a problem since there is no testnet2.deced.org host.
+// which is a problem since there is no testnet2.decred.org host.
 func (controller *MainController) getNetworkName() string {
 	if strings.HasPrefix(controller.params.Name, "testnet") {
 		return "testnet"
@@ -654,7 +654,7 @@ func (controller *MainController) WalletStatus() ([]*dcrjson.WalletInfoResult, e
 	return controller.rpcServers.WalletStatus()
 }
 
-// handlePotentialFatalError is a helper funtion to do log possibly
+// handlePotentialFatalError is a helper function to do log possibly
 // fatal rpc errors and also stops the servers to avoid any potential
 // further damage.
 func (controller *MainController) handlePotentialFatalError(fn string, err error) {
@@ -960,7 +960,6 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	c.Env["PoolLink"] = controller.poolLink
 
 	t := controller.GetTemplate(c)
-	//t := c.Env["Template"].(*template.Template)
 
 	// execute the named template with data in c.Env
 	widgets := helpers.Parse(t, "home", c.Env)

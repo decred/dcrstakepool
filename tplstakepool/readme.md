@@ -1,13 +1,13 @@
 ## Stakepool Theme Customization Files
 
-This Theme is allready installed in the views/ and public/ Directory of the document root.
+This theme is already installed in the views/ and public/ directories of the document root.
 
-If you want to customize the css and js files you can do so by editing the files in the tplstakepool/src/ directories.
+If you want to customize the CSS and JS files you can do so by editing the files in the tplstakepool/src/ directories.
 
-When you are finished with customization you have to build the css and js files into the public/ directory in the document root.
+When you are finished with customization you have to build the CSS and JS files into the public/ directory in the document root.
 
-### Prequisite
-* node
+### Prerequisites
+* node.js
 * npm
 
 ### Installation
@@ -20,8 +20,8 @@ npm install -g bower
 npm install -g grunt-cli
 ```
 
-### Build the ressources
-In order to build the static files you have to run grunt tasks which will generate public/ directory in the document root with the static js and css files, fonts and images.
+### Build the resources
+In order to build the static files you have to run grunt tasks which will generate public/ directory in the document root with the static JS and CSS files, fonts and images.
 
 This Process will overwrite the old Theme, including all Files in the public/ directory.
 

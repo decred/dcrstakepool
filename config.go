@@ -157,7 +157,7 @@ func supportedSubsystems() []string {
 		subsystems = append(subsystems, subsysID)
 	}
 
-	// Sort the subsytems for stable display.
+	// Sort the subsystems for stable display.
 	sort.Strings(subsystems)
 	return subsystems
 }
@@ -166,7 +166,7 @@ func supportedSubsystems() []string {
 // the levels accordingly.  An appropriate error is returned if anything is
 // invalid.
 func parseAndSetDebugLevels(debugLevel string) error {
-	// When the specified string doesn't have any delimters, treat it as
+	// When the specified string doesn't have any delimiters, treat it as
 	// the log level for all subsystems.
 	if !strings.Contains(debugLevel, ",") && !strings.Contains(debugLevel, "=") {
 		// Validate debug log level.
