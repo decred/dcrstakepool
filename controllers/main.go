@@ -2134,7 +2134,6 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 	c.Env["FlashError"] = session.Flashes("votingError")
 	c.Env["FlashSuccess"] = session.Flashes("votingSuccess")
 	c.Env["IsVoting"] = true
-	c.Env["User"] = user
 	c.Env["VoteVersion"] = controller.voteVersion
 
 	widgets := controller.Parse(t, "voting", c.Env)
