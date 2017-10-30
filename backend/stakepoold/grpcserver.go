@@ -80,9 +80,11 @@ func generateRPCKeyPair(writeKey bool) (tls.Certificate, error) {
 
 func interceptUnary(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	startTime := time.Now()
+
+	// parse out method from '/package.service/method'
 	methodSplit := strings.SplitAfterN(info.FullMethod, "/", 3)
 	method := methodSplit[2]
-	p, ok := peer.FromContext(ctx)
+	peer, peerOk := peer.FromContext(ctx)
 
 	// limit the time we take
 	ctx, cancel := context.WithTimeout(ctx, rpcserver.GRPCCommandTimeout)
@@ -90,16 +92,15 @@ func interceptUnary(ctx context.Context, req interface{}, info *grpc.UnaryServer
 	defer cancel()
 
 	resp, err = handler(ctx, req)
-	if err != nil && ok {
+	if err != nil && peerOk {
 		grpcLog.Errorf("%s invoked by %s failed: %v",
-			method, p.Addr.String(), err)
+			method, peer.Addr.String(), err)
 	}
 
 	defer func() {
-		p, ok := peer.FromContext(ctx)
-		if ok {
+		if peerOk {
 			grpcLog.Infof("%s invoked by %s processed in %v", method,
-				p.Addr.String(), time.Since(startTime))
+				peer.Addr.String(), time.Since(startTime))
 		} else {
 			grpcLog.Infof("%s processed in %v", method,
 				time.Since(startTime))
