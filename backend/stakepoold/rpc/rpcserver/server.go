@@ -127,7 +127,7 @@ func (s *stakepooldServer) processSetCommand(ctx context.Context, cmd *GRPCComma
 	}
 }
 
-func (s *stakepooldServer) processTicketCommand(ctx context.Context, cmd *GRPCCommandQueue) ([]*pb.TicketEntry, error) {
+func (s *stakepooldServer) processGetTicketCommand(ctx context.Context, cmd *GRPCCommandQueue) ([]*pb.TicketEntry, error) {
 	tickets := make([]*pb.TicketEntry, 0)
 
 	// send gRPC command to the handler in main
@@ -156,7 +156,7 @@ func (s *stakepooldServer) processTicketCommand(ctx context.Context, cmd *GRPCCo
 }
 
 func (s *stakepooldServer) GetAddedLowFeeTickets(ctx context.Context, req *pb.GetAddedLowFeeTicketsRequest) (*pb.GetAddedLowFeeTicketsResponse, error) {
-	tickets, err := s.processTicketCommand(ctx, &GRPCCommandQueue{
+	tickets, err := s.processGetTicketCommand(ctx, &GRPCCommandQueue{
 		Command:                GetAddedLowFeeTickets,
 		ResponseTicketsMSAChan: make(chan map[chainhash.Hash]string),
 	})
@@ -164,7 +164,7 @@ func (s *stakepooldServer) GetAddedLowFeeTickets(ctx context.Context, req *pb.Ge
 }
 
 func (s *stakepooldServer) GetIgnoredLowFeeTickets(ctx context.Context, req *pb.GetIgnoredLowFeeTicketsRequest) (*pb.GetIgnoredLowFeeTicketsResponse, error) {
-	tickets, err := s.processTicketCommand(ctx, &GRPCCommandQueue{
+	tickets, err := s.processGetTicketCommand(ctx, &GRPCCommandQueue{
 		Command:                GetIgnoredLowFeeTickets,
 		ResponseTicketsMSAChan: make(chan map[chainhash.Hash]string),
 	})
@@ -172,7 +172,7 @@ func (s *stakepooldServer) GetIgnoredLowFeeTickets(ctx context.Context, req *pb.
 }
 
 func (s *stakepooldServer) GetLiveTickets(ctx context.Context, req *pb.GetLiveTicketsRequest) (*pb.GetLiveTicketsResponse, error) {
-	tickets, err := s.processTicketCommand(ctx, &GRPCCommandQueue{
+	tickets, err := s.processGetTicketCommand(ctx, &GRPCCommandQueue{
 		Command:                GetLiveTickets,
 		ResponseTicketsMSAChan: make(chan map[chainhash.Hash]string),
 	})
