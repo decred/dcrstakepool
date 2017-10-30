@@ -27,6 +27,9 @@ database and reload its config.
   - To accommodate changes to the gRPC API, dcrstakepool/stakepoold had
   their API versions changed to require/advertize 4.0.0. This requires
   performing the upgrade steps outlined below.
+- **KNOWN ISSUE** Total tickets count reported by stakepoold may
+  not be totally accurate until low fee tickets that have been added to
+  the database can be marked as voted.  This will be resolved by future work. ([#201](https://github.com/decred/dcrstakepool/issues/201)).
 
 ## Git Tip Upgrade Guide
 
