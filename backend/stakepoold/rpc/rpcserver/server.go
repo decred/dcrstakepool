@@ -13,7 +13,6 @@
 package rpcserver
 
 import (
-	"fmt"
 	"time"
 
 	"golang.org/x/net/context"
@@ -119,11 +118,6 @@ func (s *stakepooldServer) processSetCommand(ctx context.Context, cmd *GRPCComma
 			// hit the timeout
 			return ctx.Err()
 		}
-	default:
-		// potentially have a deadlock or a closed/invalid channel
-		err := fmt.Errorf("%v: unable to signal stakepoold", cmd.Command.String())
-		log.Debug(err)
-		return err
 	}
 }
 
@@ -147,11 +141,6 @@ func (s *stakepooldServer) processGetTicketCommand(ctx context.Context, cmd *GRP
 			// hit the timeout
 			return nil, ctx.Err()
 		}
-	default:
-		// potentially have a deadlock or a closed/invalid channel
-		err := fmt.Errorf("%v: unable to signal stakepoold", cmd.Command.String())
-		log.Debug(err)
-		return nil, err
 	}
 }
 
