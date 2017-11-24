@@ -37,11 +37,9 @@ message SetAddedLowFeeTicketsRequest {
 	repeated TicketEntry tickets = 1;
 }
 message SetAddedLowFeeTicketsResponse {
-	bool Processed = 1;
 }
 
 message SetUserVotingPrefsResponse {
-	bool Processed = 1;
 }
 message SetUserVotingPrefsRequest {
 	repeated UserVotingConfigEntry user_voting_config = 1;

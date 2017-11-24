@@ -208,10 +208,10 @@ func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.Se
 		RequestTicketData: addedLowFeeTickets,
 		ResponseEmptyChan: make(chan struct{}),
 	})
-	if err == nil {
-		return &pb.SetAddedLowFeeTicketsResponse{Processed: true}, nil
+	if err != nil {
+		return nil, err
 	}
-	return &pb.SetAddedLowFeeTicketsResponse{Processed: false}, err
+	return &pb.SetAddedLowFeeTicketsResponse{}, nil
 }
 
 func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUserVotingPrefsRequest) (*pb.SetUserVotingPrefsResponse, error) {
@@ -230,8 +230,8 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 		RequestUserData:   userVotingPrefs,
 		ResponseEmptyChan: make(chan struct{}),
 	})
-	if err == nil {
-		return &pb.SetUserVotingPrefsResponse{Processed: true}, nil
+	if err != nil {
+		return nil, err
 	}
-	return &pb.SetUserVotingPrefsResponse{Processed: false}, err
+	return &pb.SetUserVotingPrefsResponse{}, nil
 }

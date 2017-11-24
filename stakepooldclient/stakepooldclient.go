@@ -118,7 +118,7 @@ func StakepooldGetLiveTickets(conn *grpc.ClientConn) (map[chainhash.Hash]string,
 	return liveTickets, err
 }
 
-func StakepooldSetAddedLowFeeTickets(conn *grpc.ClientConn, dbTickets []models.LowFeeTicket) (bool, error) {
+func StakepooldSetAddedLowFeeTickets(conn *grpc.ClientConn, dbTickets []models.LowFeeTicket) (processed bool, err error) {
 	var tickets []*pb.TicketEntry
 	for _, ticket := range dbTickets {
 		hash, err := chainhash.NewHashFromStr(ticket.TicketHash)
@@ -136,13 +136,15 @@ func StakepooldSetAddedLowFeeTickets(conn *grpc.ClientConn, dbTickets []models.L
 	setAddedTicketsReq := &pb.SetAddedLowFeeTicketsRequest{
 		Tickets: tickets,
 	}
-	resp, err := client.SetAddedLowFeeTickets(context.Background(),
+	_, err = client.SetAddedLowFeeTickets(context.Background(),
 		setAddedTicketsReq)
-
-	return resp.Processed, err
+	if err != nil {
+		return false, err
+	}
+	return true, err
 }
 
-func StakepooldSetUserVotingPrefs(conn *grpc.ClientConn, dbUsers map[int64]*models.User) (bool, error) {
+func StakepooldSetUserVotingPrefs(conn *grpc.ClientConn, dbUsers map[int64]*models.User) (processed bool, err error) {
 	var users []*pb.UserVotingConfigEntry
 	for userid, data := range dbUsers {
 		users = append(users, &pb.UserVotingConfigEntry{
@@ -157,8 +159,10 @@ func StakepooldSetUserVotingPrefs(conn *grpc.ClientConn, dbUsers map[int64]*mode
 	setVotingConfigReq := &pb.SetUserVotingPrefsRequest{
 		UserVotingConfig: users,
 	}
-	resp, err := client.SetUserVotingPrefs(context.Background(),
+	_, err = client.SetUserVotingPrefs(context.Background(),
 		setVotingConfigReq)
-
-	return resp.Processed, err
+	if err != nil {
+		return false, err
+	}
+	return true, err
 }
