@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/gob"
 	"encoding/hex"
 	"errors"
@@ -19,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/decred/dcrd/blockchain/stake"
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
@@ -26,6 +28,8 @@ import (
 	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrd/wire"
+
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/txrules"
 	"github.com/decred/dcrwallet/wallet/udb"
@@ -37,22 +41,24 @@ type appContext struct {
 	sync.RWMutex
 
 	// locking required
+	addedLowFeeTicketsMSA   map[chainhash.Hash]string            // [ticket]multisigaddr
+	ignoredLowFeeTicketsMSA map[chainhash.Hash]string            // [ticket]multisigaddr
 	liveTicketsMSA          map[chainhash.Hash]string            // [ticket]multisigaddr
-	manuallyAddedTicketsMSA map[chainhash.Hash]string            // [ticket]multisigaddr
 	userVotingConfig        map[string]userdata.UserVotingConfig // [multisigaddr]
 
 	// no locking required
 	coldwalletextpub       *hdkeychain.ExtendedKey
 	dataPath               string
 	feeAddrs               map[string]struct{}
-	feePercent             float64
+	poolFees               float64
+	grpcCommandQueueChan   chan *rpcserver.GRPCCommandQueue
 	newTicketsChan         chan NewTicketsForBlock
 	nodeConnection         *rpcclient.Client
 	params                 *chaincfg.Params
+	lastBlockSeenHash      *chainhash.Hash
+	lastBlockSeenHeight    int64
 	wg                     sync.WaitGroup // wait group for go routine exits
 	quit                   chan struct{}
-	reloadTickets          chan struct{}
-	reloadUserConfig       chan struct{}
 	spentmissedTicketsChan chan SpentMissedTicketsForBlock
 	userData               *userdata.UserData
 	votingConfig           *VotingConfig
@@ -95,21 +101,21 @@ var (
 	dataFilenameTemplate = "KIND-DATE-VERSION.gob"
 	// save individual versions of fields in case they're changed in the future
 	// and keep a global version that represents the overall schema version too
-	dataVersionCommon               = "1.0.0"
-	dataVersionLiveTickets          = "1.0.0"
-	dataVersionManuallyAddedTickets = "1.0.0"
-	dataVersionUserVotingConfig     = "1.0.0"
-	saveFilesToKeep                 = 10
-	saveFileSchema                  = struct {
-		LiveTickets          string
-		ManuallyAddedTickets string
-		UserVotingConfig     string
-		Version              string
+	dataVersionCommon             = "1.1.0"
+	dataVersionAddedLowFeeTickets = "1.0.0"
+	dataVersionLiveTickets        = "1.0.0"
+	dataVersionUserVotingConfig   = "1.0.0"
+	saveFilesToKeep               = 10
+	saveFileSchema                = struct {
+		AddedLowFeeTickets string
+		LiveTickets        string
+		UserVotingConfig   string
+		Version            string
 	}{
-		LiveTickets:          dataVersionLiveTickets,
-		ManuallyAddedTickets: dataVersionManuallyAddedTickets,
-		UserVotingConfig:     dataVersionUserVotingConfig,
-		Version:              dataVersionCommon,
+		AddedLowFeeTickets: dataVersionAddedLowFeeTickets,
+		LiveTickets:        dataVersionLiveTickets,
+		UserVotingConfig:   dataVersionUserVotingConfig,
+		Version:            dataVersionCommon,
 	}
 	ticketTypeNew         = "New"
 	ticketTypeSpentMissed = "SpentMissed"
@@ -178,6 +184,94 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 	return addresses, nil
 }
 
+// evaluateStakePoolTicket evaluates a stake pool ticket to see if it's
+// acceptable to the stake pool. The ticket must pay out to the stake
+// pool cold wallet, and must have a sufficient fee.
+func evaluateStakePoolTicket(ctx *appContext, tx *wire.MsgTx, blockHeight int32, poolUser dcrutil.Address) (bool, error) {
+	// Check the first commitment output (txOuts[1])
+	// and ensure that the address found there exists
+	// in the list of approved addresses. Also ensure
+	// that the fee exists and is of the amount
+	// requested by the pool.
+	commitmentOut := tx.TxOut[1]
+	commitAddr, err := stake.AddrFromSStxPkScrCommitment(
+		commitmentOut.PkScript, ctx.params)
+	if err != nil {
+		return false, fmt.Errorf("Failed to parse commit out addr: %s",
+			err.Error())
+	}
+
+	// Extract the fee from the ticket.
+	in := dcrutil.Amount(0)
+	for i := range tx.TxOut {
+		if i%2 != 0 {
+			commitAmt, err := stake.AmountFromSStxPkScrCommitment(
+				tx.TxOut[i].PkScript)
+			if err != nil {
+				return false, fmt.Errorf("Failed to parse commit "+
+					"out amt for commit in vout %v: %s", i, err.Error())
+			}
+			in += commitAmt
+		}
+	}
+	out := dcrutil.Amount(0)
+	for i := range tx.TxOut {
+		out += dcrutil.Amount(tx.TxOut[i].Value)
+	}
+	fees := in - out
+
+	_, exists := ctx.feeAddrs[commitAddr.EncodeAddress()]
+	if exists {
+		commitAmt, err := stake.AmountFromSStxPkScrCommitment(
+			commitmentOut.PkScript)
+		if err != nil {
+			return false, fmt.Errorf("failed to parse commit "+
+				"out amt: %s", err.Error())
+		}
+
+		// Calculate the fee required based on the current
+		// height and the required amount from the pool.
+		feeNeeded := txrules.StakePoolTicketFee(dcrutil.Amount(
+			tx.TxOut[0].Value), fees, blockHeight, ctx.poolFees,
+			ctx.params)
+		if commitAmt < feeNeeded {
+			log.Warnf("User %s submitted ticket %v which "+
+				"has less fees than are required to use this "+
+				"stake pool and is being skipped (required: %v"+
+				", found %v)", commitAddr.EncodeAddress(),
+				tx.TxHash(), feeNeeded, commitAmt)
+
+			// Reject the entire transaction if it didn't
+			// pay the pool server fees.
+			return false, nil
+		}
+	} else {
+		log.Warnf("Unknown pool commitment address %s for ticket %v",
+			commitAddr.EncodeAddress(), tx.TxHash())
+		return false, nil
+	}
+
+	log.Debugf("Accepted valid stake pool ticket %v committing %v in fees",
+		tx.TxHash(), tx.TxOut[0].Value)
+
+	return true, nil
+}
+
+// MsgTxFromHex returns a wire.MsgTx struct built from the transaction hex string
+func MsgTxFromHex(txhex string) *wire.MsgTx {
+	txBytes, err := hex.DecodeString(txhex)
+	if err != nil {
+		log.Warnf("DecodeString failed for %v: %v", txhex, err)
+		return nil
+	}
+	msgTx := wire.NewMsgTx()
+	if err = msgTx.Deserialize(bytes.NewReader(txBytes)); err != nil {
+		log.Warnf("Deserialize failed for %v: %v", txBytes, err)
+		return nil
+	}
+	return msgTx
+}
+
 func runMain() error {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
@@ -235,11 +329,18 @@ func runMain() error {
 	log.Infof("default voting config: VoteVersion %v VoteBits %v", votingConfig.VoteVersion,
 		votingConfig.VoteBits)
 
-	var userdata = &userdata.UserData{}
-	userdata.DBSetConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	var userData = &userdata.UserData{}
+	userData.DBSetConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
 
-	userVotingConfig, err := userdata.MySQLFetchUserVotingConfig()
-	if err != nil {
+	addedLowFeeTicketsMSA, errMySQLFetchAddedLowFeeTickets := userData.MySQLFetchAddedLowFeeTickets()
+	if errMySQLFetchAddedLowFeeTickets != nil {
+		log.Errorf("could not obtain voting config from MySQL: %v", err)
+	} else {
+		log.Infof("loaded prefs for %d users from MySQL", len(addedLowFeeTicketsMSA))
+	}
+
+	userVotingConfig, errMySQLFetchUserVotingConfig := userData.MySQLFetchUserVotingConfig()
+	if errMySQLFetchUserVotingConfig != nil {
 		log.Errorf("could not obtain voting config from MySQL: %v", err)
 	} else {
 		log.Infof("loaded prefs for %d users from MySQL", len(userVotingConfig))
@@ -252,16 +353,16 @@ func runMain() error {
 	}
 
 	ctx := &appContext{
-		dataPath:               cfg.DataDir,
-		feeAddrs:               feeAddrs,
-		feePercent:             cfg.PoolFees,
-		newTicketsChan:         make(chan NewTicketsForBlock),
-		params:                 activeNetParams.Params,
-		quit:                   make(chan struct{}),
-		reloadUserConfig:       make(chan struct{}),
-		reloadTickets:          make(chan struct{}),
+		addedLowFeeTicketsMSA: addedLowFeeTicketsMSA,
+		dataPath:              cfg.DataDir,
+		feeAddrs:              feeAddrs,
+		poolFees:              cfg.PoolFees,
+		grpcCommandQueueChan:  make(chan *rpcserver.GRPCCommandQueue),
+		newTicketsChan:        make(chan NewTicketsForBlock),
+		params:                activeNetParams.Params,
+		quit:                  make(chan struct{}),
 		spentmissedTicketsChan: make(chan SpentMissedTicketsForBlock),
-		userData:               userdata,
+		userData:               userData,
 		userVotingConfig:       userVotingConfig,
 		votingConfig:           &votingConfig,
 		walletConnection:       walletConn,
@@ -292,8 +393,21 @@ func runMain() error {
 		log.Warnf("pruneData error: %v", err)
 	}
 
+	// load AddedLowFeeTicketsMSA from disk cache if necessary
+	if len(ctx.addedLowFeeTicketsMSA) == 0 && errMySQLFetchAddedLowFeeTickets != nil {
+		err = loadData(ctx, "AddedLowFeeTickets")
+		if err != nil {
+			// might not have any so continue
+			log.Warnf("unable to load added low fee tickets from disk "+
+				"cache: %v", err)
+		} else {
+			log.Infof("Loaded %v AddedLowFeeTickets from disk cache",
+				len(ctx.addedLowFeeTicketsMSA))
+		}
+	}
+
 	// load userVotingConfig from disk cache if necessary
-	if len(userVotingConfig) == 0 {
+	if len(ctx.userVotingConfig) == 0 && errMySQLFetchUserVotingConfig != nil {
 		err = loadData(ctx, "UserVotingConfig")
 		if err != nil {
 			// we could possibly die out here but it's probably better
@@ -303,23 +417,29 @@ func runMain() error {
 				"cache: %v", err)
 		} else {
 			log.Infof("Loaded UserVotingConfig for %d users from disk cache",
-				len(userVotingConfig))
+				len(ctx.userVotingConfig))
 		}
+	}
+
+	if len(ctx.userVotingConfig) == 0 {
+		err := errors.New("no users?")
+		log.Error(err)
+		return err
 	}
 
 	// refresh the ticket list and make sure a block didn't come in
 	// while we were getting it
 	for {
-		prevHash, prevHeight, err := nodeConn.GetBestBlock()
+		curHash, curHeight, err := nodeConn.GetBestBlock()
 		if err != nil {
 			log.Errorf("unable to get bestblock from dcrd: %v", err)
 			return err
 		}
-		log.Infof("current block height %v hash %v", prevHeight, prevHash)
+		log.Infof("current block height %v hash %v", curHeight, curHash)
 
-		ctx.liveTicketsMSA = walletGetTickets(ctx)
+		ctx.ignoredLowFeeTicketsMSA, ctx.liveTicketsMSA = walletGetTickets(ctx, curHeight)
 
-		curHash, curHeight, err := nodeConn.GetBestBlock()
+		afterHash, afterHeight, err := nodeConn.GetBestBlock()
 		if err != nil {
 			log.Errorf("unable to get bestblock from dcrd: %v", err)
 			return err
@@ -327,11 +447,11 @@ func runMain() error {
 
 		// if a block didn't come in while we were processing tickets
 		// then we're fine
-		if prevHash.IsEqual(curHash) && prevHeight == curHeight {
+		if curHash.IsEqual(afterHash) && curHeight == afterHeight {
 			break
 		}
-		log.Infof("block %v came in during GetTickets, refreshing...",
-			curHeight)
+		log.Infof("block %v hash %v came in during GetTickets, refreshing...",
+			afterHeight, afterHash)
 	}
 
 	if err = nodeConn.NotifyBlocks(); err != nil {
@@ -357,7 +477,7 @@ func runMain() error {
 	log.Info("subscribed to notifications from dcrd")
 
 	if !cfg.NoRPCListen {
-		startGRPCServers(ctx.reloadUserConfig)
+		startGRPCServers(ctx.grpcCommandQueueChan)
 	}
 
 	// Only accept a single CTRL+C
@@ -375,19 +495,24 @@ func runMain() error {
 	}()
 
 	ctx.wg.Add(4)
+	go ctx.grpcCommandQueueHandler()
 	go ctx.newTicketHandler()
-	go ctx.reloadUserConfigHandler()
 	go ctx.spentmissedTicketHandler()
 	go ctx.winningTicketHandler()
 
 	if cfg.NoRPCListen {
-		// Initial reload of user voting config
-		ctx.reloadUserConfig <- struct{}{}
 		// Start reloading when a ticker fires
-		userConfigTicker := time.NewTicker(time.Second * 240)
+		configTicker := time.NewTicker(time.Second * 240)
 		go func() {
-			for range userConfigTicker.C {
-				ctx.reloadUserConfig <- struct{}{}
+			for range configTicker.C {
+				err := ctx.updateTicketDataFromMySQL()
+				if err != nil {
+					log.Warnf("updateTicketDataFromMySQL failed %v:", err)
+				}
+				err = ctx.updateUserDataFromMySQL()
+				if err != nil {
+					log.Warnf("updateUserDataFromMySQL failed %v:", err)
+				}
 			}
 		}()
 	}
@@ -517,13 +642,13 @@ func loadData(ctx *appContext, dataKind string) error {
 		}
 		dec := gob.NewDecoder(r)
 		switch dataKind {
-		case "LiveTickets":
-			err = dec.Decode(&ctx.liveTicketsMSA)
+		case "AddedLowFeeTickets":
+			err = dec.Decode(&ctx.addedLowFeeTicketsMSA)
 			if err != nil {
 				return err
 			}
-		case "ManuallyAddedTickets":
-			err = dec.Decode(&ctx.manuallyAddedTicketsMSA)
+		case "LiveTickets":
+			err = dec.Decode(&ctx.liveTicketsMSA)
 			if err != nil {
 				return err
 			}
@@ -558,15 +683,14 @@ func saveData(ctx *appContext) {
 
 		// Pre-validate whether we'll be saving or not.
 		switch filenameprefix {
+		case "AddedLowFeeTickets":
+			if len(ctx.addedLowFeeTicketsMSA) == 0 {
+				log.Warn("saveData: addedLowFeeTicketsMSA is empty; skipping save")
+				continue
+			}
 		case "LiveTickets":
 			if len(ctx.liveTicketsMSA) == 0 {
 				log.Warn("saveData: liveTicketsMSA is empty; skipping save")
-				continue
-			}
-		case "ManuallyAddedTickets":
-			if len(ctx.manuallyAddedTicketsMSA) == 0 {
-				// we don't expect to do anything with this yet so don't warn
-				// log.Warn("saveData: manuallyAddedTicketsMSA is empty; skipping save")
 				continue
 			}
 		case "UserVotingConfig":
@@ -587,15 +711,15 @@ func saveData(ctx *appContext) {
 		}
 
 		switch filenameprefix {
-		case "LiveTickets":
+		case "AddedLowFeeTickets":
 			enc := gob.NewEncoder(w)
-			if err := enc.Encode(&ctx.liveTicketsMSA); err != nil {
+			if err := enc.Encode(&ctx.addedLowFeeTicketsMSA); err != nil {
 				log.Errorf("Failed to encode file %s: %v", ctx.dataPath, err)
 				continue
 			}
-		case "ManuallyAddedTickets":
+		case "LiveTickets":
 			enc := gob.NewEncoder(w)
-			if err := enc.Encode(&ctx.manuallyAddedTicketsMSA); err != nil {
+			if err := enc.Encode(&ctx.liveTicketsMSA); err != nil {
 				log.Errorf("Failed to encode file %s: %v", ctx.dataPath, err)
 				continue
 			}
@@ -610,7 +734,6 @@ func saveData(ctx *appContext) {
 		log.Infof("saveData: successfully saved %v data to %s",
 			filenameprefix, destPath)
 	}
-
 }
 
 // ticketMetadata contains all the bits and pieces required to vote new tickets,
@@ -624,6 +747,7 @@ type ticketMetadata struct {
 	config           userdata.UserVotingConfig // voting config
 	duration         time.Duration             // overall vote duration
 	getDuration      time.Duration             // time to gettransaction
+	hex              string                    // hex encoded tx data
 	txid             *chainhash.Hash           // transaction id
 	ticketType       string                    // new or spentmissed
 	signDuration     time.Duration             // time to generatevote
@@ -663,23 +787,87 @@ func (ctx *appContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 
 			switch nt.ticketType {
 			case ticketTypeNew:
-				// Probably doesn't make sense to check manuallyAddedTicketsMSA
-				// here since the user/admin won't know about it until later
-				log.Debugf("calling nodeCheckTicketFee for %v", nt.ticket)
-				ticketFeesValid, err := nodeCheckTicketFee(ctx, res.Hex, res.BlockHash)
-				if !ticketFeesValid || err != nil {
-					log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
-						nt.ticket, nt.msa, ticketFeesValid, err)
-					// empty out the multisig address so processNewTickets won't
-					// be able to add this ticket
-					nt.msa = ""
-				}
+				// TODO(maybe): we could check if the ticket was added to the
+				// low fee list here but since it was just mined, it should be
+				// extremely unlikely to have been added before it was mined.
+
+				// save for fee checking
+				nt.hex = res.Hex
+
 			}
 			break
 		}
 	}
 	log.Debugf("getticket finished for %v ticket %v",
 		strings.ToLower(nt.ticketType), nt.ticket)
+}
+
+func (ctx *appContext) updateTicketData(newAddedLowFeeTicketsMSA map[chainhash.Hash]string) {
+	log.Debug("updateTicketData ctx.Lock")
+	ctx.Lock()
+
+	// apply unconditional updates
+	for tickethash, msa := range newAddedLowFeeTicketsMSA {
+		// remove from ignored list if present
+		delete(ctx.ignoredLowFeeTicketsMSA, tickethash)
+		// add to live list
+		ctx.liveTicketsMSA[tickethash] = msa
+	}
+
+	// if something is being deleted from the db by this update then
+	// we need to put it back on the ignored list
+	for th, m := range ctx.addedLowFeeTicketsMSA {
+		_, exists := newAddedLowFeeTicketsMSA[th]
+		if !exists {
+			ctx.ignoredLowFeeTicketsMSA[th] = m
+		}
+	}
+
+	ctx.addedLowFeeTicketsMSA = newAddedLowFeeTicketsMSA
+	addedLowFeeTicketsCount := len(ctx.addedLowFeeTicketsMSA)
+	ignoredLowFeeTicketsCount := len(ctx.ignoredLowFeeTicketsMSA)
+	liveTicketsCount := len(ctx.liveTicketsMSA)
+	ctx.Unlock()
+	log.Debug("updateTicketData ctx.Unlock")
+	// Log ticket information outside of the handler.
+	go func() {
+		log.Infof("tickets loaded -- addedLowFee %v ignoredLowFee %v live %v "+
+			"total %v", addedLowFeeTicketsCount, ignoredLowFeeTicketsCount,
+			liveTicketsCount,
+			addedLowFeeTicketsCount+ignoredLowFeeTicketsCount+liveTicketsCount)
+
+	}()
+}
+
+func (ctx *appContext) updateTicketDataFromMySQL() error {
+	start := time.Now()
+	newAddedLowFeeTicketsMSA, err := ctx.userData.MySQLFetchAddedLowFeeTickets()
+	log.Infof("MySQLFetchAddedLowFeeTickets took %v", time.Since(start))
+	if err != nil {
+		return err
+	}
+	ctx.updateTicketData(newAddedLowFeeTicketsMSA)
+	return nil
+}
+
+func (ctx *appContext) updateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
+	log.Debug("updateUserData ctx.Lock")
+	ctx.Lock()
+	ctx.userVotingConfig = newUserVotingConfig
+	ctx.Unlock()
+	log.Debug("updateUserData ctx.Unlock")
+}
+
+func (ctx *appContext) updateUserDataFromMySQL() error {
+	start := time.Now()
+	newUserVotingConfig, err := ctx.userData.MySQLFetchUserVotingConfig()
+	log.Infof("MySQLFetchUserVotingConfig took %v",
+		time.Since(start))
+	if err != nil {
+		return err
+	}
+	ctx.updateUserData(newUserVotingConfig)
+	return nil
 }
 
 // vote Generates a vote and send it off to the network.  This is a go routine!
@@ -749,7 +937,8 @@ func (ctx *appContext) processNewTickets(nt NewTicketsForBlock) {
 
 	wg.Wait()
 
-	addtickets := make(map[chainhash.Hash]string)
+	newIgnoredLowFeeTickets := make(map[chainhash.Hash]string)
+	newLiveTickets := make(map[chainhash.Hash]string)
 
 	for _, n := range newtickets {
 		if n.err != nil || n.msa == "" {
@@ -758,32 +947,67 @@ func (ctx *appContext) processNewTickets(nt NewTicketsForBlock) {
 			continue
 		}
 
-		addtickets[*n.ticket] = n.msa
-	}
+		// decode address
+		addr, err := dcrutil.DecodeAddress(n.msa)
+		if err != nil {
+			log.Warnf("invalid address %v", err)
+			continue
+		}
 
-	ticketCountNew := 0
-	ticketCountOld := 0
+		msgTx := MsgTxFromHex(n.hex)
+		if msgTx == nil {
+			log.Warnf("MsgTxFromHex failed for %v", n.hex)
+			continue
+		}
+
+		ticketFeesValid, err := evaluateStakePoolTicket(ctx, msgTx, int32(nt.blockHeight), addr)
+		if err != nil {
+			log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
+				n.ticket, n.msa, ticketFeesValid, err)
+			newIgnoredLowFeeTickets[*n.ticket] = n.msa
+		}
+
+		newLiveTickets[*n.ticket] = n.msa
+	}
 
 	log.Debug("processNewTickets ctx.Lock")
 	ctx.Lock()
-	ticketCountOld = len(ctx.liveTicketsMSA)
-	for ticket, msa := range addtickets {
+	// update ignored low fee tickets
+	for ticket, msa := range newIgnoredLowFeeTickets {
+		ctx.ignoredLowFeeTicketsMSA[ticket] = msa
+	}
+
+	// update live tickets
+	for ticket, msa := range newLiveTickets {
 		ctx.liveTicketsMSA[ticket] = msa
 	}
-	ticketCountNew = len(ctx.liveTicketsMSA)
+
+	// update counts
+	addedLowFeeTicketsCount := len(ctx.addedLowFeeTicketsMSA)
+	ignoredLowFeeTicketsCount := len(ctx.ignoredLowFeeTicketsMSA)
+	liveTicketsCount := len(ctx.liveTicketsMSA)
 	ctx.Unlock()
 	log.Debug("processNewTickets ctx.Unlock")
 
 	// Log ticket information outside of the handler.
 	go func() {
-		for ticket, msa := range addtickets {
-			log.Infof("added new ticket %v msa %v", ticket, msa)
+		for ticket, msa := range newLiveTickets {
+			log.Infof("added new live ticket %v msa %v", ticket, msa)
+		}
+
+		for ticket, msa := range newIgnoredLowFeeTickets {
+			log.Infof("added new ignored ticket %v msa %v", ticket, msa)
 		}
 
 		log.Infof("processNewTickets: height %v block %v duration %v "+
-			"newtickets %v ticketCountOld %v ticketCountNew %v", nt.blockHeight,
-			nt.blockHash, time.Since(start), len(addtickets), ticketCountOld,
-			ticketCountNew)
+			"ignored %v live %v notours %v", nt.blockHeight,
+			nt.blockHash, time.Since(start), len(newIgnoredLowFeeTickets),
+			len(newLiveTickets),
+			len(nt.newTickets)-len(newIgnoredLowFeeTickets)-len(newLiveTickets))
+		log.Infof("tickets loaded -- addedLowFee %v ignoredLowFee %v live %v "+
+			"total %v", addedLowFeeTicketsCount, ignoredLowFeeTicketsCount,
+			liveTicketsCount,
+			addedLowFeeTicketsCount+ignoredLowFeeTicketsCount+liveTicketsCount)
 	}()
 }
 
@@ -838,9 +1062,11 @@ func (ctx *appContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 	ctx.Lock()
 	ticketCountOld = len(ctx.liveTicketsMSA)
 	for _, ticket := range missedtickets {
+		delete(ctx.ignoredLowFeeTicketsMSA, *ticket)
 		delete(ctx.liveTicketsMSA, *ticket)
 	}
 	for _, ticket := range spenttickets {
+		delete(ctx.ignoredLowFeeTicketsMSA, *ticket)
 		delete(ctx.liveTicketsMSA, *ticket)
 	}
 	ticketCountNew = len(ctx.liveTicketsMSA)
@@ -972,30 +1198,40 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	}()
 }
 
-func (ctx *appContext) reloadUserConfigHandler() {
+func (ctx *appContext) grpcCommandQueueHandler() {
 	defer ctx.wg.Done()
 
 	for {
 		select {
-		case <-ctx.reloadUserConfig:
-			start := time.Now()
-			newUserConfig, err :=
-				ctx.userData.MySQLFetchUserVotingConfig()
-			log.Infof("MySQLFetchUserVotingConfig: %v",
-				time.Since(start))
-
-			if err != nil {
-				log.Errorf("unable to reload user config due "+
-					"to db error: %v", err)
-				continue
+		case grpcCommand := <-ctx.grpcCommandQueueChan:
+			switch grpcCommand.Command {
+			case rpcserver.GetAddedLowFeeTickets:
+				ctx.RLock()
+				ticketsMSA := ctx.addedLowFeeTicketsMSA
+				ctx.RUnlock()
+				grpcCommand.ResponseTicketsMSAChan <- ticketsMSA
+			case rpcserver.GetIgnoredLowFeeTickets:
+				ctx.RLock()
+				ticketsMSA := ctx.ignoredLowFeeTicketsMSA
+				grpcCommand.ResponseTicketsMSAChan <- ticketsMSA
+				ctx.RUnlock()
+			case rpcserver.GetLiveTickets:
+				ctx.RLock()
+				ticketsMSA := ctx.liveTicketsMSA
+				ctx.RUnlock()
+				grpcCommand.ResponseTicketsMSAChan <- ticketsMSA
+			case rpcserver.SetAddedLowFeeTickets:
+				ctx.updateTicketData(grpcCommand.RequestTicketData)
+				grpcCommand.ResponseEmptyChan <- struct{}{}
+			case rpcserver.SetUserVotingPrefs:
+				ctx.updateUserData(grpcCommand.RequestUserData)
+				grpcCommand.ResponseEmptyChan <- struct{}{}
+			default:
+				err := fmt.Errorf("grpcCommandQueueHandler: ignoring "+
+					"unregistered gRPC command '%v'",
+					grpcCommand.Command.String())
+				log.Warn(err)
 			}
-
-			// replace UserVotingConfig
-			log.Debug("reloadUserConfigHandler ctx.Lock")
-			ctx.Lock()
-			ctx.userVotingConfig = newUserConfig
-			ctx.Unlock()
-			log.Debug("reloadUserConfigHandler ctx.Unlock")
 		case <-ctx.quit:
 			return
 		}

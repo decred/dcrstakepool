@@ -16,6 +16,34 @@ vote on their behalf when the ticket is selected.
 - The architecture is subject to change in the future to lessen the dependence
   on dcrwallet and MySQL.
 
+## Git Tip Release notes
+
+- The handling of tickets considered invalid because they pay too-low-of-a-fee
+is now integrated directly into dcrstakepool and stakepoold.
+  - Users who pass both the adminIPs and the new adminUserIDs checks will see a new link on the
+menu to the new administrative add tickets page.
+  - Tickets are added to the MySQL database and then stakepoold is triggered to pull an update from the
+database and reload its config.
+  - To accommodate changes to the gRPC API, dcrstakepool/stakepoold had
+  their API versions changed to require/advertize 4.0.0. This requires
+  performing the upgrade steps outlined below.
+- **KNOWN ISSUE** Total tickets count reported by stakepoold may
+  not be totally accurate until low fee tickets that have been added to
+  the database can be marked as voted.  This will be resolved by future work. ([#201](https://github.com/decred/dcrstakepool/issues/201)).
+
+## Git Tip Upgrade Guide
+
+1) Announce maintenance and shut down dcrstakepool.
+2) Upgrade Go to the latest stable version if necessary/possible.
+3) Perform an upgrade of each stakepoold instance one at a time.
+   * Stop stakepoold.
+   * Build and restart stakepoold.
+4) Edit dcrstakepool.conf and set adminIPs/adminUserIDs appropriately to include
+   the administrative staff for whom you wish give the ability to add low fee
+   tickets for voting.
+5) Upgrade and start dcrstakepool after setting adminUserIDs.
+6) Announce maintenance complete after verifying functionality.
+
 ## 1.1.1 Release Notes
 
 - dcrd has a new agenda and the vote version in dcrwallet has been
@@ -248,6 +276,17 @@ If you are modifying templates, sending the USR1 signal to the dcrstakepool proc
   Changing the baseURL requires all API Tokens to be re-generated.
 
 ## Adding Invalid Tickets
+
+#### For Newer versions / git tip
+
+If a user pays an incorrect fee, login as an account that meets the
+adminUserIps and adminUserIds restrictions and click the 'Add Low Fee Tickets'
+link in the menu.  You will be presented with a list of tickets that are
+suitable for adding.  Check the appropriate one(s) and click the submit button.
+Upon success, you should see the stakepoold logs reflect that the new tickets
+were processed.
+
+#### For v1.1.1 and below
 
 If a user pays an incorrect fee you may add their tickets like so (requires dcrd running with txindex=1):
 

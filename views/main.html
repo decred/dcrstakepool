@@ -20,11 +20,12 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
+  {{if .Admin}}<li {{if .IsAdminTickets}}class="active"{{end}}><a href="/admintickets">Add Low Fee Tickets</a></li>{{end}}
+  {{if .Admin}}<li {{if .IsAdminStatus}}class="active"{{end}}><a href="/status">Status</a></li>{{end}}  
 	<li {{if .IsIndex }}class="active"{{end}}><a href="/">Home</a></li>
 	<li {{if .IsStats }}class="active"{{end}}><a href="/stats">Stats</a></li>
 	{{if .User}}<li {{if .IsAddress }}class="active"{{end}}><a href="/address">Address</a></li>{{end}}
-	{{if .User}}<li {{if .IsSettings }}class="active"{{end}}><a href="/settings">Settings</a></li>{{end}}
-	{{if .IsStatus}}<li class="active"><a href="/status">Status</a></li>{{end}}
+  {{if .User}}<li {{if .IsSettings }}class="active"{{end}}><a href="/settings">Settings</a></li>{{end}}
 	{{if .User}}{{if .User.MultiSigAddress}}<li {{if .IsTickets }}class="active"{{end}}><a href="/tickets">Tickets</a></li>{{end}}{{end}}
   {{if .User}}{{if .User.MultiSigAddress}}<li {{if .IsVoting }}class="active"{{end}}><a href="/voting">Voting</a></li>{{end}}{{end}}
       </ul>

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/chaincfg"
+	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
@@ -30,19 +31,24 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 )
 
-const signupEmailTemplate = "A request for an account for __URL__\r\n" +
-	"was made from __REMOTEIP__ for this email address.\r\n\n" +
-	"If you made this request, follow the link below:\r\n\n" +
-	"__URL__/emailverify?t=__TOKEN__\r\n\n" +
-	"to verify your email address and finalize registration.\r\n\n"
-const signupEmailSubject = "Stake pool email verification"
-
-// MaxUsers is the maximum number of users supported by a stake pool.
-// This is an artificial limit and can be increased by adjusting the
-// ticket/fee address indexes above 10000.
-const MaxUsers = 10000
+var (
+	// MaxUsers is the maximum number of users supported by a stake pool.
+	// This is an artificial limit and can be increased by adjusting the
+	// ticket/fee address indexes above 10000.
+	MaxUsers            = 10000
+	signupEmailSubject  = "Stake pool email verification"
+	signupEmailTemplate = "A request for an account for __URL__\r\n" +
+		"was made from __REMOTEIP__ for this email address.\r\n\n" +
+		"If you made this request, follow the link below:\r\n\n" +
+		"__URL__/emailverify?t=__TOKEN__\r\n\n" +
+		"to verify your email address and finalize registration.\r\n\n"
+	StakepooldUpdateKindAll     = "ALL"
+	StakepooldUpdateKindUsers   = "USERS"
+	StakepooldUpdateKindTickets = "TICKETS"
+)
 
 // MainController is the wallet RPC controller type.  Its methods include the
 // route handlers.
@@ -51,6 +57,7 @@ type MainController struct {
 	system.Controller
 
 	adminIPs             []string
+	adminUserIDs         []string
 	APISecret            string
 	APIVersionsSupported []int
 	baseURL              string
@@ -106,14 +113,14 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 
 // NewMainController is the constructor for the entire controller routing.
 func NewMainController(params *chaincfg.Params, adminIPs []string,
-	APISecret string, APIVersionsSupported []int, baseURL string,
-	closePool bool, closePoolMsg string, enablestakepoold bool,
-	feeXpubStr string, grpcConnections []*grpc.ClientConn,
-	poolFees float64, poolEmail, poolLink, recaptchaSecret, recaptchaSiteKey string,
-	smtpFrom, smtpHost, smtpUsername, smtpPassword, version string,
-	walletHosts, walletCerts, walletUsers, walletPasswords []string,
-	minServers int, realIPHeader, votingXpubStr string,
-	maxVotedAge int64) (*MainController, error) {
+	adminUserIDs []string, APISecret string, APIVersionsSupported []int,
+	baseURL string, closePool bool, closePoolMsg string, enablestakepoold bool,
+	feeXpubStr string,
+	grpcConnections []*grpc.ClientConn, poolFees float64, poolEmail, poolLink,
+	recaptchaSecret, recaptchaSiteKey string, smtpFrom, smtpHost, smtpUsername,
+	smtpPassword, version string, walletHosts, walletCerts, walletUsers,
+	walletPasswords []string, minServers int, realIPHeader,
+	votingXpubStr string, maxVotedAge int64) (*MainController, error) {
 
 	// Parse the extended public key and the pool fees.
 	feeKey, err := hdkeychain.NewKeyFromString(feeXpubStr)
@@ -140,6 +147,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 
 	mc := &MainController{
 		adminIPs:             adminIPs,
+		adminUserIDs:         adminUserIDs,
 		APISecret:            APISecret,
 		APIVersionsSupported: APIVersionsSupported,
 		baseURL:              baseURL,
@@ -330,7 +338,8 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
-	controller.TriggerStakepooldUpdate(c.Env["APIUserID"].(int64))
+	log.Infof("successfully create multisigaddress for user %d", c.Env["APIUserID"])
+	controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
 
 	return nil, codes.OK, "address successfully imported", nil
 }
@@ -441,13 +450,37 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 	}
 
 	if uint16(oldVoteBits) != userVoteBits {
-		controller.TriggerStakepooldUpdate(c.Env["APIUserID"].(int64))
+		controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
 	}
 
 	log.Infof("updated voteBits for user %d from %d to %d",
 		user.Id, oldVoteBits, userVoteBits)
 
-	return nil, codes.OK, "sucessfully updated voting preferences", nil
+	return nil, codes.OK, "successfully updated voting preferences", nil
+}
+
+func (controller *MainController) isAdmin(c web.C, r *http.Request) (bool, error) {
+	remoteIP := getClientIP(r, controller.realIPHeader)
+	session := controller.GetSession(c)
+
+	if session.Values["UserId"] == nil {
+		return false, fmt.Errorf("%s request with no session from %s",
+			r.URL, remoteIP)
+	}
+
+	uidstr := strconv.Itoa(int(session.Values["UserId"].(int64)))
+
+	if !stringSliceContains(controller.adminIPs, remoteIP) {
+		return false, fmt.Errorf("%s request from %s "+
+			"userid %s failed AdminIPs check", r.URL, remoteIP, uidstr)
+	}
+
+	if !stringSliceContains(controller.adminUserIDs, uidstr) {
+		return false, fmt.Errorf("%s request from %s "+
+			"userid %s failed adminUserIDs check", r.URL, remoteIP, uidstr)
+	}
+
+	return true, nil
 }
 
 // SendMail sends an email with the passed data using the system's SMTP
@@ -485,17 +518,104 @@ func (controller *MainController) SendMail(emailaddress string, subject string, 
 	return err
 }
 
-// TriggerStakepooldUpdate informs stakepoold via gRPC that an update for user
-// information/voting preferences needs to be performed.
-func (controller *MainController) TriggerStakepooldUpdate(userid int64) error {
-	if controller.enableStakepoold {
-		for i := range controller.grpcConnections {
-			err := stakepooldclient.StakepooldUpdateVotingPrefs(controller.grpcConnections[i], userid)
-			if err != nil {
-				log.Errorf("Failed to update stakepoold voting cfg for all users on host %d: %v", i, err)
-			}
+// StakepooldGetIgnoredLowFeeTickets performs a gRPC GetIgnoredLowFeeTickets
+// request against all stakepoold instances and returns the first result fetched
+// without errors
+func (controller *MainController) StakepooldGetIgnoredLowFeeTickets() (map[chainhash.Hash]string, error) {
+	var err error
+	ignoredLowFeeTickets := make(map[chainhash.Hash]string)
+
+	// TODO need some better code here
+	for i := range controller.grpcConnections {
+		ignoredLowFeeTickets, err = stakepooldclient.StakepooldGetIgnoredLowFeeTickets(controller.grpcConnections[i])
+		// take the first non-error result
+		if err == nil {
+			return ignoredLowFeeTickets, err
 		}
 	}
+
+	return ignoredLowFeeTickets, err
+}
+
+// StakepooldUpdateAll attempts to trigger all connected stakepoold
+// instances to pull a data update of the specified kind.
+func (controller *MainController) StakepooldUpdateAll(dbMap *gorp.DbMap, updateKind string) error {
+	var votableLowFeeTickets []models.LowFeeTicket
+	var allUsers map[int64]*models.User
+	var err error
+
+	switch updateKind {
+	case StakepooldUpdateKindAll, StakepooldUpdateKindTickets, StakepooldUpdateKindUsers:
+		// valid
+	default:
+		return fmt.Errorf("TriggerStakepoolUpdate: unhandled update kind %v",
+			updateKind)
+	}
+
+	switch updateKind {
+	case StakepooldUpdateKindAll, StakepooldUpdateKindTickets:
+		votableLowFeeTickets, err = models.GetVotableLowFeeTickets(dbMap)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch updateKind {
+	case StakepooldUpdateKindAll, StakepooldUpdateKindUsers:
+		// reset votebits if Vote Version changed or if the stored VoteBits are
+		// somehow invalid
+		allUsers, err = controller.CheckAndResetUserVoteBits(dbMap)
+		if err != nil {
+			return err
+		}
+	}
+
+	successCount := 0
+	for i := range controller.grpcConnections {
+		var err error
+		var success bool
+
+		switch updateKind {
+		case StakepooldUpdateKindAll, StakepooldUpdateKindTickets:
+			success, err = stakepooldclient.StakepooldSetAddedLowFeeTickets(controller.grpcConnections[i], votableLowFeeTickets)
+			if err != nil {
+				log.Errorf("stakepoold host %d unable to update manual "+
+					"tickets grpc error: %v", i, err)
+			}
+			if !success {
+				// TODO(maybe) should re-try in the background until we get a
+				// successful update
+				log.Errorf("stakepoold host %d unable to update manual "+
+					"tickets stakepoold update would have blocked", i)
+			}
+		}
+
+		switch updateKind {
+		case StakepooldUpdateKindAll, StakepooldUpdateKindUsers:
+			success, err = stakepooldclient.StakepooldSetUserVotingPrefs(controller.grpcConnections[i], allUsers)
+			if err != nil {
+				log.Errorf("stakepoold host %d unable to update voting config "+
+					"grpc error: %v", i, err)
+			}
+			if !success {
+				// TODO(maybe) should re-try in the background until we get a
+				// successful update
+				log.Errorf("stakepoold host %d unable to update voting config "+
+					"stakepoold update would have blocked", i)
+			}
+		}
+
+		if err == nil {
+			log.Infof("successfully triggered update kind %s on stakepoold "+
+				"host %d", updateKind, i)
+			successCount++
+		}
+	}
+
+	if successCount == 0 {
+		log.Warn("no stakepoold connections alive/working?")
+	}
+
 	return nil
 }
 
@@ -503,7 +623,7 @@ func (controller *MainController) TriggerStakepooldUpdate(userid int64) error {
 // fees for an individual pool user.
 func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 	error) {
-	if uint32(uid+1) > MaxUsers {
+	if uid+1 > MaxUsers {
 		return nil, fmt.Errorf("bad uid index %v", uid)
 	}
 
@@ -533,7 +653,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 // generating the 1-of-2 multisig.
 func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Address,
 	error) {
-	if uint32(uid+1) > MaxUsers {
+	if uid+1 > MaxUsers {
 		return nil, fmt.Errorf("bad uid index %v", uid)
 	}
 
@@ -582,7 +702,7 @@ func (controller *MainController) GetVoteVersion() (uint32, error) {
 
 // CheckAndResetUserVoteBits reset users VoteBits if the VoteVersion has
 // changed or if the stored VoteBits are somehow invalid.
-func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap) {
+func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap) (map[int64]*models.User, error) {
 	defaultVoteBits := uint16(1)
 	userMax := models.GetUserMax(dbMap)
 	for userid := int64(1); userid <= userMax; userid++ {
@@ -598,23 +718,23 @@ func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap) {
 			oldVoteBitsVersion := user.VoteBitsVersion
 			_, err := helpers.UpdateVoteBitsVersionByID(dbMap, userid, controller.voteVersion)
 			if err != nil {
-				log.Errorf("failed to update VoteBitsVersion for uid %v: %v",
+				return nil, fmt.Errorf("failed to update VoteBitsVersion for uid %v: %v",
 					userid, err)
-				continue
-			} else {
-				log.Infof("updated VoteBitsVersion from %v to %v for uid %v",
-					oldVoteBitsVersion, controller.voteVersion, userid)
 			}
+
+			log.Infof("updated VoteBitsVersion from %v to %v for uid %v",
+				oldVoteBitsVersion, controller.voteVersion, userid)
+
 			if uint16(user.VoteBits) != defaultVoteBits {
 				oldVoteBits := user.VoteBits
 				_, err = helpers.UpdateVoteBitsByID(dbMap, userid, defaultVoteBits)
 				if err != nil {
-					log.Errorf("failed to update VoteBits for uid %v: %v",
+					return nil, fmt.Errorf("failed to update VoteBits for uid %v: %v",
 						userid, err)
-				} else {
-					log.Infof("updated VoteBits from %v to %v for uid %v",
-						oldVoteBits, defaultVoteBits, userid)
 				}
+
+				log.Infof("updated VoteBits from %v to %v for uid %v",
+					oldVoteBits, defaultVoteBits, userid)
 			}
 		} else {
 			// Validate that the votebits are valid for the agendas of the current
@@ -623,15 +743,28 @@ func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap) {
 				oldVoteBits := user.VoteBits
 				_, err := helpers.UpdateVoteBitsByID(dbMap, userid, defaultVoteBits)
 				if err != nil {
-					log.Errorf("failed to reset invalid VoteBits for uid %v: %v",
+					return nil, fmt.Errorf("failed to reset invalid VoteBits for uid %v: %v",
 						userid, err)
-				} else {
-					log.Infof("reset invalid VoteBits from %v to %v for uid %v",
-						oldVoteBits, defaultVoteBits, userid)
 				}
+
+				log.Infof("reset invalid VoteBits from %v to %v for uid %v",
+					oldVoteBits, defaultVoteBits, userid)
 			}
 		}
 	}
+
+	allUsers := make(map[int64]*models.User)
+	for userid := int64(1); userid <= userMax; userid++ {
+		// may have gaps due to users deleted from the database
+		user, err := models.GetUserById(dbMap, userid)
+		if err != nil || user.MultiSigAddress == "" {
+			continue
+		}
+
+		allUsers[user.Id] = user
+	}
+
+	return allUsers, nil
 }
 
 // RPCStart starts the connected rpcServers.
@@ -675,6 +808,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 		return "/", http.StatusSeeOther
 	}
 
+	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsAddress"] = true
 	c.Env["Network"] = controller.getNetworkName()
 
@@ -813,9 +947,258 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
-	controller.TriggerStakepooldUpdate(user.Id)
+	controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
 
 	return "/tickets", http.StatusSeeOther
+}
+
+// AdminStatus renders the status page.
+func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string, int) {
+	isAdmin, err := controller.isAdmin(c, r)
+	if !isAdmin {
+		log.Warnf("isAdmin check failed: %v", err)
+		return "", http.StatusUnauthorized
+	}
+
+	type stakepooldInfoPage struct {
+		Status string
+	}
+
+	stakepooldPageInfo := make([]stakepooldInfoPage, len(controller.grpcConnections))
+
+	for i, conn := range controller.grpcConnections {
+		grpcStatus := "Unknown"
+		state := conn.GetState()
+		switch state {
+		case connectivity.Idle:
+			grpcStatus = "Idle"
+		case connectivity.Shutdown:
+			grpcStatus = "Shutdown"
+		case connectivity.Ready:
+			grpcStatus = "Ready"
+		case connectivity.Connecting:
+			grpcStatus = "Connecting"
+		case connectivity.TransientFailure:
+			grpcStatus = "TransientFailure"
+		}
+		stakepooldPageInfo[i] = stakepooldInfoPage{
+			Status: grpcStatus,
+		}
+	}
+
+	// Attempt to query wallet statuses
+	walletInfo, err := controller.WalletStatus()
+	if err != nil {
+		// decide when to throw err here
+	}
+
+	type WalletInfoPage struct {
+		Connected       bool
+		DaemonConnected bool
+		Unlocked        bool
+		EnableVoting    bool
+	}
+	walletPageInfo := make([]WalletInfoPage, len(walletInfo))
+	connectedWallets := 0
+	for i, v := range walletInfo {
+		// If something is nil in the slice means it is disconnected.
+		if v == nil {
+			walletPageInfo[i] = WalletInfoPage{
+				Connected: false,
+			}
+			controller.rpcServers.DisconnectWalletRPC(i)
+			err = controller.rpcServers.ReconnectWalletRPC(i)
+			if err != nil {
+				log.Infof("wallet rpc reconnect failed: server %v %v", i, err)
+			}
+			continue
+		}
+		// Wallet has been successfully queried.
+		connectedWallets++
+		walletPageInfo[i] = WalletInfoPage{
+			Connected:       true,
+			DaemonConnected: v.DaemonConnected,
+			EnableVoting:    v.Voting,
+			Unlocked:        v.Unlocked,
+		}
+	}
+
+	// Depending on how many wallets have been detected update RPCStatus.
+	// Admins can then use to monitor this page periodically and check status.
+	var rpcstatus string
+	allWallets := len(walletInfo)
+
+	if connectedWallets == allWallets {
+		rpcstatus = "OK"
+	} else {
+		if connectedWallets == 0 {
+			rpcstatus = "Emergency"
+		} else if connectedWallets == 1 {
+			rpcstatus = "Critical"
+		} else {
+			rpcstatus = "Degraded"
+		}
+	}
+
+	t := controller.GetTemplate(c)
+	c.Env["Admin"] = isAdmin
+	c.Env["IsAdminStatus"] = true
+	c.Env["Title"] = "Decred Stake Pool - Status (Admin)"
+
+	// Set info to be used by admins on /status page.
+	c.Env["StakepooldInfo"] = stakepooldPageInfo
+	c.Env["WalletInfo"] = walletPageInfo
+	c.Env["RPCStatus"] = rpcstatus
+
+	widgets := controller.Parse(t, "admin/status", c.Env)
+	c.Env["Content"] = template.HTML(widgets)
+
+	if controller.RPCIsStopped() {
+		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
+	}
+
+	return controller.Parse(t, "main", c.Env), http.StatusOK
+}
+
+// AdminTickets renders the administrative tickets page.
+func (controller *MainController) AdminTickets(c web.C, r *http.Request) (string, int) {
+	t := controller.GetTemplate(c)
+	session := controller.GetSession(c)
+	dbMap := controller.GetDbMap(c)
+
+	isAdmin, err := controller.isAdmin(c, r)
+	if !isAdmin {
+		log.Warnf("isAdmin check failed: %v", err)
+		return "", http.StatusUnauthorized
+	}
+
+	votableLowFeeTickets := make(map[chainhash.Hash]string)
+	gvlft, err := models.GetVotableLowFeeTickets(dbMap)
+	if err == nil {
+		for _, t := range gvlft {
+			th, _ := chainhash.NewHashFromStr(t.TicketHash)
+			votableLowFeeTickets[*th] = t.TicketAddress
+		}
+	}
+
+	c.Env["Admin"] = isAdmin
+	c.Env["IsAdminTickets"] = true
+	c.Env["Network"] = controller.getNetworkName()
+
+	c.Env["FlashError"] = session.Flashes("adminTicketsError")
+	c.Env["FlashSuccess"] = session.Flashes("adminTicketsSuccess")
+
+	c.Env["AddedLowFeeTickets"] = votableLowFeeTickets
+	c.Env["IgnoredLowFeeTickets"], _ = controller.StakepooldGetIgnoredLowFeeTickets()
+	widgets := controller.Parse(t, "admin/tickets", c.Env)
+
+	c.Env["Title"] = "Decred Stake Pool - Tickets (Admin)"
+	c.Env["Content"] = template.HTML(widgets)
+
+	return controller.Parse(t, "main", c.Env), http.StatusOK
+}
+
+// AdminTicketsPost validates and processes the form posted from AdminTickets.
+func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (string, int) {
+	session := controller.GetSession(c)
+	dbMap := controller.GetDbMap(c)
+	remoteIP := getClientIP(r, controller.realIPHeader)
+
+	isAdmin, err := controller.isAdmin(c, r)
+	if !isAdmin {
+		log.Warnf("isAdmin check failed: %v", err)
+		return "", http.StatusUnauthorized
+	}
+
+	if err := r.ParseForm(); err != nil {
+		session.AddFlash("unable to parse form: "+err.Error(),
+			"adminTicketsError")
+		return "/admintickets", http.StatusSeeOther
+	}
+
+	if len(r.PostForm["tickets[]"]) == 0 {
+		session.AddFlash("no tickets selected to modify", "adminTicketsError")
+		return "/admintickets", http.StatusSeeOther
+	}
+
+	switch r.PostFormValue("action") {
+	case "Add", "Remove":
+		// valid
+		break
+	default:
+		session.AddFlash("invalid or unknown form action type", "adminTicketsError")
+		return "/admintickets", http.StatusSeeOther
+	}
+
+	actionVerb := "Unknown"
+	switch r.PostFormValue("action") {
+	case "Add":
+		actionVerb = "added"
+		ignoredLowFeeTickets, err := controller.StakepooldGetIgnoredLowFeeTickets()
+		if err != nil {
+			session.AddFlash("GetIgnoredLowFeeTickets error: "+err.Error(), "adminTicketsError")
+			return "/admintickets", http.StatusSeeOther
+		}
+
+		for _, ticketToAddString := range r.PostForm["tickets[]"] {
+			t := time.Now()
+
+			// TODO check if it is already present in the database
+			// and error out if so
+
+			tickethash, err := chainhash.NewHashFromStr(ticketToAddString)
+			if err != nil {
+				session.AddFlash("NewHashFromStr failed for "+ticketToAddString+": "+err.Error(), "adminTicketsError")
+				return "/admintickets", http.StatusSeeOther
+			}
+
+			msa, exists := ignoredLowFeeTickets[*tickethash]
+			if !exists {
+				session.AddFlash("ticket " + ticketToAddString + " is no longer present")
+				return "/admintickets", http.StatusSeeOther
+			}
+
+			expires := controller.CalcEstimatedTicketExpiry()
+
+			lowFeeTicket := &models.LowFeeTicket{
+				AddedByUid:    session.Values["UserId"].(int64),
+				TicketAddress: msa,
+				TicketHash:    ticketToAddString,
+				TicketExpiry:  0,
+				Voted:         0,
+				Created:       t.Unix(),
+				Expires:       expires.Unix(),
+			}
+
+			if err := models.InsertLowFeeTicket(dbMap, lowFeeTicket); err != nil {
+				session.AddFlash("Database error occurred while adding ticket "+ticketToAddString, "adminTicketsError")
+				log.Warnf("Adding ticket %v failed: %v", tickethash, err)
+				return "/admintickets", http.StatusSeeOther
+			}
+		}
+	case "Remove":
+		actionVerb = "removed"
+		query := "DELETE FROM LowFeeTicket WHERE TicketHash IN (\"" +
+			strings.Join(r.PostForm["tickets[]"], ",") + "\")"
+		_, err := dbMap.Exec(query)
+		if err != nil {
+			session.AddFlash("failed to execute delete query: "+err.Error(), "adminTicketsError")
+			return "/admintickets", http.StatusSeeOther
+		}
+	}
+
+	err = controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindTickets)
+	if err != nil {
+		session.AddFlash("StakepooldUpdateAll error: "+err.Error(), "adminTicketsError")
+	}
+
+	log.Infof("ip %v userid %v %v for %v ticket(s)",
+		remoteIP, session.Values["UserId"].(int64), actionVerb,
+		len(r.PostForm["tickets[]"]))
+	session.AddFlash("successfully "+actionVerb+" "+
+		strconv.Itoa(len(r.PostForm["tickets[]"]))+" ticket(s)", "adminTicketsSuccess")
+
+	return "/admintickets", http.StatusSeeOther
 }
 
 // EmailUpdate validates the passed token and updates the user's email address.
@@ -936,6 +1319,7 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 		rpcstatus = "Stopped"
 	}
 
+	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsError"] = true
 	c.Env["Title"] = "Decred Stake Pool - Error"
 	c.Env["RPCStatus"] = rpcstatus
@@ -964,9 +1348,8 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	// execute the named template with data in c.Env
 	widgets := helpers.Parse(t, "home", c.Env)
 
-	// With that kind of flags template can "figure out" what route is being rendered
+	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsIndex"] = true
-
 	c.Env["Title"] = "Decred Stake Pool - Welcome"
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -1183,6 +1566,7 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 
 	t := controller.GetTemplate(c)
 
+	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["APIToken"] = user.APIToken
 	c.Env["FlashError"] = session.Flashes("settingsError")
 	c.Env["FlashSuccess"] = session.Flashes("settingsSuccess")
@@ -1500,6 +1884,7 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 // Stats renders the stats page.
 func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
+	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsStats"] = true
 	c.Env["Title"] = "Decred Stake Pool - Stats"
 
@@ -1531,90 +1916,6 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 
 	widgets := controller.Parse(t, "stats", c.Env)
 	c.Env["Content"] = template.HTML(widgets)
-
-	return controller.Parse(t, "main", c.Env), http.StatusOK
-}
-
-// Status renders the status page.
-func (controller *MainController) Status(c web.C, r *http.Request) (string, int) {
-
-	// Confirm that the incoming IP address is an approved
-	// admin IP as set in config.
-	remoteIP := getClientIP(r, controller.realIPHeader)
-
-	if !stringSliceContains(controller.adminIPs, remoteIP) {
-		log.Warnf("unauthorized /status request from %v", remoteIP)
-		return "", http.StatusUnauthorized
-	}
-
-	// Attempt to query wallet statuses
-	walletInfo, err := controller.WalletStatus()
-	if err != nil {
-		// decide when to throw err here
-	}
-
-	type WalletInfoPage struct {
-		Connected       bool
-		DaemonConnected bool
-		Unlocked        bool
-		EnableVoting    bool
-	}
-	walletPageInfo := make([]WalletInfoPage, len(walletInfo))
-	connectedWallets := 0
-	for i, v := range walletInfo {
-		// If something is nil in the slice means it is disconnected.
-		if v == nil {
-			walletPageInfo[i] = WalletInfoPage{
-				Connected: false,
-			}
-			controller.rpcServers.DisconnectWalletRPC(i)
-			err = controller.rpcServers.ReconnectWalletRPC(i)
-			if err != nil {
-				log.Infof("wallet rpc reconnect failed: server %v %v", i, err)
-			}
-			continue
-		}
-		// Wallet has been successfully queried.
-		connectedWallets++
-		walletPageInfo[i] = WalletInfoPage{
-			Connected:       true,
-			DaemonConnected: v.DaemonConnected,
-			EnableVoting:    v.Voting,
-			Unlocked:        v.Unlocked,
-		}
-	}
-
-	// Depending on how many wallets have been detected update RPCStatus.
-	// Admins can then use to monitor this page periodically and check status.
-	var rpcstatus string
-	allWallets := len(walletInfo)
-
-	if connectedWallets == allWallets {
-		rpcstatus = "OK"
-	} else {
-		if connectedWallets == 0 {
-			rpcstatus = "Emergency"
-		} else if connectedWallets == 1 {
-			rpcstatus = "Critical"
-		} else {
-			rpcstatus = "Degraded"
-		}
-	}
-
-	t := controller.GetTemplate(c)
-	c.Env["IsStatus"] = true
-	c.Env["Title"] = "Decred Stake Pool - Status"
-
-	// Set info to be used by admins on /status page.
-	c.Env["WalletInfo"] = walletPageInfo
-	c.Env["RPCStatus"] = rpcstatus
-
-	widgets := controller.Parse(t, "status", c.Env)
-	c.Env["Content"] = template.HTML(widgets)
-
-	if controller.RPCIsStopped() {
-		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
-	}
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
@@ -1791,6 +2092,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	sort.Sort(BySpentByHeight(ticketInfoVoted))
 	sort.Sort(BySpentByHeight(ticketInfoMissed))
 
+	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["TicketsInvalid"] = ticketInfoInvalid
 	c.Env["TicketsLive"] = ticketInfoLive
 	c.Env["TicketsExpired"] = ticketInfoExpired
@@ -1825,6 +2127,7 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 		strk := strconv.Itoa(k)
 		c.Env["Agenda"+strk+"Selected"] = v
 	}
+	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["Agendas"] = controller.getAgendas()
 	c.Env["FlashError"] = session.Flashes("votingError")
 	c.Env["FlashSuccess"] = session.Flashes("votingSuccess")
@@ -1880,12 +2183,12 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 		return "/voting", http.StatusSeeOther
 	}
 
-	if uint16(oldVoteBits) != generatedVoteBits {
-		controller.TriggerStakepooldUpdate(user.Id)
-	}
-
 	log.Infof("updated voteBits for user %d from %d to %d",
 		user.Id, oldVoteBits, generatedVoteBits)
+	if uint16(oldVoteBits) != generatedVoteBits {
+		controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
+	}
+
 	session.AddFlash("successfully updated voting preferences", "votingSuccess")
 	return "/voting", http.StatusSeeOther
 }
@@ -1929,6 +2232,23 @@ func (controller *MainController) getAgendas() []chaincfg.ConsensusDeployment {
 
 	return controller.params.Deployments[controller.voteVersion]
 
+}
+
+// CalcEstimatedTicketExpiry returns a time.Time reflecting the estimated time
+// that the ticket will expire.  A safety margin of 5% padding is applied to
+// ensure the ticket is not removed prematurely.
+// XXX we should really be using the actual expiry height of the ticket instead
+// of an estimated time but the stakepool doesn't have a way to retrieve that
+// information yet.
+func (controller *MainController) CalcEstimatedTicketExpiry() time.Time {
+	t := time.Now()
+
+	// Generate an estimated expiry time for this ticket and add 5% for
+	// a margin of safety in case blocks are slower than expected
+	minutesUntilExpiryEstimate := time.Duration(controller.params.TicketExpiry) * controller.params.TargetTimePerBlock
+	expires := t.Add(minutesUntilExpiryEstimate * 105 / 100)
+
+	return expires
 }
 
 // IsValidVoteBits returns an error if voteBits are not valid for agendas

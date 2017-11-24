@@ -20,6 +20,17 @@ type EmailChange struct {
 	Expires  int64
 }
 
+type LowFeeTicket struct {
+	Id            int64 `db:"LowFeeTicketID"`
+	AddedByUid    int64
+	TicketAddress string
+	TicketHash    string
+	TicketExpiry  int64
+	Voted         int64
+	Created       int64
+	Expires       int64
+}
+
 type PasswordReset struct {
 	Id      int64 `db:"PasswordResetID"`
 	UserId  int64
@@ -109,6 +120,11 @@ func InsertEmailChange(dbMap *gorp.DbMap, emailChange *EmailChange) error {
 	return dbMap.Insert(emailChange)
 }
 
+// InsertLowFeeTicket inserts a user into the DB
+func InsertLowFeeTicket(dbMap *gorp.DbMap, lowFeeTicket *LowFeeTicket) error {
+	return dbMap.Insert(lowFeeTicket)
+}
+
 // InsertUser inserts a user into the DB
 func InsertUser(dbMap *gorp.DbMap, user *User) error {
 	return dbMap.Insert(user)
@@ -185,10 +201,27 @@ func GetAllCurrentMultiSigScripts(dbMap *gorp.DbMap) ([]User, error) {
 	return multiSigs, nil
 }
 
+func GetAllLowFeeTickets(dbMap *gorp.DbMap) ([]LowFeeTicket, error) {
+	var lowFeeTickets []LowFeeTicket
+	_, err := dbMap.Select(&lowFeeTickets, "SELECT * FROM LowFeeTicket")
+	if err != nil {
+		return nil, err
+	}
+	return lowFeeTickets, nil
+}
+
+func GetVotableLowFeeTickets(dbMap *gorp.DbMap) ([]LowFeeTicket, error) {
+	var votableLowFeeTickets []LowFeeTicket
+	_, err := dbMap.Select(&votableLowFeeTickets, "SELECT * FROM LowFeeTicket WHERE Voted = 0 AND Expires > UNIX_TIMESTAMP()")
+	if err != nil {
+		return nil, err
+	}
+	return votableLowFeeTickets, nil
+}
+
 func GetDbMap(APISecret, baseURL, user, password, hostname, port, database string) *gorp.DbMap {
 	// connect to db using standard Go database/sql API
 	// use whatever database/sql driver you wish
-	//TODO: Get user, password and database from config.
 	db, err := sql.Open("mysql", fmt.Sprint(user, ":", password, "@(", hostname, ":", port, ")/", database, "?charset=utf8mb4"))
 	if err != nil {
 		log.Critical("sql.Open failed: ", err)
@@ -208,6 +241,7 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// add a table, setting the table name and specifying that
 	// the Id property is an auto incrementing primary key
 	dbMap.AddTableWithName(EmailChange{}, "EmailChange").SetKeys(true, "Id")
+	dbMap.AddTableWithName(LowFeeTicket{}, "LowFeeTicket").SetKeys(true, "Id")
 	dbMap.AddTableWithName(PasswordReset{}, "PasswordReset").SetKeys(true, "Id")
 	dbMap.AddTableWithName(User{}, "Users").SetKeys(true, "Id")
 

@@ -3,24 +3,59 @@ syntax = "proto3";
 package stakepoolrpc;
 
 service StakepooldService {
-	// Queries
+	rpc GetAddedLowFeeTickets (GetAddedLowFeeTicketsRequest) returns (GetAddedLowFeeTicketsResponse);
+	rpc GetIgnoredLowFeeTickets (GetIgnoredLowFeeTicketsRequest) returns (GetIgnoredLowFeeTicketsResponse);
+	rpc GetLiveTickets (GetLiveTicketsRequest) returns (GetLiveTicketsResponse);
 	rpc Ping (PingRequest) returns (PingResponse);
-
-	// Control
-	rpc UpdateVotingPrefs (UpdateVotingPrefsRequest) returns (UpdateVotingPrefsResponse);
+	rpc SetAddedLowFeeTickets (SetAddedLowFeeTicketsRequest) returns (SetAddedLowFeeTicketsResponse);
+	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
 }
 
 service VersionService {
 	rpc Version (VersionRequest) returns (VersionResponse);
 }
 
+message GetAddedLowFeeTicketsRequest {}
+message GetAddedLowFeeTicketsResponse {
+	repeated TicketEntry tickets = 1;
+}
+
+message GetIgnoredLowFeeTicketsRequest {}
+message GetIgnoredLowFeeTicketsResponse {
+	repeated TicketEntry tickets = 1;
+}
+
+message GetLiveTicketsRequest {}
+message GetLiveTicketsResponse {
+	repeated TicketEntry tickets = 1;
+}
+
 message PingRequest {}
 message PingResponse {}
 
-message UpdateVotingPrefsRequest {
-	int64 Userid = 1;
+message SetAddedLowFeeTicketsRequest {
+	repeated TicketEntry tickets = 1;
 }
-message UpdateVotingPrefsResponse {}
+message SetAddedLowFeeTicketsResponse {
+}
+
+message SetUserVotingPrefsResponse {
+}
+message SetUserVotingPrefsRequest {
+	repeated UserVotingConfigEntry user_voting_config = 1;
+}
+
+message TicketEntry {
+	string TicketAddress = 1;
+	bytes TicketHash = 2;
+}
+
+message UserVotingConfigEntry {
+  int64 UserId = 1;
+  string MultiSigAddress = 2;
+  int64 VoteBits = 3;
+  int64 VoteBitsVersion = 4;
+}
 
 message VersionRequest {}
 message VersionResponse {

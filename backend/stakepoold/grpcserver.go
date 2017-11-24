@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"crypto/elliptic"
 	"crypto/tls"
 	"errors"
@@ -22,6 +23,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 )
 
 // generateRPCKeyPair generates a new RPC TLS keypair and writes the cert and
@@ -74,6 +76,37 @@ func generateRPCKeyPair(writeKey bool) (tls.Certificate, error) {
 
 	log.Info("Done generating TLS certificates")
 	return keyPair, nil
+}
+
+func interceptUnary(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	startTime := time.Now()
+
+	// parse out method from '/package.service/method'
+	methodSplit := strings.SplitAfterN(info.FullMethod, "/", 3)
+	method := methodSplit[2]
+	peer, peerOk := peer.FromContext(ctx)
+
+	// limit the time we take
+	ctx, cancel := context.WithTimeout(ctx, rpcserver.GRPCCommandTimeout)
+	// it is good practice to use the cancellation function even with a timeout
+	defer cancel()
+
+	resp, err = handler(ctx, req)
+	if err != nil && peerOk {
+		grpcLog.Errorf("%s invoked by %s failed: %v",
+			method, peer.Addr.String(), err)
+	}
+
+	defer func() {
+		if peerOk {
+			grpcLog.Infof("%s invoked by %s processed in %v", method,
+				peer.Addr.String(), time.Since(startTime))
+		} else {
+			grpcLog.Infof("%s processed in %v", method,
+				time.Since(startTime))
+		}
+	}()
+	return resp, err
 }
 
 type listenFunc func(net string, laddr string) (net.Listener, error)
@@ -153,7 +186,7 @@ func openRPCKeyPair() (tls.Certificate, error) {
 	return tls.LoadX509KeyPair(cfg.RPCCert, cfg.RPCKey)
 }
 
-func startGRPCServers(c chan struct{}) (*grpc.Server, error) {
+func startGRPCServers(grpcCommandQueueChan chan *rpcserver.GRPCCommandQueue) (*grpc.Server, error) {
 	var (
 		server  *grpc.Server
 		keyPair tls.Certificate
@@ -171,9 +204,9 @@ func startGRPCServers(c chan struct{}) (*grpc.Server, error) {
 		return nil, err
 	}
 	creds := credentials.NewServerTLSFromCert(&keyPair)
-	server = grpc.NewServer(grpc.Creds(creds))
+	server = grpc.NewServer(grpc.Creds(creds), grpc.UnaryInterceptor(interceptUnary))
 	rpcserver.StartVersionService(server)
-	rpcserver.StartStakepooldService(c, server)
+	rpcserver.StartStakepooldService(grpcCommandQueueChan, server)
 	for _, lis := range listeners {
 		lis := lis
 		go func() {

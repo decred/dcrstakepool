@@ -1,0 +1,59 @@
+{{define "admin/tickets"}}
+<div class="wrapper">
+ <div class="row">
+  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
+    {{range .FlashError}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
+    {{range .FlashSuccess}}<div class="well well-notification green-notification">{{.}}</div>{{end}}
+  </div>
+
+  <div class="col-sm-15 col-md-10 text-left center-block">
+    <h1>Add Low Fee Tickets</h1>
+
+    <hr />
+
+    <!-- IGNORED INVALID/LOW FEE TICKETS -->
+    <h2>Ignored Low Fee Tickets</h2>
+    {{with .IgnoredLowFeeTickets}}
+    <form id="addTicketsForm" method="post">
+      {{ range $tickethash, $msa := .}}
+      <div class="form-group">
+        <div class="checkbox">
+            <label><input type="checkbox" name="tickets[]" value="{{$tickethash}}"><span style="color: white; font-size: x-large;">{{$tickethash}} ({{$msa}})</span></label>
+        </div>
+      </div>
+      {{end}}
+      <div class="form-group">
+          <button id="addTickets" name="action" class="btn btn-primary" value="Add">Add Tickets To Live Voting List</button>
+      </div>
+      <input type="hidden" name="{{$.CsrfKey}}" value={{$.CsrfToken}}>
+    </form>
+    {{else}}
+    <p><strong>Currently there are no ignored low fee tickets.</strong></p>
+    {{end}}
+
+    <!-- ADDED INVALID/LOW FEE TICKETS -->
+    <h2>Added Low Fee Tickets</h2>
+    {{with .AddedLowFeeTickets}}
+    <form id="removeTicketsForm" method="post">
+      {{ range $tickethash, $msa := .}}
+      <div class="form-group">
+        <div class="checkbox">
+            <label><input type="checkbox" name="tickets[]" value="{{$tickethash}}"><span style="color: white; font-size: x-large;">{{$tickethash}} ({{$msa}})</span></label>
+        </div>
+      </div>
+      {{end}}
+      <div class="form-group">
+          <button id="rmTickets" name="action" class="btn btn-primary" value="Remove">Remove Tickets From Live Voting List</button>
+      </div>
+      <input type="hidden" name="{{$.CsrfKey}}" value={{$.CsrfToken}}>
+    </form>
+    {{else}}
+    <p><strong>Currently there are no added low fee tickets.</strong></p>
+    {{end}}
+
+  </div>
+
+ </div>
+</div>
+{{end}}
+
