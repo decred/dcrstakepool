@@ -122,6 +122,9 @@ func (s *stakepooldServer) processSetCommand(ctx context.Context, cmd *GRPCComma
 			// hit the timeout
 			return ctx.Err()
 		}
+	case <-ctx.Done():
+		// hit the timeout
+		return ctx.Err()
 	}
 }
 
@@ -145,6 +148,9 @@ func (s *stakepooldServer) processGetTicketCommand(ctx context.Context, cmd *GRP
 			// hit the timeout
 			return nil, ctx.Err()
 		}
+	case <-ctx.Done():
+		// hit the timeout
+		return nil, ctx.Err()
 	}
 }
 
@@ -153,7 +159,10 @@ func (s *stakepooldServer) GetAddedLowFeeTickets(ctx context.Context, req *pb.Ge
 		Command:                GetAddedLowFeeTickets,
 		ResponseTicketsMSAChan: make(chan map[chainhash.Hash]string),
 	})
-	return &pb.GetAddedLowFeeTicketsResponse{Tickets: tickets}, err
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetAddedLowFeeTicketsResponse{Tickets: tickets}, nil
 }
 
 func (s *stakepooldServer) GetIgnoredLowFeeTickets(ctx context.Context, req *pb.GetIgnoredLowFeeTicketsRequest) (*pb.GetIgnoredLowFeeTicketsResponse, error) {
@@ -161,7 +170,10 @@ func (s *stakepooldServer) GetIgnoredLowFeeTickets(ctx context.Context, req *pb.
 		Command:                GetIgnoredLowFeeTickets,
 		ResponseTicketsMSAChan: make(chan map[chainhash.Hash]string),
 	})
-	return &pb.GetIgnoredLowFeeTicketsResponse{Tickets: tickets}, err
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetIgnoredLowFeeTicketsResponse{Tickets: tickets}, nil
 }
 
 func (s *stakepooldServer) GetLiveTickets(ctx context.Context, req *pb.GetLiveTicketsRequest) (*pb.GetLiveTicketsResponse, error) {
@@ -169,7 +181,10 @@ func (s *stakepooldServer) GetLiveTickets(ctx context.Context, req *pb.GetLiveTi
 		Command:                GetLiveTickets,
 		ResponseTicketsMSAChan: make(chan map[chainhash.Hash]string),
 	})
-	return &pb.GetLiveTicketsResponse{Tickets: tickets}, err
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetLiveTicketsResponse{Tickets: tickets}, nil
 }
 
 func (s *stakepooldServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.PingResponse, error) {
