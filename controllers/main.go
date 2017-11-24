@@ -1392,13 +1392,9 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 		return controller.PasswordReset(c, r)
 	}
 
+	remoteIP := getClientIP(r, controller.realIPHeader)
 	user, err := helpers.EmailExists(dbMap, email)
-
-	if err != nil {
-		session.AddFlash("Invalid Email", "passwordresetError")
-	} else {
-		remoteIP := getClientIP(r, controller.realIPHeader)
-
+	if err == nil {
 		log.Infof("PasswordReset POST from %v, email %v", remoteIP,
 			user.Email)
 
@@ -1429,12 +1425,18 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 			"happened.\r\n"
 		err := controller.SendMail(user.Email, "Stake pool password reset", body)
 		if err != nil {
-			session.AddFlash("Unable to send email reset", "passwordresetError")
+			session.AddFlash("Unable to send password reset email", "passwordresetError")
 			log.Errorf("error sending password reset email %v", err)
-		} else {
-			session.AddFlash("Password reset email sent", "passwordresetSuccess")
+			return controller.PasswordReset(c, r)
 		}
+	} else {
+		log.Infof("request to reset non-existent account %v from IP %v",
+			email, remoteIP)
 	}
+
+	session.AddFlash("An email containing password reset instructions has "+
+		"been sent to "+email+" if it was a registered account here.",
+		"passwordresetSuccess")
 
 	return controller.PasswordReset(c, r)
 }
