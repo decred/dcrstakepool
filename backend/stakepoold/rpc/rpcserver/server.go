@@ -25,9 +25,13 @@ import (
 
 // Public API version constants
 const (
-	// This should only get hit if stakepoold has deadlocked.  Most requests
-	// should be fulfilled within ~1ms.  This just makes sure dcrstakepool gets
-	// a response of some sort even if stakepoold has indeed deadlocked.
+	// The most probable reason for a command timing out would be because a
+	// deadlock has occurred in the main process.  We want to reply with an
+	// error message in this case before dcrstakepool applies a client timeout.
+	// The commands are basic map operations and copies and typically complete
+	// within one millisecond.  It is possible for an abnormally long garbage
+	// collection cycle to also trigger a timeout but the current allocation
+	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
 	semverString       = "4.0.0"
 	semverMajor        = 4
