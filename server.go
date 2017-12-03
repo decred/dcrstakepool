@@ -105,7 +105,7 @@ func runMain() int {
 	// Supported API versions are advertised in the API stats result
 	APIVersionsSupported := []int{1, 2}
 
-	grpcConnections := make([]*grpc.ClientConn, len(cfg.StakepooldHosts))
+	grpcConnections := make([]*grpc.ClientConn, 0, len(cfg.StakepooldHosts))
 
 	if cfg.EnableStakepoold {
 		for i := range cfg.StakepooldHosts {
