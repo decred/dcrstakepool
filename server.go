@@ -104,10 +104,10 @@ func runMain() int {
 
 	// Supported API versions are advertised in the API stats result
 	APIVersionsSupported := []int{1, 2}
-	
-       var grpcConnections []*grpc.ClientConn
-       if cfg.EnableStakepoold && len(cfg.StakepooldHosts) > 0 {
-               grpcConnections = make([]*grpc.ClientConn, len(cfg.StakepooldHosts))
+
+	var grpcConnections []*grpc.ClientConn
+	if cfg.EnableStakepoold && len(cfg.StakepooldHosts) > 0 {
+		grpcConnections = make([]*grpc.ClientConn, len(cfg.StakepooldHosts))
 		for i := range cfg.StakepooldHosts {
 			grpcConnections[i], err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts, i)
 			if err != nil {
@@ -116,7 +116,7 @@ func runMain() int {
 			}
 		}
 	}
-	
+
 	controller, err := controllers.NewMainController(activeNetParams.Params,
 		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported, cfg.BaseURL,
 		cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
