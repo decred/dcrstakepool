@@ -29,7 +29,7 @@ TESTCMD="test -z \"\$(gometalinter --vendor --disable-all \
   --enable=gosimple \
   --enable=unconvert \
   --enable=ineffassign \
-  --deadline=10m ./... | tee /dev/stderr)\" && \
+  --deadline=10m ./... )\" && \
   env GORACE='halt_on_error=1' go test -short -race \
   \${TESTDIRS}"
 
