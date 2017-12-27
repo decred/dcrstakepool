@@ -437,7 +437,11 @@ func runMain() error {
 		}
 		log.Infof("current block height %v hash %v", curHeight, curHash)
 
-		ctx.ignoredLowFeeTicketsMSA, ctx.liveTicketsMSA = walletGetTickets(ctx, curHeight)
+		ctx.ignoredLowFeeTicketsMSA, ctx.liveTicketsMSA, err = walletGetTickets(ctx, curHeight)
+		if err != nil {
+			log.Errorf("unable to get tickets: %v", err)
+			return err
+		}
 
 		afterHash, afterHeight, err := nodeConn.GetBestBlock()
 		if err != nil {
