@@ -111,7 +111,7 @@ func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 	return dcrwClient, walletVer, nil
 }
 
-func walletGetTickets(ctx *appContext, currentHeight int64) (map[chainhash.Hash]string, map[chainhash.Hash]string) {
+func walletGetTickets(ctx *appContext, currentHeight int64) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
 	blockHashToHeightCache := make(map[chainhash.Hash]int32)
 
 	// This is suboptimal to copy and needs fixing.
@@ -133,7 +133,7 @@ func walletGetTickets(ctx *appContext, currentHeight int64) (map[chainhash.Hash]
 
 	if err != nil {
 		log.Warnf("GetTickets failed: %v", err)
-		return ignoredLowFeeTickets, liveTickets
+		return ignoredLowFeeTickets, liveTickets, err
 	}
 
 	type promise struct {
@@ -231,5 +231,5 @@ func walletGetTickets(ctx *appContext, currentHeight int64) (map[chainhash.Hash]
 		len(ignoredLowFeeTickets), normalFee, len(liveTickets),
 		len(tickets))
 
-	return ignoredLowFeeTickets, liveTickets
+	return ignoredLowFeeTickets, liveTickets, nil
 }
