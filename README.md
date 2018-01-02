@@ -1,5 +1,8 @@
-dcrstakepool
-====
+# dcrstakepool
+
+[![GoDoc](https://godoc.org/github.com/decred/dcrstakepool?status.svg)](https://godoc.org/github.com/decred/dcrstakepool)
+[![Build Status](https://travis-ci.org/decred/dcrstakepool.svg?branch=master)](https://travis-ci.org/decred/dcrstakepool)
+[![Go Report Card](https://goreportcard.com/badge/github.com/decred/dcrstakepool)](https://goreportcard.com/report/github.com/decred/dcrstakepool)
 
 dcrstakepool is a web application which coordinates generating 1-of-2 multisig
 addresses on a pool of [dcrwallet](https://github.com/decred/dcrwallet) servers
