@@ -8,7 +8,8 @@ set -ex
 # 3. gosimple      (https://github.com/dominikh/go-simple)
 # 4. unconvert     (https://github.com/mdempsky/unconvert)
 # 5. ineffassign   (https://github.com/gordonklaus/ineffassign)
-# 6. race detector (http://blog.golang.org/race-detector)
+# 6. misspell      (https://github.com/client9/misspell)
+# 7. race detector (http://blog.golang.org/race-detector)
 
 # gometalinter (github.com/alecthomas/gometalinter) is used to run each each
 # static checker.
@@ -21,36 +22,66 @@ set -ex
 #Default GOVERSION
 GOVERSION=${1:-1.9}
 REPO=dcrstakepool
+DOCKER_IMAGE_TAG=decred-golang-builder-$GOVERSION
 
-TESTDIRS=$(go list ./... | grep -v '/vendor/')
-TESTCMD="test -z \"\$(gometalinter --vendor --disable-all \
-  --enable=gofmt \
-  --enable=vet \
-  --enable=gosimple \
-  --enable=unconvert \
-  --enable=ineffassign \
-  --enable=misspell \
-  --deadline=10m ./... | tee /dev/stderr)\" && \
-  env GORACE='halt_on_error=1' go test -short -race \
-  \${TESTDIRS}"
+testrepo () {
+  TESTDIRS=$(go list ./... | grep -v '/vendor/')
+  TMPFILE=$(mktemp)
+
+  # Check lockfile
+  cp Gopkg.lock $TMPFILE && dep ensure && diff Gopkg.lock $TMPFILE >/dev/null
+  if [ $? != 0 ]; then
+    echo 'lockfile must be updated with dep ensure'
+    exit 1
+  fi
+
+  # Check linters
+  gometalinter --vendor --disable-all --deadline=10m \
+    --enable=gofmt \
+    --enable=gosimple \
+    --enable=unconvert \
+    --enable=ineffassign \
+    --enable=misspell
+  if [ $? != 0 ]; then
+    echo 'gometalinter has some complaints'
+    exit 1
+  fi
+
+  # Test application install
+  go install . ./backend/...
+  if [ $? != 0 ]; then
+    echo 'go install failed'
+    exit 1
+  fi
+
+  # Check tests
+  env GORACE='halt_on_error=1' go test -short -race $TESTDIRS
+  if [ $? != 0 ]; then
+    echo 'go tests failed'
+    exit 1
+  fi
+
+  echo "------------------------------------------"
+  echo "Tests complete."
+}
 
 if [ $GOVERSION == "local" ]; then
-    eval $TESTCMD
+    testrepo
     exit
 fi
 
-DOCKER_IMAGE_TAG=decred-golang-builder-$GOVERSION
-
 docker pull decred/$DOCKER_IMAGE_TAG
+if [ $? != 0 ]; then
+  echo 'docker pull failed'
+  exit 1
+fi
 
 docker run --rm -it -v $(pwd):/src decred/$DOCKER_IMAGE_TAG /bin/bash -c "\
   rsync -ra --filter=':- .gitignore'  \
   /src/ /go/src/github.com/decred/$REPO/ && \
   cd github.com/decred/$REPO/ && \
-  dep ensure && \
-  go install . && \
-  $TESTCMD
-"
-
-echo "------------------------------------------"
-echo "Tests complete."
+  bash run_tests.sh local"
+if [ $? != 0 ]; then
+        echo 'docker run failed'
+        exit 1
+fi
