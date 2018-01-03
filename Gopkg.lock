@@ -4,7 +4,10 @@
 [[projects]]
   branch = "master"
   name = "github.com/agl/ed25519"
-  packages = [".","edwards25519"]
+  packages = [
+    ".",
+    "edwards25519"
+  ]
   revision = "5312a61534124124185d41f09206b9fef1d88403"
 
 [[projects]]
@@ -46,38 +49,74 @@
 [[projects]]
   branch = "master"
   name = "github.com/decred/dcrd"
-  packages = ["blockchain","blockchain/internal/dbnamespace","blockchain/internal/progresslog","blockchain/stake","blockchain/stake/internal/dbnamespace","blockchain/stake/internal/ticketdb","blockchain/stake/internal/tickettreap","certgen","chaincfg","chaincfg/chainec","chaincfg/chainhash","database","dcrec/edwards","dcrec/secp256k1","dcrec/secp256k1/schnorr","dcrjson","dcrutil","hdkeychain","rpcclient","txscript","wire"]
-  revision = "d27429061b49d400d06505911a1379b8a8246671"
+  packages = [
+    "blockchain",
+    "blockchain/internal/dbnamespace",
+    "blockchain/internal/progresslog",
+    "blockchain/stake",
+    "blockchain/stake/internal/dbnamespace",
+    "blockchain/stake/internal/ticketdb",
+    "blockchain/stake/internal/tickettreap",
+    "certgen",
+    "chaincfg",
+    "chaincfg/chainec",
+    "chaincfg/chainhash",
+    "database",
+    "dcrec/edwards",
+    "dcrec/secp256k1",
+    "dcrec/secp256k1/schnorr",
+    "dcrjson",
+    "dcrutil",
+    "hdkeychain",
+    "rpcclient",
+    "txscript",
+    "wire"
+  ]
+  revision = "e5828813c0f04d156d44f005be3137d0ba12807b"
 
 [[projects]]
   branch = "master"
   name = "github.com/decred/dcrwallet"
-  packages = ["apperrors","internal/helpers","internal/zero","snacl","wallet/txrules","wallet/udb","walletdb"]
-  revision = "2df4002bce8c540907c9a3e2980fc3e5deeba8f6"
+  packages = [
+    "apperrors",
+    "internal/helpers",
+    "internal/zero",
+    "snacl",
+    "wallet/txrules",
+    "wallet/udb",
+    "walletdb"
+  ]
+  revision = "c1da68c40d2d4260beca96e8ed75cc91cfa0d0ce"
 
 [[projects]]
-  branch = "master"
   name = "github.com/dgrijalva/jwt-go"
   packages = ["."]
-  revision = "a539ee1a749a2b895533f979515ac7e6e0f5b650"
+  revision = "dbeaa9332f19a944acb5736b4456cfcc02140e29"
+  version = "v3.1.0"
 
 [[projects]]
   branch = "master"
   name = "github.com/go-gorp/gorp"
   packages = ["."]
-  revision = "659d466222f6a201e44cfeff05813fa6be8409cd"
+  revision = "c5fd513e7b0a246178d6eb97c6cfe334b7e96afc"
 
 [[projects]]
   branch = "master"
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
-  revision = "7785c74297136c027fdf2fd6f8931c0e19be8aa7"
+  revision = "9181e3a86a19bacd63e68d43ae8b7b36320d8092"
 
 [[projects]]
   branch = "master"
   name = "github.com/golang/protobuf"
-  packages = ["proto","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
-  revision = "130e6b02ab059e7b717a096f397c5b60111cae74"
+  packages = [
+    "proto",
+    "ptypes",
+    "ptypes/any",
+    "ptypes/duration",
+    "ptypes/timestamp"
+  ]
+  revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
 
 [[projects]]
   branch = "master"
@@ -95,7 +134,7 @@
   branch = "master"
   name = "github.com/gorilla/sessions"
   packages = ["."]
-  revision = "b61c93cb7f67533c8bfbb5ea450efc07e5833c5e"
+  revision = "a3acf13e802c358d65f249324d14ed24aac11370"
 
 [[projects]]
   branch = "master"
@@ -112,42 +151,104 @@
 [[projects]]
   branch = "master"
   name = "github.com/zenazn/goji"
-  packages = ["graceful","graceful/listener","web","web/middleware","web/mutil"]
+  packages = [
+    "graceful",
+    "graceful/listener",
+    "web",
+    "web/middleware",
+    "web/mutil"
+  ]
   revision = "c05078ca81941f8e801bba3ddc0e6b86b7fdc893"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["bcrypt","blowfish","nacl/secretbox","pbkdf2","poly1305","ripemd160","salsa20/salsa","scrypt"]
-  revision = "76eec36fa14229c4b25bb894c2d0e591527af429"
+  packages = [
+    "bcrypt",
+    "blowfish",
+    "nacl/secretbox",
+    "pbkdf2",
+    "poly1305",
+    "ripemd160",
+    "salsa20/salsa",
+    "scrypt"
+  ]
+  revision = "0fcca4842a8d74bfddc2c96a073bd2a4d2a7a2e8"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
-  revision = "0a9397675ba34b2845f758fe3cd68828369c6517"
+  packages = [
+    "context",
+    "http2",
+    "http2/hpack",
+    "idna",
+    "internal/timeseries",
+    "lex/httplex",
+    "trace"
+  ]
+  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
-  packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "1cbadb444a806fd9430d14ad08967ed91da4fa0a"
+  packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
+    "internal/gen",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "secure/bidirule",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable"
+  ]
+  revision = "e19ae1496984b1c655b8044a65c0300a3c878dd3"
+
+[[projects]]
+  name = "google.golang.org/appengine"
+  packages = ["cloudsql"]
+  revision = "150dc57a1b433e64154302bdc40b6bb8aefa313a"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "1e559d0a00eef8a9a43151db4665280bd8dd5886"
+  revision = "a8101f21cf983e773d0c1133ebc5424792003214"
 
 [[projects]]
+  branch = "v1.7.x"
   name = "google.golang.org/grpc"
-  packages = [".","codes","connectivity","credentials","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","stats","status","tap","transport"]
-  revision = "f92cdcd7dcdc69e81b2d7b338479a19a8723cfa3"
-  version = "v1.6.0"
+  packages = [
+    ".",
+    "balancer",
+    "codes",
+    "connectivity",
+    "credentials",
+    "grpclb/grpc_lb_v1/messages",
+    "grpclog",
+    "internal",
+    "keepalive",
+    "metadata",
+    "naming",
+    "peer",
+    "resolver",
+    "stats",
+    "status",
+    "tap",
+    "transport"
+  ]
+  revision = "fb57512bcf559adb14c19326b46a54cf0bbdefb0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b98bc1b9be0ac8d195caa20878b1b6a9b3142cc2995c13f3df09afa6287eb076"
+  inputs-digest = "252566ea4c637022861092fe0079f3f90d35465968be941168e12e1d0fb82423"
   solver-name = "gps-cdcl"
   solver-version = 1

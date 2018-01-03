@@ -60,5 +60,5 @@
   name = "golang.org/x/net"
 
 [[constraint]]
+  branch = "v1.7.x"
   name = "google.golang.org/grpc"
-  version = "v1.6.0"
