@@ -334,9 +334,9 @@ func runMain() error {
 
 	addedLowFeeTicketsMSA, errMySQLFetchAddedLowFeeTickets := userData.MySQLFetchAddedLowFeeTickets()
 	if errMySQLFetchAddedLowFeeTickets != nil {
-		log.Errorf("could not obtain voting config from MySQL: %v", err)
+		log.Errorf("could not obtain low fee tickets from MySQL: %v", err)
 	} else {
-		log.Infof("loaded prefs for %d users from MySQL", len(addedLowFeeTicketsMSA))
+		log.Infof("loaded low fee tickets for %d users from MySQL", len(addedLowFeeTicketsMSA))
 	}
 
 	userVotingConfig, errMySQLFetchUserVotingConfig := userData.MySQLFetchUserVotingConfig()
