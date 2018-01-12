@@ -232,6 +232,9 @@ MySQL> CREATE DATABASE stakepool;
 
 - Adapt sample-nginx.conf or setup a different web server in a proxy configuration
 
+#### stakepoold
+- Adapt sample-stakepoold.conf and run stakepoold.
+
 #### dcrstakepool
 
 - Create the .dcrstakepool directory and copy dcrwallet certs to it
@@ -240,6 +243,8 @@ $ mkdir ~/.dcrstakepool
 $ cd ~/.dcrstakepool
 $ scp walletserver1:~/.dcrwallet/rpc.cert wallet1.cert
 $ scp walletserver2:~/.dcrwallet/rpc.cert wallet2.cert
+$ scp walletserver1:~/.stakepoold/rpc.cert stakepoold1.cert
+$ scp walletserver2:~/.stakepoold/rpc.cert stakepoold2.cert
 ```
 
 - Copy sample config and edit appropriately
