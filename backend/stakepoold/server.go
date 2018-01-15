@@ -422,9 +422,7 @@ func runMain() error {
 	}
 
 	if len(ctx.userVotingConfig) == 0 {
-		err := errors.New("no users?")
-		log.Error(err)
-		return err
+		log.Warn("0 active users")
 	}
 
 	// refresh the ticket list and make sure a block didn't come in
