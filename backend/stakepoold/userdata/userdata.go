@@ -60,7 +60,6 @@ func (u *UserData) MySQLFetchAddedLowFeeTickets() (map[chainhash.Hash]string, er
 		return tickets, err
 	}
 
-	count := 0
 	defer rows.Close()
 	for rows.Next() {
 		err := rows.Scan(&ticketHashString, &ticketAddress)
@@ -74,7 +73,6 @@ func (u *UserData) MySQLFetchAddedLowFeeTickets() (map[chainhash.Hash]string, er
 			continue
 		}
 		tickets[*ticketHash] = ticketAddress
-		count++
 	}
 
 	err = db.Close()
@@ -113,7 +111,6 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 		return userInfo, err
 	}
 
-	count := 0
 	defer rows.Close()
 	for rows.Next() {
 		err := rows.Scan(&userid, &multiSigAddress, &voteBits, &voteBitsVersion)
@@ -127,7 +124,6 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 			VoteBits:        uint16(voteBits),
 			VoteBitsVersion: uint32(voteBitsVersion),
 		}
-		count++
 	}
 
 	err = db.Close()
