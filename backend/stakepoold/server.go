@@ -44,6 +44,7 @@ type appContext struct {
 	addedLowFeeTicketsMSA   map[chainhash.Hash]string            // [ticket]multisigaddr
 	ignoredLowFeeTicketsMSA map[chainhash.Hash]string            // [ticket]multisigaddr
 	liveTicketsMSA          map[chainhash.Hash]string            // [ticket]multisigaddr
+	possiblyMissingTickets  map[chainhash.Hash]int64             // ticket]blockheight
 	userVotingConfig        map[string]userdata.UserVotingConfig // [multisigaddr]
 
 	// no locking required
@@ -519,6 +520,21 @@ func runMain() error {
 		}()
 	}
 
+	// This ticker removes old tickets from possiblyMissing to preserve memory
+	// since stakepoold can potentially run for months without interruption.
+	possiblyMissingEvicterTicker := time.NewTicker(activeNetParams.Params.TargetTimePerBlock * 100)
+	go func() {
+		for range possiblyMissingEvicterTicker.C {
+			ctx.Lock()
+			for ticket, height := range ctx.possiblyMissingTickets {
+				if height+100 < ctx.lastBlockSeenHeight {
+					delete(ctx.possiblyMissingTickets, ticket)
+				}
+			}
+			ctx.Unlock()
+		}
+	}()
+
 	// Wait for CTRL+C to signal goroutines to terminate via quit channel.
 	ctx.wg.Wait()
 
@@ -872,6 +888,42 @@ func (ctx *appContext) updateUserDataFromMySQL() error {
 	return nil
 }
 
+// getVoteConfig returns the voting config for the specified user.
+// This function MUST be called with the ctx read lock held.
+func (ctx *appContext) getVoteConfig(msa string) userdata.UserVotingConfig {
+	voteCfg, ok := ctx.userVotingConfig[msa]
+	if !ok {
+		// Use defaults if not found.
+		log.Warnf("vote config not found for %v using defaults",
+			msa)
+		voteCfg = userdata.UserVotingConfig{
+			Userid:          0,
+			MultiSigAddress: msa,
+			VoteBits:        ctx.votingConfig.VoteBits,
+			VoteBitsVersion: ctx.votingConfig.VoteVersion,
+		}
+	} else {
+		// If the user's voting config has a vote version that
+		// is different from our global vote version that we
+		// plucked from dcrwallet walletinfo then just use the
+		// default votebits.
+		if voteCfg.VoteBitsVersion !=
+			ctx.votingConfig.VoteVersion {
+
+			voteCfg.VoteBits = ctx.votingConfig.VoteBits
+			log.Infof("userid %v multisigaddress %v vote "+
+				"version mismatch user %v stakepoold "+
+				"%v using votebits %d",
+				voteCfg.Userid, voteCfg.MultiSigAddress,
+				voteCfg.VoteBitsVersion,
+				ctx.votingConfig.VoteVersion,
+				voteCfg.VoteBits)
+		}
+	}
+
+	return voteCfg
+}
+
 // vote Generates a vote and send it off to the network.  This is a go routine!
 func (ctx *appContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, blockHeight int64, w *ticketMetadata) {
 	start := time.Now()
@@ -971,6 +1023,37 @@ func (ctx *appContext) processNewTickets(nt NewTicketsForBlock) {
 
 		newLiveTickets[*n.ticket] = n.msa
 	}
+
+	var wgVote sync.WaitGroup // wait group for voting go routine exits
+
+	ctx.RLock()
+	for ticket, msa := range newLiveTickets {
+		height, found := ctx.possiblyMissingTickets[ticket]
+		if found {
+			log.Infof("voting newly matured/possibly missed ticket %v for "+
+				"height %v", ticket, height)
+			voteCfg := ctx.getVoteConfig(msa)
+
+			w := &ticketMetadata{
+				msa:    msa,
+				ticket: &ticket,
+				config: voteCfg,
+			}
+
+			// When testing we don't send the tickets.
+			if ctx.testing {
+				continue
+			}
+
+			wg.Add(1)
+			log.Debugf("calling GenerateVote with blockHash %v blockHeight %v "+
+				"ticket %v VoteBits %v VoteBitsExtended %v ",
+				nt.blockHash, nt.blockHeight, w.ticket, w.config.VoteBits,
+				ctx.votingConfig.VoteBitsExtended)
+			go ctx.vote(&wgVote, nt.blockHash, nt.blockHeight, w)
+		}
+	}
+	ctx.RUnlock()
 
 	log.Debug("processNewTickets ctx.Lock")
 	ctx.Lock()
@@ -1101,6 +1184,7 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 
 	// We use pointer because it is the fastest accessor.
 	winners := make([]*ticketMetadata, 0, len(wt.winningTickets))
+	possiblyMissing := make(map[chainhash.Hash]struct{})
 
 	var wg sync.WaitGroup // wait group for go routine exits
 
@@ -1108,43 +1192,17 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 	for _, ticket := range wt.winningTickets {
 		// Look up multi sig address.
 		msa, ok := ctx.liveTicketsMSA[*ticket]
+
+		// This ticket either doesn't belong to the stake pool or we haven't
+		// been notified about its existence yet via a new ticket notification.
+		// This can happen once in awhile when a just-matured ticket is picked
+		// to vote.  We will vote this ticket elsewhere.
 		if !ok {
-			log.Debugf("unmanaged winning ticket: %v", ticket)
-			if ctx.testing {
-				panic("boom")
-			}
+			possiblyMissing[*ticket] = struct{}{}
 			continue
 		}
 
-		voteCfg, ok := ctx.userVotingConfig[msa]
-		if !ok {
-			// Use defaults if not found.
-			log.Warnf("vote config not found for %v using defaults",
-				msa)
-			voteCfg = userdata.UserVotingConfig{
-				Userid:          0,
-				MultiSigAddress: msa,
-				VoteBits:        ctx.votingConfig.VoteBits,
-				VoteBitsVersion: ctx.votingConfig.VoteVersion,
-			}
-		} else {
-			// If the user's voting config has a vote version that
-			// is different from our global vote version that we
-			// plucked from dcrwallet walletinfo then just use the
-			// default votebits.
-			if voteCfg.VoteBitsVersion !=
-				ctx.votingConfig.VoteVersion {
-
-				voteCfg.VoteBits = ctx.votingConfig.VoteBits
-				log.Infof("userid %v multisigaddress %v vote "+
-					"version mismatch user %v stakepoold "+
-					"%v using votebits %d",
-					voteCfg.Userid, voteCfg.MultiSigAddress,
-					voteCfg.VoteBitsVersion,
-					ctx.votingConfig.VoteVersion,
-					voteCfg.VoteBits)
-			}
-		}
+		voteCfg := ctx.getVoteConfig(msa)
 
 		w := &ticketMetadata{
 			msa:    msa,
@@ -1166,6 +1224,13 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 		go ctx.vote(&wg, wt.blockHash, wt.blockHeight, w)
 	}
 	ctx.RUnlock()
+
+	// append the possibly missing tickets for this block to the global map
+	ctx.Lock()
+	for ticket := range possiblyMissing {
+		ctx.possiblyMissingTickets[ticket] = wt.blockHeight
+	}
+	ctx.Unlock()
 
 	wg.Wait()
 
