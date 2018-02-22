@@ -20,12 +20,11 @@ set -ex
 # for more details.
 
 #Default GOVERSION
-GOVERSION=${1:-1.9}
+GOVERSION=${1:-1.10}
 REPO=dcrstakepool
 DOCKER_IMAGE_TAG=decred-golang-builder-$GOVERSION
 
 testrepo () {
-  TESTDIRS=$(go list ./... | grep -v '/vendor/')
   TMPFILE=$(mktemp)
 
   # Check lockfile
@@ -41,28 +40,33 @@ testrepo () {
     --enable=gosimple \
     --enable=unconvert \
     --enable=ineffassign \
-    --enable=misspell
+    --enable=misspell \
+    ./...
   if [ $? != 0 ]; then
     echo 'gometalinter has some complaints'
     exit 1
   fi
 
   # Test application install
-  go install . ./backend/...
+  if [ $GOVERSION == "1.10" ]; then
+    go install -i . ./backend/...
+  else
+    go install . ./backend/...
+  fi
   if [ $? != 0 ]; then
     echo 'go install failed'
     exit 1
   fi
 
   # Check tests
-  env GORACE='halt_on_error=1' go test -short -race $TESTDIRS
+  env GORACE='halt_on_error=1' go test -short -race ./...
   if [ $? != 0 ]; then
     echo 'go tests failed'
     exit 1
   fi
 
   echo "------------------------------------------"
-  echo "Tests complete."
+  echo "Tests completed successfully!"
 }
 
 if [ $GOVERSION == "local" ]; then
@@ -70,10 +74,27 @@ if [ $GOVERSION == "local" ]; then
     exit
 fi
 
-docker pull decred/$DOCKER_IMAGE_TAG
-if [ $? != 0 ]; then
-  echo 'docker pull failed'
-  exit 1
+mkdir -p ~/.cache
+
+if [ -f ~/.cache/$DOCKER_IMAGE_TAG.tar ]; then
+	# load via cache
+	docker load -i ~/.cache/$DOCKER_IMAGE_TAG.tar
+	if [ $? != 0 ]; then
+		echo 'docker load failed'
+		exit 1
+	fi
+else
+	# pull and save image to cache
+	docker pull decred/$DOCKER_IMAGE_TAG
+	if [ $? != 0 ]; then
+		echo 'docker pull failed'
+		exit 1
+	fi
+	docker save decred/$DOCKER_IMAGE_TAG > ~/.cache/$DOCKER_IMAGE_TAG.tar
+	if [ $? != 0 ]; then
+		echo 'docker save failed'
+		exit 1
+	fi
 fi
 
 docker run --rm -it -v $(pwd):/src decred/$DOCKER_IMAGE_TAG /bin/bash -c "\
@@ -82,6 +103,6 @@ docker run --rm -it -v $(pwd):/src decred/$DOCKER_IMAGE_TAG /bin/bash -c "\
   cd github.com/decred/$REPO/ && \
   bash run_tests.sh local"
 if [ $? != 0 ]; then
-        echo 'docker run failed'
-        exit 1
+	echo 'docker run failed'
+	exit 1
 fi
