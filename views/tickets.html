@@ -74,8 +74,8 @@
 enableticketbuyer=true
 pooladdress={{ .User.UserFeeAddr }}
 poolfees={{ .PoolFees }}
-ticketaddress={{ .User.MultiSigAddress }}
 [Ticket Buyer Options]
+ticketbuyer.votingaddress={{ .User.MultiSigAddress }}
 ticketbuyer.maxpriceabsolute=100
 </pre>
       <p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the pool address.</p>
