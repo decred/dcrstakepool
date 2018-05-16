@@ -330,7 +330,8 @@ is used for this project.
 
 ## License
 
-dcrstakepool is licensed under the [copyfree](http://copyfree.org) ISC License.
+dcrstakepool is licensed under the [copyfree](http://copyfree.org) MIT/X11 and
+ISC Licenses.
 
 ## Version History
 - 1.1.0 - Architecture change.
