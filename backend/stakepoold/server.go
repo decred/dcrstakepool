@@ -346,9 +346,9 @@ func runMain() error {
 		log.Infof("loaded prefs for %d users from MySQL", len(userVotingConfig))
 	}
 
-	err = txrules.IsValidPoolFeeRate(cfg.PoolFees)
-	if err != nil {
-		log.Errorf("poolfees is invalid: %v", err)
+	if !txrules.ValidPoolFeeRate(cfg.PoolFees) {
+		err = fmt.Errorf("poolfees '%v' is invalid", cfg.PoolFees)
+		log.Error(err)
 		return err
 	}
 

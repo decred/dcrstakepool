@@ -23,7 +23,7 @@ func TestCalculateFeeAddresses(t *testing.T) {
 		"TsiWMbdbmfMaJ9SDb7ig8EKfYp3KU3pvYfu",
 		"TsgTraHPFWes88oTjpPVy7SEroJvgShv1G1",
 	}
-	params := &chaincfg.TestNet2Params
+	params := &chaincfg.TestNet3Params
 
 	// calculateFeeAddresses is currently hard-coded to return 10,000 addresses
 	numAddr := 10000

@@ -185,9 +185,9 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 }
 
 // getNetworkName will strip any suffix from a network name starting with
-// "testnet" (e.g. "testnet2"). This is primarily intended for the tickets page,
+// "testnet" (e.g. "testnet3"). This is primarily intended for the tickets page,
 // which generates block explorer links using a value set by the network string,
-// which is a problem since there is no testnet2.decred.org host.
+// which is a problem since there is no testnet3.decred.org host.
 func (controller *MainController) getNetworkName() string {
 	if strings.HasPrefix(controller.params.Name, "testnet") {
 		return "testnet"
