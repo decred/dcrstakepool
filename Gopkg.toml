@@ -1,10 +1,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/btcsuite/btclog"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/btcsuite/go-flags"
 
 [[constraint]]
@@ -12,44 +8,48 @@
   name = "github.com/decred/dcrd"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/decred/dcrwallet"
+  version = "release-v1.3.0-rc1"
 
 [[constraint]]
-  branch = "master"
+  name = "github.com/decred/slog"
+  version = "1.0.0"
+
+[[constraint]]
   name = "github.com/dgrijalva/jwt-go"
+  version = "3.2.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/go-gorp/gorp"
+  version = "2.1.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/go-sql-driver/mysql"
+  version = "1.4.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/golang/protobuf"
+  version = "1.1.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/gorilla/context"
+  version = "1.1.1"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/gorilla/sessions"
+  version = "1.1.1"
 
 [[constraint]]
   branch = "master"
   name = "github.com/haisum/recaptcha"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/jrick/logrotate"
+  version = "1.0.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/zenazn/goji"
+  version = "1.0.0"
 
 [[constraint]]
   branch = "master"
@@ -60,5 +60,9 @@
   name = "golang.org/x/net"
 
 [[constraint]]
-  branch = "v1.7.x"
   name = "google.golang.org/grpc"
+  version = "1.14.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true
