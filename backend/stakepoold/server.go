@@ -353,14 +353,14 @@ func runMain() error {
 	}
 
 	ctx := &appContext{
-		addedLowFeeTicketsMSA: addedLowFeeTicketsMSA,
-		dataPath:              cfg.DataDir,
-		feeAddrs:              feeAddrs,
-		poolFees:              cfg.PoolFees,
-		grpcCommandQueueChan:  make(chan *rpcserver.GRPCCommandQueue),
-		newTicketsChan:        make(chan NewTicketsForBlock),
-		params:                activeNetParams.Params,
-		quit:                  make(chan struct{}),
+		addedLowFeeTicketsMSA:  addedLowFeeTicketsMSA,
+		dataPath:               cfg.DataDir,
+		feeAddrs:               feeAddrs,
+		poolFees:               cfg.PoolFees,
+		grpcCommandQueueChan:   make(chan *rpcserver.GRPCCommandQueue),
+		newTicketsChan:         make(chan NewTicketsForBlock),
+		params:                 activeNetParams.Params,
+		quit:                   make(chan struct{}),
 		spentmissedTicketsChan: make(chan SpentMissedTicketsForBlock),
 		userData:               userData,
 		userVotingConfig:       userVotingConfig,
