@@ -1215,10 +1215,6 @@ func checkWalletsVoteVersion(wsm *walletSvrManager) (uint32, error) {
 // walletSvrsSync ensures that the wallet servers are all in sync with each
 // other in terms of redeemscripts and address indexes.
 func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error {
-	if wsm.serversLen == 1 {
-		return nil
-	}
-
 	// Check for connectivity and if unlocked.
 	for i := range wsm.servers {
 		if wsm.servers[i] == nil {
