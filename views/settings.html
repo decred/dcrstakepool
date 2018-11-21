@@ -27,67 +27,85 @@
   <div class="col-sm-15 col-md-10 text-left center-block">
     <h1>Settings</h1>
  
-	<p><strong>API Token:</strong></p>
-	<pre>{{ .APIToken }}</pre>
-<hr />
+    <p><strong>API Token:</strong></p>
+    <pre>{{ .APIToken }}</pre>
+    <hr />
 
-	<h2>Change Email Address</h2>
-        <form method="post" class="form-horizontal">
-	 <div class="form-group">
-	  <label class="control-label col-sm-2" for="email">New Email:</label>
-	<div class="col-sm-13">
-	  <input id="email" name="email" placeholder="New Email Address" type="email" class="form-control" required>
-	</div>
-	 </div>
-	 <div class="form-group">
-	  <label class="control-label col-sm-2" for="emailpassword">Password:</label>
-	<div class="col-sm-13">
-	  <input id="emailpassword" name="password" placeholder="Password" type="password" class="form-control" required>
-	</div>
-	 </div>
-	<div class="form-group">
-         <div class="g-recaptcha pull-right" style="padding-right: 15px;" data-sitekey="{{.RecaptchaSiteKey}}" data-theme="light"></div>
-	</div>
-	<div class="form-group">
-         <button id="updateEmail" name="updateEmail" value="true" class="btn btn-primary">Change Email Address</button>
-	</div>
-	 <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-	</form>
+    <h2>Change Email Address</h2>
+    {{if .CaptchaDone}}
+    <form method="post" class="form-horizontal">
+      <div class="form-group">
+        <label class="control-label col-sm-2" for="email">New Email:</label>
+        <div class="col-sm-13">
+          <input id="email" name="email" placeholder="New Email Address" type="email" class="form-control" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="control-label col-sm-2" for="emailpassword">Password:</label>
+        <div class="col-sm-13">
+          <input id="emailpassword" name="password" placeholder="Password" type="password" class="form-control" required>
+        </div>
+      </div>
+      <div class="form-group">
+            <button id="updateEmail" name="updateEmail" value="true" class="btn btn-primary">Change Email Address</button>
+      </div>
+      <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+    </form>
+    {{else}}
+    <p>To change your email address, first complete the captcha:</p>
+    <div class="row">
+      <div class="col-sm-10 center-block">
+        <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-sm-15 text-left center-block">
+        <form action="/verifyhuman" method="post" class="form-horizontal">
+          <div class="form-group center-block">
+            <label class="control-label col-sm-4" for="captchaSolution">Text in picture:</label>
+            <div class="col-sm-8">
+              <input name=captchaSolution class="form-control">
+              <input type=hidden name=captchaId value="{{.CaptchaID}}">
+            </div>
+            <div class="col-md-button center-block text-middle">
+              <button name=captchaSubmit type=submit class="btn btn-primary">Submit</button>
+            </div>
+          </div>
+          <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+        </form>
+      </div>
+    </div>
+    {{end}}
 
-<hr />
-	<h2>Change Password</h2>
-       <form class="form-horizontal" method="post">
-	<div class="form-group">
-          <label for="curpassword" class="control-label col-sm-2">Current<br />Password</label>
-	<div class="col-sm-13">
+    <hr />
+    <h2>Change Password</h2>
+    <form class="form-horizontal" method="post">
+      <div class="form-group">
+        <label for="curpassword" class="control-label col-sm-2">Current<br />Password</label>
+        <div class="col-sm-13">
           <input id="curpassword" name="password" type="password" placeholder="Current Password" class="form-control" required>
-	</div>
         </div>
-        <div class="form-group">
-          <label class="control-label col-sm-2" for="newpassword">New<br />Password</label>
-	<div class="col-sm-13">
+      </div>
+      <div class="form-group">
+        <label class="control-label col-sm-2" for="newpassword">New<br />Password</label>
+        <div class="col-sm-13">
           <input id="newpassword" name="newpassword" type="password" placeholder="New Password" class="form-control" required>
-	</div>
-	</div>
-	<div class="form-group">
-          <label class="control-label col-sm-2" for="newpasswordrepeat">Repeat New Password</label>
-	<div class="col-sm-13">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="control-label col-sm-2" for="newpasswordrepeat">Repeat New Password</label>
+        <div class="col-sm-13">
           <input id="newpasswordrepeat" name="newpasswordrepeat" type="password" placeholder="Repeat New Password" class="form-control" required>
-	</div>
         </div>
-        <div class="form-group">
-          <label class="control-label" for="updatepassword"></label>
-          <button id="updatepassword" name="updatePassword" value="true" class="btn btn-primary">Update Password</button>
-        </div>
-        <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-       </form>
-
-
-
-
-  </div>
-
- </div>
-</div>
+      </div>
+      <div class="form-group">
+        <label class="control-label" for="updatepassword"></label>
+        <button id="updatepassword" name="updatePassword" value="true" class="btn btn-primary">Update Password</button>
+      </div>
+      <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+    </form>
+  </div> <!-- forms column -->
+ </div> <!-- row -->
+</div> <!-- wrapper -->
 {{end}}
 

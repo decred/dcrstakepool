@@ -82,6 +82,19 @@ func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler 
 	return http.HandlerFunc(fn)
 }
 
+func (application *Application) ApplyCaptcha(c *web.C, h http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		session := c.Env["Session"].(*sessions.Session)
+		if done, ok := session.Values["CaptchaDone"].(bool); ok {
+			c.Env["CaptchaDone"] = done
+		} else {
+			c.Env["CaptchaDone"] = false
+		}
+		h.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
+}
+
 func (application *Application) ApplyAuth(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		session := c.Env["Session"].(*sessions.Session)

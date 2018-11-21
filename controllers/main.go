@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/dchest/captcha"
 	"html/template"
 	"net"
 	"net/http"
@@ -26,7 +27,6 @@ import (
 	"github.com/decred/dcrstakepool/system"
 	"github.com/decred/dcrwallet/wallet/udb"
 	"github.com/go-gorp/gorp"
-	"github.com/haisum/recaptcha"
 	"github.com/zenazn/goji/web"
 
 	"google.golang.org/grpc"
@@ -72,8 +72,7 @@ type MainController struct {
 	params               *chaincfg.Params
 	rpcServers           *walletSvrManager
 	realIPHeader         string
-	recaptchaSecret      string
-	recaptchaSiteKey     string
+	captchaHandler       *CaptchaHandler
 	smtpFrom             string
 	smtpHost             string
 	smtpUsername         string
@@ -115,10 +114,9 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 func NewMainController(params *chaincfg.Params, adminIPs []string,
 	adminUserIDs []string, APISecret string, APIVersionsSupported []int,
 	baseURL string, closePool bool, closePoolMsg string, enablestakepoold bool,
-	feeXpubStr string,
-	grpcConnections []*grpc.ClientConn, poolFees float64, poolEmail, poolLink,
-	recaptchaSecret, recaptchaSiteKey string, smtpFrom, smtpHost, smtpUsername,
-	smtpPassword, version string, walletHosts, walletCerts, walletUsers,
+	feeXpubStr string, grpcConnections []*grpc.ClientConn, poolFees float64,
+	poolEmail, poolLink, smtpFrom, smtpHost, smtpUsername, smtpPassword,
+	version string, walletHosts, walletCerts, walletUsers,
 	walletPasswords []string, minServers int, realIPHeader,
 	votingXpubStr string, maxVotedAge int64) (*MainController, error) {
 
@@ -145,6 +143,11 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		return nil, err
 	}
 
+	ch := &CaptchaHandler{
+		ImgHeight: 127,
+		ImgWidth:  257,
+	}
+
 	mc := &MainController{
 		adminIPs:             adminIPs,
 		adminUserIDs:         adminUserIDs,
@@ -160,8 +163,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		poolFees:             poolFees,
 		poolLink:             poolLink,
 		params:               params,
-		recaptchaSecret:      recaptchaSecret,
-		recaptchaSiteKey:     recaptchaSiteKey,
+		captchaHandler:       ch,
 		rpcServers:           rpcs,
 		realIPHeader:         realIPHeader,
 		smtpFrom:             smtpFrom,
@@ -1359,20 +1361,20 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 
 // PasswordReset renders the password reset page.
 func (controller *MainController) PasswordReset(c web.C, r *http.Request) (string, int) {
-	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 	c.Env["FlashError"] = session.Flashes("passwordresetError")
 	c.Env["FlashSuccess"] = session.Flashes("passwordresetSuccess")
 	c.Env["IsPasswordReset"] = true
-	c.Env["RecaptchaSiteKey"] = controller.recaptchaSiteKey
 	if controller.smtpHost == "" {
 		c.Env["SMTPDisabled"] = true
 	}
+	c.Env["CaptchaID"] = captcha.New()
 
+	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "passwordreset", c.Env)
+
 	c.Env["Title"] = "Decred Voting Service - Password Reset"
 	c.Env["Content"] = template.HTML(widgets)
-
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
@@ -1382,14 +1384,8 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
-	re := recaptcha.R{
-		Secret: controller.recaptchaSecret,
-	}
-
-	isValid := re.Verify(*r)
-	if !isValid {
-		log.Errorf("Recaptcha error %v", re.LastError())
-		session.AddFlash("Recaptcha error", "passwordresetError")
+	if !controller.IsCaptchaDone(c) {
+		session.AddFlash("Captcha error", "passwordresetError")
 		return controller.PasswordReset(c, r)
 	}
 
@@ -1567,25 +1563,24 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 		user, _ = models.GetUserById(dbMap, session.Values["UserId"].(int64))
 	}
 
-	t := controller.GetTemplate(c)
-
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["APIToken"] = user.APIToken
 	c.Env["FlashError"] = session.Flashes("settingsError")
 	c.Env["FlashSuccess"] = session.Flashes("settingsSuccess")
 	c.Env["IsSettings"] = true
-	c.Env["RecaptchaSiteKey"] = controller.recaptchaSiteKey
 	if user.MultiSigAddress == "" {
 		c.Env["ShowInstructions"] = true
 	}
 	if controller.smtpHost == "" {
 		c.Env["SMTPDisabled"] = true
 	}
+	c.Env["CaptchaID"] = captcha.New()
 
+	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "settings", c.Env)
+
 	c.Env["Title"] = "Decred Voting Service - Settings"
 	c.Env["Content"] = template.HTML(widgets)
-
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
@@ -1614,14 +1609,8 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		newEmail := r.FormValue("email")
 		log.Infof("user requested email change from %v to %v", user.Email, newEmail)
 
-		re := recaptcha.R{
-			Secret: controller.recaptchaSecret,
-		}
-
-		isValid := re.Verify(*r)
-		if !isValid {
-			session.AddFlash("Recaptcha error", "settingsError")
-			log.Errorf("Recaptcha error %v", re.LastError())
+		if !controller.IsCaptchaDone(c) {
+			session.AddFlash("Captcha error", "settingsError")
 			return controller.Settings(c, r)
 		}
 
@@ -1776,9 +1765,6 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 
 // SignUp renders the signup page.
 func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int) {
-	t := controller.GetTemplate(c)
-	session := controller.GetSession(c)
-
 	// Tell main.html what route is being rendered
 	c.Env["IsSignUp"] = true
 	if controller.smtpHost == "" {
@@ -1789,31 +1775,33 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 		c.Env["ClosePoolMsg"] = controller.closePoolMsg
 	}
 
+	session := controller.GetSession(c)
 	c.Env["FlashError"] = session.Flashes("signupError")
 	c.Env["FlashSuccess"] = session.Flashes("signupSuccess")
-	c.Env["RecaptchaSiteKey"] = controller.recaptchaSiteKey
+	c.Env["CaptchaID"] = captcha.New()
 
+	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "auth/signup", c.Env)
 
 	c.Env["Title"] = "Decred Stake Pool - Sign Up"
 	c.Env["Content"] = template.HTML(widgets)
-
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// SignUpPost form submit route. Registers new user or shows Sign Up route with appropriate
-// messages set in session.
+// SignUpPost form submit route. Registers new user or shows Sign Up route with
+// appropriate messages set in session.
 func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, int) {
 	if controller.closePool {
 		log.Infof("attempt to signup while registration disabled")
 		return "/error?r=/signup", http.StatusSeeOther
 	}
 
-	re := recaptcha.R{
-		Secret: controller.recaptchaSecret,
+	session := controller.GetSession(c)
+	if !controller.IsCaptchaDone(c) {
+		session.AddFlash("Captcha error", "signupError")
+		return controller.SignUp(c, r)
 	}
 
-	session := controller.GetSession(c)
 	remoteIP := getClientIP(r, controller.realIPHeader)
 
 	email, password, passwordRepeat := r.FormValue("email"),
@@ -1831,13 +1819,6 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 
 	if password != passwordRepeat {
 		session.AddFlash("passwords do not match", "signupError")
-		return controller.SignUp(c, r)
-	}
-
-	isValid := re.Verify(*r)
-	if !isValid {
-		session.AddFlash("Recaptcha error", "signupError")
-		log.Errorf("Recaptcha error %v", re.LastError())
 		return controller.SignUp(c, r)
 	}
 
@@ -1979,10 +1960,6 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	var ticketInfoLive []TicketInfoLive
 	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
 	var numVoted int
-
-	responseHeaderMap := make(map[string]string)
-	c.Env["ResponseHeaderMap"] = responseHeaderMap
-	// map is a reference type so responseHeaderMap may be modified
 
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)

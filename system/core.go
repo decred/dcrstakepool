@@ -122,25 +122,19 @@ func (application *Application) Close() {
 }
 
 func (application *Application) Route(controller interface{}, route string) web.HandlerFunc {
-	fn := func(c web.C, w http.ResponseWriter, r *http.Request) {
+	return func(c web.C, w http.ResponseWriter, r *http.Request) {
 		c.Env["Content-Type"] = "text/html"
 
+		// TODO: nuke Route and get rid of this reflect usage.
 		methodValue := reflect.ValueOf(controller).MethodByName(route)
 		methodInterface := methodValue.Interface()
 		method := methodInterface.(func(c web.C, r *http.Request) (string, int))
 
 		body, code := method(c, r)
 
+		// Save the session in c.Env["Session"].
 		if err := saveSession(c, w, r); err != nil {
 			log.Errorf("Can't save session: %v", err)
-		}
-
-		if respHeader, exists := c.Env["ResponseHeaderMap"]; exists {
-			if hdrMap, ok := respHeader.(map[string]string); ok {
-				for key, val := range hdrMap {
-					w.Header().Set(key, val)
-				}
-			}
 		}
 
 		switch code {
@@ -158,7 +152,6 @@ func (application *Application) Route(controller interface{}, route string) web.
 			http.Error(w, http.StatusText(500), 500)
 		}
 	}
-	return fn
 }
 
 func saveSession(c web.C, w http.ResponseWriter, r *http.Request) error {

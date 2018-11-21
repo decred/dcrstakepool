@@ -28,6 +28,11 @@ func (controller *Controller) IsXhr(c web.C) bool {
 	return c.Env["IsXhr"].(bool)
 }
 
+func (controller *Controller) IsCaptchaDone(c web.C) bool {
+	done, ok := c.Env["CaptchaDone"].(bool)
+	return done && ok
+}
+
 func (controller *Controller) Parse(t *template.Template, name string, data interface{}) string {
 	var doc bytes.Buffer
 	err := t.ExecuteTemplate(&doc, name, data)

@@ -20,29 +20,27 @@ import (
 )
 
 const (
-	defaultBaseURL          = "http://127.0.0.1:8000"
-	defaultClosePoolMsg     = "The voting service is temporarily closed to new signups."
-	defaultConfigFilename   = "dcrstakepool.conf"
-	defaultDataDirname      = "data"
-	defaultLogLevel         = "info"
-	defaultLogDirname       = "logs"
-	defaultLogFilename      = "dcrstakepool.log"
-	defaultCookieSecure     = false
-	defaultDBHost           = "localhost"
-	defaultDBName           = "stakepool"
-	defaultDBPort           = "3306"
-	defaultDBUser           = "stakepool"
-	defaultListen           = ":8000"
-	defaultPoolEmail        = "admin@example.com"
-	defaultPoolFees         = 7.5
-	defaultPoolLink         = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
-	defaultPublicPath       = "public"
-	defaultTemplatePath     = "views"
-	defaultRecaptchaSecret  = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
-	defaultRecaptchaSitekey = "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
-	defaultSMTPHost         = ""
-	defaultMinServers       = 2
-	defaultMaxVotedAge      = 8640
+	defaultBaseURL        = "http://127.0.0.1:8000"
+	defaultClosePoolMsg   = "The voting service is temporarily closed to new signups."
+	defaultConfigFilename = "dcrstakepool.conf"
+	defaultDataDirname    = "data"
+	defaultLogLevel       = "info"
+	defaultLogDirname     = "logs"
+	defaultLogFilename    = "dcrstakepool.log"
+	defaultCookieSecure   = false
+	defaultDBHost         = "localhost"
+	defaultDBName         = "stakepool"
+	defaultDBPort         = "3306"
+	defaultDBUser         = "stakepool"
+	defaultListen         = ":8000"
+	defaultPoolEmail      = "admin@example.com"
+	defaultPoolFees       = 7.5
+	defaultPoolLink       = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
+	defaultPublicPath     = "public"
+	defaultTemplatePath   = "views"
+	defaultSMTPHost       = ""
+	defaultMinServers     = 2
+	defaultMaxVotedAge    = 8640
 )
 
 var (
@@ -85,8 +83,6 @@ type config struct {
 	DBName             string   `long:"dbname" description:"Name of database"`
 	PublicPath         string   `long:"publicpath" description:"Path to the public folder which contains css/fonts/images/javascript."`
 	TemplatePath       string   `long:"templatepath" description:"Path to the views folder which contains html files."`
-	RecaptchaSecret    string   `long:"recaptchasecret" description:"Recaptcha Secret"`
-	RecaptchaSitekey   string   `long:"recaptchasitekey" description:"Recaptcha Sitekey"`
 	PoolEmail          string   `long:"poolemail" description:"Email address to for support inquiries"`
 	PoolFees           float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
 	PoolLink           string   `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
@@ -282,30 +278,28 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
-		BaseURL:          defaultBaseURL,
-		ClosePool:        false,
-		ClosePoolMsg:     defaultClosePoolMsg,
-		ConfigFile:       defaultConfigFile,
-		DebugLevel:       defaultLogLevel,
-		DataDir:          defaultDataDir,
-		LogDir:           defaultLogDir,
-		CookieSecure:     defaultCookieSecure,
-		DBHost:           defaultDBHost,
-		DBName:           defaultDBName,
-		DBPort:           defaultDBPort,
-		DBUser:           defaultDBUser,
-		Listen:           defaultListen,
-		PoolEmail:        defaultPoolEmail,
-		PoolFees:         defaultPoolFees,
-		PoolLink:         defaultPoolLink,
-		PublicPath:       defaultPublicPath,
-		TemplatePath:     defaultTemplatePath,
-		RecaptchaSecret:  defaultRecaptchaSecret,
-		RecaptchaSitekey: defaultRecaptchaSitekey,
-		SMTPHost:         defaultSMTPHost,
-		Version:          version(),
-		MinServers:       defaultMinServers,
-		MaxVotedAge:      defaultMaxVotedAge,
+		BaseURL:      defaultBaseURL,
+		ClosePool:    false,
+		ClosePoolMsg: defaultClosePoolMsg,
+		ConfigFile:   defaultConfigFile,
+		DebugLevel:   defaultLogLevel,
+		DataDir:      defaultDataDir,
+		LogDir:       defaultLogDir,
+		CookieSecure: defaultCookieSecure,
+		DBHost:       defaultDBHost,
+		DBName:       defaultDBName,
+		DBPort:       defaultDBPort,
+		DBUser:       defaultDBUser,
+		Listen:       defaultListen,
+		PoolEmail:    defaultPoolEmail,
+		PoolFees:     defaultPoolFees,
+		PoolLink:     defaultPoolLink,
+		PublicPath:   defaultPublicPath,
+		TemplatePath: defaultTemplatePath,
+		SMTPHost:     defaultSMTPHost,
+		Version:      version(),
+		MinServers:   defaultMinServers,
+		MaxVotedAge:  defaultMaxVotedAge,
 	}
 
 	// Service options which are only added on Windows.
