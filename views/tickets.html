@@ -128,7 +128,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsLive }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				<td>{{ $data.TicketHeight }}</td>
 				</tr>{{end}}
 			</tbody>
@@ -169,8 +169,8 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsVoted }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.SpentBy}}" target="_blank">{{$data.SpentByHeight}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.SpentBy}}" target="_blank">{{$data.SpentByHeight}}</a></td>
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
 			</tbody>
@@ -215,7 +215,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsMissed }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				<td>{{$data.SpentByHeight}}</td>
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
@@ -259,7 +259,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsExpired }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				<td>{{$data.SpentByHeight}}</td>
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
@@ -304,7 +304,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsInvalid }}<tr>
-				<td><a href="https://{{$.Network}}.decred.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
 				</tr>{{end}}
 			</tbody>
 			<tfoot>
