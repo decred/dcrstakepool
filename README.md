@@ -22,25 +22,26 @@ vote on their behalf when the ticket is selected.
 ## Git Tip Release notes
 
 - The handling of tickets considered invalid because they pay too-low-of-a-fee
-is now integrated directly into dcrstakepool and stakepoold.
-  - Users who pass both the adminIPs and the new adminUserIDs checks will see a new link on the
-menu to the new administrative add tickets page.
-  - Tickets are added to the MySQL database and then stakepoold is triggered to pull an update from the
-database and reload its config.
-  - To accommodate changes to the gRPC API, dcrstakepool/stakepoold had
-  their API versions changed to require/advertize 4.0.0. This requires
-  performing the upgrade steps outlined below.
-- **KNOWN ISSUE** Total tickets count reported by stakepoold may
-  not be totally accurate until low fee tickets that have been added to
-  the database can be marked as voted.  This will be resolved by future work. ([#201](https://github.com/decred/dcrstakepool/issues/201)).
+  is now integrated directly into dcrstakepool and stakepoold.
+  - Users who pass both the adminIPs and the new adminUserIDs checks will see a
+    new link on the menu to the new administrative add tickets page.
+  - Tickets are added to the MySQL database and then stakepoold is triggered to
+    pull an update from the database and reload its config.
+  - To accommodate changes to the gRPC API, dcrstakepool/stakepoold had their
+    API versions changed to require/advertize 4.0.0. This requires performing
+    the upgrade steps outlined below.
+- **KNOWN ISSUE** Total tickets count reported by stakepoold may not be totally
+  accurate until low fee tickets that have been added to the database can be
+  marked as voted.  This will be resolved by future work.
+  ([#201](https://github.com/decred/dcrstakepool/issues/201)).
 
 ## Git Tip Upgrade Guide
 
 1) Announce maintenance and shut down dcrstakepool.
 2) Upgrade Go to the latest stable version if necessary/possible.
 3) Perform an upgrade of each stakepoold instance one at a time.
-   * Stop stakepoold.
-   * Build and restart stakepoold.
+   - Stop stakepoold.
+   - Build and restart stakepoold.
 4) Edit dcrstakepool.conf and set adminIPs/adminUserIDs appropriately to include
    the administrative staff for whom you wish give the ability to add low fee
    tickets for voting.
@@ -52,14 +53,14 @@ database and reload its config.
 - dcrd has a new agenda and the vote version in dcrwallet has been
   incremented to v5 on mainnet.
 - stakepoold
-  - The ticket list is now maintained by doing an initial GetTicket RPC
-  call and then substracts/adds tickets by processing SpentAndMissed/New
-  ticket notifications from dcrwallet.  This approach is much faster than
-  the old method of calling StakePoolUserInfo for each user.
+  - The ticket list is now maintained by doing an initial GetTicket RPC call and
+    then subtracts/adds tickets by processing SpentAndMissed/New ticket
+    notifications from dcrwallet.  This approach is much faster than the old
+    method of calling StakePoolUserInfo for each user.
   - Bug fixes to the above commit and to accommodate changes in dcrwallet.
 - Status page
   - StatusUnauthorized error is now thrown rather than a generic one when
-  accessing the page as a non-admin.
+    accessing the page as a non-admin.
   - Updated to use new design.
   - Synced dcrwallet walletinfo field list.
 - Tickets page
@@ -77,12 +78,12 @@ database and reload its config.
 1) Announce maintenance and shut down dcrstakepool.
 2) Perform upgrades on each dcrd+dcrwallet+stakepoold voting cluster one at a
    time.
-   * Stop stakepoold, dcrwallet, and dcrd.
-   * Upgrade dcrd, dcrwallet to 1.1.0 release binaries or git. If compiling from
+   - Stop stakepoold, dcrwallet, and dcrd.
+   - Upgrade dcrd, dcrwallet to 1.1.0 release binaries or git. If compiling from
    source, Go 1.9 is recommended to pick up improvements to the Golang runtime.
-   * Restart dcrd, dcrwallet.
-   * Upgrade stakepoold.
-   * Start stakepoold.
+   - Restart dcrd, dcrwallet.
+   - Upgrade stakepoold.
+   - Start stakepoold.
 3) Upgrade and start dcrstakepool.  If you are maintaining a fork, note that
    you need to update the dcrd/chaincfg dependency to a revision that contains
    the new agenda.
@@ -94,54 +95,71 @@ database and reload its config.
 
 ## Requirements
 
-- [Go](http://golang.org) 1.8.3 or newer.
+- [Go](http://golang.org) 1.10.5 or newer (1.11 is recommended).
 - MySQL
 - Nginx or other web server to proxy to dcrstakepool
 
 ## Installation
 
-#### Linux/BSD/MacOSX/POSIX - Build from Source
+### Build from Source
 
-Building or updating from source requires the following build dependencies:
+Building or updating from source requires only an installation of Go
+([instructions](http://golang.org/doc/install)). It is recommended to add
+`$GOPATH/bin` to your `PATH` at this point.
 
-- **Go 1.8.3 or newer**
+Clone the dcrstakepool repository into any folder and follow the instructions
+below for your version of Go.
 
-  Installation instructions can be found here: http://golang.org/doc/install.
-  It is recommended to add `$GOPATH/bin` to your `PATH` at this point.
+#### Building with Go 1.11
 
-- **Dep**
+Go 1.11 introduced native support for
+[modules](https://github.com/golang/go/wiki/Modules), a new dependency
+management approach, that obviates the need for third party tooling such as
+`dep`.
 
-  Dep is used to manage project dependencies and provide reproducible builds.
-  To install:
+Usage is simple, and nothing is required except Go 1.11. If building in a folder
+under `GOPATH`, it is necessary to explicitly build with modules enabled:
 
-  `go get -u github.com/golang/dep/cmd/dep`
+    GO111MODULE=on go build
 
-Unfortunately, the use of `dep` prevents a handy tool such as `go get` from
-automatically downloading, building, and installing the source in a single
-command.  Instead, the latest project and dependency sources must be first
-obtained manually with `git` and `dep`, and then `go` is used to build and
-install the project.
+If building outside of `GOPATH`, modules are automatically enabled, and `go
+build` is sufficient.
 
-- Run the following command to obtain the dcrstakepool code and all dependencies:
+The `go` tool will process the source code and automatically download
+dependencies. If the dependencies are configured correctly, there will be no
+modifications to the `go.mod` and `go.sum` files.
+
+#### Building with Go 1.10
+
+Module-enabled builds with Go 1.10 require the
+[vgo](https://github.com/golang/vgo) command. Follow the same procedures as if
+you were [using Go 1.11](#building-with-go-111), but replacing `go` with `vgo`.
+
+**NOTE:** The `dep` tool is no longer supported. If you must use Go 1.10,
+install and use `vgo`. If possible, upgrade to Go 1.11.
+
+### Components
+
+The frontend server (dcrstakepool) and the backend daemon (stakepoold) are built
+separately. Since module-enabled builds no longer require building under
+`$GOPATH`, the following instructions use the placeholder
+`{{YOUR_GO_MODULE_PATH}}` to refer to wherever you checkout your Go code.
+
+#### Frontend - dcrstakepool
+
+Build dcrstakepool and copy it to the web server.
 
 ```bash
-$ git clone https://github.com/decred/dcrstakepool $GOPATH/src/github.com/decred/dcrstakepool
-$ cd $GOPATH/src/github.com/decred/dcrstakepool
-$ dep ensure
-```
-
-- Assuming you have done the below configuration, build and run dcrstakepool:
-
-```bash
-$ cd $GOPATH/src/github.com/decred/dcrstakepool
+$ cd {{YOUR_GO_MODULE_PATH}}/github.com/decred/dcrstakepool
 $ go build
-$ ./dcrstakepool
 ```
 
-- Build stakepoold and copy it to your voting nodes:
+#### Backend - stakepoold
+
+Build stakepoold and copy it to each voting wallet node.
 
 ```bash
-$ cd $GOPATH/src/github.com/decred/dcrstakepool/backend/stakepoold
+$ cd {{YOUR_GO_MODULE_PATH}}/src/github.com/decred/dcrstakepool/backend/stakepoold
 $ go build
 ```
 
@@ -161,62 +179,70 @@ $ go build
 
 ## Setup
 
-#### Pre-requisites
+### Pre-requisites
 
 These instructions assume you are familiar with dcrd/dcrwallet.
 
-- Create basic dcrd/dcrwallet/dcrctl config files with usernames, passwords, rpclisten, and network set appropriately within them or run example commands with additional flags as necessary
+- Create basic dcrd/dcrwallet/dcrctl config files with usernames, passwords,
+  rpclisten, and network set appropriately within them or run example commands
+  with additional flags as necessary.
 
-- Build/install dcrd and dcrwallet from latest master
+- Build/install dcrd and dcrwallet from latest master.
 
-- Run dcrd instances and let them fully sync
+- Run dcrd instances and let them fully sync.
 
-#### Stake pool fees/cold wallet
+### Stake pool fees/cold wallet
 
-- Setup a new wallet for receiving payment for stake pool fees.  **This should be completely separate from the stake pool infrastructure.**
+- Setup a new wallet for receiving payment for stake pool fees.  **This should
+  be completely separate from the stake pool infrastructure.**
 
 ```bash
 $ dcrwallet --create
 $ dcrwallet
 ```
 
-- Get the master pubkey for the account you wish to use. This will be needed to configure dcrwallet and dcrstakepool.
+- Get the master pubkey for the account you wish to use. This will be needed to
+  configure dcrwallet and dcrstakepool.
 
 ```bash
 $ dcrctl --wallet createnewaccount teststakepoolfees
 $ dcrctl --wallet getmasterpubkey teststakepoolfees
 ```
 
-- Mark 10000 addresses in use for the account so the wallet will recognize transactions to those addresses. Fees from UserId 1 will go to address 1, UserId 2 to address 2, and so on.
+- Mark 10000 addresses in use for the account so the wallet will recognize
+  transactions to those addresses. Fees from UserId 1 will go to address 1,
+  UserId 2 to address 2, and so on.
 
 ```bash
 $ dcrctl --wallet accountsyncaddressindex teststakepoolfees 0 10000
 ```
 
-#### Stake pool voting wallets
+### Stake pool voting wallets
 
-- Create the wallets.  All wallets should have the same seed.  **Backup the seed for disaster recovery!**
+- Create the wallets.  All wallets should have the same seed.  **Backup the seed
+  for disaster recovery!**
 
 ```bash
 $ dcrwallet --create
 ```
 
-- Start a properly configured dcrwallet and unlock it. See sample-dcrwallet.conf.
+- Start a properly configured dcrwallet and unlock it. See
+  sample-dcrwallet.conf.
 
 ```bash
 $ dcrwallet
 ```
 
-- Get the master pubkey from the default account.  This will be used for votingwalletextpub in dcrstakepool.conf.
+- Get the master pubkey from the default account.  This will be used for
+  votingwalletextpub in dcrstakepool.conf.
 
 ```bash
 $ dcrctl --wallet getmasterpubkey default
 ```
 
-#### MySQL
+### MySQL
 
 - Install, configure, and start MySQL
-
 - Add stakepool user and create the stakepool database
 
 ```bash
@@ -228,16 +254,19 @@ MySQL> FLUSH PRIVILEGES;
 MySQL> CREATE DATABASE stakepool;
 ```
 
-#### Nginx/web server
+### Nginx/web server
 
-- Adapt sample-nginx.conf or setup a different web server in a proxy configuration
+- Adapt sample-nginx.conf or setup a different web server in a proxy
+  configuration.
 
-#### stakepoold
+### stakepoold setup
+
 - Adapt sample-stakepoold.conf and run stakepoold.
 
-#### dcrstakepool
+### dcrstakepool setup
 
-- Create the .dcrstakepool directory and copy dcrwallet certs to it
+- Create the .dcrstakepool directory and copy dcrwallet certs to it:
+
 ```bash
 $ mkdir ~/.dcrstakepool
 $ cd ~/.dcrstakepool
@@ -247,7 +276,8 @@ $ scp walletserver1:~/.stakepoold/rpc.cert stakepoold1.cert
 $ scp walletserver2:~/.stakepoold/rpc.cert stakepoold2.cert
 ```
 
-- Copy sample config and edit appropriately
+- Copy sample config and edit appropriately.
+
 ```bash
 $ cp -p sample-dcrstakepool.conf dcrstakepool.conf
 ```
@@ -263,29 +293,37 @@ $ go build
 $ ./dcrstakepool
 ```
 
-If you wish to run dcrstakepool from a different directory you will need to change **publicpath** and **templatepath**
-from their relative paths to an absolute path.
+If you wish to run dcrstakepool from a different directory you will need to
+change **publicpath** and **templatepath** from their relative paths to an
+absolute path.
 
 ## Development
 
-If you are modifying templates, sending the USR1 signal to the dcrstakepool process will trigger a template reload.
+If you are modifying templates, sending the USR1 signal to the dcrstakepool
+process will trigger a template reload.
 
 ## Operations
 
-- dcrstakepool will connect to the database or error out if it cannot do so
+- dcrstakepool will connect to the database or error out if it cannot do so.
 
-- dcrstakepool will create the stakepool.Users table automatically if it doesn't exist
+- dcrstakepool will create the stakepool.Users table automatically if it doesn't
+  exist.
 
-- dcrstakepool attempts to connect to all of the wallet servers on startup or error out if it cannot do so
+- dcrstakepool attempts to connect to all of the wallet servers on startup or
+  error out if it cannot do so.
 
-- dcrstakepool takes a user's pubkey, validates it, calls getnewaddress on all the wallet servers, then createmultisig, and finally importscript.  If any of these RPCs fail or returns inconsistent results, the RPC client built-in to dcrstakepool will shut down and will not operate until it has been restarted.  Wallets should be verified to be in sync before restarting.
+- dcrstakepool takes a user's pubkey, validates it, calls getnewaddress on all
+  the wallet servers, then createmultisig, and finally importscript.  If any of
+  these RPCs fail or returns inconsistent results, the RPC client built-in to
+  dcrstakepool will shut down and will not operate until it has been restarted.
+  Wallets should be verified to be in sync before restarting.
 
 - User API Tokens have an issuer field set to baseURL from the configuration file.
   Changing the baseURL requires all API Tokens to be re-generated.
 
 ## Adding Invalid Tickets
 
-#### For Newer versions / git tip
+### For Newer versions / git tip
 
 If a user pays an incorrect fee, login as an account that meets the
 adminUserIps and adminUserIds restrictions and click the 'Add Low Fee Tickets'
@@ -294,9 +332,10 @@ suitable for adding.  Check the appropriate one(s) and click the submit button.
 Upon success, you should see the stakepoold logs reflect that the new tickets
 were processed.
 
-#### For v1.1.1 and below
+### For v1.1.1 and below
 
-If a user pays an incorrect fee you may add their tickets like so (requires dcrd running with txindex=1):
+If a user pays an incorrect fee you may add their tickets like so (requires dcrd
+running with `txindex=1`):
 
 ```bash
 dcrctl --wallet stakepooluserinfo "MultiSigAddress" | grep -Pzo '(?<="invalid": \[)[^\]]*' | tr -d , | xargs -Itickethash dcrctl --wallet getrawtransaction tickethash | xargs -Itickethex dcrctl --wallet addticket "tickethex"
@@ -304,19 +343,27 @@ dcrctl --wallet stakepooluserinfo "MultiSigAddress" | grep -Pzo '(?<="invalid": 
 
 ## Backups, monitoring, security considerations
 
-- MySQL should be backed up often and regularly (probably at least hourly). Backups should be transferred off-site.  If using binary backups, do a test restore. For .sql files, verify visually.
+- MySQL should be backed up often and regularly (probably at least hourly).
+  Backups should be transferred off-site.  If using binary backups, do a test
+  restore. For .sql files, verify visually.
 
-- A monitoring system with alerting should be pointed at dcrstakepool and tested/verified to be operating properly.  There is a hidden /status page which throws 500 if the RPC client is shutdown.  If your monitoring system supports it, add additional points of verification such as: checking that the /stats page loads and has expected information in it, create a test account and setup automated login testing, etc.
+- A monitoring system with alerting should be pointed at dcrstakepool and
+  tested/verified to be operating properly.  There is a hidden /status page
+  which throws 500 if the RPC client is shutdown.  If your monitoring system
+  supports it, add additional points of verification such as: checking that the
+  /stats page loads and has expected information in it, create a test account
+  and setup automated login testing, etc.
 
-- Wallets should never be used for anything else (they should always have a balance of 0)
+- Wallets should never be used for anything else (they should always have a
+  balance of 0).
 
 ## Disaster Recovery
 
 **Always keep at least one wallet voting while performing maintenance / restoration!**
 
 - In the case of a total failure of a wallet server:
-  * Restore the failed wallet(s) from seed
-  * Restart the dcrstakepool process to allow automatic syncing to occur.
+  - Restore the failed wallet(s) from seed
+  - Restart the dcrstakepool process to allow automatic syncing to occur.
 
 ## IRC
 
@@ -334,6 +381,7 @@ dcrstakepool is licensed under the [copyfree](http://copyfree.org) MIT/X11 and
 ISC Licenses.
 
 ## Version History
+
 - 1.1.0 - Architecture change.
   * Per-ticket votebits were removed in favor of per-user voting preferences.
     A voting page was added and the API upgraded to v2 to support getting and
