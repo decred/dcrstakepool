@@ -95,7 +95,7 @@ type WinningTicketsForBlock struct {
 var (
 	cfg              *config
 	errDuplicateVote = "-32603: already have transaction "
-	errNoTxInfo      = "-5: No information for transaction"
+	errNoTxInfo      = "-5: no information for transaction"
 	errSuccess       = errors.New("success")
 
 	dataFilenameTemplate = "KIND-DATE-VERSION.gob"
