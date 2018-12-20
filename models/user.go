@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-gorp/gorp"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
@@ -243,7 +243,8 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	dbMap.AddTableWithName(EmailChange{}, "EmailChange").SetKeys(true, "Id")
 	dbMap.AddTableWithName(LowFeeTicket{}, "LowFeeTicket").SetKeys(true, "Id")
 	dbMap.AddTableWithName(PasswordReset{}, "PasswordReset").SetKeys(true, "Id")
-	dbMap.AddTableWithName(User{}, "Users").SetKeys(true, "Id")
+	usersTableName := "Users"
+	dbMap.AddTableWithName(User{}, usersTableName).SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -266,7 +267,7 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// April 1st 2016.  The last mainnet block on Mar 31st of 15346 is used
 	// as a safe default to ensure no tickets are missed. This could be
 	// adjusted upwards since most pools were on testnet for a long time.
-	addColumn(dbMap, database, "Users", "HeightRegistered", "bigint(20) NULL",
+	AddColumn(dbMap, database, usersTableName, "HeightRegistered", "bigint(20) NULL",
 		"UserFeeAddr",
 		"UPDATE Users SET HeightRegistered = 15346 WHERE MultiSigAddress <> ''")
 
@@ -283,11 +284,11 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// add EmailVerified, EmailToken so new users' email addresses can be
 	// verified.  We consider users who already registered to be grandfathered
 	// in and use 2 to reflect that.  1 is verified, 0 is unverified.
-	addColumn(dbMap, database, "Users", "EmailVerified", "bigint(20) NULL",
+	AddColumn(dbMap, database, usersTableName, "EmailVerified", "bigint(20) NULL",
 		"HeightRegistered",
 		"UPDATE Users SET EmailVerified = 2")
 	// Set an empty token for grandfathered accounts
-	addColumn(dbMap, database, "Users", "EmailToken", "varchar(255) NULL",
+	AddColumn(dbMap, database, usersTableName, "EmailToken", "varchar(255) NULL",
 		"EmailVerified",
 		"UPDATE Users SET EmailToken = ''")
 
@@ -295,7 +296,7 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 
 	// add APIToken column for storing a token that users may use to submit a
 	// public key address and retrieve ticket purchasing information via the API
-	addColumn(dbMap, database, "Users", "APIToken", "varchar(255) NULL",
+	AddColumn(dbMap, database, usersTableName, "APIToken", "varchar(255) NULL",
 		"EmailToken", "UPDATE Users SET APIToken = ''")
 
 	// Set an API token for all users who have verified their email address
@@ -319,18 +320,18 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 
 	// add VoteBits column for storing the user's voting preferences.  Set the
 	// default to 1 which means the previous block was valid
-	addColumn(dbMap, database, "Users", "VoteBits", "bigint(20) NULL", "APIToken", "UPDATE Users SET VoteBits = 1")
+	AddColumn(dbMap, database, usersTableName, "VoteBits", "bigint(20) NULL", "APIToken", "UPDATE Users SET VoteBits = 1")
 
 	// add VoteBitsVersion column for storing the vote version that the VoteBits
 	// are set for.  The default is 3 since that is the current version on mainnet
 	// and it will be upgraded when talking to stakepoold
-	addColumn(dbMap, database, "Users", "VoteBitsVersion", "bigint(20) NULL", "VoteBits", "UPDATE Users SET VoteBitsVersion = 3")
+	AddColumn(dbMap, database, usersTableName, "VoteBitsVersion", "bigint(20) NULL", "VoteBits", "UPDATE Users SET VoteBitsVersion = 3")
 
 	return dbMap
 }
 
-// addColumn checks if a column exists and adds it if it doesn't
-func addColumn(dbMap *gorp.DbMap, db string, table string, columnToAdd string,
+// AddColumn checks if a column exists and adds it if it doesn't
+func AddColumn(dbMap *gorp.DbMap, db string, table string, columnToAdd string,
 	dataSpec string, colAfter string, defaultQry string) {
 	s, err := dbMap.SelectStr("SELECT column_name FROM " +
 		"information_schema.columns WHERE table_schema = '" + db +
