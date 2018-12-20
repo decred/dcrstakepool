@@ -6,14 +6,14 @@
   </div>
     <div class="col-sm-15 col-md-10 text-left center-block">
        <h1>{{if .User.MultiSigAddress }}Address Submitted{{else}}Submit Address{{end}}</h1>
-     <p><strong>When you submit an address, the stake pool binds that address
-        from your wallet together with an address from the stake pool's voting
+     <p><strong>When you submit an address, the voting service binds that address
+        from your wallet together with an address from the voting service's voting
         wallet.  This is done by creating a 1-of-2 multisignature script which
         lets you, the pool, or both parties vote.  This "binding" of the wallets
         means that if you ever delete your current wallet and create a new
         wallet with a different seed, importing your multisignature script will
         not work because it contains an address that is not present in your new
-        wallet.  Please contact your stake pool administrator or support staff
+        wallet.  Please contact your voting service administrator or support staff
         if you need to re-register with a new address from a new wallet.</strong></p>
 {{if .User.MultiSigAddress}}
      <div style="overflow:auto">
@@ -33,7 +33,7 @@ $ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet validateaddress 
 {{ else }}
         <p><strong>The official Decred GUI wallet
         <a href="https://decred.org/downloads/#decrediton">Decrediton</a>
-        is the recommended way to use stake pools.  All you need to get started
+        is the recommended way to use voting services.  All you need to get started
         is to copy and paste the API Token from the <a href="/settings">Settings Page</a>.  A more
         comprehensive guide is available for
         <a href="https://docs.decred.org/getting-started/user-guides/decrediton-setup/">Decrediton</a>.

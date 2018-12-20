@@ -893,7 +893,7 @@ func (w *walletSvrManager) GetTxOut(hash *chainhash.Hash, idx uint32) (*dcrjson.
 	return response.txOut, response.err
 }
 
-// StakePoolUserInfo gets the stake pool user information for a given user.
+// StakePoolUserInfo gets the voting service user information for a given user.
 //
 // This can race depending on what wallet is currently processing, so failures
 // from this function should NOT cause fatal errors on the web server like the
@@ -990,12 +990,12 @@ type walletSvrManager struct {
 
 	walletsLock sync.Mutex
 
-	// cachedStakeInfo is cached information about the stake pool wallet.
-	// This is required because of the time it takes to compute the
-	// stake information. The included timer is used so that new stake
-	// information is only queried for if 5 minutes or more has passed.
-	// The mutex is used to allow concurrent access to the stake
-	// information if less than five minutes has passed.
+	// cachedStakeInfo is cached information about the voting service wallet.
+	// This is required because of the time it takes to compute the stake
+	// information. The included timer is used so that new stake information is
+	// only queried for if 5 minutes or more has passed. The mutex is used to
+	// allow concurrent access to the stake information if less than five
+	// minutes has passed.
 	cachedStakeInfo      *dcrjson.GetStakeInfoResult
 	cachedStakeInfoTimer time.Time
 	cachedStakeInfoMutex sync.Mutex

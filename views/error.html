@@ -21,7 +21,7 @@
          {{if .Referer}}<a href="{{ .Referer }}">{{end}}Please re-try your request.{{if .Referer}}</a>{{end}}</p>
          {{end}}
          {{if eq .RPCStatus "Stopped"}}
-            <p>Stakepool is currently not processing RPC commands so most functionality of the web interface will not work until connections to the RPC server is restored.  <b>Wallets are still online and voting.</b></p>
+            <p>The voting service is currently not processing RPC commands so most functionality of the web interface will not work until connections to the RPC server is restored.  <b>Wallets are still online and voting.</b></p>
          {{end}}
          {{end}}
     </div>

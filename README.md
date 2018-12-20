@@ -12,7 +12,7 @@ vote on their behalf when the ticket is selected.
 
 ## Architecture
 
-![Stake Pool Architecture](https://i.imgur.com/2JDA9dl.png)
+![Voting Service Architecture](https://i.imgur.com/2JDA9dl.png)
 
 - It is highly recommended to use 3 dcrd+dcrwallet+stakepoold nodes for
   production use on mainnet.
@@ -191,10 +191,10 @@ These instructions assume you are familiar with dcrd/dcrwallet.
 
 - Run dcrd instances and let them fully sync.
 
-### Stake pool fees/cold wallet
+### Voting service fees/cold wallet
 
-- Setup a new wallet for receiving payment for stake pool fees.  **This should
-  be completely separate from the stake pool infrastructure.**
+- Setup a new wallet for receiving payment for voting service fees.  **This should
+  be completely separate from the voting service infrastructure.**
 
 ```bash
 $ dcrwallet --create
@@ -217,7 +217,7 @@ $ dcrctl --wallet getmasterpubkey teststakepoolfees
 $ dcrctl --wallet accountsyncaddressindex teststakepoolfees 0 10000
 ```
 
-### Stake pool voting wallets
+### Voting service voting wallets
 
 - Create the wallets.  All wallets should have the same seed.  **Backup the seed
   for disaster recovery!**
@@ -397,7 +397,7 @@ ISC Licenses.
     verified email address when upgrading.  Tokens are generated for new
     users on demand when visiting the Settings page which displays their token.
     Authenticated users may use the API to submit a public key address and to
-    retrieve ticket purchasing information.  The stake pool's stats are also
+    retrieve ticket purchasing information.  The voting service's stats are also
     available through the API without authentication.
 - 0.0.4 - Major changes/improvements.
   * config.toml is no longer required as the options in that file have been
@@ -408,7 +408,7 @@ ISC Licenses.
   * Temporary wallet connectivity errors are now handled much more gracefully.
   * A preliminary v0.1 API was added.
 - 0.0.3 - More expected/basic web application functionality added.
-  * SMTPHost now defaults to an empty string so a stake pool can be used for
+  * SMTPHost now defaults to an empty string so a voting service can be used for
     development or testing purposes without a configured mail server.  The
     contents of the emails are sent through the logger so links can still be
     followed.

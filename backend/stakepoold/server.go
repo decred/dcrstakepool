@@ -121,7 +121,7 @@ var (
 	ticketTypeSpentMissed = "SpentMissed"
 )
 
-// calculateFeeAddresses decodes the string of stake pool payment addresses
+// calculateFeeAddresses decodes the string of voting service payment addresses
 // to search incoming tickets for. The format for the passed string is:
 // "xpub...:end"
 // where xpub... is the extended public key and end is the last
@@ -131,7 +131,7 @@ var (
 func calculateFeeAddresses(xpubStr string, params *chaincfg.Params) (map[string]struct{}, error) {
 	end := uint32(10000)
 
-	log.Infof("Please wait, deriving %v stake pool fees addresses "+
+	log.Infof("Please wait, deriving %v voting service fees addresses "+
 		"for extended public key %s", end, xpubStr)
 
 	// Parse the extended public key and ensure it's the right network.
@@ -184,9 +184,9 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 	return addresses, nil
 }
 
-// evaluateStakePoolTicket evaluates a stake pool ticket to see if it's
-// acceptable to the stake pool. The ticket must pay out to the stake
-// pool cold wallet, and must have a sufficient fee.
+// evaluateStakePoolTicket evaluates a voting service ticket to see if it's
+// acceptable to the voting service. The ticket must pay out to the voting
+// service cold wallet, and must have a sufficient fee.
 func evaluateStakePoolTicket(ctx *appContext, tx *wire.MsgTx, blockHeight int32, poolUser dcrutil.Address) (bool, error) {
 	// Check the first commitment output (txOuts[1])
 	// and ensure that the address found there exists
@@ -237,7 +237,7 @@ func evaluateStakePoolTicket(ctx *appContext, tx *wire.MsgTx, blockHeight int32,
 		if commitAmt < feeNeeded {
 			log.Warnf("User %s submitted ticket %v which "+
 				"has less fees than are required to use this "+
-				"stake pool and is being skipped (required: %v"+
+				"Voting service and is being skipped (required: %v"+
 				", found %v)", commitAddr.EncodeAddress(),
 				tx.TxHash(), feeNeeded, commitAmt)
 
@@ -251,7 +251,7 @@ func evaluateStakePoolTicket(ctx *appContext, tx *wire.MsgTx, blockHeight int32,
 		return false, nil
 	}
 
-	log.Debugf("Accepted valid stake pool ticket %v committing %v in fees",
+	log.Debugf("Accepted valid voting service ticket %v committing %v in fees",
 		tx.TxHash(), tx.TxOut[0].Value)
 
 	return true, nil

@@ -21,7 +21,7 @@ import (
 
 const (
 	defaultBaseURL          = "http://127.0.0.1:8000"
-	defaultClosePoolMsg     = "The stake pool is temporarily closed to new signups."
+	defaultClosePoolMsg     = "The voting service is temporarily closed to new signups."
 	defaultConfigFilename   = "dcrstakepool.conf"
 	defaultDataDirname      = "data"
 	defaultLogLevel         = "info"
@@ -73,9 +73,9 @@ type config struct {
 	DebugLevel         string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	APISecret          string   `long:"apisecret" description:"Secret string used to encrypt API tokens."`
 	BaseURL            string   `long:"baseurl" description:"BaseURL to use when sending links via email"`
-	ColdWalletExtPub   string   `long:"coldwalletextpub" description:"The extended public key to send user stake pool fees to"`
+	ColdWalletExtPub   string   `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
 	ClosePool          bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
-	ClosePoolMsg       string   `long:"closepoolmsg" description:"Message to display when closepool is set (default: Stake pool is currently oversubscribed)"`
+	ClosePoolMsg       string   `long:"closepoolmsg" description:"Message to display when closepool is set."`
 	CookieSecret       string   `long:"cookiesecret" description:"Secret string used to encrypt session data."`
 	CookieSecure       bool     `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
 	DBHost             string   `long:"dbhost" description:"Hostname for database connection"`
