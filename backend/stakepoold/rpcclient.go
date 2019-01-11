@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
@@ -36,7 +35,7 @@ func connectNodeRPC(ctx *appContext, cfg *config) (*rpcclient.Client, semver, er
 		Certificates: dcrdCert,
 	}
 
-	ntfnHandlers := getNodeNtfnHandlers(ctx, connCfgDaemon)
+	ntfnHandlers := getNodeNtfnHandlers(ctx)
 	dcrdClient, err := rpcclient.New(connCfgDaemon, ntfnHandlers)
 	if err != nil {
 		log.Errorf("Failed to start dcrd RPC client: %s\n", err.Error())
@@ -84,7 +83,7 @@ func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 		Certificates: dcrwCert,
 	}
 
-	ntfnHandlers := getWalletNtfnHandlers(cfg)
+	ntfnHandlers := getWalletNtfnHandlers()
 	dcrwClient, err := rpcclient.New(connCfgWallet, ntfnHandlers)
 	if err != nil {
 		log.Errorf("Verify that username and password is correct and that "+
@@ -111,7 +110,7 @@ func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 	return dcrwClient, walletVer, nil
 }
 
-func walletGetTickets(ctx *appContext, currentHeight int64) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
+func walletGetTickets(ctx *appContext) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
 	blockHashToHeightCache := make(map[chainhash.Hash]int32)
 
 	// This is suboptimal to copy and needs fixing.
@@ -158,15 +157,10 @@ func walletGetTickets(ctx *appContext, currentHeight int64) (map[chainhash.Hash]
 			continue
 		}
 		for i := range gt.Details {
-			_, ok := userVotingConfig[gt.Details[i].Address]
+			addr := gt.Details[i].Address
+			_, ok := userVotingConfig[addr]
 			if !ok {
-				log.Warnf("Could not map ticket %v to a user, user %v doesn't exist", gt.TxID, gt.Details[i].Address)
-				continue
-			}
-
-			addr, err := dcrutil.DecodeAddress(gt.Details[i].Address)
-			if err != nil {
-				log.Warnf("invalid address %v", err)
+				log.Warnf("Could not map ticket %v to a user, user %v doesn't exist", gt.TxID, addr)
 				continue
 			}
 
@@ -181,7 +175,7 @@ func walletGetTickets(ctx *appContext, currentHeight int64) (map[chainhash.Hash]
 			// sort the tickets into their respective maps.
 			_, isAdded := ctx.addedLowFeeTicketsMSA[*hash]
 			if isAdded {
-				liveTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
+				liveTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 			} else {
 
 				msgTx := MsgTxFromHex(gt.Hex)
@@ -212,14 +206,14 @@ func walletGetTickets(ctx *appContext, currentHeight int64) (map[chainhash.Hash]
 					ticketBlockHeight = int32(gbh.Height)
 				}
 
-				ticketFeesValid, err := evaluateStakePoolTicket(ctx, msgTx, ticketBlockHeight, addr)
+				ticketFeesValid, err := evaluateStakePoolTicket(ctx, msgTx, ticketBlockHeight)
 				if ticketFeesValid {
 					normalFee++
-					liveTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
+					liveTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 				} else {
-					ignoredLowFeeTickets[*hash] = userVotingConfig[gt.Details[i].Address].MultiSigAddress
+					ignoredLowFeeTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 					log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
-						*hash, ctx.userVotingConfig[gt.Details[i].Address].MultiSigAddress, ticketFeesValid, err)
+						*hash, ctx.userVotingConfig[addr].MultiSigAddress, ticketFeesValid, err)
 				}
 			}
 			break

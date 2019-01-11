@@ -989,7 +989,8 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 	// Attempt to query wallet statuses
 	walletInfo, err := controller.WalletStatus()
 	if err != nil {
-		// decide when to throw err here
+		log.Errorf("Failed to execute WalletStatus: %v", err)
+		return "/error", http.StatusSeeOther
 	}
 
 	type WalletInfoPage struct {
@@ -2011,7 +2012,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	// Get P2SH Address
 	multisig, err := dcrutil.DecodeAddress(user.MultiSigAddress)
 	if err != nil {
-		log.Infof("Invalid address %v in database: %v", user.MultiSigAddress, err)
+		log.Warnf("Invalid address %v in database: %v", user.MultiSigAddress, err)
 		return "/error", http.StatusSeeOther
 	}
 
