@@ -42,7 +42,7 @@
 			<p><strong><u>Step 1</u></strong></p>
 			<p><strong>The official Decred GUI wallet
         <a href="https://decred.org/downloads/#decrediton">Decrediton</a>
-        is the recommended way to use stake pools.  All you need to get started
+        is the recommended way to use voting services.  All you need to get started
         is to copy and paste the API Token from the <a href="/settings">Settings Page</a>.  A more
         comprehensive guide is available for
         <a href="https://docs.decred.org/getting-started/user-guides/decrediton-setup/">Decrediton</a>.
@@ -63,7 +63,7 @@
 			<div class="cmd"><pre>$ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet importscript {{ .User.MultiSigScript }}</pre></div>
 
 			<p>After successfully importing the script into your wallet, you may
-				purchase tickets with voting rights delegated to the pool in either of
+				purchase tickets with voting rights delegated to the voting service in either of
 				two ways:</p>
 
 			<p><strong><u>Step 3</u></strong></p>
@@ -80,7 +80,7 @@ poolfees={{ .PoolFees }}
 ticketbuyer.votingaddress={{ .User.MultiSigAddress }}
 ticketbuyer.maxpriceabsolute=100
 </pre>
-      <p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the pool address.</p>
+      <p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the voting service address.</p>
 
 			<p><strong>Option B - dcrwallet - Manual purchasing</strong></p>
 			<p>Start a wallet with funds available and manually purchase tickets with the following command using <strong>dcrctl</strong>:</p>
@@ -88,7 +88,7 @@ ticketbuyer.maxpriceabsolute=100
 <pre>
 dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 100 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre>
 			<p>Will purchase a ticket delegated to the the multisig address which
-				allows either your or the pool to vote when the ticket is called. This
+				allows either your or the voting service to vote when the ticket is called. This
 				uses funds from the default account only if the current network price
 				for a ticket is less than 100.0 coins.</p>
 
@@ -98,8 +98,8 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#how-to-vote">How To Vote</a>
 			and
 			<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#solo-voting">Solo-Voting</a>.
-			The preferences you set on this stake pool's <a href="/voting">voting page</a>
-			only affect the stake pool's voting wallets and not your own.</p>
+			The preferences you set on this voting service's <a href="/voting">voting page</a>
+			only affect the stake voting service's voting wallets and not your own.</p>
       </div>
     </div>
   </div>
@@ -203,7 +203,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			<p><strong>No missed tickets.</strong></p>
 			{{end}}
 			{{if .TicketsMissed}}
-			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the pool.</div>
+			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the voting service.</div>
 			<div class="table-responsive">
 			<table id="ticketsmissed" class="table table-condensed datatablesort responsive">
 			<thead>
@@ -293,8 +293,8 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			{{end}}
 			{{if .TicketsInvalid}}
 			<div class="well well-notification orange-notification"><b>Alert!</b> Tickets appearing here did not pay the correct pool fee.
-			You will either need to vote these tickets yourself or contact your stake pool administrator to have them add
-			the ticket to the pool manually.</div>
+			You will either need to vote these tickets yourself or contact your voting service provider administrator to have them add
+			the ticket to the voting service manually.</div>
 			<div class="table-responsive">
 			<table id="ticketsinvalid" class="table table-condensed">
 			<thead>
