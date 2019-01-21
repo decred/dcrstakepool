@@ -39,7 +39,7 @@ var (
 	defaultDBName = "stakepool"
 	defaultDBPort = "3306"
 	defaultDBUser = "stakepool"
-	defaultDBTLS  = false
+	defaultDBTLS  = "false"
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
