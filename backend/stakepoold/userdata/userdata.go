@@ -14,7 +14,7 @@ type DBConfig struct {
 	DBPassword string
 	DBPort     string
 	DBUser     string
-	DBTLS      bool
+	DBTLS      string
 }
 
 // UserData stores the current snapshot of the user voting config.
@@ -132,7 +132,7 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 }
 
 // DBSetConfig sets the database configuration.
-func (u *UserData) DBSetConfig(DBUser string, DBPassword string, DBHost string, DBPort string, DBName string, DBTLS bool) {
+func (u *UserData) DBSetConfig(DBUser string, DBPassword string, DBHost string, DBPort string, DBName string, DBTLS string) {
 	dbconfig := &DBConfig{
 		DBHost:     DBHost,
 		DBName:     DBName,
