@@ -68,7 +68,7 @@ type config struct {
 	DBPassword       string  `long:"dbpassword" description:"Password for database connection"`
 	DBPort           string  `long:"dbport" description:"Port for database connection"`
 	DBName           string  `long:"dbname" description:"Name of database"`
-	DBTLS            bool    `long:"dbtls" description:"Use TLS when connecting to mysqld"`
+	DBTLS            string  `long:"dbtls" description:"Use TLS when connecting to mysqld"`
 	DcrdHost         string  `long:"dcrdhost" description:"Hostname/IP for dcrd server"`
 	DcrdUser         string  `long:"dcrduser" description:"Username for dcrd server"`
 	DcrdPassword     string  `long:"dcrdpassword" description:"Password for dcrd server"`
