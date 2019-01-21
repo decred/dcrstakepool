@@ -40,6 +40,7 @@ var (
 	defaultDBName = "stakepool"
 	defaultDBPort = "3306"
 	defaultDBUser = "stakepool"
+	defaultDBTLS  = false
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -50,6 +51,7 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
+<<<<<<< HEAD
 	HomeDir          string   `short:"A" long:"appdata" description:"Path to application home directory"`
 	ShowVersion      bool     `short:"V" long:"version" description:"Display version information and exit"`
 	ConfigFile       string   `short:"C" long:"configfile" description:"Path to configuration file"`
@@ -76,6 +78,36 @@ type config struct {
 	WalletUser       string   `long:"walletuser" description:"Username for wallet server"`
 	WalletPassword   string   `long:"walletpassword" description:"Password for wallet server"`
 	WalletCert       string   `long:"walletcert" description:"Certificate path for wallet server"`
+=======
+	HomeDir          string  `short:"A" long:"appdata" description:"Path to application home directory"`
+	ShowVersion      bool    `short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile       string  `short:"C" long:"configfile" description:"Path to configuration file"`
+	DataDir          string  `short:"b" long:"datadir" description:"Directory to store data"`
+	LogDir           string  `long:"logdir" description:"Directory to log output."`
+	TestNet          bool    `long:"testnet" description:"Use the test network"`
+	SimNet           bool    `long:"simnet" description:"Use the simulation test network"`
+	Profile          string  `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	CPUProfile       string  `long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	MemProfile       string  `long:"memprofile" description:"Write mem profile to the specified file"`
+	DebugLevel       string  `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	ColdWalletExtPub string  `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
+	PoolFees         float64 `long:"poolfees" description:"The per-ticket fees the user must send to the voting service with their tickets"`
+	DBHost           string  `long:"dbhost" description:"Hostname for database connection"`
+	DBUser           string  `long:"dbuser" description:"Username for database connection"`
+	DBPassword       string  `long:"dbpassword" description:"Password for database connection"`
+	DBPort           string  `long:"dbport" description:"Port for database connection"`
+	DBName           string  `long:"dbname" description:"Name of database"`
+	DBTLS            string  `long:"dbtls" description:"Use TLS when connecting to mysqld"`
+	DcrdHost         string  `long:"dcrdhost" description:"Hostname/IP for dcrd server"`
+	DcrdUser         string  `long:"dcrduser" description:"Username for dcrd server"`
+	DcrdPassword     string  `long:"dcrdpassword" description:"Password for dcrd server"`
+	DcrdCert         string  `long:"dcrdcert" description:"Certificate path for dcrd server"`
+	WalletHost       string  `long:"wallethost" description:"Hostname for wallet server"`
+	WalletUser       string  `long:"walletuser" description:"Username for wallet server"`
+	WalletPassword   string  `long:"walletpassword" description:"Password for wallet server"`
+	WalletCert       string  `long:"walletcert" description:"Certificate path for wallet server"`
+	Version          string
+>>>>>>> New dbtls parameter to configure encryption for the database connection
 	NoRPCListen      bool     `long:"norpclisten" description:"Do not start a gRPC server. User voting preferences update on a ticker"`
 	RPCListeners     []string `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 9113, testnet: 19113)"`
 	RPCCert          string   `long:"rpccert" description:"File containing the certificate file"`
@@ -261,6 +293,7 @@ func loadConfig() (*config, []string, error) {
 		DBName:     defaultDBName,
 		DBPort:     defaultDBPort,
 		DBUser:     defaultDBUser,
+		DBTLS:      defaultDBTLS,
 		LogDir:     defaultLogDir,
 		PoolFees:   defaultPoolFees,
 		RPCKey:     defaultRPCKeyFile,
