@@ -47,9 +47,9 @@
         comprehensive guide is available for
         <a href="https://docs.decred.org/getting-started/user-guides/decrediton-setup/">Decrediton</a>.
 				There is also a more general overview of the staking process available
-				<a href="https://docs.decred.org/mining/proof-of-stake/#automatic-purchasing-of-tickets" target="_blank">here</a>.</strong></p>
+				<a href="https://docs.decred.org/mining/proof-of-stake/#automatic-purchasing-of-tickets" target="_blank" rel="noopener noreferrer">here</a>.</strong></p>
 			<p><strong>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</strong>
-			<a href="https://decred.org/downloads/" target="_blank"><span aria-label="Decred Downloads Page"> &#8675; Decred Downloads Page</span></a>
+			<a href="https://decred.org/downloads/" target="_blank" rel="noopener noreferrer"><span aria-label="Decred Downloads Page"> &#8675; Decred Downloads Page</span></a>
 			The <a href="https://docs.decred.org/getting-started/user-guides/dcrwallet-tickets/">dcrwallet instructions</a>
       are the most helpful if you wish to continue on the command-line path.</p>
 			<p><strong><u>Step 2</u></strong></p>
@@ -128,7 +128,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsLive }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
 				<td>{{ $data.TicketHeight }}</td>
 				</tr>{{end}}
 			</tbody>
@@ -169,8 +169,8 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsVoted }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.SpentBy}}" target="_blank">{{$data.SpentByHeight}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.SpentBy}}" target="_blank" rel="noopener noreferrer">{{$data.SpentByHeight}}</a></td>
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
 			</tbody>
@@ -215,7 +215,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsMissed }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
 				<td>{{$data.SpentByHeight}}</td>
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
@@ -259,7 +259,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsExpired }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
 				<td>{{$data.SpentByHeight}}</td>
 				<td>{{$data.TicketHeight}}</td>
 				</tr>{{end}}
@@ -304,7 +304,7 @@ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "de
 			</thead>
 			<tbody>
 			{{ range $i, $data := .TicketsInvalid }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank">{{$data.Ticket}}</a></td>
+				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
 				</tr>{{end}}
 			</tbody>
 			<tfoot>
