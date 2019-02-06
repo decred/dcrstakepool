@@ -28,15 +28,6 @@
       <input name="passwordrepeat" type="password" class="form-control" placeholder="Password" required>
 	</div>
   </div>
-<!-- <div class="form-group" style="{{if .FlashSuccess}}display: none;{{end}}">
-    <label class="col-md-4 control-label" for=""></label>
-     <div class="col-md-6">
-     <label class="checkbox-inline" for="terms">
-    <input type="checkbox" name="terms" id="terms" required="" data-parsley-required-message="You can't continue without accepting our Terms and Conditions">
-       I accept terms and conditions
-     </label>
-     </div>
-    </div> -->
 
   <div class="form-group" style="{{if .FlashSuccess}}display: none;{{end}}">
      <div class="g-recaptcha pull-right" style="margin-right:8px" data-sitekey="{{.RecaptchaSiteKey}}" data-theme="light"></div>
@@ -50,9 +41,7 @@
   </div>
 
   <div class="form-group col-sm-7 pull-right" style="{{if .FlashSuccess}}display: none;{{end}}">
-<!--    <label class="col-md-4 control-label" for="reset"></label> -->
         <p><a href="/passwordreset">Forgot your password?</a></p>
-        <p><a href="/signup">New user?</a></p>
   </div>
 </div>
 	<input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
