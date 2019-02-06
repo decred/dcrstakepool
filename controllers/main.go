@@ -5,18 +5,19 @@
 package controllers
 
 import (
+	"crypto/tls"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"html/template"
 	"net"
 	"net/http"
-	"net/smtp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/dajohi/goemail"
 	"github.com/dchest/captcha"
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
@@ -77,9 +78,7 @@ type MainController struct {
 	realIPHeader         string
 	captchaHandler       *CaptchaHandler
 	smtpFrom             string
-	smtpHost             string
-	smtpUsername         string
-	smtpPassword         string
+	smtpServer           *goemail.SMTP
 	version              string
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
@@ -145,6 +144,13 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		ImgWidth:  257,
 	}
 
+	smtpUrl := fmt.Sprintf("smtp://%s:%s@%s", smtpUsername, smtpPassword, smtpHost)
+	tlsConfig := tls.Config{}
+	smtpServer, err := goemail.NewSMTP(smtpUrl, &tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	mc := &MainController{
 		adminIPs:             adminIPs,
 		adminUserIDs:         adminUserIDs,
@@ -164,9 +170,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		rpcServers:           rpcs,
 		realIPHeader:         realIPHeader,
 		smtpFrom:             smtpFrom,
-		smtpHost:             smtpHost,
-		smtpUsername:         smtpUsername,
-		smtpPassword:         smtpPassword,
+		smtpServer:           smtpServer,
 		version:              version,
 		votingXpub:           voteKey,
 		maxVotedAge:          maxVotedAge,
@@ -485,34 +489,14 @@ func (controller *MainController) isAdmin(c web.C, r *http.Request) (bool, error
 // SendMail sends an email with the passed data using the system's SMTP
 // configuration.
 func (controller *MainController) SendMail(emailaddress string, subject string, body string) error {
-
-	hostname := controller.smtpHost
-
-	if strings.Contains(controller.smtpHost, ":") {
-		parts := strings.Split(controller.smtpHost, ":")
-		hostname = parts[0]
-	}
-
-	// Set up authentication information.
-	auth := smtp.PlainAuth("", controller.smtpUsername, controller.smtpPassword, hostname)
-
 	// Connect to the server, authenticate, set the sender and recipient,
 	// and send the email all in one step.
-	to := []string{emailaddress}
-	msg := []byte("To: " + emailaddress + "\r\n" +
-		"From: " + controller.smtpFrom + "\r\n" +
-		"Subject: " + subject + "\r\n" +
-		"\r\n" +
-		body + "\r\n")
+	mailMsg := goemail.NewMessage(controller.smtpFrom, subject, body)
+	mailMsg.AddTo(emailaddress)
 
-	if controller.smtpHost == "" {
-		log.Warn("no mail server configured -- skipping sending " + string(msg))
-		return nil
-	}
-
-	err := smtp.SendMail(controller.smtpHost, auth, controller.smtpFrom, to, msg)
+	err := controller.smtpServer.Send(mailMsg)
 	if err != nil {
-		log.Errorf("Error sending email to %v", err)
+		log.Errorf("Error sending email to %v: %v", emailaddress, err)
 	}
 	return err
 }
@@ -1401,9 +1385,6 @@ func (controller *MainController) PasswordReset(c web.C, r *http.Request) (strin
 	c.Env["FlashError"] = append(session.Flashes("passwordresetError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("passwordresetSuccess")
 	c.Env["IsPasswordReset"] = true
-	if controller.smtpHost == "" {
-		c.Env["SMTPDisabled"] = true
-	}
 	c.Env["CaptchaID"] = captcha.New()
 
 	t := controller.GetTemplate(c)
@@ -1595,9 +1576,6 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 	c.Env["IsSettings"] = true
 	if user.MultiSigAddress == "" {
 		c.Env["ShowInstructions"] = true
-	}
-	if controller.smtpHost == "" {
-		c.Env["SMTPDisabled"] = true
 	}
 	c.Env["CaptchaID"] = captcha.New()
 
@@ -1792,9 +1770,6 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int) {
 	// Tell main.html what route is being rendered
 	c.Env["IsSignUp"] = true
-	if controller.smtpHost == "" {
-		c.Env["SMTPDisabled"] = true
-	}
 	if controller.closePool {
 		c.Env["IsClosed"] = true
 		c.Env["ClosePoolMsg"] = controller.closePoolMsg
