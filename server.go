@@ -95,11 +95,12 @@ func runMain() int {
 	// that the next function will assume has been setup successfully.
 	app.Use(application.ApplyTemplates)
 	app.Use(application.ApplySessions)
+	app.Use(application.ApplyCaptcha) // must be after ApplySessions
 	app.Use(application.ApplyDbMap)
 	app.Use(application.ApplyAPI)
-	app.Use(application.ApplyAuth)
+	app.Use(application.ApplyAuth) // must be after ApplySessions
 	app.Use(application.ApplyIsXhr)
-	app.Use(application.ApplyCsrfProtection)
+	app.Use(application.ApplyCsrfProtection) // must be after ApplySessions
 	app.Use(context.ClearHandler)
 
 	// Supported API versions are advertised in the API stats result
@@ -118,14 +119,13 @@ func runMain() int {
 	}
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported, cfg.BaseURL,
-		cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
+		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported,
+		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
 		cfg.ColdWalletExtPub, grpcConnections, cfg.PoolFees, cfg.PoolEmail,
-		cfg.PoolLink, cfg.RecaptchaSecret, cfg.RecaptchaSitekey, cfg.SMTPFrom,
-		cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.Version,
-		cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers, cfg.WalletPasswords,
-		cfg.MinServers, cfg.RealIPHeader, cfg.VotingWalletExtPub,
-		cfg.MaxVotedAge)
+		cfg.PoolLink, cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername,
+		cfg.SMTPPassword, cfg.Version, cfg.WalletHosts, cfg.WalletCerts,
+		cfg.WalletUsers, cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader,
+		cfg.VotingWalletExtPub, cfg.MaxVotedAge)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to initialize the main controller: %v",
@@ -226,6 +226,10 @@ func runMain() int {
 	// Sign Up routes
 	app.Get("/signup", application.Route(controller, "SignUp"))
 	app.Post("/signup", application.Route(controller, "SignUpPost"))
+
+	// Captcha
+	app.Get("/captchas/*", controller.CaptchaServe)
+	app.Post("/verifyhuman", controller.CaptchaVerify)
 
 	// Stats
 	app.Get("/stats", application.Route(controller, "Stats"))

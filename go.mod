@@ -2,6 +2,7 @@ module github.com/decred/dcrstakepool
 
 require (
 	github.com/btcsuite/go-flags v0.0.0-20150116065318-6c288d648c1c
+	github.com/dchest/captcha v0.0.0-20170622155422-6a29415a8364
 	github.com/decred/dcrd/blockchain/stake v1.1.0
 	github.com/decred/dcrd/certgen v1.0.2
 	github.com/decred/dcrd/chaincfg v1.3.0
@@ -19,7 +20,6 @@ require (
 	github.com/golang/protobuf v1.2.0
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/sessions v1.1.2
-	github.com/haisum/recaptcha v0.0.0-20170327142240-7d3b8053900e
 	github.com/jrick/logrotate v1.0.0
 	github.com/lib/pq v1.0.0 // indirect
 	github.com/mattn/go-sqlite3 v1.9.0 // indirect
