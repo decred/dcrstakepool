@@ -55,13 +55,12 @@ func (controller *MainController) CaptchaVerify(c web.C, w http.ResponseWriter, 
 
 	session := controller.GetSession(c)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	var status int
 	if captcha.VerifyString(id, solution) {
 		session.Values["CaptchaDone"] = true
-		status = http.StatusFound
 	} else {
 		session.Values["CaptchaDone"] = false
-		status = http.StatusBadRequest
+		session.AddFlash("Captcha verification failed. Please try again.",
+			"captchaFailed")
 	}
 
 	if err := session.Save(r, w); err != nil {
@@ -73,5 +72,5 @@ func (controller *MainController) CaptchaVerify(c web.C, w http.ResponseWriter, 
 	if ref == "" {
 		ref = "/"
 	}
-	http.Redirect(w, r, ref, status)
+	http.Redirect(w, r, ref, http.StatusFound)
 }

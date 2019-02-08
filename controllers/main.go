@@ -1362,7 +1362,7 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 // PasswordReset renders the password reset page.
 func (controller *MainController) PasswordReset(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
-	c.Env["FlashError"] = session.Flashes("passwordresetError")
+	c.Env["FlashError"] = append(session.Flashes("passwordresetError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("passwordresetSuccess")
 	c.Env["IsPasswordReset"] = true
 	if controller.smtpHost == "" {
@@ -1385,7 +1385,7 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	dbMap := controller.GetDbMap(c)
 
 	if !controller.IsCaptchaDone(c) {
-		session.AddFlash("Captcha error", "passwordresetError")
+		session.AddFlash("You must complete the captcha.", "passwordresetError")
 		return controller.PasswordReset(c, r)
 	}
 
@@ -1565,7 +1565,7 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["APIToken"] = user.APIToken
-	c.Env["FlashError"] = session.Flashes("settingsError")
+	c.Env["FlashError"] = append(session.Flashes("settingsError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("settingsSuccess")
 	c.Env["IsSettings"] = true
 	if user.MultiSigAddress == "" {
@@ -1610,7 +1610,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		log.Infof("user requested email change from %v to %v", user.Email, newEmail)
 
 		if !controller.IsCaptchaDone(c) {
-			session.AddFlash("Captcha error", "settingsError")
+			session.AddFlash("You must complete the captcha.", "settingsError")
 			return controller.Settings(c, r)
 		}
 
@@ -1776,7 +1776,7 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 	}
 
 	session := controller.GetSession(c)
-	c.Env["FlashError"] = session.Flashes("signupError")
+	c.Env["FlashError"] = append(session.Flashes("signupError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("signupSuccess")
 	c.Env["CaptchaID"] = captcha.New()
 
@@ -1798,7 +1798,7 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 
 	session := controller.GetSession(c)
 	if !controller.IsCaptchaDone(c) {
-		session.AddFlash("Captcha error", "signupError")
+		session.AddFlash("You must complete the captcha.", "signupError")
 		return controller.SignUp(c, r)
 	}
 
