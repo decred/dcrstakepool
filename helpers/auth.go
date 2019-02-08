@@ -6,20 +6,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func AddPasswordResetToken(dbMap *gorp.DbMap, email string) (*models.User, error) {
-	var user models.User
-	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE Email = ?", email)
-	if err != nil {
-		return nil, err
-	}
-
-	return &user, err
-}
-
-func EmailChangeComplete(dbMap *gorp.DbMap, token string) error {
+func EmailChangeComplete(dbMap *gorp.DbMap, token models.UserToken) error {
 	var emailChange models.EmailChange
 
-	err := dbMap.SelectOne(&emailChange, "SELECT * FROM EmailChange WHERE Token = ?", token)
+	err := dbMap.SelectOne(&emailChange,
+		"SELECT * FROM EmailChange WHERE Token = ?", token.String())
 	if err != nil {
 		return err
 	}
@@ -30,13 +21,14 @@ func EmailChangeComplete(dbMap *gorp.DbMap, token string) error {
 		return err
 	}
 
-	_, err = dbMap.Exec("DELETE FROM EmailChange WHERE Token = ?", token)
+	_, err = dbMap.Exec("DELETE FROM EmailChange WHERE Token = ?", token.String())
 	return err
 }
 
-func EmailChangeTokenExists(dbMap *gorp.DbMap, token string) (*models.EmailChange, error) {
+func EmailChangeTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.EmailChange, error) {
 	var emailChange models.EmailChange
-	err := dbMap.SelectOne(&emailChange, "SELECT * FROM EmailChange WHERE Token = ?", token)
+	err := dbMap.SelectOne(&emailChange,
+		"SELECT * FROM EmailChange WHERE Token = ?", token.String())
 	if err != nil {
 		return nil, err
 	}
@@ -54,9 +46,10 @@ func EmailExists(dbMap *gorp.DbMap, email string) (*models.User, error) {
 	return &user, err
 }
 
-func EmailVerificationTokenExists(dbMap *gorp.DbMap, token string) (*models.User, error) {
+func EmailVerificationTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.User, error) {
 	var user models.User
-	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE EmailToken = ?", token)
+	err := dbMap.SelectOne(&user,
+		"SELECT * FROM Users WHERE EmailToken = ?", token.String())
 	if err != nil {
 		return nil, err
 	}
@@ -64,20 +57,22 @@ func EmailVerificationTokenExists(dbMap *gorp.DbMap, token string) (*models.User
 	return &user, err
 }
 
-func EmailVerificationComplete(dbMap *gorp.DbMap, token string) error {
-	_, err := dbMap.Exec("UPDATE Users SET EmailToken = '', "+
-		"EmailVerified = 1 WHERE EmailToken = ?", token)
+func EmailVerificationComplete(dbMap *gorp.DbMap, token models.UserToken) error {
+	_, err := dbMap.Exec(`UPDATE Users
+		SET EmailToken = '', EmailVerified = 1
+		WHERE EmailToken = ?`, token.String())
 	return err
 }
 
-func PasswordResetTokenDelete(dbMap *gorp.DbMap, token string) error {
-	_, err := dbMap.Exec("DELETE FROM PasswordReset WHERE Token = ?", token)
+func PasswordResetTokenDelete(dbMap *gorp.DbMap, token models.UserToken) error {
+	_, err := dbMap.Exec("DELETE FROM PasswordReset WHERE Token = ?", token.String())
 	return err
 }
 
-func PasswordResetTokenExists(dbMap *gorp.DbMap, token string) (*models.PasswordReset, error) {
+func PasswordResetTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.PasswordReset, error) {
 	var passwordReset models.PasswordReset
-	err := dbMap.SelectOne(&passwordReset, "SELECT * FROM PasswordReset WHERE Token = ?", token)
+	err := dbMap.SelectOne(&passwordReset,
+		"SELECT * FROM PasswordReset WHERE Token = ?", token.String())
 	if err != nil {
 		return nil, err
 	}
