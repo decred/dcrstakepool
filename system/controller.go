@@ -57,7 +57,8 @@ func (controller *Controller) CheckPasswordResetToken(tokenStr string, c web.C) 
 
 	// Check that the token is set.
 	if tokenStr == "" {
-		session.AddFlash("No password update token present.", "passwordupdateError")
+		session.AddFlash("No password update token present.",
+			"passwordupdateError")
 		return token, nil, false
 	}
 
@@ -73,8 +74,10 @@ func (controller *Controller) CheckPasswordResetToken(tokenStr string, c web.C) 
 	// Check that the token is recognized.
 	passwordReset, err := helpers.PasswordResetTokenExists(dbMap, token)
 	if err != nil {
-		session.AddFlash("Password update token not valid", "passwordupdateError")
-		return token, passwordReset, false
+		log.Debugf(`Password update token "%v" not found in DB: %v`, token, err)
+		session.AddFlash("Password update token not recognized.",
+			"passwordupdateError")
+		return token, nil, false
 	}
 
 	// Check that the token is not expired.
