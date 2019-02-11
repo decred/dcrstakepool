@@ -2,7 +2,6 @@
 <div class="wrapper">
   <div class="row">
     <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-      {{if .SMTPDisabled }}<div class="well well-notification  orange-notification">Mail server not configured.  You will not receive an email verification link.</div>{{end}}
       {{range .FlashError}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
       {{range .FlashSuccess}}<div class="well well-notification green-notification">{{.}}</div>{{end}}
       {{if .IsClosed }}<div class="well well-notification  orange-notification">{{.ClosePoolMsg}}</div>{{end}}

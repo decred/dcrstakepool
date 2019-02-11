@@ -2,6 +2,7 @@ module github.com/decred/dcrstakepool
 
 require (
 	github.com/apoydence/onpar v0.0.0-20181125144932-f2f06780798d // indirect
+	github.com/dajohi/goemail v0.0.0-20190207191308-61faa215f94d
 	github.com/dchest/captcha v0.0.0-20170622155422-6a29415a8364
 	github.com/decred/dcrd/blockchain/stake v1.1.0
 	github.com/decred/dcrd/certgen v1.0.2
@@ -23,12 +24,13 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
 	github.com/lib/pq v1.0.0 // indirect
-	github.com/mattn/go-sqlite3 v1.9.0 // indirect
+	github.com/mattn/go-sqlite3 v1.10.0 // indirect
+	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/poy/onpar v0.0.0-20181125144932-f2f06780798d // indirect
 	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/zenazn/goji v0.9.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
-	golang.org/x/net v0.0.0-20180911220305-26e67e76b6c3
-	google.golang.org/grpc v1.15.0
+	golang.org/x/net v0.0.0-20180826012351-8a410e7b638d
+	google.golang.org/grpc v1.18.0
 )
