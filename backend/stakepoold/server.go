@@ -15,7 +15,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -28,7 +27,6 @@ import (
 	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrd/wire"
-
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/txrules"
@@ -284,7 +282,6 @@ func runMain() error {
 		}
 	}()
 
-	log.Infof("Version %s (Go version %s)", version(), runtime.Version())
 	log.Infof("Network: %s", activeNetParams.Params.Name)
 	log.Infof("Home dir: %s", cfg.HomeDir)
 
