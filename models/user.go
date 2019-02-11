@@ -5,7 +5,9 @@
 package models
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -47,6 +49,40 @@ func ValidateHashList(hashList HashList) error {
 // []string type in expandSliceArgs.
 func (hashList HashList) ToStringSlice() []string {
 	return hashList // []string(hashList)
+}
+
+const userTokenSize = 16
+
+// UserToken is a token used in user registration, and email and password
+// changes.
+type UserToken [userTokenSize]byte
+
+// String returns the hexadecimal encoding of the token bytes.
+func (ut UserToken) String() string {
+	return hex.EncodeToString(ut[:])
+}
+
+// NewUserToken creates a new random UserToken.
+func NewUserToken() (ut UserToken) {
+	rand.Read(ut[:])
+	return
+}
+
+// UserTokenFromStr attempts to decode the token string into a UserToken.
+func UserTokenFromStr(token string) (UserToken, error) {
+	var ut UserToken
+	b, err := hex.DecodeString(token)
+	if err != nil {
+		return ut, err
+	}
+
+	if len(b) != userTokenSize {
+		return ut, fmt.Errorf("token length incorrect: expected %d, got %d",
+			userTokenSize, len(b))
+	}
+
+	copy(ut[:], b)
+	return ut, nil
 }
 
 type EmailChange struct {

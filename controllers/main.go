@@ -5,7 +5,6 @@
 package controllers
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -19,7 +18,6 @@ import (
 	"time"
 
 	"github.com/dchest/captcha"
-
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
@@ -86,12 +84,6 @@ type MainController struct {
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
 	maxVotedAge          int64
-}
-
-func randToken() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return fmt.Sprintf("%x", b)
 }
 
 // Get the client's real IP address using the X-Real-IP header, or if that is
@@ -1235,106 +1227,123 @@ func (controller *MainController) EmailUpdate(c web.C, r *http.Request) (string,
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
-	// validate that the token is set, valid, and not expired.
-	token := r.URL.Query().Get("t")
-
-	if token != "" {
-		failed := false
-		emailChange, err := helpers.EmailChangeTokenExists(dbMap, token)
-		if err != nil {
-			session.AddFlash("Email verification token not valid",
-				"emailupdateError")
-			failed = true
-		}
-
-		if !failed {
-			if emailChange.Expires-time.Now().Unix() <= 0 {
-				session.AddFlash("Email change token has expired",
-					"emailupdateError")
-				failed = true
-			}
-		}
-
-		// possible that someone signed up with this email in the time between
-		// when the token was generated and now.
-		if !failed {
-			userExists := models.GetUserByEmail(dbMap, emailChange.NewEmail)
-			if userExists != nil {
-				session.AddFlash("Email address is in use", "emailupdateError")
-				failed = true
-			}
-		}
-
-		if !failed {
-			err := helpers.EmailChangeComplete(dbMap, token)
-			if err != nil {
-				session.AddFlash("Error occurred while changing email address",
-					"emailupdateError")
-				log.Errorf("EmailChangeComplete failed %v", err)
-			} else {
-				// Logout the user to force them to sign in with their new
-				// email address
-				session.Values["UserId"] = nil
-				session.AddFlash("Email successfully updated",
-					"emailupdateSuccess")
-			}
-		}
-	} else {
-		session.AddFlash("No email verification token present",
-			"emailupdateError")
+	render := func() string {
+		c.Env["Title"] = "Decred Voting Service - Email Update"
+		c.Env["FlashError"] = session.Flashes("emailupdateError")
+		c.Env["FlashSuccess"] = session.Flashes("emailupdateSuccess")
+		c.Env["IsEmailUpdate"] = true
+		widgets := controller.Parse(t, "emailupdate", c.Env)
+		c.Env["Content"] = template.HTML(widgets)
+		return controller.Parse(t, "main", c.Env)
 	}
 
-	c.Env["FlashError"] = session.Flashes("emailupdateError")
-	c.Env["FlashSuccess"] = session.Flashes("emailupdateSuccess")
+	// Validate that the token is set.
+	tokenStr := r.URL.Query().Get("t")
+	if tokenStr == "" {
+		session.AddFlash("No email verification token present",
+			"emailupdateError")
+		return render(), http.StatusOK
+	}
 
-	widgets := controller.Parse(t, "emailupdate", c.Env)
-	c.Env["IsEmailUpdate"] = true
-	c.Env["Title"] = "Decred Voting Service - Email Update"
-	c.Env["Content"] = template.HTML(widgets)
+	// Validate that the token is valid.
+	token, err := models.UserTokenFromStr(tokenStr)
+	if err != nil {
+		session.AddFlash("Email verification token not valid.",
+			"emailupdateError")
+		return render(), http.StatusOK
+	}
 
-	return controller.Parse(t, "main", c.Env), http.StatusOK
+	// Validate that the token is recognized.
+	emailChange, err := helpers.EmailChangeTokenExists(dbMap, token)
+	if err != nil {
+		session.AddFlash("Email verification token not recognized.",
+			"emailupdateError")
+		return render(), http.StatusOK
+	}
+
+	// Validate that the token is not expired.
+	expTime := time.Unix(emailChange.Expires, 0)
+	if expTime.Before(time.Now()) {
+		session.AddFlash("Email change token has expired.",
+			"emailupdateError")
+		return render(), http.StatusOK
+	}
+
+	// possible that someone signed up with this email in the time between
+	// when the token was generated and now.
+	userExists := models.GetUserByEmail(dbMap, emailChange.NewEmail)
+	if userExists != nil {
+		session.AddFlash("Email address is in use", "emailupdateError")
+		return render(), http.StatusOK
+	}
+
+	err = helpers.EmailChangeComplete(dbMap, token)
+	if err != nil {
+		session.AddFlash("Error occurred while changing email address",
+			"emailupdateError")
+		log.Errorf("EmailChangeComplete failed %v", err)
+	} else {
+		// Logout the user to force them to sign in with their new
+		// email address
+		session.Values["UserId"] = nil
+		session.AddFlash("Email successfully updated",
+			"emailupdateSuccess")
+	}
+	return render(), http.StatusOK
 }
 
 // EmailVerify renders the email verification page.
-func (controller *MainController) EmailVerify(c web.C, r *http.Request) (string,
-	int) {
+func (controller *MainController) EmailVerify(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 
-	// validate that the token is set and valid.
-	token := r.URL.Query().Get("t")
-
-	if token != "" {
-		_, err := helpers.EmailVerificationTokenExists(dbMap, token)
-		if err != nil {
-			session.AddFlash("Email verification token not valid",
-				"emailverifyError")
-		} else {
-			err := helpers.EmailVerificationComplete(dbMap, token)
-			if err != nil {
-				session.AddFlash("Unable to set email to verified status",
-					"emailverifyError")
-				log.Errorf("could not set email to verified %v", err)
-			} else {
-				session.AddFlash("Email successfully verified",
-					"emailverifySuccess")
-			}
-		}
-	} else {
-		session.AddFlash("No email verification token present",
-			"emailverifyError")
+	render := func() string {
+		c.Env["Title"] = "Decred Voting Service - Email Verification"
+		c.Env["FlashError"] = session.Flashes("emailverifyError")
+		c.Env["FlashSuccess"] = session.Flashes("emailverifySuccess")
+		c.Env["IsEmailVerify"] = true
+		widgets := controller.Parse(t, "emailverify", c.Env)
+		c.Env["Content"] = template.HTML(widgets)
+		return controller.Parse(t, "main", c.Env)
 	}
 
-	c.Env["FlashError"] = session.Flashes("emailverifyError")
-	c.Env["FlashSuccess"] = session.Flashes("emailverifySuccess")
+	// Validate that the token is set.
+	tokenStr := r.URL.Query().Get("t")
+	if tokenStr == "" {
+		session.AddFlash("No email verification token present.",
+			"emailverifyError")
+		return render(), http.StatusOK
+	}
 
-	widgets := controller.Parse(t, "emailverify", c.Env)
-	c.Env["IsEmailVerify"] = true
-	c.Env["Title"] = "Decred Voting Service - Email Verification"
-	c.Env["Content"] = template.HTML(widgets)
+	// Validate that the token is valid.
+	token, err := models.UserTokenFromStr(tokenStr)
+	if err != nil {
+		session.AddFlash("Email verification token not valid.",
+			"emailverifyError")
+		return render(), http.StatusOK
+	}
 
-	return controller.Parse(t, "main", c.Env), http.StatusOK
+	// Validate that the token is recognized.
+	_, err = helpers.EmailVerificationTokenExists(dbMap, token)
+	if err != nil {
+		session.AddFlash("Email verification token not recognized.",
+			"emailverifyError")
+		return render(), http.StatusOK
+	}
+
+	// Set the email as verified.
+	err = helpers.EmailVerificationComplete(dbMap, token)
+	if err != nil {
+		session.AddFlash("Unable to set email to verified status.",
+			"emailverifyError")
+		log.Errorf("could not set email to verified %v", err)
+		return render(), http.StatusInternalServerError
+	}
+
+	session.AddFlash("Email successfully verified.",
+		"emailverifySuccess")
+	return render(), http.StatusOK
 }
 
 // Error renders the error page.
@@ -1384,8 +1393,10 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	return helpers.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// PasswordReset renders the password reset page.
+// PasswordReset renders the password reset page. This shows the form where the
+// user enters their email address.
 func (controller *MainController) PasswordReset(c web.C, r *http.Request) (string, int) {
+	c.Env["Title"] = "Decred Voting Service - Password Reset"
 	session := controller.GetSession(c)
 	c.Env["FlashError"] = append(session.Flashes("passwordresetError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("passwordresetSuccess")
@@ -1397,13 +1408,16 @@ func (controller *MainController) PasswordReset(c web.C, r *http.Request) (strin
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "passwordreset", c.Env)
-
-	c.Env["Title"] = "Decred Voting Service - Password Reset"
 	c.Env["Content"] = template.HTML(widgets)
+
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// PasswordResetPost handles the posted password reset form.
+// PasswordResetPost handles the posted password reset form. This submits the
+// data entered into the email address form. If the email is recognized a
+// password reset token is generated and the user will check their email for a
+// link. The link will take them to the password update page with a token
+// specified on the URL.
 func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (string, int) {
 	email := r.FormValue("email")
 	session := controller.GetSession(c)
@@ -1423,10 +1437,10 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 		t := time.Now()
 		expires := t.Add(time.Hour * 1)
 
-		token := randToken()
+		token := models.NewUserToken()
 		passReset := &models.PasswordReset{
 			UserId:  user.Id,
-			Token:   token,
+			Token:   token.String(),
 			Created: t.Unix(),
 			Expires: expires.Unix(),
 		}
@@ -1440,7 +1454,7 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 		body := "A request to reset your password was made from IP address: " +
 			remoteIP + "\r\n\n" +
 			"If you made this request, follow the link below:\r\n\n" +
-			controller.baseURL + "/passwordupdate?t=" + token + "\r\n\n" +
+			controller.baseURL + "/passwordupdate?t=" + token.String() + "\r\n\n" +
 			"The above link expires an hour after this email was sent.\r\n\n" +
 			"If you did not make this request, you may safely ignore this " +
 			"email.\r\n" + "However, you may want to look into how this " +
@@ -1463,83 +1477,69 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	return controller.PasswordReset(c, r)
 }
 
-// PasswordUpdate renders the password update page.
+// PasswordUpdate renders the password update page. When a user clicks the link
+// containing a token in the password reset email, this handler will validate
+// the token. When the token is valid, the user will be presented with forms to
+// enter their new password. PasswordUpdatePost handles the submission of these
+// forms, and calls PasswordUpdate again for page rendering.
 func (controller *MainController) PasswordUpdate(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
-	dbMap := controller.GetDbMap(c)
 
-	// validate that the token is set, valid, and not expired.
-	token := r.URL.Query().Get("t")
-
-	if token != "" {
-		passwordReset, err := helpers.PasswordResetTokenExists(dbMap, token)
-		if err != nil {
-			session.AddFlash("Password update token not valid", "passwordupdateError")
-		} else {
-			if passwordReset.Expires-time.Now().Unix() <= 0 {
-				session.AddFlash("Password update token has expired", "passwordupdateError")
-			}
-		}
-	} else {
-		session.AddFlash("No password update token present", "passwordupdateError")
+	render := func() string {
+		c.Env["Title"] = "Decred Voting Service - Password Update"
+		c.Env["FlashError"] = session.Flashes("passwordupdateError")
+		c.Env["FlashSuccess"] = session.Flashes("passwordupdateSuccess")
+		c.Env["IsPasswordUpdate"] = true
+		widgets := controller.Parse(t, "passwordupdate", c.Env)
+		c.Env["Content"] = template.HTML(widgets)
+		return controller.Parse(t, "main", c.Env)
 	}
 
-	c.Env["FlashError"] = session.Flashes("passwordupdateError")
-	c.Env["FlashSuccess"] = session.Flashes("passwordupdateSuccess")
+	// Just render the page if the POST handler already checked the token.
+	_, tokenChecked := c.Env["TokenValid"].(bool)
+	if tokenChecked {
+		return render(), http.StatusOK
+	}
 
-	widgets := controller.Parse(t, "passwordupdate", c.Env)
-	c.Env["IsPasswordUpdate"] = true
-	c.Env["Title"] = "Decred Voting Service - Password Update"
-	c.Env["Content"] = template.HTML(widgets)
-
-	return controller.Parse(t, "main", c.Env), http.StatusOK
+	// Use CheckPasswordResetToken to set relevant flash messages.
+	controller.CheckPasswordResetToken(r.URL.Query().Get("t"), c)
+	return render(), http.StatusOK
 }
 
-// PasswordUpdatePost handles updating passwords.
+// PasswordUpdatePost handles updating passwords. The token in the URL is from
+// the password reset email. The token is validated and the password is changed.
 func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	dbMap := controller.GetDbMap(c)
 	remoteIP := getClientIP(r, controller.realIPHeader)
 
-	// validate that the token is set and not expired.
-	token := r.URL.Query().Get("t")
-
-	if token == "" {
-		session.AddFlash("No password update token present", "passwordupdateError")
+	// Ensure a valid password reset token is provided. If the token is valid,
+	// return the decoded UserToken and PasswordReset data for the token.
+	token, resetData, tokenOK := controller.CheckPasswordResetToken(
+		r.URL.Query().Get("t"), c)
+	c.Env["TokenValid"] = tokenOK
+	// tokenChecked will be true regardless of token validity.
+	if !tokenOK {
 		return controller.PasswordUpdate(c, r)
 	}
 
-	passwordReset, err := helpers.PasswordResetTokenExists(dbMap, token)
-	if err != nil {
-		log.Errorf("error updating password %v", err)
-		session.AddFlash("Password update token not valid",
-			"passwordupdateError")
-		return controller.PasswordUpdate(c, r)
-	}
-
-	if passwordReset.Expires-time.Now().Unix() <= 0 {
-		session.AddFlash("Password update token has expired",
-			"passwordupdateError")
-		return controller.PasswordUpdate(c, r)
-	}
-
-	password, passwordRepeat := r.FormValue("password"),
-		r.FormValue("passwordrepeat")
+	// Given a valid password reset token, process the password change.
+	password := r.FormValue("password")
 	if password == "" {
-		session.AddFlash("Password cannot be empty", "passwordupdateError")
+		session.AddFlash("Password cannot be empty.", "passwordupdateError")
 		return controller.PasswordUpdate(c, r)
 	}
-
+	passwordRepeat := r.FormValue("passwordrepeat")
 	if password != passwordRepeat {
-		session.AddFlash("Passwords do not match", "passwordupdateError")
+		session.AddFlash("Passwords do not match.", "passwordupdateError")
 		return controller.PasswordUpdate(c, r)
 	}
 
-	user, err := helpers.UserIDExists(dbMap, passwordReset.UserId)
+	user, err := helpers.UserIDExists(dbMap, resetData.UserId)
 	if err != nil {
 		log.Infof("UserIDExists failure %v, %v", err, remoteIP)
-		session.AddFlash("Unable to find User ID", "passwordupdateError")
+		session.AddFlash("Unable to find User ID.", "passwordupdateError")
 		return controller.PasswordUpdate(c, r)
 	}
 
@@ -1547,11 +1547,11 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 		user.Email)
 
 	user.HashPassword(password)
-	_, err = helpers.UpdateUserPasswordById(dbMap, passwordReset.UserId,
+	_, err = helpers.UpdateUserPasswordById(dbMap, resetData.UserId,
 		user.Password)
 	if err != nil {
 		log.Errorf("error updating password %v", err)
-		session.AddFlash("Unable to update password", "passwordupdateError")
+		session.AddFlash("Unable to update password.", "passwordupdateError")
 		return controller.PasswordUpdate(c, r)
 	}
 
@@ -1622,6 +1622,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	password, updateEmail, updatePassword := r.FormValue("password"),
 		r.FormValue("updateEmail"), r.FormValue("updatePassword")
 
+	// Changes to email or password require the current password.
 	user, err := helpers.PasswordValidById(dbMap, session.Values["UserId"].(int64), password)
 	if err != nil {
 		session.AddFlash("Password not valid", "settingsError")
@@ -1630,7 +1631,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 
 	log.Infof("Settings POST from %v, email %v", remoteIP, user.Email)
 
-	if updateEmail == "true" {
+	if updateEmail == "true" || updateEmail == "1" {
 		newEmail := r.FormValue("email")
 		log.Infof("user requested email change from %v to %v", user.Email, newEmail)
 
@@ -1640,7 +1641,6 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		}
 
 		userExists := models.GetUserByEmail(dbMap, newEmail)
-
 		if userExists != nil {
 			session.AddFlash("Email address in use", "settingsError")
 			return controller.Settings(c, r)
@@ -1649,11 +1649,11 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		t := time.Now()
 		expires := t.Add(time.Hour * 1)
 
-		token := randToken()
+		token := models.NewUserToken()
 		emailChange := &models.EmailChange{
 			UserId:   user.Id,
 			NewEmail: newEmail,
-			Token:    token,
+			Token:    token.String(),
 			Created:  t.Unix(),
 			Expires:  expires.Unix(),
 		}
@@ -1669,7 +1669,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 			"from " + user.Email + " to " + newEmail + "\r\n\n" +
 			"The request was made from IP address " + remoteIP + "\r\n\n" +
 			"If you made this request, follow the link below:\r\n\n" +
-			controller.baseURL + "/emailupdate?t=" + token + "\r\n\n" +
+			controller.baseURL + "/emailupdate?t=" + token.String() + "\r\n\n" +
 			"The above link expires an hour after this email was sent.\r\n\n" +
 			"If you did not make this request, you may safely ignore this " +
 			"email.\r\n" + "However, you may want to look into how this " +
@@ -1855,11 +1855,11 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 		return controller.SignUp(c, r)
 	}
 
-	token := randToken()
+	token := models.NewUserToken()
 	user = &models.User{
 		Username:        email,
 		Email:           email,
-		EmailToken:      token,
+		EmailToken:      token.String(),
 		EmailVerified:   0,
 		VoteBits:        1,
 		VoteBitsVersion: int64(controller.voteVersion),
@@ -1877,7 +1877,7 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	body := signupEmailTemplate
 	body = strings.Replace(body, "__URL__", controller.baseURL, -1)
 	body = strings.Replace(body, "__REMOTEIP__", remoteIP, -1)
-	body = strings.Replace(body, "__TOKEN__", token, -1)
+	body = strings.Replace(body, "__TOKEN__", token.String(), -1)
 
 	err := controller.SendMail(user.Email, signupEmailSubject, body)
 	if err != nil {
