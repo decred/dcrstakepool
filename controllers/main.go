@@ -1,3 +1,7 @@
+// Copyright (c) 2016-2019 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package controllers
 
 import (
@@ -5,7 +9,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/dchest/captcha"
 	"html/template"
 	"net"
 	"net/http"
@@ -14,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dchest/captcha"
 
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
@@ -1107,6 +1112,12 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 	dbMap := controller.GetDbMap(c)
 	remoteIP := getClientIP(r, controller.realIPHeader)
 
+	userID, ok := session.Values["UserId"].(int64)
+	if !ok {
+		log.Warnf("UserId not set!")
+		return "", http.StatusUnauthorized
+	}
+
 	isAdmin, err := controller.isAdmin(c, r)
 	if !isAdmin {
 		log.Warnf("isAdmin check failed: %v", err)
@@ -1119,73 +1130,88 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 		return "/admintickets", http.StatusSeeOther
 	}
 
-	if len(r.PostForm["tickets[]"]) == 0 {
+	ticketList := r.PostForm["tickets[]"]
+
+	if len(ticketList) == 0 {
 		session.AddFlash("no tickets selected to modify", "adminTicketsError")
 		return "/admintickets", http.StatusSeeOther
 	}
 
-	switch r.PostFormValue("action") {
-	case "Add", "Remove":
-		// valid
-		break
+	// Validate each of the ticket hash strings.
+	ticketHashes, err := models.DecodeHashList(ticketList)
+	if err != nil {
+		session.AddFlash("Invalid ticket in form data: "+err.Error(),
+			"adminTicketsError")
+		return "/admintickets", http.StatusSeeOther
+	}
+
+	action := strings.ToLower(r.PostFormValue("action"))
+	switch action {
+	case "add", "remove":
+		// recognized action
 	default:
 		session.AddFlash("invalid or unknown form action type", "adminTicketsError")
 		return "/admintickets", http.StatusSeeOther
 	}
 
-	actionVerb := "Unknown"
-	switch r.PostFormValue("action") {
-	case "Add":
+	actionVerb := "unknown"
+	switch action {
+	case "add":
 		actionVerb = "added"
 		ignoredLowFeeTickets, err := controller.StakepooldGetIgnoredLowFeeTickets()
 		if err != nil {
-			session.AddFlash("GetIgnoredLowFeeTickets error: "+err.Error(), "adminTicketsError")
+			session.AddFlash("GetIgnoredLowFeeTickets error: "+err.Error(),
+				"adminTicketsError")
 			return "/admintickets", http.StatusSeeOther
 		}
 
-		for _, ticketToAddString := range r.PostForm["tickets[]"] {
-			t := time.Now()
+		for i, tickethash := range ticketHashes {
+			t := ticketList[i]
 
 			// TODO check if it is already present in the database
 			// and error out if so
 
-			tickethash, err := chainhash.NewHashFromStr(ticketToAddString)
-			if err != nil {
-				session.AddFlash("NewHashFromStr failed for "+ticketToAddString+": "+err.Error(), "adminTicketsError")
-				return "/admintickets", http.StatusSeeOther
-			}
-
-			msa, exists := ignoredLowFeeTickets[*tickethash]
+			msa, exists := ignoredLowFeeTickets[tickethash]
 			if !exists {
-				session.AddFlash("ticket " + ticketToAddString + " is no longer present")
+				session.AddFlash("ticket " + t + " is no longer present")
 				return "/admintickets", http.StatusSeeOther
 			}
 
 			expires := controller.CalcEstimatedTicketExpiry()
 
 			lowFeeTicket := &models.LowFeeTicket{
-				AddedByUid:    session.Values["UserId"].(int64),
+				AddedByUid:    userID,
 				TicketAddress: msa,
-				TicketHash:    ticketToAddString,
+				TicketHash:    t,
 				TicketExpiry:  0,
 				Voted:         0,
-				Created:       t.Unix(),
+				Created:       time.Now().Unix(),
 				Expires:       expires.Unix(),
 			}
 
-			if err := models.InsertLowFeeTicket(dbMap, lowFeeTicket); err != nil {
-				session.AddFlash("Database error occurred while adding ticket "+ticketToAddString, "adminTicketsError")
+			err = models.InsertLowFeeTicket(dbMap, lowFeeTicket)
+			if err != nil {
+				session.AddFlash("Database error occurred while adding ticket "+
+					t, "adminTicketsError")
 				log.Warnf("Adding ticket %v failed: %v", tickethash, err)
 				return "/admintickets", http.StatusSeeOther
 			}
 		}
-	case "Remove":
+
+	case "remove":
 		actionVerb = "removed"
-		query := "DELETE FROM LowFeeTicket WHERE TicketHash IN (\"" +
-			strings.Join(r.PostForm["tickets[]"], ",") + "\")"
-		_, err := dbMap.Exec(query)
+		// To use gorm's slice expansion, use a mapper with a ticketList. For
+		// three tickets in the list, gorm will expand this to:
+		//     "... IN (:Tickets0,:Tickets1,:Tickets2)".
+		// This allows each string in the list two be it's own argument.
+		query := "DELETE FROM LowFeeTicket WHERE TicketHash IN (:Tickets)"
+		ticketListMapper := map[string]interface{}{
+			"Tickets": ticketList,
+		}
+		_, err := dbMap.Exec(query, ticketListMapper)
 		if err != nil {
-			session.AddFlash("failed to execute delete query: "+err.Error(), "adminTicketsError")
+			session.AddFlash("failed to execute delete query: "+err.Error(),
+				"adminTicketsError")
 			return "/admintickets", http.StatusSeeOther
 		}
 	}
@@ -1195,11 +1221,10 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 		session.AddFlash("StakepooldUpdateAll error: "+err.Error(), "adminTicketsError")
 	}
 
-	log.Infof("ip %v userid %v %v for %v ticket(s)",
-		remoteIP, session.Values["UserId"].(int64), actionVerb,
-		len(r.PostForm["tickets[]"]))
-	session.AddFlash("successfully "+actionVerb+" "+
-		strconv.Itoa(len(r.PostForm["tickets[]"]))+" ticket(s)", "adminTicketsSuccess")
+	log.Infof("ip %s userid %d %s for %d ticket(s)", remoteIP, userID,
+		actionVerb, len(ticketList))
+	session.AddFlash(fmt.Sprintf("successfully %s %d ticket(s)", actionVerb,
+		len(ticketList)), "adminTicketsSuccess")
 
 	return "/admintickets", http.StatusSeeOther
 }
