@@ -25,6 +25,7 @@ import (
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrstakepool/helpers"
+	"github.com/decred/dcrstakepool/internal/version"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/poolapi"
 	"github.com/decred/dcrstakepool/stakepooldclient"
@@ -79,7 +80,6 @@ type MainController struct {
 	captchaHandler       *CaptchaHandler
 	smtpFrom             string
 	smtpServer           *goemail.SMTP
-	version              string
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
 	maxVotedAge          int64
@@ -111,8 +111,8 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	adminUserIDs []string, APISecret string, APIVersionsSupported []int,
 	baseURL string, closePool bool, closePoolMsg string, enablestakepoold bool,
 	feeXpubStr string, grpcConnections []*grpc.ClientConn, poolFees float64,
-	poolEmail, poolLink, smtpFrom, smtpHost, smtpUsername, smtpPassword,
-	version string, walletHosts, walletCerts, walletUsers,
+	poolEmail, poolLink, smtpFrom, smtpHost, smtpUsername, smtpPassword string,
+	walletHosts, walletCerts, walletUsers,
 	walletPasswords []string, minServers int, realIPHeader,
 	votingXpubStr string, maxVotedAge int64) (*MainController, error) {
 
@@ -171,7 +171,6 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		realIPHeader:         realIPHeader,
 		smtpFrom:             smtpFrom,
 		smtpServer:           smtpServer,
-		version:              version,
 		votingXpub:           voteKey,
 		maxVotedAge:          maxVotedAge,
 	}
@@ -419,7 +418,7 @@ func (controller *MainController) APIStats(c web.C,
 		PoolStatus:           poolStatus,
 		UserCount:            userCount,
 		UserCountActive:      userCountActive,
-		Version:              controller.version,
+		Version:              version.String(),
 	}
 
 	return stats, codes.OK, "stats successfully retrieved", nil

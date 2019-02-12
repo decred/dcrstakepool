@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrstakepool/internal/version"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -97,7 +98,6 @@ type config struct {
 	WalletUsers        []string `long:"walletusers" description:"Usernames for wallet servers"`
 	WalletPasswords    []string `long:"walletpasswords" description:"Passwords for wallet servers"`
 	WalletCerts        []string `long:"walletcerts" description:"Certificate paths for wallet servers"`
-	Version            string
 	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
@@ -297,7 +297,6 @@ func loadConfig() (*config, []string, error) {
 		PublicPath:   defaultPublicPath,
 		TemplatePath: defaultTemplatePath,
 		SMTPHost:     defaultSMTPHost,
-		Version:      version(),
 		MinServers:   defaultMinServers,
 		MaxVotedAge:  defaultMaxVotedAge,
 	}
@@ -324,7 +323,8 @@ func loadConfig() (*config, []string, error) {
 	appName = strings.TrimSuffix(appName, filepath.Ext(appName))
 	usageMessage := fmt.Sprintf("Use %s -h to show usage", appName)
 	if preCfg.ShowVersion {
-		fmt.Println(appName, "version", version())
+		fmt.Printf("%s version %s (Go version %s %s/%s)\n", appName,
+			version.String(), runtime.Version(), runtime.GOOS, runtime.GOARCH)
 		os.Exit(0)
 	}
 

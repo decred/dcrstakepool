@@ -1,3 +1,7 @@
+// Copyright (c) 2016-2019 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package main
 
 import (
@@ -49,7 +53,6 @@ func runMain() int {
 		return 1
 	}
 	cfg = loadedCfg
-	log.Infof("Version: %s", version())
 	log.Infof("Network: %s", activeNetParams.Params.Name)
 
 	defer func() {
@@ -123,7 +126,7 @@ func runMain() int {
 		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
 		cfg.ColdWalletExtPub, grpcConnections, cfg.PoolFees, cfg.PoolEmail,
 		cfg.PoolLink, cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername,
-		cfg.SMTPPassword, cfg.Version, cfg.WalletHosts, cfg.WalletCerts,
+		cfg.SMTPPassword, cfg.WalletHosts, cfg.WalletCerts,
 		cfg.WalletUsers, cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader,
 		cfg.VotingWalletExtPub, cfg.MaxVotedAge)
 	if err != nil {
