@@ -139,7 +139,15 @@ func runMain() int {
 	}
 
 	// reset votebits if Vote Version changed or stored VoteBits are invalid
-	controller.CheckAndResetUserVoteBits(application.DbMap)
+	_, err = controller.CheckAndResetUserVoteBits(application.DbMap)
+	if err != nil {
+		application.Close()
+		log.Errorf("failed to check and reset user vote bits: %v",
+			err)
+		fmt.Fprintf(os.Stderr, "failed to check and reset user vote bits: %v",
+			err)
+		return 3
+	}
 
 	if cfg.EnableStakepoold {
 		err = controller.StakepooldUpdateAll(application.DbMap, controllers.StakepooldUpdateKindAll)

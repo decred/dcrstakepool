@@ -53,24 +53,22 @@ func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler 
 				JWTtoken, err := jwt.Parse(apitoken, func(token *jwt.Token) (interface{}, error) {
 					// validate signing algorithm
 					if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-						return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+						return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 					}
 					return []byte(application.APISecret), nil
 				})
 
 				if err != nil {
 					log.Warnf("invalid token %v: %v", apitoken, err)
-				} else {
-					if claims, ok := JWTtoken.Claims.(jwt.MapClaims); ok && JWTtoken.Valid {
-						dbMap := c.Env["DbMap"].(*gorp.DbMap)
+				} else if claims, ok := JWTtoken.Claims.(jwt.MapClaims); ok && JWTtoken.Valid {
+					dbMap := c.Env["DbMap"].(*gorp.DbMap)
 
-						user, err := models.GetUserById(dbMap, int64(claims["loggedInAs"].(float64)))
-						if err != nil {
-							log.Errorf("unable to map apitoken %v to user id %v", apitoken, claims["loggedInAs"])
-						} else {
-							c.Env["APIUserID"] = user.Id
-							log.Infof("mapped apitoken %v to user id %v", apitoken, user.Id)
-						}
+					user, err := models.GetUserById(dbMap, int64(claims["loggedInAs"].(float64)))
+					if err != nil {
+						log.Errorf("unable to map apitoken %v to user id %v", apitoken, claims["loggedInAs"])
+					} else {
+						c.Env["APIUserID"] = user.Id
+						log.Infof("mapped apitoken %v to user id %v", apitoken, user.Id)
 					}
 				}
 			}

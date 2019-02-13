@@ -21,12 +21,7 @@ type logWriter struct{}
 
 func (logWriter) Write(p []byte) (n int, err error) {
 	os.Stdout.Write(p)
-	// Normally this if isn't required, but the tests in this main package need
-	// to work with uninitialized log rotators.
-	if logRotator != nil {
-		logRotator.Write(p)
-	}
-	return len(p), nil
+	return logRotator.Write(p)
 }
 
 // Loggers per subsystem.  A single backend logger is created and all subsytem
@@ -110,13 +105,4 @@ func setLogLevels(logLevel string) {
 	for subsystemID := range subsystemLoggers {
 		setLogLevel(subsystemID, logLevel)
 	}
-}
-
-// pickNoun returns the singular or plural form of a noun depending
-// on the count n.
-func pickNoun(n int, singular, plural string) string {
-	if n == 1 {
-		return singular
-	}
-	return plural
 }

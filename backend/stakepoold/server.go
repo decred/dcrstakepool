@@ -87,6 +87,11 @@ type WinningTicketsForBlock struct {
 	winningTickets []*chainhash.Hash
 }
 
+const (
+	// TODO: sync with controllers/main.go MaxUsers
+	numServicePaymentFeeAddresses uint32 = 10000
+)
+
 var (
 	cfg              *config
 	errDuplicateVote = "-32603: already have transaction "
@@ -124,10 +129,7 @@ var (
 // addresses for this public key for the address indexes [0,end). The branch
 // used for the derivation is always the external branch.
 func calculateFeeAddresses(xpubStr string, params *chaincfg.Params) (map[string]struct{}, error) {
-	end := uint32(10000)
-
-	log.Infof("Please wait, deriving %v voting service fees addresses "+
-		"for extended public key %s", end, xpubStr)
+	end := numServicePaymentFeeAddresses
 
 	// Parse the extended public key and ensure it's the right network.
 	key, err := hdkeychain.NewKeyFromString(xpubStr)
@@ -292,6 +294,9 @@ func runMain() error {
 		return err
 	}
 
+	log.Infof("Please wait, deriving %v voting service fees addresses "+
+		"for extended public key %s", numServicePaymentFeeAddresses,
+		cfg.ColdWalletExtPub)
 	feeAddrs, err := calculateFeeAddresses(cfg.ColdWalletExtPub,
 		activeNetParams.Params)
 	if err != nil {
@@ -473,7 +478,10 @@ func runMain() error {
 	log.Info("subscribed to notifications from dcrd")
 
 	if !cfg.NoRPCListen {
-		startGRPCServers(ctx.grpcCommandQueueChan)
+		if _, err = startGRPCServers(ctx.grpcCommandQueueChan); err != nil {
+			fmt.Printf("Failed to start GRPCServers: %s\n", err.Error())
+			return err
+		}
 	}
 
 	// Only accept a single CTRL+C
@@ -779,8 +787,7 @@ func (ctx *appContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 			// multisigaddress will match if it belongs a pool user
 			nt.msa = res.Details[i].Address
 
-			switch nt.ticketType {
-			case ticketTypeNew:
+			if nt.ticketType == ticketTypeNew {
 				// TODO(maybe): we could check if the ticket was added to the
 				// low fee list here but since it was just mined, it should be
 				// extremely unlikely to have been added before it was mined.
@@ -1112,23 +1119,19 @@ func (ctx *appContext) processWinningTickets(wt WinningTicketsForBlock) {
 				VoteBits:        ctx.votingConfig.VoteBits,
 				VoteBitsVersion: ctx.votingConfig.VoteVersion,
 			}
-		} else {
+		} else if voteCfg.VoteBitsVersion != ctx.votingConfig.VoteVersion {
 			// If the user's voting config has a vote version that
 			// is different from our global vote version that we
 			// plucked from dcrwallet walletinfo then just use the
 			// default votebits.
-			if voteCfg.VoteBitsVersion !=
-				ctx.votingConfig.VoteVersion {
-
-				voteCfg.VoteBits = ctx.votingConfig.VoteBits
-				log.Infof("userid %v multisigaddress %v vote "+
-					"version mismatch user %v stakepoold "+
-					"%v using votebits %d",
-					voteCfg.Userid, voteCfg.MultiSigAddress,
-					voteCfg.VoteBitsVersion,
-					ctx.votingConfig.VoteVersion,
-					voteCfg.VoteBits)
-			}
+			voteCfg.VoteBits = ctx.votingConfig.VoteBits
+			log.Infof("userid %v multisigaddress %v vote "+
+				"version mismatch user %v stakepoold "+
+				"%v using votebits %d",
+				voteCfg.Userid, voteCfg.MultiSigAddress,
+				voteCfg.VoteBitsVersion,
+				ctx.votingConfig.VoteVersion,
+				voteCfg.VoteBits)
 		}
 
 		w := &ticketMetadata{

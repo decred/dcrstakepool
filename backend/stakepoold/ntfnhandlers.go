@@ -10,7 +10,7 @@ import (
 // Define notification handlers
 func getNodeNtfnHandlers(ctx *appContext) *rpcclient.NotificationHandlers {
 	return &rpcclient.NotificationHandlers{
-		OnNewTickets: func(blockHash *chainhash.Hash, blockHeight int64, stakeDifficulty int64, tickets []*chainhash.Hash) {
+		OnNewTickets: func(blockHash *chainhash.Hash, blockHeight int64, _ int64, tickets []*chainhash.Hash) {
 			nt := NewTicketsForBlock{
 				blockHash:   blockHash,
 				blockHeight: blockHeight,
@@ -18,7 +18,7 @@ func getNodeNtfnHandlers(ctx *appContext) *rpcclient.NotificationHandlers {
 			}
 			ctx.newTicketsChan <- nt
 		},
-		OnSpentAndMissedTickets: func(blockHash *chainhash.Hash, blockHeight int64, stakeDifficulty int64, tickets map[chainhash.Hash]bool) {
+		OnSpentAndMissedTickets: func(blockHash *chainhash.Hash, blockHeight int64, _ int64, tickets map[chainhash.Hash]bool) {
 			ticketsFixed := make(map[*chainhash.Hash]bool)
 			for ticketHash, spent := range tickets {
 				ticketHash := ticketHash
@@ -46,6 +46,7 @@ func getWalletNtfnHandlers() *rpcclient.NotificationHandlers {
 	return &rpcclient.NotificationHandlers{
 		OnUnknownNotification: func(method string, params []json.RawMessage) {
 			log.Infof("ignoring notification %v", method)
+			log.Tracef("%#v", params)
 		},
 	}
 }
