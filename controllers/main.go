@@ -145,16 +145,16 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	}
 
 	// Format: smtp://[username[:password]@]host
-        smtpUrl := "smtp://"
-        if smtpUsername != "" {
-             smtpUrl += smtpUsername
-             if smtpPassword != "" {
-                 smtpUrl += ":" + smtpPassword
-             }
-             smtpUrl += "@"
-        }
-        smtpUrl += smtpHost
-	
+	smtpUrl := "smtp://"
+	if smtpUsername != "" {
+		smtpUrl += smtpUsername
+		if smtpPassword != "" {
+			smtpUrl += ":" + smtpPassword
+		}
+		smtpUrl += "@"
+	}
+	smtpUrl += smtpHost
+
 	tlsConfig := tls.Config{}
 	smtpServer, err := goemail.NewSMTP(smtpUrl, &tlsConfig)
 	if err != nil {
