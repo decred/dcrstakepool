@@ -178,9 +178,9 @@ func walletGetTickets(ctx *appContext) (map[chainhash.Hash]string, map[chainhash
 				liveTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 			} else {
 
-				msgTx := MsgTxFromHex(gt.Hex)
-				if msgTx == nil {
-					log.Warnf("MsgTxFromHex failed for %v", gt.Hex)
+				msgTx, err := MsgTxFromHex(gt.Hex)
+				if err != nil {
+					log.Warnf("MsgTxFromHex failed for %v: %v", gt.Hex, err)
 					continue
 				}
 

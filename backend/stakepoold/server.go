@@ -255,18 +255,16 @@ func evaluateStakePoolTicket(ctx *appContext, tx *wire.MsgTx, blockHeight int32)
 }
 
 // MsgTxFromHex returns a wire.MsgTx struct built from the transaction hex string
-func MsgTxFromHex(txhex string) *wire.MsgTx {
+func MsgTxFromHex(txhex string) (*wire.MsgTx, error) {
 	txBytes, err := hex.DecodeString(txhex)
 	if err != nil {
-		log.Warnf("DecodeString failed for %v: %v", txhex, err)
-		return nil
+		return nil, err
 	}
 	msgTx := wire.NewMsgTx()
 	if err = msgTx.Deserialize(bytes.NewReader(txBytes)); err != nil {
-		log.Warnf("Deserialize failed for %v: %v", txBytes, err)
-		return nil
+		return nil, err
 	}
-	return msgTx
+	return msgTx, nil
 }
 
 func runMain() error {
@@ -948,9 +946,9 @@ func (ctx *appContext) processNewTickets(nt NewTicketsForBlock) {
 			continue
 		}
 
-		msgTx := MsgTxFromHex(n.hex)
-		if msgTx == nil {
-			log.Warnf("MsgTxFromHex failed for %v", n.hex)
+		msgTx, err := MsgTxFromHex(n.hex)
+		if err != nil {
+			log.Warnf("MsgTxFromHex failed for %v: %v", n.hex, err)
 			continue
 		}
 
