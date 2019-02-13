@@ -337,7 +337,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			if w.servers[i] == nil {
 				continue
 			}
-			err := s.ImportScriptRescanFrom(ism.script, true, ism.height)
+			err := s.ImportScriptRescan(ism.script, false)
 			isErrors[i] = err
 		}
 
