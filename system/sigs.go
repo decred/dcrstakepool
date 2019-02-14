@@ -14,8 +14,11 @@ func reloadTemplatesSig(sig os.Signal, app *Application) {
 			sigr := <-sigChan
 			log.Infof("Received: %s", sig)
 			if sigr == sig {
-				app.LoadTemplates(app.TemplatesPath)
+				err := app.LoadTemplates(app.TemplatesPath)
 				log.Infof("LoadTemplates() executed.")
+				if err != nil {
+					log.Errorf("LoadTemplates failed: %v", err)
+				}
 			}
 		}
 	}()

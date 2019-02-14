@@ -351,7 +351,11 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
 	log.Infof("successfully create multisigaddress for user %d", c.Env["APIUserID"])
-	controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
+
+	err = controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
+	if err != nil {
+		log.Warnf("failure to update all: %v", err)
+	}
 
 	return nil, codes.OK, "address successfully imported", nil
 }
@@ -728,20 +732,18 @@ func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap) (
 				log.Infof("updated VoteBits from %v to %v for uid %v",
 					oldVoteBits, defaultVoteBits, userid)
 			}
-		} else {
+		} else if !controller.IsValidVoteBits(uint16(user.VoteBits)) {
 			// Validate that the votebits are valid for the agendas of the current
 			// vote version
-			if !controller.IsValidVoteBits(uint16(user.VoteBits)) {
-				oldVoteBits := user.VoteBits
-				_, err := helpers.UpdateVoteBitsByID(dbMap, userid, defaultVoteBits)
-				if err != nil {
-					return nil, fmt.Errorf("failed to reset invalid VoteBits for uid %v: %v",
-						userid, err)
-				}
-
-				log.Infof("reset invalid VoteBits from %v to %v for uid %v",
-					oldVoteBits, defaultVoteBits, userid)
+			oldVoteBits := user.VoteBits
+			_, err := helpers.UpdateVoteBitsByID(dbMap, userid, defaultVoteBits)
+			if err != nil {
+				return nil, fmt.Errorf("failed to reset invalid VoteBits for uid %v: %v",
+					userid, err)
 			}
+
+			log.Infof("reset invalid VoteBits from %v to %v for uid %v",
+				oldVoteBits, defaultVoteBits, userid)
 		}
 	}
 
@@ -939,7 +941,9 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), bestBlockHeight)
 
-	controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
+	if err = controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers); err != nil {
+		log.Errorf("unable to update all: %v", err)
+	}
 
 	return "/tickets", http.StatusSeeOther
 }
@@ -1024,11 +1028,12 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 	if connectedWallets == allWallets {
 		rpcstatus = "OK"
 	} else {
-		if connectedWallets == 0 {
+		switch connectedWallets {
+		case 0:
 			rpcstatus = "Emergency"
-		} else if connectedWallets == 1 {
+		case 1:
 			rpcstatus = "Critical"
-		} else {
+		default:
 			rpcstatus = "Degraded"
 		}
 	}
@@ -2174,7 +2179,9 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 	log.Infof("updated voteBits for user %d from %d to %d",
 		user.Id, oldVoteBits, generatedVoteBits)
 	if uint16(oldVoteBits) != generatedVoteBits {
-		controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
+		if err := controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers); err != nil {
+			log.Errorf("unable to update all: %v", err)
+		}
 	}
 
 	session.AddFlash("successfully updated voting preferences", "votingSuccess")

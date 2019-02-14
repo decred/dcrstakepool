@@ -622,7 +622,10 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 
 		if !w.checkForSyncness(spuirs) {
 			log.Infof("StakePoolUserInfo across wallets are not synced.  Attempting to sync now")
-			w.syncTickets(spuirs)
+			err := w.syncTickets(spuirs)
+			if err != nil {
+				log.Warnf("failed to syncTickets: %v", err)
+			}
 		}
 
 		for i := range spuirs {
@@ -1059,10 +1062,10 @@ func (w *walletSvrManager) CheckServers() error {
 			return err
 		}
 		if !wi.DaemonConnected {
-			return fmt.Errorf("Wallet on svr %d not connected\n", i)
+			return fmt.Errorf("server %d wallet is not connected\n", i)
 		}
 		if !wi.Unlocked {
-			return fmt.Errorf("Wallet on svr %d not unlocked.\n", i)
+			return fmt.Errorf("server %d wallet is not unlocked.\n", i)
 		}
 	}
 

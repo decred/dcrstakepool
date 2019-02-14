@@ -147,9 +147,11 @@ func (application *Application) Route(controller interface{}, route string) web.
 		case http.StatusSeeOther, http.StatusFound:
 			http.Redirect(w, r, body, code)
 		case http.StatusUnauthorized:
-			http.Error(w, http.StatusText(403), 403)
+			http.Error(w, http.StatusText(http.StatusForbidden),
+				http.StatusForbidden)
 		case http.StatusInternalServerError:
-			http.Error(w, http.StatusText(500), 500)
+			http.Error(w, http.StatusText(http.StatusInternalServerError),
+				http.StatusInternalServerError)
 		}
 	}
 }
@@ -158,7 +160,7 @@ func saveSession(c web.C, w http.ResponseWriter, r *http.Request) error {
 	if session, exists := c.Env["Session"]; exists {
 		return session.(*sessions.Session).Save(r, w)
 	}
-	return errors.New("Session not available")
+	return errors.New("session not available")
 }
 
 // APIHandler executes an API processing function that provides an *APIResponse
