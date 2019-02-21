@@ -2,8 +2,8 @@ module github.com/decred/dcrstakepool
 
 require (
 	github.com/apoydence/onpar v0.0.0-20181125144932-f2f06780798d // indirect
+	github.com/chappjc/captcha v0.0.0-20190221063140-b35d3e125a40
 	github.com/dajohi/goemail v0.0.0-20190207191308-61faa215f94d
-	github.com/dchest/captcha v0.0.0-20170622155422-6a29415a8364
 	github.com/decred/dcrd/blockchain/stake v1.1.0
 	github.com/decred/dcrd/certgen v1.0.2
 	github.com/decred/dcrd/chaincfg v1.3.0

@@ -1,3 +1,7 @@
+// Copyright (c) 2019 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package controllers
 
 import (
@@ -7,13 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dchest/captcha"
+	"github.com/chappjc/captcha"
 	"github.com/zenazn/goji/web"
 )
 
 type CaptchaHandler struct {
 	ImgWidth  int
 	ImgHeight int
+	Opts      *captcha.DistortionOpts
 }
 
 func (controller *MainController) CaptchaServe(c web.C, w http.ResponseWriter, r *http.Request) {
@@ -26,8 +31,6 @@ func (controller *MainController) CaptchaServe(c web.C, w http.ResponseWriter, r
 		return
 	}
 
-	h := controller.captchaHandler
-
 	if r.FormValue("reload") != "" {
 		captcha.Reload(id)
 	}
@@ -38,7 +41,8 @@ func (controller *MainController) CaptchaServe(c web.C, w http.ResponseWriter, r
 
 	var content bytes.Buffer
 	w.Header().Set("Content-Type", "image/png")
-	err := captcha.WriteImage(&content, id, h.ImgWidth, h.ImgHeight)
+	ch := controller.captchaHandler
+	err := captcha.WriteImage(&content, id, ch.ImgWidth, ch.ImgHeight, ch.Opts)
 	if err != nil {
 		http.Error(w, "failed to generate captcha image", http.StatusInternalServerError)
 	}

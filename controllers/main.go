@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chappjc/captcha"
 	"github.com/dajohi/goemail"
-	"github.com/dchest/captcha"
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
@@ -39,7 +39,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-var (
+const (
 	// MaxUsers is the maximum number of users supported by a voting service.
 	// This is an artificial limit and can be increased by adjusting the
 	// ticket/fee address indexes above 10000.
@@ -83,6 +83,7 @@ type MainController struct {
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
 	maxVotedAge          int64
+	numCaptchaDigits     int
 }
 
 // Get the client's real IP address using the X-Real-IP header, or if that is
@@ -139,9 +140,23 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		return nil, err
 	}
 
+	// TODO: set from config
 	ch := &CaptchaHandler{
 		ImgHeight: 127,
 		ImgWidth:  257,
+		Opts: &captcha.DistortionOpts{
+			CircleCount: 20,
+			StrikeCount: 1,
+			MaxSkew:     0.7,
+			CanvasWarp: captcha.WarpBounds{
+				AmpMin: 5, AmpMax: 10,
+				PeriodMin: 100, PeriodMax: 200,
+			},
+			StrikeWarp: captcha.WarpBounds{
+				AmpMin: 5, AmpMax: 20,
+				PeriodMin: 80, PeriodMax: 180,
+			},
+		},
 	}
 
 	// Format: smtp://[username[:password]@]host
@@ -183,6 +198,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		smtpServer:           smtpServer,
 		votingXpub:           voteKey,
 		maxVotedAge:          maxVotedAge,
+		numCaptchaDigits:     6, // TODO: set from config
 	}
 
 	voteVersion, err := mc.GetVoteVersion()
@@ -1399,7 +1415,7 @@ func (controller *MainController) PasswordReset(c web.C, r *http.Request) (strin
 	c.Env["FlashError"] = append(session.Flashes("passwordresetError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("passwordresetSuccess")
 	c.Env["IsPasswordReset"] = true
-	c.Env["CaptchaID"] = captcha.New()
+	c.Env["CaptchaID"] = captcha.NewLen(controller.numCaptchaDigits)
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "passwordreset", c.Env)
@@ -1591,7 +1607,7 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 	if user.MultiSigAddress == "" {
 		c.Env["ShowInstructions"] = true
 	}
-	c.Env["CaptchaID"] = captcha.New()
+	c.Env["CaptchaID"] = captcha.NewLen(controller.numCaptchaDigits)
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "settings", c.Env)
@@ -1792,7 +1808,7 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 	session := controller.GetSession(c)
 	c.Env["FlashError"] = append(session.Flashes("signupError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("signupSuccess")
-	c.Env["CaptchaID"] = captcha.New()
+	c.Env["CaptchaID"] = captcha.NewLen(controller.numCaptchaDigits)
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "auth/signup", c.Env)
