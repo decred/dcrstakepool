@@ -5,11 +5,10 @@
 package controllers
 
 import (
-	"bytes"
+	"image/png"
 	"net/http"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/chappjc/captcha"
 	"github.com/zenazn/goji/web"
@@ -31,23 +30,39 @@ func (controller *MainController) CaptchaServe(c web.C, w http.ResponseWriter, r
 		return
 	}
 
-	if r.FormValue("reload") != "" {
-		captcha.Reload(id)
+	if r.FormValue("reload") != "" && !captcha.Reload(id) {
+		http.NotFound(w, r)
+		return
 	}
 
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
 
-	var content bytes.Buffer
-	w.Header().Set("Content-Type", "image/png")
-	ch := controller.captchaHandler
-	err := captcha.WriteImage(&content, id, ch.ImgWidth, ch.ImgHeight, ch.Opts)
-	if err != nil {
-		http.Error(w, "failed to generate captcha image", http.StatusInternalServerError)
+	// Retrieve the digits for this captcha id from the global store.
+	digits := captcha.Digits(id)
+	if len(digits) == 0 {
+		http.NotFound(w, r)
+		return
 	}
 
-	http.ServeContent(w, r, id+ext, time.Time{}, bytes.NewReader(content.Bytes()))
+	// Generate the image for the digits.
+	ch := controller.captchaHandler
+	img := captcha.NewImage(id, digits, ch.ImgWidth, ch.ImgHeight, ch.Opts)
+	if img == nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError)
+		return
+	}
+
+	// Encode the image as a PNG directly to the ResponseWriter.
+	enc := png.Encoder{
+		CompressionLevel: png.BestSpeed,
+	}
+	if err := enc.Encode(w, img.Paletted); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError)
+	}
 }
 
 func (controller *MainController) CaptchaVerify(c web.C, w http.ResponseWriter, r *http.Request) {
