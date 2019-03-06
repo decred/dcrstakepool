@@ -141,6 +141,7 @@ func (application *Application) Route(controller interface{}, route string) web.
 		case http.StatusOK, http.StatusProcessing, http.StatusServiceUnavailable:
 			if _, exists := c.Env["Content-Type"]; exists {
 				w.Header().Set("Content-Type", c.Env["Content-Type"].(string))
+				w.Header().Set("Cache-Control", "private,no-store,no-cache")
 			}
 			w.WriteHeader(code)
 			io.WriteString(w, body)
