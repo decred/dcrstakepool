@@ -139,9 +139,11 @@ func (application *Application) Route(controller interface{}, route string) web.
 
 		switch code {
 		case http.StatusOK, http.StatusProcessing, http.StatusServiceUnavailable:
+			if r.URL.Path != "/" && r.URL.Path != "/status" {
+				w.Header().Set("Cache-Control", "private,no-store,no-cache")
+			}
 			if _, exists := c.Env["Content-Type"]; exists {
 				w.Header().Set("Content-Type", c.Env["Content-Type"].(string))
-				w.Header().Set("Cache-Control", "private,no-store,no-cache")
 			}
 			w.WriteHeader(code)
 			io.WriteString(w, body)
