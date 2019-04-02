@@ -29,8 +29,8 @@ import (
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrwallet/wallet/txrules"
-	"github.com/decred/dcrwallet/wallet/udb"
+	"github.com/decred/dcrwallet/wallet/v2/txrules"
+	"github.com/decred/dcrwallet/wallet/v2/udb"
 
 	_ "github.com/go-sql-driver/mysql"
 )

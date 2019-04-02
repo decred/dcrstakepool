@@ -16,7 +16,7 @@ import (
 	"github.com/decred/dcrd/rpcclient/v2"
 	"github.com/decred/dcrstakepool/models"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
-	"github.com/decred/dcrwallet/wallet/udb"
+	"github.com/decred/dcrwallet/wallet/v2/udb"
 )
 
 // functionName

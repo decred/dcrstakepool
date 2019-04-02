@@ -30,7 +30,7 @@ import (
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
-	"github.com/decred/dcrwallet/wallet/udb"
+	"github.com/decred/dcrwallet/wallet/v2/udb"
 	"github.com/go-gorp/gorp"
 	"github.com/zenazn/goji/web"
 
