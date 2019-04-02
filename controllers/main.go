@@ -21,7 +21,6 @@ import (
 	"github.com/dchest/captcha"
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrstakepool/helpers"
@@ -30,6 +29,7 @@ import (
 	"github.com/decred/dcrstakepool/poolapi"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
+	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 	"github.com/decred/dcrwallet/wallet/udb"
 	"github.com/go-gorp/gorp"
 	"github.com/zenazn/goji/web"
@@ -777,7 +777,7 @@ func (controller *MainController) RPCIsStopped() bool {
 }
 
 // WalletStatus returns current WalletInfo from all rpcServers.
-func (controller *MainController) WalletStatus() ([]*dcrjson.WalletInfoResult, error) {
+func (controller *MainController) WalletStatus() ([]*wallettypes.WalletInfoResult, error) {
 	return controller.rpcServers.WalletStatus()
 }
 

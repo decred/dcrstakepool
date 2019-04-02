@@ -15,7 +15,7 @@ import (
 
 	"github.com/gorilla/context"
 
-	"github.com/decred/dcrd/rpcclient"
+	"github.com/decred/dcrd/rpcclient/v2"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
