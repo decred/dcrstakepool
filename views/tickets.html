@@ -1,328 +1,217 @@
 {{define "tickets"}}
-<div class="wrapper">
- <div class="row">
+<section class="site-content">
+	<div class="container container--narrow">
+			<div class="row mx-3">
 
-  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-    {{if .Error}}<div class="well well-notification  orange-notification">{{.Error}}</div>{{end}}
-    {{range .Flash}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-    {{range .FlashWarn}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-  </div>
- 
-  <div class="col-sm-15 col-md-10 text-left center-block">
-
-<div class="panel-group" id="accordion">
-
-<!-- TICKET INFORMATION BEGIN HERE -->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-info">
-        Ticket Information</a>
-      </h4>
-    </div>
-    <div id="collapse-info" class="panel-collapse collapse {{if not .TicketsLive}}in{{end}}">
-      <div class="panel-body">
-	 <h1>P2SH Address:</h1><pre>{{ .User.MultiSigAddress }}</pre>
-        <hr />
-        <h1>Redeem Script:</h1><pre>{{ .User.MultiSigScript }}</pre>
-      </div>
-    </div>
-  </div>
-
-<!-- TICKET INSTRUCTIONS BEGIN HERE -->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-instr">
-        Ticket Instructions</a>
-      </h4>
-    </div>
-    <div id="collapse-instr" class="panel-collapse collapse {{if not .TicketsLive}}in{{end}}">
-      <div class="panel-body">
-			<p><strong><u>Step 1</u></strong></p>
-			<p><strong>The official Decred GUI wallet
-        <a href="https://decred.org/downloads/#decrediton">Decrediton</a>
-        is the recommended way to use voting services.  All you need to get started
-        is to copy and paste the API Token from the <a href="/settings">Settings Page</a>.  A more
-        comprehensive guide is available for
-        <a href="https://docs.decred.org/getting-started/user-guides/decrediton-setup/">Decrediton</a>.
-				There is also a more general overview of the staking process available
-				<a href="https://docs.decred.org/mining/proof-of-stake/#automatic-purchasing-of-tickets" target="_blank" rel="noopener noreferrer">here</a>.</strong></p>
-			<p><strong>It is recommended to use the latest versions of the Decred software before starting.&nbsp;</strong>
-			<a href="https://decred.org/downloads/" target="_blank" rel="noopener noreferrer"><span aria-label="Decred Downloads Page"> &#8675; Decred Downloads Page</span></a>
-			The <a href="https://docs.decred.org/getting-started/user-guides/dcrwallet-tickets/">dcrwallet instructions</a>
-      are the most helpful if you wish to continue on the command-line path.</p>
-			<p><strong><u>Step 2</u></strong></p>
-			<p>Your multisignature script for delegating votes has been generated.
-			Please first import it locally into your wallet using <b>dcrctl</b> for
-			safe keeping, so you can recover your funds and vote in the unlikely
-			event of a pool failure:</p>
-
-			<p>dcrctl --wallet importscript "script"</p>
-			<p>For example:</p>
-			<div class="cmd"><pre>$ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet importscript {{ .User.MultiSigScript }}</pre></div>
-
-			<p>After successfully importing the script into your wallet, you may
-				purchase tickets with voting rights delegated to the voting service in either of
-				two ways:</p>
-
-			<p><strong><u>Step 3</u></strong></p>
-			<p><strong>Option A - dcrwallet - Automatic purchasing</strong></p>
-			<p>Stop dcrwallet if it is currently running and add the following to <strong>dcrwallet.conf</strong>:</p>
-<pre>
-[Application Options]
-enableticketbuyer=true
-pooladdress={{ .User.UserFeeAddr }}
-poolfees={{ .PoolFees }}
-;; DEPRECATED -- use ticketbuyer.votingaddress instead
-;; ticketaddress={{ .User.MultiSigAddress }}
-[Ticket Buyer Options]
-ticketbuyer.votingaddress={{ .User.MultiSigAddress }}
-ticketbuyer.maxpriceabsolute=100
-</pre>
-      <p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the voting service address.</p>
-
-			<p><strong>Option B - dcrwallet - Manual purchasing</strong></p>
-			<p>Start a wallet with funds available and manually purchase tickets with the following command using <strong>dcrctl</strong>:</p>
-			<p>dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</p>
-<pre>
-dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet purchaseticket "default" 100 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}</pre>
-			<p>Will purchase a ticket delegated to the the multisig address which
-				allows either your or the voting service to vote when the ticket is called. This
-				uses funds from the default account only if the current network price
-				for a ticket is less than 100.0 coins.</p>
-
-			<p><strong><u>Step 4 (Optional)</u></strong></p>
-			<p><strong>Voting</strong></p>
-			<p>If you wish to cast votes yourself, please review the guides
-			<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#how-to-vote">How To Vote</a>
-			and
-			<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#solo-voting">Solo-Voting</a>.
-			The preferences you set on this voting service's <a href="/voting">voting page</a>
-			only affect the stake voting service's voting wallets and not your own.</p>
-      </div>
-    </div>
-  </div>
-
-<!-- BEGIN LIVE IMMATURE -->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-livelist">
-        Live/Immature</a>
-      </h4>
-    </div>
-    <div id="collapse-livelist" class="panel-collapse collapse {{if .TicketsLive }}in{{end}}">
-      <div class="panel-body">
-			{{if not .TicketsLive}}
-			<p><strong>No live tickets.</strong></p>
-			{{end}}
-			{{if .TicketsLive}}
-			<div class="table-responsive">
-			<table id="ticketslive" class="table table-condensed datatablesort responsive">
-			<thead>
-				<tr>
-					<th>Ticket</th>
-					<th>TicketHeight</th>
-				</tr>
-			</thead>
-			<tbody>
-			{{ range $i, $data := .TicketsLive }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
-				<td>{{ $data.TicketHeight }}</td>
-				</tr>{{end}}
-			</tbody>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
-			</table>
+		{{range .Flash}}
+			<div class="snackbar snackbar-error">
+				<div class="snackbar-message">
+					<p>{{.}}</p>
+				</div>
 			</div>
-			{{end}}
-      </div>
-    </div>
-  </div>
+		{{end}}
 
-<!-- BEGIN VOTED TICKETS-->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-votedlist">
-        Voted Tickets</a>
-      </h4>
-    </div>
-    <div id="collapse-votedlist" class="panel-collapse collapse {{if .TicketsVoted}}in{{end}}">
-      <div class="panel-body">
-			<p><strong>{{.TicketsVotedCount}} total tickets voted ({{.TicketsVotedArchivedCount}} archived and not shown).</strong></p>
-			
-			{{if .TicketsVoted}}
-			<div class="table-responsive">
-			<table id="ticketsvoted" class="table table-condensed datatablesort responsive">
-			<thead>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</thead>
-			<tbody>
-			{{ range $i, $data := .TicketsVoted }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.SpentBy}}" target="_blank" rel="noopener noreferrer">{{$data.SpentByHeight}}</a></td>
-				<td>{{$data.TicketHeight}}</td>
-				</tr>{{end}}
-			</tbody>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
-			</table>
+		<section class="block">
+				<div class="col-12 block__title">
+					<h1><span>Ticket Groups</span></h1>
+				</div>
+
+				<div class="col-12 mb-4 px-0">
+					
+					<div class="accordion ticket_accordion">
+						<input id="accordion-control-2" class="accordion-control" type="checkbox" />
+						<label for="accordion-control-2">
+							<div class="accordion__toggle">
+								<div class="d-flex justify-content-between align-items-center">
+									<span><img src="assets/images/group-1119.svg" alt=""> Live/Immature</span> <div class="arrow-down"></div>
+								</div>
+							</div>
+						</label>
+							<div class="accordion__contents mb-1">
+							{{ range $i, $data := .TicketsLive }}
+							<div>
+								<img src="assets/images/group-1119.svg" alt=""> <span>{{printf "%.12s" $data.Ticket}}...</span>
+							</div>
+							{{end}}
+							</div>
+						</div>  
+					
+					<div class="accordion ticket_accordion">
+						<input id="accordion-control-3" class="accordion-control" type="checkbox" />
+						<label for="accordion-control-3">
+							<div class="accordion__toggle">
+								<div class="d-flex justify-content-between align-items-center">
+									<span><img src="assets/images/symbol-8-1.svg" alt=""> Voted</span> <div class="arrow-down"></div>
+								</div>
+							</div>
+						</label>
+							<div class="accordion__contents mb-1">
+								{{ range $i, $data := .TicketsVoted }}
+								<div>
+									<img src="assets/images/symbol-8-1.svg" alt=""> <span>{{printf "%.12s" $data.Ticket}}...</span>
+								</div>
+								{{end}}
+							</div>
+					</div>  
+					
+					<div class="accordion ticket_accordion">
+						<input id="accordion-control-4" class="accordion-control" type="checkbox" />
+						<label for="accordion-control-4">
+							<div class="accordion__toggle">
+								<div class="d-flex justify-content-between align-items-center">
+									<span><img src="assets/images/symbol-9-1.svg" alt=""> Missed</span> <div class="arrow-down"></div>
+								</div>
+							</div>
+						</label>
+							<div class="accordion__contents mb-1">
+								{{ range $i, $data := .TicketsMissed }}
+									<div>
+										<img src="assets/images/symbol-9-1.svg" alt=""> <span>{{printf "%.12s" $data.Ticket}}...</span>
+									</div>
+								{{end}}
+							</div>
+					</div>  
+					
+					<div class="accordion ticket_accordion">
+						<input id="accordion-control-5" class="accordion-control" type="checkbox" />
+						<label for="accordion-control-5">
+							<div class="accordion__toggle">
+								<div class="d-flex justify-content-between align-items-center">
+									<span><img src="assets/images/symbol-5-1.svg" alt=""> Expired</span> <div class="arrow-down"></div>
+								</div>
+							</div>
+						</label>
+							<div class="accordion__contents mb-1">
+								{{ range $i, $data := .TicketsExpired }}
+								<div>
+									<img src="assets/images/symbol-5-1.svg" alt=""> <span>{{printf "%.12s" $data.Ticket}}...</span>
+								</div>
+								{{end}}
+							</div>
+					</div>  
+					
+					<div class="accordion ticket_accordion">
+						<input id="accordion-control-6" class="accordion-control" type="checkbox" />
+						<label for="accordion-control-6">
+							<div class="accordion__toggle">
+								<div class="d-flex justify-content-between align-items-center">
+									<span><img src="assets/images/symbol-5-1-1.svg" alt=""> Invalid</span> <div class="arrow-down"></div>
+								</div>
+							</div>
+						</label>
+							<div class="accordion__contents mb-1">
+								{{ range $i, $data := .TicketsInvalid }}
+								<div>
+									<img src="assets/images/symbol-5-1-1.svg" alt=""> <span>{{printf "%.12s" $data.Ticket}}...</span>
+								</div>
+								{{end}}
+							</div>
+							
+					</div>
+				</div>
+			</section>
+
+			<section class="block">
+					<div class="col-12 block__title">
+						<h1 class="d-flex justify-content-between align-items-center"><span>Ticket Information</span> <img class="icon--info" src="assets/images/info-icon.svg" data-toggle="modal" data-target="#connectTicketInfo" alt=""></h1>
+					</div>
+
+				<div class="modal fade" id="connectTicketInfo" tabindex="-1" role="dialog" aria-labelledby="connectTicketInfoTitle" aria-hidden="true">
+					<div class="container container--narrow modal-dialog px-0" role="document">
+						<div class="modal-content px-md-3 py-md-4">
+							<div class="modal-header d-md-flex d-none">
+								<h1 class="modal-title d-flex justify-content-between align-items-center" id="connectSubAddressTitle"><img src="assets/images/info-icon-lg.svg" alt=""> <span class="px-3">Buying Tickets with dcrwallet using command-line tools</span></h1>
+								<button type="button" class="modal-close" data-dismiss="modal" aria-label="Close">
+									<span aria-hidden="true"><img src="assets/images/close-cross-icon.svg" alt=""></span>
+								</button>
+							</div>
+							<div class="modal-header modal-header--long-title d-md-none d-block mb-3 p-4">
+								<div class="d-flex justify-content-between align-items-start">
+									<button type="button" class="modal-close" data-dismiss="modal" aria-label="Close">
+										<span aria-hidden="true"><img src="assets/images/arrow-back--blue.svg" alt=""></span>
+									</button>
+									<h1 class="modal-title" id="connectSubAddressTitle"><img src="assets/images/info-icon-sm.svg" alt=""> <span class="pl-1">Buying Tickets with dcrwallet using command-line tools</span></h1>
+								</div>
+							</div>
+							<div class="modal-body mx-3 px-sm-5 px-0">
+								<blockquote class="modal-blockquote"><span>Note!</span> <br>
+								For ease of use, it’s recommended to participate in staking by using the <a href="https://decred.org/downloads">Decrediton Wallet &darr;</a><br>
+								For command-line users, in-depth dcrwallet instructions can be founds at <a href="https://docs.decred.org/getting-started/user-guides/dcrwallet-tickets/">docs.decred.org.</a><br>
+								Below is a brief introduction for staking the command line environment.</blockquote>
+
+								<p>Your multisignature script for delegating votes has been generated. Please first import it locally into your wallet using dcrctl for safe keeping, so you can recover your funds and vote in the unlikely event of a pool failure:</p>
+
+								<p>dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet importscript “script”
+
+								<p>For example:</p>
+
+								<div class="modal-code">
+									<p>
+										$ dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet importscript {{ .User.MultiSigScript }}
+									</p>
+								</div>
+
+								<p>After successfully importing the script into your wallet, you may purchase tickets with voting rights delegated to the pool in either of two ways:</p>
+
+								<strong>Option A - dcrwallet - Automatic purchasing</strong>
+
+								<p>Stop dcrwallet if it is currently running and add the following to dcrwallet.conf:</p>
+
+								<div class="modal-code">
+									<p>
+										[Application Options] <br>
+										enableticketbuyer=true <br>
+										pooladdress={{ .User.UserFeeAddr }} <br>
+										poolfees={{ .PoolFees }} <br>
+										;; DEPRECATED -- use ticketbuyer.votingaddress instead <br>
+										;; ticketaddress={{ .User.MultiSigAddress }} <br>
+										[Ticket Buyer Options] <br>
+										ticketbuyer.votingaddress={{ .User.MultiSigAddress }} <br>
+										ticketbuyer.maxpriceabsolute=100
+									</p>
+								</div>
+								
+								<p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the voting service address.</p>
+
+								<strong>Option B - dcrwallet - Manual purchasing</strong>
+
+								<p>Start a wallet with funds available and manually purchase tickets with the following command using dcrctl:</p>
+
+								<p>dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</p>
+
+								<div class="modal-code">
+									<p>
+										dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet purchaseticket "default" 100 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}
+									</p>
+								</div>
+
+								<p>Will purchase a ticket delegated to the the multisig address which allows either your or the pool to vote when the ticket is called. This uses funds from the default account only if the current network price for a ticket is less than 100.0 coins.</p>
+
+								<strong>Voting</strong>
+
+								<p>If you wish to cast votes yourself, please review the guides
+								<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#how-to-vote">How To Vote</a>
+								and
+								<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#solo-voting">Solo-Voting</a>.
+								The preferences you set on this voting service's <a href="/voting">voting page</a>
+								only affect the stake voting service's voting wallets and not your own.</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+					<div class="col-12 mb-4 block__key">
+						<h2>P2SH Address</h2>
+						<p>{{ .User.MultiSigAddress }}</p>
+					</div>
+
+					<div class="col-12 mb-5 block__key">
+						<h2>Redeem Script</h2>
+						<p>{{ .User.MultiSigScript }}</p>
+					</div>
+
+				</section>
 			</div>
-			{{end}}
-      </div>
-    </div>
-  </div>
-
-
-<!-- BEGIN MISSED TICKETS-->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-missedlist">
-        Missed Tickets</a>
-      </h4>
-    </div>
-    <div id="collapse-missedlist" class="panel-collapse collapse">
-      <div class="panel-body">
-			{{if not .TicketsMissed}}
-			<p><strong>No missed tickets.</strong></p>
-			{{end}}
-			{{if .TicketsMissed}}
-			<div class="well well-notification  orange-notification"><b>Caution!</b> Missed tickets can be caused by a poorly connected miner and may not be any fault of the voting service.</div>
-			<div class="table-responsive">
-			<table id="ticketsmissed" class="table table-condensed datatablesort responsive">
-			<thead>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</thead>
-			<tbody>
-			{{ range $i, $data := .TicketsMissed }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
-				<td>{{$data.SpentByHeight}}</td>
-				<td>{{$data.TicketHeight}}</td>
-				</tr>{{end}}
-			</tbody>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
-			</table>
-			</div>
-			{{end}}
-      </div>
-    </div>
-  </div>
-
-<!-- BEGIN EXPIRED TICKETS-->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-expiredlist">
-        Expired Tickets</a>
-      </h4>
-    </div>
-    <div id="collapse-expiredlist" class="panel-collapse collapse">
-      <div class="panel-body">
-			{{if not .TicketsExpired}}
-			<p><strong>No expired tickets.</strong></p>
-			{{end}}
-			{{if .TicketsExpired}}
-			<div class="table-responsive">
-			<table id="ticketsexpired" class="table table-condensed datatablesort responsive">
-			<thead>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</thead>
-			<tbody>
-			{{ range $i, $data := .TicketsExpired }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
-				<td>{{$data.SpentByHeight}}</td>
-				<td>{{$data.TicketHeight}}</td>
-				</tr>{{end}}
-			</tbody>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-					<th>SpentByHeight</th>
-					<th>TicketHeight</th>
-				</tr>
-			</tfoot>
-			</table>
-			</div>
-			{{end}}
-      </div>
-    </div>
-  </div>
-
-<!-- BEGIN INVALID TICKETS-->
-  <div class="panel panel-default panel-control">
-    <div class="panel-heading">
-      <h4 class="panel-title">
-        <a data-toggle="collapse" data-parent="#accordion" href="#collapse-invalidlist">
-        Invalid Tickets</a>
-      </h4>
-    </div>
-    <div id="collapse-invalidlist" class="panel-collapse collapse {{if .TicketsInvalid }}in{{end}}">
-      <div class="panel-body">
-			{{if not .TicketsInvalid}}
-			<p><strong>No tickets.</strong></p>
-			{{end}}
-			{{if .TicketsInvalid}}
-			<div class="well well-notification orange-notification"><b>Alert!</b> Tickets appearing here did not pay the correct pool fee.
-			You will either need to vote these tickets yourself or contact your voting service provider administrator to have them add
-			the ticket to the voting service manually.</div>
-			<div class="table-responsive">
-			<table id="ticketsinvalid" class="table table-condensed">
-			<thead>
-				<tr>
-					<th>Ticket</th>
-				</tr>
-			</thead>
-			<tbody>
-			{{ range $i, $data := .TicketsInvalid }}<tr>
-				<td><a href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" target="_blank" rel="noopener noreferrer">{{$data.Ticket}}</a></td>
-				</tr>{{end}}
-			</tbody>
-			<tfoot>
-				<tr>
-					<th>Ticket</th>
-				</tr>
-			</tfoot>
-			</table>
-			</div>
-			{{end}}
-      </div>
-    </div>
-  </div>
-
-</div>
-
-
-</div>
-</div>
-</div>
+		</div>
+</section>
 {{end}}

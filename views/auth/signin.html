@@ -1,45 +1,32 @@
 {{define "auth/signin"}}
-<div class="wrapper">
-    <div class="row">
-    <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-       {{range .Flash}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-	{{if .IsClosed }}<div class="well well-notification  orange-notification">{{.ClosePoolMsg}}</div>{{end}}
+<section class="site-content site-content--form-only">
+  <div class="container container--narrow">
+    <div class="row justify-content-center">
+
+      <form id="Login" class="col-sm-9 col-11 py-md-5 pt-5 pb-3 px-2 form block--shadow text-center" method="post">
+        <div class="d-flex justify-content-center form__tabs">
+          <a class="btn" href="/signin" disabled>Login</a>
+          <a class="btn" href="/signup">Register</a>
+        </div>
+
+        <h1>Login</h1>
+        {{range .FlashError}}
+          <div class="snackbar snackbar-error">
+            <div class="snackbar-message">
+              <p>{{.}}</p>
+            </div>
+          </div>
+        {{end}}
+
+        <input type="email" name="email" class="form-control mb-4 w-75 mx-auto" placeholder="Email" required autofocus>
+        <input type="password" name="password" class="form-control mb-4 w-75 mx-auto" placeholder="Password" required>
+        <input class="btn btn-primary" type="submit" value="Login">
+        {{ $.csrfField }}
+        
+        <div class="col-12"><a href="/passwordreset">Forgot your password?</a></div>
+
     </div>
-    <div class="col-sm-15 col-md-6 text-left center-block">
-    <h1>Sign in</h1>
-    <form method="post" class="form-horizontal">
-
-  <div class="form-group row">
-    <label class="control-label col-sm-2" for="email">Email:</label>
-	<div class="col-sm-13">
-      <input name="email" type="email" class="form-control" id="email" placeholder="Email">
-	</div>
-  </div>
-
-  <div class="form-group row">
-    <label class="control-label col-sm-2" for="password">Password:</label>
-	<div class="col-sm-13">
-      <input name="password" type="password" class="form-control" id="password" placeholder="Password">
-	</div>
-  </div>
-
-<div class="row">
-  <div class="form-group col-sm-4">
-    <div class="col-md-button sign-in-button">
-      <button id="signin" name="signin" type="submit" class="btn btn-primary">Sign in</button>
-    </div>
-  </div>
-
-  <div class="form-group col-sm-8 pull-right">
-    <label for="reset"></label>
-        <p><a href="/passwordreset">Forgot your password?</a></p>
-        <p><a href="/signup">New user?</a></p>
-  </div>
-</div>
-	{{ $.csrfField }}
-    </form>
-    </div> 
-    </div>
-</div>
+  </div>	
+</section>
 {{end}}
 

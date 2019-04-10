@@ -111,7 +111,7 @@ func runMain() int {
 		cfg.ColdWalletExtPub, grpcConnections, cfg.PoolFees, cfg.PoolEmail,
 		cfg.PoolLink, sender, cfg.WalletHosts, cfg.WalletCerts,
 		cfg.WalletUsers, cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader,
-		cfg.VotingWalletExtPub, cfg.MaxVotedAge)
+		cfg.VotingWalletExtPub, cfg.MaxVotedAge, cfg.Description, cfg.Designation)
 	if err != nil {
 		application.Close()
 		log.Errorf("Failed to initialize the main controller: %v",

@@ -1,85 +1,142 @@
 {{define "stats"}}
-        <div class="wrapper">
-            <div class="col-sm-15 col-md-12 text-left center-block">
-            <div class="row main-row pie-row">
-                <div class="col-sm-15 col-md-6">
-				<hr>
-				<h1>Pool Votes</h1>
-					<div class="pull-right">
-				<div class="legend-box">
-					 <label>Missed</label>
-				    <div class="legend"></div>
+<section class="site-content">
+	<div class="container container--narrow">
+		<div class="row mx-3">
+			<section class="block">
+				<div class="col-12 block__title">
+					<h1><span>Stats and Status</span></h1>
 				</div>
-				<div class="legend-box">
-			      <label>Votes</label>
-			      <div class="legend legend1"></div>
-			      </div>
+				<div class="col-12 mb-4">
+					<div class="row">
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Live</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.Live }}</p>
+						</div>
+						<div class="col text-center bg-white mb-3 py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Expired</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.Expired }}</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Voted</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.Voted }}</p>
+						</div>
+						<div class="col text-center bg-white mb-3 py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Missed</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.Missed }}</p>
+						</div>
+						<div class="col text-center bg-white mb-3 py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Immature</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.Immature }}</p>
+						</div>
+						<div class="col text-center bg-white mb-3 py-2">
+							<p class="font-weight-bold text--size-13 mb-0">AllMempoolTix</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.AllMempoolTix }}</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">ProportionLive</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.ProportionLive }}</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Pool Size</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.PoolSize }}</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">ProportionMissed</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.ProportionMissed }}</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Revoked</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.Revoked }}</p>
+						</div>
+					</div>
 				</div>
-				<div id="test1"></div>
-                </div>
-                <div class="col-sm-15 col-md-6 col-md-offset-3 pie-margin">
-				<hr>
-				<h1>Pool Tickets</h1>
-						<div class="pull-right">
-				<div class="legend-box">
-					 <label>Live</label>
-				    <div class="legend legend2"></div>
+
+				<div class="row js-only" style="display:none;">
+					<div class="col-md-6 col-12 mb-3">
+						<div class="row">
+							<div class="col-12 px-5 mb-3">
+								<h1>Pool Votes</h1>	
+							</div>
+							<div class="col-12 mb-5">
+								<div class="bg-white p-5">
+									<div class="d-flex justify-content-start">
+										<div class="circle circle--sm color1 mr-3"></div>
+										<p class="text--size-13">Votes</p>
+									</div>
+									<div class="d-flex justify-content-start">
+										<div class="circle circle--sm color2 mr-3"></div>
+										<p class="text--size-13">Missed</p>
+									</div>
+									<div id="chart1" class="stats-chart"></div>
+								</div>
+							</div>
+							<div class="col-12 px-5 mb-3">
+								<h1>Stakepool vs Network Proportion</h1>	
+							</div>
+							<div class="col-12 mb-3">
+								<div class="bg-white p-5">
+									<div class="d-flex justify-content-start">
+										<div class="circle circle--sm color3 mr-3"></div>
+										<p class="text--size-13">Stakepool Ticket Pool</p>
+									</div>
+									<div class="d-flex justify-content-start">
+										<div class="circle circle--sm color4 mr-3"></div>
+										<p class="text--size-13">Network Ticket Pool</p>
+									</div>
+									<div id="chart3" class="stats-chart"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-md-6 col-12 px-md-3">
+						<div class="row">
+							<div class="col-12 px-5 mb-3">
+								<h1>Pool Tickets</h1>
+							</div>
+							<div class="col-12 mb-5">
+								<div class="bg-white p-5">
+									<div class="d-flex justify-content-start">
+										<div class="circle circle--sm color5 mr-3"></div>
+										<p class="text--size-13">Live</p>
+									</div>
+									<div class="d-flex justify-content-start">
+										<div class="circle circle--sm color6 mr-3"></div>
+										<p class="text--size-13">Immature</p>
+									</div>
+									<div id="chart2" class="stats-chart"></div>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
-				<div class="legend-box">
-			      <label>Immature</label>
-			      <div class="legend legend3"></div>
-			      </div>
-				</div>
-				<div id="test2"></div>		
-               </div>
-               <div class="col-sm-15 col-md-6">
-               <hr>
-               <h1>Voting Service vs Network Proportion</h1>
-               	<div class="pull-right">
-				<div class="legend-box">
-					 <label>Stakepool Ticket Pool</label>
-				    <div class="legend legend4"></div>
-				</div>
-				<div class="legend-box">
-			      <label>Network Ticket Pool</label>
-			      <div class="legend legend5"></div>
-			      </div>
-				</div>
-               	<div id="test3"></div>
-               </div>
-                <div class="col-sm-15 col-md-6 col-md-offset-3">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Stats &amp; Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-               <tr><td>Immature:</td><td><span id="Immature">{{ .StakeInfo.Immature }}</td></tr>
-                <tr><td>Live:</td><td><span id="Live">{{ .StakeInfo.Live }}</td></tr>
-                <tr><td>Voted:</td><td><span id="Voted">{{ .StakeInfo.Voted }}</td></tr>
-                <tr><td>Missed:</td><td><span id="Missed">{{ .StakeInfo.Missed }}</td></tr>
-                <tr><td>Expired:</td><td><span id="Expired">{{ .StakeInfo.Expired }}</td></tr>
-                <tr><td>Revoked:</td><td><span id="Revoked">{{ .StakeInfo.Revoked }}</td></tr>
-                <tr><td>ProportionMissed:</td><td><span id="ProportionMissed">{{ .StakeInfo.ProportionMissed }}</td></tr>
-                <tr><td>Pool Size:</td><td><span id="PoolSize">{{ .StakeInfo.PoolSize }}</td></tr>
-                <tr><td>AllMempoolTix:</td><td><span id="AllMempoolTix">{{ .StakeInfo.AllMempoolTix }}</td></tr>
-                <!-- disabled due to https://github.com/decred/dcrwallet/issues/251
-                        <tr><td>OwnMempoolTix:</td><td><span id="OwnMempoolTix">{{ .StakeInfo.OwnMempoolTix }}</td></tr>-->
-                <tr><td>ProportionLive:</td><td><span id="ProportionLive">{{ .StakeInfo.ProportionLive }}</td></tr>
-                <tr><td>Difficulty:</td><td><span id="Difficulty">{{ .StakeInfo.Difficulty }}</td></tr>
-                <tr><td>TotalSubsidy:</td><td><span id="TotalSubsidy">{{ .StakeInfo.TotalSubsidy }}</td></tr>
-                <tr><td>Total User Count:</td><td><span id="UserCount">{{ .UserCount }}</td></tr>
-                <tr><td>Active User Count:</td><td><span id="UserCountActive">{{ .UserCountActive }}</td></tr>
-                <tr><td>Network:</td><td><span id="Network">{{ .Network }}</td></tr>
-                <tr><td>Pool Fees:</td><td><span id="PoolFees">{{ .PoolFees }}</td></tr>
-                <tr><td>Pool Status:</td><td><span id="PoolStatus">{{ .PoolStatus }}</td></tr>
-                <tr><td>Pool Email:</td><td><span id="PoolEmail">{{ .PoolEmail }}</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            </div>
-        </div>
+
+				<style>
+					.stats-chart > svg {
+						margin-right: -144px;
+						position: relative;
+						left: 50%;
+						-webkit-transform: translateX(-50%);
+						-ms-transform: translateX(-50%);
+						transform: translateX(-50%);
+					}
+				</style>
+
+				<script type="text/javascript">
+					var elements = document.getElementsByClassName("js-only");
+					for (var i = 0; i < elements.length; i++) {
+						elements[i].style.display = "flex";
+					}
+				</script>
+				
+				<noscript>
+					<div class="row col-12 block__description">
+						<p>Enable Javascript to view charts</p>
+					</div>
+				</noscript>
+
+			</section>
+		</div>
+	</div>
+</section>
 {{end}}
 
