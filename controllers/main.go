@@ -505,6 +505,9 @@ func (controller *MainController) SendMail(emailaddress string, subject string, 
 	// Connect to the server, authenticate, set the sender and recipient,
 	// and send the email all in one step.
 	mailMsg := goemail.NewMessage(controller.smtpFrom, subject, body)
+	if mailMsg == nil {
+		return fmt.Errorf(`invalid from address "%s"`, controller.smtpFrom)
+	}
 	mailMsg.AddTo(emailaddress)
 
 	err := controller.smtpServer.Send(mailMsg)
@@ -1690,6 +1693,8 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		if err != nil {
 			log.Errorf("error sending email change token to old address %v %v",
 				user.Email, err)
+			session.AddFlash("Failed to send email change verification email. "+
+				"Please contact the site admin.", "settingsError")
 		}
 	} else if updatePassword == "true" {
 		newPassword, newPasswordRepeat := r.FormValue("newpassword"),
@@ -1718,9 +1723,11 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		if err != nil {
 			log.Errorf("error sending password change confirmation %v %v",
 				user.Email, err)
+			session.AddFlash("Failed to send password change email. "+
+				"Please contact the site admin.", "settingsError")
+		} else {
+			session.AddFlash("Password successfully updated", "settingsSuccess")
 		}
-
-		session.AddFlash("Password successfully updated", "settingsSuccess")
 	}
 
 	return controller.Settings(c, r)
