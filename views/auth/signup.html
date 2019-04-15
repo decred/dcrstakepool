@@ -37,7 +37,7 @@
             <p><a href="/passwordreset">Forgot your password?</a></p>
           </div>
         </div>
-        <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+        {{ $.csrfField }}
       </form>
       {{else}}
         <p>To sign up, first complete the captcha:</p>

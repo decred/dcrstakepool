@@ -25,7 +25,7 @@
       <div class="form-group">
           <button id="addTickets" name="action" class="btn btn-primary" value="Add">Add Tickets To Live Voting List</button>
       </div>
-      <input type="hidden" name="{{$.CsrfKey}}" value={{$.CsrfToken}}>
+      {{ $.csrfField }}
     </form>
     {{else}}
     <p><strong>Currently there are no ignored low fee tickets.</strong></p>
@@ -45,7 +45,8 @@
       <div class="form-group">
           <button id="rmTickets" name="action" class="btn btn-primary" value="Remove">Remove Tickets From Live Voting List</button>
       </div>
-      <input type="hidden" name="{{$.CsrfKey}}" value={{$.CsrfToken}}>
+      {{ $.csrfField }}
+      
     </form>
     {{else}}
     <p><strong>Currently there are no added low fee tickets.</strong></p>

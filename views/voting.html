@@ -31,7 +31,7 @@
     <div class="form-group">
         <button id="updateVoting" name="updateVoting" class="btn btn-primary">Update Voting Preferences</button>
     </div>
-    <input type="hidden" name="{{$.CsrfKey}}" value={{$.CsrfToken}}>
+    {{ $.csrfField }}
     </form>
     {{else}}
     <p><strong>There are no active agendas to vote on currently.</strong></p>

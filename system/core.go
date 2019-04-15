@@ -20,27 +20,12 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// CSRF token constants
-const (
-	CSRFCookie = "XSRF-TOKEN"
-	CSRFHeader = "X-XSRF-TOKEN"
-	CSRFKey    = "csrf_token"
-)
-
 type Application struct {
-	APISecret      string
-	Template       *template.Template
-	TemplatesPath  string
-	Store          *sessions.CookieStore
-	DbMap          *gorp.DbMap
-	CsrfProtection *CsrfProtection
-}
-
-type CsrfProtection struct {
-	Key    string
-	Cookie string
-	Header string
-	Secure bool
+	APISecret     string
+	Template      *template.Template
+	TemplatesPath string
+	Store         *sessions.CookieStore
+	DbMap         *gorp.DbMap
 }
 
 // GojiWebHandlerFunc is an adaptor that allows an http.HanderFunc where a
@@ -73,13 +58,6 @@ func (application *Application) Init(APISecret string, baseURL string,
 		DBHost,
 		DBPort,
 		DBName)
-
-	application.CsrfProtection = &CsrfProtection{
-		Key:    CSRFKey,
-		Cookie: CSRFCookie,
-		Header: CSRFHeader,
-		Secure: cookieSecure,
-	}
 
 	application.APISecret = APISecret
 }
@@ -172,10 +150,6 @@ func saveSession(c web.C, w http.ResponseWriter, r *http.Request) error {
 func (application *Application) APIHandler(apiFun func(web.C, *http.Request) *APIResponse) web.HandlerFunc {
 	return func(c web.C, w http.ResponseWriter, r *http.Request) {
 		apiResp := apiFun(c, r)
-
-		if err := saveSession(c, w, r); err != nil {
-			log.Errorf("Can't save session: %v", err)
-		}
 
 		if apiResp != nil {
 			WriteAPIResponse(apiResp, http.StatusOK, w)
