@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/gorilla/context"
+	"github.com/gorilla/csrf"
 
 	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrstakepool/controllers"
@@ -102,8 +103,8 @@ func runMain() int {
 	app.Use(application.ApplyDbMap)
 	app.Use(application.ApplyAPI)
 	app.Use(application.ApplyAuth) // must be after ApplySessions
-	app.Use(application.ApplyIsXhr)
-	app.Use(application.ApplyCsrfProtection) // must be after ApplySessions
+	app.Use(csrf.Protect([]byte(cfg.APISecret), csrf.Secure(cfg.CookieSecure)))
+
 	app.Use(context.ClearHandler)
 
 	// Supported API versions are advertised in the API stats result
