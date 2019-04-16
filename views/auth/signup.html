@@ -40,29 +40,8 @@
         <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
       </form>
       {{else}}
-      <p>To sign up, first complete the captcha:</p>
-      <div class="row">
-        <div class="col-sm-10 center-block">
-          <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-sm-15 text-left center-block">
-          <form action="/verifyhuman" method="post" class="form-horizontal">
-            <div class="form-group center-block">
-              <label class="control-label col-sm-4" for="captchaSolution">Text in picture:</label>
-              <div class="col-sm-8">
-                <input name=captchaSolution class="form-control">
-                <input type=hidden name=captchaId value="{{.CaptchaID}}">
-              </div>
-              <div class="col-md-button center-block text-middle">
-                <button name=captchaSubmit type=submit class="btn btn-primary">Submit</button>
-              </div>
-            </div>
-            <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-          </form>
-        </div>
-      </div>
+        <p>To sign up, first complete the captcha:</p>
+        {{ template "captcha" . }}
       {{end}}
     </div> <!-- forms column -->
   </div> <!-- row -->
