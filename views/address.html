@@ -99,7 +99,7 @@ $ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet validateaddress 
 			<div class="form-group">
                                 <button id="signup" name="signup" class="btn btn-primary">Submit Address</button>
                         </div>
-                {{ .csrfField }}
+                {{ $.csrfField }}
                 </form>
 {{ end }}
     </div>
