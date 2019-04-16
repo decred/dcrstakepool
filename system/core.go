@@ -151,10 +151,6 @@ func (application *Application) APIHandler(apiFun func(web.C, *http.Request) *AP
 	return func(c web.C, w http.ResponseWriter, r *http.Request) {
 		apiResp := apiFun(c, r)
 
-		if err := saveSession(c, w, r); err != nil {
-			log.Errorf("Can't save session: %v", err)
-		}
-
 		if apiResp != nil {
 			WriteAPIResponse(apiResp, http.StatusOK, w)
 			return
