@@ -5,7 +5,6 @@
 package controllers
 
 import (
-	"crypto/tls"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -17,13 +16,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dajohi/goemail"
 	"github.com/dchest/captcha"
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
+	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/internal/version"
 	"github.com/decred/dcrstakepool/models"
@@ -43,13 +42,7 @@ var (
 	// MaxUsers is the maximum number of users supported by a voting service.
 	// This is an artificial limit and can be increased by adjusting the
 	// ticket/fee address indexes above 10000.
-	MaxUsers            = 10000
-	signupEmailSubject  = "Voting service provider email verification"
-	signupEmailTemplate = "A request for an account for __URL__\r\n" +
-		"was made from __REMOTEIP__ for this email address.\r\n\n" +
-		"If you made this request, follow the link below:\r\n\n" +
-		"__URL__/emailverify?t=__TOKEN__\r\n\n" +
-		"to verify your email address and finalize registration.\r\n\n"
+	MaxUsers                    = 10000
 	StakepooldUpdateKindAll     = "ALL"
 	StakepooldUpdateKindUsers   = "USERS"
 	StakepooldUpdateKindTickets = "TICKETS"
@@ -78,8 +71,7 @@ type MainController struct {
 	rpcServers           *walletSvrManager
 	realIPHeader         string
 	captchaHandler       *CaptchaHandler
-	smtpFrom             string
-	smtpServer           *goemail.SMTP
+	emailSender          email.Sender
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
 	maxVotedAge          int64
@@ -111,8 +103,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	adminUserIDs []string, APISecret string, APIVersionsSupported []int,
 	baseURL string, closePool bool, closePoolMsg string, enablestakepoold bool,
 	feeXpubStr string, grpcConnections []*grpc.ClientConn, poolFees float64,
-	poolEmail, poolLink, smtpFrom, smtpHost, smtpUsername, smtpPassword string,
-	walletHosts, walletCerts, walletUsers,
+	poolEmail, poolLink string, emailSender email.Sender, walletHosts, walletCerts, walletUsers,
 	walletPasswords []string, minServers int, realIPHeader,
 	votingXpubStr string, maxVotedAge int64) (*MainController, error) {
 
@@ -144,23 +135,6 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		ImgWidth:  257,
 	}
 
-	// Format: smtp://[username[:password]@]host
-	smtpUrl := "smtp://"
-	if smtpUsername != "" {
-		smtpUrl += smtpUsername
-		if smtpPassword != "" {
-			smtpUrl += ":" + smtpPassword
-		}
-		smtpUrl += "@"
-	}
-	smtpUrl += smtpHost
-
-	tlsConfig := tls.Config{}
-	smtpServer, err := goemail.NewSMTP(smtpUrl, &tlsConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	mc := &MainController{
 		adminIPs:             adminIPs,
 		adminUserIDs:         adminUserIDs,
@@ -179,8 +153,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		captchaHandler:       ch,
 		rpcServers:           rpcs,
 		realIPHeader:         realIPHeader,
-		smtpFrom:             smtpFrom,
-		smtpServer:           smtpServer,
+		emailSender:          emailSender,
 		votingXpub:           voteKey,
 		maxVotedAge:          maxVotedAge,
 	}
@@ -497,24 +470,6 @@ func (controller *MainController) isAdmin(c web.C, r *http.Request) (bool, error
 	}
 
 	return true, nil
-}
-
-// SendMail sends an email with the passed data using the system's SMTP
-// configuration.
-func (controller *MainController) SendMail(emailaddress string, subject string, body string) error {
-	// Connect to the server, authenticate, set the sender and recipient,
-	// and send the email all in one step.
-	mailMsg := goemail.NewMessage(controller.smtpFrom, subject, body)
-	if mailMsg == nil {
-		return fmt.Errorf(`invalid from address "%s"`, controller.smtpFrom)
-	}
-	mailMsg.AddTo(emailaddress)
-
-	err := controller.smtpServer.Send(mailMsg)
-	if err != nil {
-		log.Errorf("Error sending email to %v: %v", emailaddress, err)
-	}
-	return err
 }
 
 // StakepooldGetIgnoredLowFeeTickets performs a gRPC GetIgnoredLowFeeTickets
@@ -1449,15 +1404,7 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 			return controller.PasswordReset(c, r)
 		}
 
-		body := "A request to reset your password was made from IP address: " +
-			remoteIP + "\r\n\n" +
-			"If you made this request, follow the link below:\r\n\n" +
-			controller.baseURL + "/passwordupdate?t=" + token.String() + "\r\n\n" +
-			"The above link expires an hour after this email was sent.\r\n\n" +
-			"If you did not make this request, you may safely ignore this " +
-			"email.\r\n" + "However, you may want to look into how this " +
-			"happened.\r\n"
-		err := controller.SendMail(user.Email, "Voting service password reset", body)
+		err := controller.emailSender.PasswordChangeRequest(user.Email, remoteIP, controller.baseURL, token.String())
 		if err != nil {
 			session.AddFlash("Unable to send password reset email", "passwordresetError")
 			log.Errorf("error sending password reset email %v", err)
@@ -1659,17 +1606,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 			return controller.Settings(c, r)
 		}
 
-		bodyNew := "A request was made to change the email address\r\n" +
-			"for a voting service account at " + controller.baseURL + "\r\n" +
-			"from " + user.Email + " to " + newEmail + "\r\n\n" +
-			"The request was made from IP address " + remoteIP + "\r\n\n" +
-			"If you made this request, follow the link below:\r\n\n" +
-			controller.baseURL + "/emailupdate?t=" + token.String() + "\r\n\n" +
-			"The above link expires an hour after this email was sent.\r\n\n" +
-			"If you did not make this request, you may safely ignore this " +
-			"email.\r\n" + "However, you may want to look into how this " +
-			"happened.\r\n"
-		err = controller.SendMail(newEmail, "Voting service email change", bodyNew)
+		err = controller.emailSender.EmailChangeVerification(controller.baseURL, user.Email, newEmail, remoteIP, token.String())
 		if err != nil {
 			session.AddFlash("Unable to send email change token.",
 				"settingsError")
@@ -1680,15 +1617,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 				"settingsSuccess")
 		}
 
-		bodyOld := "A request was made to change the email address\r\n" +
-			"for your voting service account at " + controller.baseURL + "\r\n" +
-			"from " + user.Email + " to " + newEmail + "\r\n\n" +
-			"The request was made from IP address " + remoteIP + "\r\n\n" +
-			"If you did not make this request, please contact the \r\n" +
-			"Voting service administrator immediately.\r\n"
-		err = controller.SendMail(user.Email, "Voting service email change",
-			bodyOld)
-		// this likely has the same status as the above email so don't
+		err = controller.emailSender.EmailChangeNotification(controller.baseURL, user.Email, newEmail, remoteIP)
 		// inform the user.
 		if err != nil {
 			log.Errorf("error sending email change token to old address %v %v",
@@ -1714,12 +1643,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		}
 
 		// send a confirmation email.
-		body := "Your voting service password for " + controller.baseURL + "\r\n" +
-			"was just changed by IP Address " + remoteIP + "\r\n\n" +
-			"If you did not make this request, please contact the \r\n" +
-			"Voting service administrator immediately.\r\n"
-		err = controller.SendMail(user.Email, "Voting service password change",
-			body)
+		err = controller.emailSender.PasswordChangeConfirm(user.Email, controller.baseURL, remoteIP)
 		if err != nil {
 			log.Errorf("error sending password change confirmation %v %v",
 				user.Email, err)
@@ -1864,18 +1788,14 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 
 	log.Infof("SignUp POST from %v, email %v. Inserting.", remoteIP, user.Email)
 
-	if err := models.InsertUser(dbMap, user); err != nil {
+	err := models.InsertUser(dbMap, user)
+	if err != nil {
 		session.AddFlash("Database error occurred while adding user", "signupError")
 		log.Errorf("Error while registering user: %v", err)
 		return controller.SignUp(c, r)
 	}
 
-	body := signupEmailTemplate
-	body = strings.Replace(body, "__URL__", controller.baseURL, -1)
-	body = strings.Replace(body, "__REMOTEIP__", remoteIP, -1)
-	body = strings.Replace(body, "__TOKEN__", token.String(), -1)
-
-	err := controller.SendMail(user.Email, signupEmailSubject, body)
+	err = controller.emailSender.Registration(email, controller.baseURL, remoteIP, token.String())
 	if err != nil {
 		session.AddFlash("Unable to send signup email", "signupError")
 		log.Errorf("error sending verification email %v", err)
