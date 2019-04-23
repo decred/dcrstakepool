@@ -113,20 +113,6 @@ $('.form-check-input').change(function () {
   }
 });
 
-
-//dataTable setup
-$(document).ready(function () {
-	$('.dtVerticalScroll').DataTable({
-		"scrollY": "251px",
-		"scrollX": true,
-		"scrollCollapse": true,
-		"paging": false,
-		"searching": false,
-		"info": false
-	});
-	$('.dataTables_length').addClass('bs-select');
-});
-
 //carousel dot tooltip setup
 $(document).ready(function() {
   $('.carousel-nav__dot').tooltip({
