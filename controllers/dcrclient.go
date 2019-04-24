@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/dcrjson"
+	"github.com/decred/dcrd/dcrjson/v2"
 	"github.com/decred/dcrd/dcrutil"
-	"github.com/decred/dcrd/rpcclient"
+	"github.com/decred/dcrd/rpcclient/v2"
 	"github.com/decred/dcrstakepool/models"
-	"github.com/decred/dcrwallet/wallet/udb"
+	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
+	"github.com/decred/dcrwallet/wallet/v2/udb"
 )
 
 // functionName
@@ -51,7 +52,7 @@ var (
 
 // validateAddressResponse
 type validateAddressResponse struct {
-	addrInfo *dcrjson.ValidateAddressWalletResult
+	addrInfo *wallettypes.ValidateAddressWalletResult
 	err      error
 }
 
@@ -63,7 +64,7 @@ type validateAddressMsg struct {
 
 // createMultisigResponse
 type createMultisigResponse struct {
-	multisigInfo *dcrjson.CreateMultiSigResult
+	multisigInfo *wallettypes.CreateMultiSigResult
 	err          error
 }
 
@@ -113,7 +114,7 @@ type getTxOutMsg struct {
 
 // getStakeInfoResponse
 type getStakeInfoResponse struct {
-	stakeInfo *dcrjson.GetStakeInfoResult
+	stakeInfo *wallettypes.GetStakeInfoResult
 	err       error
 }
 
@@ -124,7 +125,7 @@ type getStakeInfoMsg struct {
 
 // connectedResponse
 type connectedResponse struct {
-	walletInfo []*dcrjson.WalletInfoResult
+	walletInfo []*wallettypes.WalletInfoResult
 	err        error
 }
 
@@ -135,7 +136,7 @@ type connectedMsg struct {
 
 // stakePoolUserInfoResponse
 type stakePoolUserInfoResponse struct {
-	userInfo *dcrjson.StakePoolUserInfoResult
+	userInfo *wallettypes.StakePoolUserInfoResult
 	err      error
 }
 
@@ -226,7 +227,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case validateAddressFn:
 		vam := msg.(validateAddressMsg)
 		resp := new(validateAddressResponse)
-		vawrs := make([]*dcrjson.ValidateAddressWalletResult, w.serversLen)
+		vawrs := make([]*wallettypes.ValidateAddressWalletResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -279,7 +280,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case createMultisigFn:
 		cmsm := msg.(createMultisigMsg)
 		resp := new(createMultisigResponse)
-		cmsrs := make([]*dcrjson.CreateMultiSigResult, w.serversLen)
+		cmsrs := make([]*wallettypes.CreateMultiSigResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -463,7 +464,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 
 	case getStakeInfoFn:
 		resp := new(getStakeInfoResponse)
-		gsirs := make([]*dcrjson.GetStakeInfoResult, w.serversLen)
+		gsirs := make([]*wallettypes.GetStakeInfoResult, w.serversLen)
 		connectCount := 0
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
@@ -518,7 +519,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case connectedFn:
 		resp := new(connectedResponse)
 		resp.err = nil
-		wirs := make([]*dcrjson.WalletInfoResult, w.serversLen)
+		wirs := make([]*wallettypes.WalletInfoResult, w.serversLen)
 		resp.walletInfo = wirs
 		connectCount := 0
 		for i, s := range w.servers {
@@ -590,7 +591,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 			return resp
 		}
 		// Getting each wallet's response, checking for "syncness"
-		spuirs := make([]*dcrjson.StakePoolUserInfoResult, w.serversLen)
+		spuirs := make([]*wallettypes.StakePoolUserInfoResult, w.serversLen)
 		// use connectCount to increment total number of successful responses
 		// if we have > 0 then we proceed as though nothing is wrong for the user
 		connectCount := 0
@@ -666,7 +667,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 
 // ping pings all the servers and makes sure they're online. This should be
 // performed before doing a write.
-func (w *walletSvrManager) connected() ([]*dcrjson.WalletInfoResult, error) {
+func (w *walletSvrManager) connected() ([]*wallettypes.WalletInfoResult, error) {
 	reply := make(chan connectedResponse)
 	w.msgChan <- connectedMsg{
 		reply: reply,
@@ -679,7 +680,7 @@ func (w *walletSvrManager) connected() ([]*dcrjson.WalletInfoResult, error) {
 // PoolTickets need to be synced due to manual addtickets, or a status is off.
 // If a ticket is seen to be valid in 1 wallet and invalid in another, we use
 // addticket rpc command to add that ticket to the invalid wallet.
-func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult) error {
+func (w *walletSvrManager) syncTickets(spuirs []*wallettypes.StakePoolUserInfoResult) error {
 	for i := 0; i < len(spuirs); i++ {
 		if w.servers[i] == nil {
 			continue
@@ -721,7 +722,7 @@ func (w *walletSvrManager) syncTickets(spuirs []*dcrjson.StakePoolUserInfoResult
 // that each share the others PoolTickets and have the same
 // valid/invalid lists.  If any thing is deemed off then syncTickets
 // call is made.
-func (w *walletSvrManager) checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoResult) bool {
+func (w *walletSvrManager) checkForSyncness(spuirs []*wallettypes.StakePoolUserInfoResult) bool {
 	for i := 0; i < len(spuirs); i++ {
 		if spuirs[i] == nil {
 			continue
@@ -787,7 +788,7 @@ func (w *walletSvrManager) checkForSyncness(spuirs []*dcrjson.StakePoolUserInfoR
 //
 // This should return equivalent results from all wallet RPCs. If this
 // encounters a failure, it should be considered fatal.
-func (w *walletSvrManager) ValidateAddress(addr dcrutil.Address) (*dcrjson.ValidateAddressWalletResult, error) {
+func (w *walletSvrManager) ValidateAddress(addr dcrutil.Address) (*wallettypes.ValidateAddressWalletResult, error) {
 	// Assert that all servers are online.
 	_, err := w.connected()
 	if err != nil {
@@ -807,7 +808,7 @@ func (w *walletSvrManager) ValidateAddress(addr dcrutil.Address) (*dcrjson.Valid
 //
 // This should return equivalent results from all wallet RPCs. If this
 // encounters a failure, it should be considered fatal.
-func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*dcrjson.CreateMultiSigResult, error) {
+func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*wallettypes.CreateMultiSigResult, error) {
 	// Assert that all servers are online.
 	_, err := w.connected()
 	if err != nil {
@@ -901,7 +902,7 @@ func (w *walletSvrManager) GetTxOut(hash *chainhash.Hash, idx uint32) (*dcrjson.
 // This can race depending on what wallet is currently processing, so failures
 // from this function should NOT cause fatal errors on the web server like the
 // other RPC client calls.
-func (w *walletSvrManager) StakePoolUserInfo(userAddr dcrutil.Address, takeFirstResponse bool) (*dcrjson.StakePoolUserInfoResult, error) {
+func (w *walletSvrManager) StakePoolUserInfo(userAddr dcrutil.Address, takeFirstResponse bool) (*wallettypes.StakePoolUserInfoResult, error) {
 	reply := make(chan stakePoolUserInfoResponse)
 	w.msgChan <- stakePoolUserInfoMsg{
 		userAddr:          userAddr,
@@ -931,7 +932,7 @@ func (w *walletSvrManager) GetBestBlock() (*chainhash.Hash, int64, error) {
 // This can race depending on what wallet is currently processing, so failures
 // from this function should NOT cause fatal errors on the web server like the
 // other RPC client calls.
-func (w *walletSvrManager) getStakeInfo() (*dcrjson.GetStakeInfoResult, error) {
+func (w *walletSvrManager) getStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
 	// Less than five minutes has elapsed since the last call. Return
 	// the previously cached stake information.
 	if time.Since(w.cachedStakeInfoTimer) < cacheTimerStakeInfo {
@@ -960,7 +961,7 @@ func (w *walletSvrManager) getStakeInfo() (*dcrjson.GetStakeInfoResult, error) {
 }
 
 // GetStakeInfo is the concurrency safe, exported version of getStakeInfo.
-func (w *walletSvrManager) GetStakeInfo() (*dcrjson.GetStakeInfoResult, error) {
+func (w *walletSvrManager) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
 	w.cachedStakeInfoMutex.Lock()
 	defer w.cachedStakeInfoMutex.Unlock()
 
@@ -999,7 +1000,7 @@ type walletSvrManager struct {
 	// only queried for if 5 minutes or more has passed. The mutex is used to
 	// allow concurrent access to the stake information if less than five
 	// minutes has passed.
-	cachedStakeInfo      *dcrjson.GetStakeInfoResult
+	cachedStakeInfo      *wallettypes.GetStakeInfoResult
 	cachedStakeInfoTimer time.Time
 	cachedStakeInfoMutex sync.Mutex
 
@@ -1117,7 +1118,7 @@ func (w *walletSvrManager) GetUnspentUserTickets(userMultiSigAddress dcrutil.Add
 	return tickethashes, nil
 }
 
-func (w *walletSvrManager) WalletStatus() ([]*dcrjson.WalletInfoResult, error) {
+func (w *walletSvrManager) WalletStatus() ([]*wallettypes.WalletInfoResult, error) {
 	return w.connected()
 }
 

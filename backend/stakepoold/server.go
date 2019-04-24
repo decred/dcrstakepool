@@ -22,15 +22,15 @@ import (
 	"github.com/decred/dcrd/blockchain/stake"
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/dcrjson"
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
-	"github.com/decred/dcrd/rpcclient"
+	"github.com/decred/dcrd/rpcclient/v2"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrwallet/wallet/txrules"
-	"github.com/decred/dcrwallet/wallet/udb"
+	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
+	"github.com/decred/dcrwallet/wallet/v2/txrules"
+	"github.com/decred/dcrwallet/wallet/v2/udb"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -879,7 +879,7 @@ func (ctx *appContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 	}()
 
 	// Ask wallet to generate vote result.
-	var res *dcrjson.GenerateVoteResult
+	var res *wallettypes.GenerateVoteResult
 	res, w.err = ctx.walletConnection.GenerateVote(blockHash, blockHeight,
 		w.ticket, w.config.VoteBits, ctx.votingConfig.VoteBitsExtended)
 	if w.err != nil || res.Hex == "" {

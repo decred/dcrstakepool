@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/rpcclient"
+	"github.com/decred/dcrd/rpcclient/v2"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
 
-var requiredChainServerAPI = semver{major: 5, minor: 0, patch: 0}
-var requiredWalletAPI = semver{major: 5, minor: 0, patch: 0}
+var requiredChainServerAPI = semver{major: 5, minor: 1, patch: 0}
+var requiredWalletAPI = semver{major: 6, minor: 0, patch: 0}
 
 func connectNodeRPC(ctx *appContext, cfg *config) (*rpcclient.Client, semver, error) {
 	var nodeVer semver
