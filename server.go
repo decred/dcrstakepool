@@ -17,6 +17,7 @@ import (
 
 	"github.com/decred/dcrd/rpcclient/v2"
 	"github.com/decred/dcrstakepool/controllers"
+	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 
@@ -121,12 +122,18 @@ func runMain() int {
 		}
 	}
 
+	sender, err := email.NewSender(cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom, cfg.UseSMTPS)
+	if err != nil {
+		application.Close()
+		log.Errorf("Failed to initialize the smtp server: %v", err)
+		return 1
+	}
+
 	controller, err := controllers.NewMainController(activeNetParams.Params,
 		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported,
 		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
 		cfg.ColdWalletExtPub, grpcConnections, cfg.PoolFees, cfg.PoolEmail,
-		cfg.PoolLink, cfg.SMTPFrom, cfg.SMTPHost, cfg.SMTPUsername,
-		cfg.SMTPPassword, cfg.WalletHosts, cfg.WalletCerts,
+		cfg.PoolLink, sender, cfg.WalletHosts, cfg.WalletCerts,
 		cfg.WalletUsers, cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader,
 		cfg.VotingWalletExtPub, cfg.MaxVotedAge)
 	if err != nil {

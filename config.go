@@ -92,6 +92,7 @@ type config struct {
 	SMTPHost           string   `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
 	SMTPUsername       string   `long:"smtpusername" description:"SMTP username for authentication if required"`
 	SMTPPassword       string   `long:"smtppassword" description:"SMTP password for authentication if required"`
+	UseSMTPS           bool     `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
 	StakepooldHosts    []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
 	StakepooldCerts    []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
 	WalletHosts        []string `long:"wallethosts" description:"Hostnames for wallet servers"`
