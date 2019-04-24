@@ -1,9 +1,6 @@
 package system
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
-	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"strings"
@@ -45,7 +42,6 @@ func (application *Application) ApplyDbMap(c *web.C, h http.Handler) http.Handle
 func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api") {
-			c.Env["IsAPI"] = true
 			authHeader := r.Header.Get("Authorization")
 			if strings.HasPrefix(authHeader, "Bearer ") {
 				apitoken := strings.TrimPrefix(authHeader, "Bearer ")
@@ -72,8 +68,6 @@ func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler 
 					}
 				}
 			}
-		} else {
-			c.Env["IsAPI"] = false
 		}
 		h.ServeHTTP(w, r)
 	}
@@ -107,98 +101,6 @@ func (application *Application) ApplyAuth(c *web.C, h http.Handler) http.Handler
 				c.Env["User"] = user
 			}
 		}
-		h.ServeHTTP(w, r)
-	}
-	return http.HandlerFunc(fn)
-}
-
-func (application *Application) ApplyIsXhr(c *web.C, h http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
-			c.Env["IsXhr"] = true
-		} else {
-			c.Env["IsXhr"] = false
-		}
-		h.ServeHTTP(w, r)
-	}
-	return http.HandlerFunc(fn)
-}
-
-func isValidToken(a, b string) bool {
-	x := []byte(a)
-	y := []byte(b)
-	if len(x) != len(y) {
-		return false
-	}
-	return subtle.ConstantTimeCompare(x, y) == 1
-}
-
-var csrfProtectionMethodForNoXhr = []string{"POST", "PUT", "DELETE"}
-
-func isCsrfProtectionMethodForNoXhr(method string) bool {
-	return strInSlice(csrfProtectionMethodForNoXhr, strings.ToUpper(method)) >= 0
-}
-
-func strInSlice(strs []string, str string) int {
-	for i, v := range strs {
-		if str == v {
-			return i
-		}
-	}
-	return -1
-}
-
-func (application *Application) ApplyCsrfProtection(c *web.C, h http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		// disable CSRF for API requests
-		if c.Env["IsAPI"] != nil {
-			if c.Env["IsAPI"].(bool) {
-				h.ServeHTTP(w, r)
-				return
-			}
-		} else {
-			log.Error("IsAPI not set -- middleware not called in proper order")
-		}
-		session := c.Env["Session"].(*sessions.Session)
-		csrfProtection := application.CsrfProtection
-		if _, ok := session.Values["CsrfToken"]; !ok {
-			hash := sha256.New()
-			buffer := make([]byte, 32)
-			_, err := rand.Read(buffer)
-			if err != nil {
-				log.Criticalf("crypt/rand.Read failed: %s", err)
-				panic(err)
-			}
-			hash.Write(buffer)
-			session.Values["CsrfToken"] = fmt.Sprintf("%x", hash.Sum(nil))
-			if err = session.Save(r, w); err != nil {
-				log.Criticalf("session.Save() failed")
-				panic(err)
-			}
-		}
-		c.Env["CsrfKey"] = csrfProtection.Key
-		c.Env["CsrfToken"] = session.Values["CsrfToken"]
-		csrfToken := c.Env["CsrfToken"].(string)
-
-		if c.Env["IsXhr"].(bool) {
-			if !isValidToken(csrfToken, r.Header.Get(csrfProtection.Header)) {
-				http.Error(w, "Invalid Csrf Header", http.StatusBadRequest)
-				return
-			}
-		} else {
-			if isCsrfProtectionMethodForNoXhr(r.Method) {
-				if !isValidToken(csrfToken, r.PostFormValue(csrfProtection.Key)) {
-					http.Error(w, "Invalid Csrf Token", http.StatusBadRequest)
-					return
-				}
-			}
-		}
-		http.SetCookie(w, &http.Cookie{
-			Name:   csrfProtection.Cookie,
-			Value:  csrfToken,
-			Secure: csrfProtection.Secure,
-			Path:   "/",
-		})
 		h.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)

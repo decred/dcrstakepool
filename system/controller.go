@@ -27,10 +27,6 @@ func (controller *Controller) GetDbMap(c web.C) *gorp.DbMap {
 	return c.Env["DbMap"].(*gorp.DbMap)
 }
 
-func (controller *Controller) IsXhr(c web.C) bool {
-	return c.Env["IsXhr"].(bool)
-}
-
 func (controller *Controller) IsCaptchaDone(c web.C) bool {
 	done, ok := c.Env["CaptchaDone"].(bool)
 	return done && ok

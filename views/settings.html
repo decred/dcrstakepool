@@ -48,7 +48,7 @@
       <div class="form-group">
             <button id="updateEmail" name="updateEmail" value="true" class="btn btn-primary">Change Email Address</button>
       </div>
-      <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+      {{ $.csrfField }}
     </form>
     {{else}}
       <p>To change your email address, first complete the captcha:</p>
@@ -80,7 +80,7 @@
         <label class="control-label" for="updatepassword"></label>
         <button id="updatepassword" name="updatePassword" value="true" class="btn btn-primary">Update Password</button>
       </div>
-      <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+      {{ $.csrfField }}
     </form>
   </div> <!-- forms column -->
  </div> <!-- row -->

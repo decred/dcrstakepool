@@ -19,7 +19,7 @@
                 <button name=captchaSubmit type=submit class="btn btn-primary">Submit</button>
             </div>
         </div>
-        <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
+        {{ $.csrfField }}
         </form>
     </div>
 </div>
