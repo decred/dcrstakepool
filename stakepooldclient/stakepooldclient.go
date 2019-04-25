@@ -166,3 +166,15 @@ func StakepooldSetUserVotingPrefs(conn *grpc.ClientConn, dbUsers map[int64]*mode
 	}
 	return true, err
 }
+
+func StakepooldImportScript(conn *grpc.ClientConn, script []byte) (heightImported int64, err error) {
+	client := pb.NewStakepooldServiceClient(conn)
+	importScriptReq := &pb.ImportScriptRequest{
+		Script: script,
+	}
+	importScriptResp, err := client.ImportScript(context.Background(), importScriptReq)
+	if err != nil {
+		return -1, err
+	}
+	return importScriptResp.HeightImported, err
+}

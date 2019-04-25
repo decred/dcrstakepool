@@ -849,6 +849,21 @@ func (ctx *appContext) updateTicketDataFromMySQL() error {
 	return nil
 }
 
+func (ctx *appContext) importScript(script []byte) int64 {
+	err := ctx.walletConnection.ImportScript(script)
+	if err != nil {
+		log.Errorf("importScript: importScript rpc failed: %v", err)
+		return -1
+	}
+
+	_, block, err := ctx.walletConnection.GetBestBlock()
+	if err != nil {
+		log.Errorf("importScript: getBetBlock rpc failed: %v", err)
+		return -1
+	}
+	return block
+}
+
 func (ctx *appContext) updateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	log.Debug("updateUserData ctx.Lock")
 	ctx.Lock()
@@ -1214,6 +1229,9 @@ func (ctx *appContext) grpcCommandQueueHandler() {
 			case rpcserver.SetUserVotingPrefs:
 				ctx.updateUserData(grpcCommand.RequestUserData)
 				grpcCommand.ResponseEmptyChan <- struct{}{}
+			case rpcserver.ImportScript:
+				blockHeight := ctx.importScript(grpcCommand.RequestScript)
+				grpcCommand.ResponseBlockHeight <- blockHeight
 			default:
 				err := fmt.Errorf("grpcCommandQueueHandler: ignoring "+
 					"unregistered gRPC command '%v'",

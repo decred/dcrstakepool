@@ -25,7 +25,6 @@ type functionName int
 const (
 	validateAddressFn functionName = iota
 	createMultisigFn
-	importScriptFn
 	ticketsForAddressFn
 	getTxOutFn
 	getStakeInfoFn
@@ -73,18 +72,6 @@ type createMultisigMsg struct {
 	required  int
 	addresses []dcrutil.Address
 	reply     chan createMultisigResponse
-}
-
-// importScriptResponse
-type importScriptResponse struct {
-	err error
-}
-
-// importScriptMsg
-type importScriptMsg struct {
-	height int
-	script []byte
-	reply  chan importScriptResponse
 }
 
 // ticketsForAddressResponse
@@ -178,10 +165,6 @@ out:
 			case createMultisigMsg:
 				resp := w.executeInSequence(createMultisigFn, msg)
 				respTyped := resp.(*createMultisigResponse)
-				msg.reply <- *respTyped
-			case importScriptMsg:
-				resp := w.executeInSequence(importScriptFn, msg)
-				respTyped := resp.(*importScriptResponse)
 				msg.reply <- *respTyped
 			case ticketsForAddressMsg:
 				resp := w.executeInSequence(ticketsForAddressFn, msg)
@@ -328,45 +311,6 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 				break
 			}
 		}
-		return resp
-
-	case importScriptFn:
-		ism := msg.(importScriptMsg)
-		resp := new(importScriptResponse)
-		isErrors := make([]error, w.serversLen)
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				continue
-			}
-			err := s.ImportScriptRescan(ism.script, false)
-			isErrors[i] = err
-		}
-
-		for i := 0; i < w.serversLen; i++ {
-			if i == w.serversLen-1 {
-				break
-			}
-
-			notIsNil1 := isErrors[i] != nil
-			notIsNil2 := isErrors[i+1] != nil
-			if notIsNil1 != notIsNil2 {
-				log.Infof("importScriptFn nonequiv failure 1 on servers %v, %v",
-					i, i+1)
-				resp.err = fmt.Errorf("non equivalent error returned 1")
-				return resp
-			}
-
-			if notIsNil1 && notIsNil2 {
-				if isErrors[i].Error() != isErrors[i+1].Error() {
-					log.Infof("importScriptFn nonequiv failure 2 on  "+
-						"servers %v, %v", i, i+1)
-					resp.err = fmt.Errorf("non equivalent error returned 2")
-					return resp
-				}
-			}
-		}
-
-		resp.err = isErrors[0]
 		return resp
 
 	case ticketsForAddressFn:
@@ -823,27 +767,6 @@ func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*w
 	}
 	response := <-reply
 	return response.multisigInfo, response.err
-}
-
-// ImportScript
-//
-// This should return equivalent results from all wallet RPCs. If this
-// encounters a failure, it should be considered fatal.
-func (w *walletSvrManager) ImportScript(script []byte, height int) error {
-	// Assert that all servers are online.
-	_, err := w.connected()
-	if err != nil {
-		return connectionError(err)
-	}
-
-	reply := make(chan importScriptResponse)
-	w.msgChan <- importScriptMsg{
-		height: height,
-		script: script,
-		reply:  reply,
-	}
-	response := <-reply
-	return response.err
 }
 
 // TicketsForAddress
