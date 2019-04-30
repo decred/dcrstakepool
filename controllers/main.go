@@ -300,9 +300,9 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 	}
 
 	// Import the RedeemScript
-	var bestBlockHeight int64
+	var importedHeight int64
 	for i := range controller.grpcConnections {
-		bestBlockHeight, err = stakepooldclient.StakepooldImportScript(controller.grpcConnections[i], serializedScript)
+		importedHeight, err = stakepooldclient.StakepooldImportScript(controller.grpcConnections[i], serializedScript)
 		if err != nil {
 			log.Errorf("Error importing script on stakepoold rpc connection %d", i)
 			return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
@@ -318,7 +318,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	models.UpdateUserByID(dbMap, user.Id, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
-		userFeeAddr.EncodeAddress(), bestBlockHeight)
+		userFeeAddr.EncodeAddress(), importedHeight)
 
 	log.Infof("successfully create multisigaddress for user %d", c.Env["APIUserID"])
 
@@ -868,9 +868,9 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// Import the RedeemScript
-	var bestBlockHeight int64
+	var importedHeight int64
 	for i := range controller.grpcConnections {
-		bestBlockHeight, err = stakepooldclient.StakepooldImportScript(controller.grpcConnections[i], serializedScript)
+		importedHeight, err = stakepooldclient.StakepooldImportScript(controller.grpcConnections[i], serializedScript)
 		if err != nil {
 			log.Errorf("Error importing script on stakepoold rpc connection %d", i)
 			return "/error", http.StatusSeeOther
@@ -890,7 +890,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	// addresses, and the fee address
 	models.UpdateUserByID(dbMap, uid64, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
-		userFeeAddr.EncodeAddress(), bestBlockHeight)
+		userFeeAddr.EncodeAddress(), importedHeight)
 
 	if err = controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers); err != nil {
 		log.Errorf("unable to update all: %v", err)
