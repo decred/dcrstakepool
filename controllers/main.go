@@ -1414,6 +1414,7 @@ func (controller *MainController) PasswordReset(c web.C, r *http.Request) (strin
 	c.Env["FlashSuccess"] = session.Flashes("passwordresetSuccess")
 	c.Env["IsPasswordReset"] = true
 	c.Env["CaptchaID"] = captcha.New()
+	c.Env["CaptchaMsg"] = "To reset your password, first complete the captcha:"
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "passwordreset", c.Env)
@@ -1586,6 +1587,7 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 	c.Env["FlashSuccess"] = session.Flashes("settingsSuccess")
 	c.Env["IsSettings"] = true
 	c.Env["CaptchaID"] = captcha.New()
+	c.Env["CaptchaMsg"] = "To change your email address, first complete the captcha:"
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "settings", c.Env)
@@ -1717,7 +1719,7 @@ func (controller *MainController) SignIn(c web.C, r *http.Request) (string, int)
 
 	widgets := controller.Parse(t, "auth/signin", c.Env)
 
-	c.Env["Title"] = "Decred Stake Pool - Sign In"
+	c.Env["Title"] = "Decred Stake Pool - Login"
 	c.Env["Designation"] = controller.designation
 
 	c.Env["Content"] = template.HTML(widgets)
@@ -1778,11 +1780,12 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 	c.Env["FlashError"] = append(session.Flashes("signupError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("signupSuccess")
 	c.Env["CaptchaID"] = captcha.New()
+	c.Env["CaptchaMsg"] = "To register, first complete the captcha:"
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "auth/signup", c.Env)
 
-	c.Env["Title"] = "Decred Stake Pool - Sign Up"
+	c.Env["Title"] = "Decred Stake Pool - Register"
 	c.Env["Designation"] = controller.designation
 
 	c.Env["Content"] = template.HTML(widgets)

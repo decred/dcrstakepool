@@ -62,9 +62,6 @@ var pie = new d3pie("chart1", {
 		"outer": {
 			"pieDistance": 32
 		},
-		"inner": {
-			"hideWhenLessThanPercentage": 100
-		},
 		"mainLabel": {
 			"fontSize": 0
 		},
@@ -135,9 +132,6 @@ var pie = new d3pie("chart2", {
 		"outer": {
 			"pieDistance": 32
 		},
-		"inner": {
-			"hideWhenLessThanPercentage": 100
-		},
 		"mainLabel": {
 			"fontSize": 0
 		},
@@ -199,16 +193,13 @@ var pie = new d3pie("chart3", {
 			{
 				"label": "Network Ticket Pool",
 				"value": {{ .StakeInfo.PoolSize }},
-				"color": "#e1f7ff"
+				"color": "#effafe"
 			}
 		]
 	},
 	"labels": {
 		"outer": {
 			"pieDistance": 32
-		},
-		"inner": {
-			"hideWhenLessThanPercentage": 100
 		},
 		"mainLabel": {
 			"fontSize": 0

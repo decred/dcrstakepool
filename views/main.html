@@ -65,9 +65,9 @@
             <a class="pb-3 pt-2 d-none d-md-inline-block" href="/logout">Logout</a>
             {{else}}
               <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
-                {{if .IsSignIn }}active{{end}}" href="/signin">Sign In</a>
+                {{if .IsSignIn }}active{{end}}" href="/signin">Login</a>
               <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
-                {{if .IsSignUp }}active{{end}}" href="/signup">Sign Up</a>
+                {{if .IsSignUp }}active{{end}}" href="/signup">Register</a>
           {{end}}
           <div id="sidebarCollapse" class="py-1 d-inline-block d-md-none">
         <div class="menu-trigger first">
@@ -112,8 +112,8 @@
     {{if .User}}
       <li><a href="/logout">Logout</a></li>
     {{else}}
-      <li><a class="{{if .IsSignIn}}active{{end}}" href="/signin">Sign In</a></li>
-      <li><a class="{{if .IsSignUp}}active{{end}}" href="/signup">Sign Up</a></li>
+      <li><a class="{{if .IsSignIn}}active{{end}}" href="/signin">Login</a></li>
+      <li><a class="{{if .IsSignUp}}active{{end}}" href="/signup">Register</a></li>
     {{end}}
   </ul>
 </nav>

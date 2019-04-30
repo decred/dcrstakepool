@@ -24,8 +24,9 @@
 					<div class="col-12 block__title">
 						<h1><span>Change Email Address</span></h1>
 					</div>
+					<div class="w-100 form form--narrow-inputs">
 					{{if .CaptchaDone}}
-						<form method="post" id="ChangeEmail" class="w-100 form form--narrow-inputs">
+						<form method="post" id="ChangeEmail" >
 							<div class="col-12 mb-4">
 								<div class="form-group row mb-0 align-items-center">
 								<label for="inputNewEmail" class="col-md-2 pr-0">New email:</label>
@@ -39,15 +40,16 @@
 							</div>
 							</div>
 							{{ $.csrfField }}
-              <input type="hidden" name="updateEmail" value="true">
+							<input type="hidden" name="updateEmail" value="true">
 							<input type="submit" class="btn mb-2" value="Change Email">
 						</form>
-					
 					{{else}} <!-- Render CAPTCHA -->
-					
-						<p>To change your email address, first complete the captcha:</p>
-            {{ template "captcha" . }}
+						<div class="col-12">
+							{{ template "captcha" . }}
+						</div>
 					{{end}}
+					</div>
+
 				</section>
 			
 			<section class="block">

@@ -7398,6 +7398,8 @@ h2 {
     line-height: 1.13;
     letter-spacing: normal;
     color: #8997a5; }
+  .site-header p {
+    color: #424F67; }
   .site-header a:hover, .site-header a:focus, .site-header a.active {
     text-decoration: none;
     color: #091440;
@@ -7544,7 +7546,9 @@ h2 {
     @media (min-width: 769px) and (max-width: 1200px) {
       #sidebar ul li a.active {
         padding-left: 55px; } }
-
+  #sidebar ul li p {
+    color: #424F67;
+  }
 #dismiss {
   position: absolute;
   top: 22px;
@@ -7939,9 +7943,9 @@ input[type="submit"]:disabled {
   .circle.color2 {
     background-color: #fd704a; }
   .circle.color3 {
-    background-color: #e1f7ff; }
-  .circle.color4 {
     background-color: #73d5f3; }
+  .circle.color4 {
+    background-color: #e1f7ff; }
   .circle.color5 {
     background-color: #2971ff; }
   .circle.color6 {
@@ -8356,12 +8360,14 @@ input[type="submit"]:disabled {
     .modal-blockquote span {
       color: #fd704a; }
   .modal-close {
-    margin: 4px 0;
     padding: 0;
     cursor: pointer;
     -webkit-appearance: none !important;
     border: 0;
     background: transparent; }
+  .modal-close img {
+    vertical-align: super;
+  }
     .modal-close:focus {
       outline: none; }
     @media (max-width: 1199.98px) {
@@ -8700,7 +8706,7 @@ https://flickity.metafizzy.co
   border-radius: 5px;
   line-height: 17px;
   box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px;
-  width: 450px;
+  display:inline-block;
   font-size: 15px;
   min-height: 60px;
   padding: 20px 34px 10px 60px;
