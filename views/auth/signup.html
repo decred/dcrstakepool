@@ -1,49 +1,53 @@
 {{define "auth/signup"}}
-<div class="wrapper">
-  <div class="row">
-    <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-      {{range .FlashError}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-      {{range .FlashSuccess}}<div class="well well-notification green-notification">{{.}}</div>{{end}}
-      {{if .IsClosed }}<div class="well well-notification  orange-notification">{{.ClosePoolMsg}}</div>{{end}}
-    </div> <!-- notication-col, etc. -->
-    <div class="col-sm-15 col-md-6 text-left center-block">
-      {{if .CaptchaDone}}
-      <h1 style="{{if .FlashSuccess}}display: none;{{end}}">Sign Up</h1>
-      <form method="post" class="form-horizontal">
-        <div class="form-group" style="{{if .FlashSuccess}}display: none;{{end}}">
-          <label class="control-label col-sm-2" for="email">Email:</label>
-          <div class="col-sm-13">
-            <input name="email" type="email" class="form-control" placeholder="Email" required>
+<section class="site-content site-content--form-only">
+	<div class="container container--narrow">
+		<div class="row justify-content-center">
+				
+        <div class="col-sm-9 col-11 p-sm-5 px-2 pt-5 pb-3 form block--shadow text-center">
+          <div class="d-flex justify-content-center form__tabs">
+            <a class="btn" href="/signin">Login</a>
+            <a class="btn" href="/signup" disabled>Register</a>
           </div>
-        </div>
-        <div class="form-group" style="{{if .FlashSuccess}}display: none;{{end}}">
-          <label class="control-label col-sm-2" for="password">Password:</label>
-          <div class="col-sm-13">
-              <input name="password" type="password" class="form-control" id="password" placeholder="Password" required>
-          </div>
-        </div>
-        <div class="form-group" style="{{if .FlashSuccess}}display: none;{{end}}">
-          <label class="control-label col-sm-2" for="passwordrepeat">Password:</label>
-          <div class="col-sm-13">
-              <input name="passwordrepeat" type="password" class="form-control" placeholder="Password" required>
-          </div>
-        </div>
-        <div class="row">
-          <div class="form-group col-sm-8" style="{{if .FlashSuccess}}display: none;{{end}}">
-            <div class="col-md-button sign-in-button">
-              <button id="signin" name="signin" type="submit" class="btn btn-primary" {{if .IsClosed }}disabled{{end}}>Sign Up</button>
+				  
+          <h1 class="mb-4 text--size-27">Register</h1>
+				
+          {{if .CaptchaDone}}
+            <form id="Register" data-empty="" action="#" method="post">
+                {{if .FlashSuccess}}
+                  {{range .FlashSuccess}}<p><span style="font-size: larger;">{{.}}</span></p>{{end}}
+                {{else}}
+                  
+                  {{range .FlashError}}
+                    <div class="snackbar snackbar-error">
+                      <div class="snackbar-message">
+                        <p>{{.}}</p>
+                      </div>
+                    </div>
+                  {{end}}
+
+                  {{if .IsClosed }}
+                    <div class="snackbar snackbar-error">
+                      <div class="snackbar-message">
+                        <p>{{.ClosePoolMsg}}</p>
+                      </div>
+                    </div>
+                  {{end}}
+
+                  <input type="email" name="email" class="form-control mb-4 w-75 mx-auto" placeholder="Email" required autofocus>
+                  <input type="password" name="password" class="form-control mb-4 w-75 mx-auto" placeholder="Password" required>
+                  <input type="password" name="passwordrepeat" class="form-control mb-4 w-75 mx-auto" placeholder="Repeat your new password" required>
+                  <input class="btn btn-primary mb-3" type="submit" value="Register">
+                  {{ $.csrfField }}
+                {{end}}
+            </form>
+          {{else}} <!-- Render CAPTCHA -->
+            <div class="col-12 p-0">
+              {{ template "captcha" . }}
             </div>
-          </div>
-            <p><a href="/passwordreset">Forgot your password?</a></p>
-          </div>
+          {{end}}
         </div>
-        {{ $.csrfField }}
-      </form>
-      {{else}}
-        <p>To sign up, first complete the captcha:</p>
-        {{ template "captcha" . }}
-      {{end}}
-    </div> <!-- forms column -->
-  </div> <!-- row -->
-</div> <!-- wrapper -->
+				
+		</div>
+	</div>
+</section>
 {{end}}

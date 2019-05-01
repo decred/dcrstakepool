@@ -1,31 +1,136 @@
 {{define "home"}}
-<div class="wrapper">
-    <div class="row main-row">
- <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-    </div>
-    <div class="col-sm-12 col-md-10 col-lg-8 center-block">
-       <h1 class="text-center">Decred Voting Service Overview</h1>
-       <p>A voting service is used to delegate your voting powers to a third party (the voting service). The service <b>cannot</b> steal your funds.</p>
-       <p>Using in a voting service is perfect for people who wish to take part in Decred's proof of stake voting but can't due to:</p>
-       <ul><li>Not wanting to keep a constantly unlocked wallet</li>
-       <li>Lack of a realible/low latency Internet connection</li></ul>
-       <p>The source code is available at <a href="https://github.com/decred/dcrstakepool" target="_blank" rel="noopener noreferrer">GitHub.</a></p>
-       <hr>
-       <ul>
-         <li class="li-heading">Pool Information</li>
-         <li>Network: {{.Network}}</li>
-         <li>Pool Fees: {{.PoolFees}}%</li>
-         <li>Support Email: <a href="mailto:{{.PoolEmail}}">{{.PoolEmail}}</a></li>
-         <li>Support Link: <a href="{{.PoolLink}}" target="_blank" rel="noopener noreferrer">{{.PoolLink}}</a></li>
-       </ul>
-    </div>   
-    </div>
-	{{if not .User}}
-     <div class="row row-button">
-      <div class="col-sm-15 col-md-6 center-block text-center">
-        <a href="/signup" class="btn btn-primary" role="button">Sign Up</a>
+<section class="site-content">
+<div class="container">
+  <div class="row mx-3">
+    <div class="col-md-6 col-12">
+      <div class="row">
+        <section class="block">
+          <div class="col-12 block__title">
+            <h1><span>Voting Service Provider Overview</span></h1>
+          </div>
+          <div class="col-12 mb-4 block__content">
+            <p>Voting Service Providers (VSPs) allow you to participate in Decred’s proof-of-stake (PoS) system without the need to keep a constantly unlocked wallet or worry about losses due to downtime, flaky internet.</p>
+
+            <p>VSPs are used to delegate your voting powers. The VSP can cast a vote on your behalf when a ticket is called to vote. VSPs do not hold, manage, or transfer any of your DCR funds. The VSP cannot steal your funds.</p>
+
+            <p>{{$.CustomDescription}}</p>
+            {{if not .User}}
+              <a href="/signup" class="btn btn-outline-primary btn-outline-primary--inverted d-lg-inline-block d-block mb-3">Register</a>
+            {{end}}
+            <a href="{{.PoolLink}}" class="btn btn-outline-primary d-lg-inline-block d-block mb-3">Support</a>
+          </div>
+        </section>
+      </div>
+      <div class="row">
+        <div class="main-carousel">
+          <div class="carousel-cell">
+            <div class="row">
+              <div class="col-lg-5 col-12 main-carousel__image-container px-0 pl-lg-3">
+                <picture>
+                  <source media="(min-width: 992px)" srcset="assets/images/1-panel-desktop.png">
+                  <source media="(min-width: 768px)" srcset="assets/images/1-panel-tablet.png">
+                  <img src="assets/images/1-panel-mobile.png" class="img-fluid">
+                </picture>
+              </div>
+              <div class="col-lg-7 col-12 block__content">
+                <h2>What is Staking?</h2>
+                <p>Staking (PoS) allows users to participate in Decred’s Governance. To have your say, you can lock up your DCR funds in return for tickets. Participants are given a real voice in the decision-making and rewarded for engagement in the projects governance.</p>
+                <p>Participation in Staking (PoS) is open to everyone and requires time-locking a portion of your DCR in return for tickets. Current price of a ticket is <span>{{printf "%0.2f" .StakeInfo.Difficulty}}&nbsp;DCR</span></p>
+              </div>
+            </div>
+          </div>
+          <div class="carousel-cell">
+            <div class="row">
+              <div class="col-lg-5 col-12 main-carousel__image-container px-0 pl-lg-3">
+                <picture>
+                  <source media="(min-width: 992px)" srcset="assets/images/2-panel-desktop.png">
+                  <source media="(min-width: 768px)" srcset="assets/images/2-panel-tablet.png">
+                  <img src="assets/images/2-panel-mobile.png" class="img-fluid">
+                </picture>
+              </div>
+              <div class="col-lg-7 col-12 block__content">
+                <h2>What are Tickets?</h2>
+                <p>The purpose of these tickets is twofold: 
+                - Firstly they serve an automatic function of voting on the validity of new blocks. 
+                - Secondly they grant the right to partake in the decision-making processes which determines the future of Decred.</p>
+                <p>The process of staking is essentially like a lottery, where tickets are chosen to vote randomly.</p>
+              </div>
+            </div>
+          </div>
+          <div class="carousel-cell">
+            <div class="row">
+              <div class="col-lg-5 col-12 main-carousel__image-container px-0 pl-lg-3">
+                <picture>
+                  <source media="(min-width: 992px)" srcset="assets/images/3-panel-desktop.png">
+                  <source media="(min-width: 768px)" srcset="assets/images/3-panel-tablet.png">
+                  <img src="assets/images/3-panel-mobile.png" class="img-fluid">
+                </picture>
+              </div>
+              <div class="col-lg-7 col-12 block__content">
+                <h2>Profitability</h2>
+                <p>A successful vote returns the participant the original cost of the ticket and a part of the blockreward as profit.</p>
+                <p>In case the vote misses (0.5% probability), original cost of the ticket is safely returned without the reward. Average time for a ticket to vote is within 28 days and maximum up to 142 days.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <ul class="carousel-nav col-lg-7 col-12">
+        </ul>
       </div>
     </div>
-	{{end}}
+    <div class="col-md-6 col-12">
+      <div class="row ml-1">
+        <section class="block">
+          <div class="col-12 block__title">
+            <h1><span>Information</span></h1>
+          </div>
+          <div class="col-12 mb-4 block__content">
+            <div class="row mb-3">
+              <div class="col-6">
+                <div class="d-lg-flex align-items-start align-items-lg-center">
+                  <img class="mb-lg-0 mb-1" src="assets/images/group-1079.svg" alt="">
+                  <p class="ml-lg-3 mb-0"><strong>Pool fee:</strong> {{ .PoolFees }}%</p>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-lg-flex align-items-start align-items-lg-center">
+                  <img class="mb-lg-0 mb-1" src="assets/images/circular-graphic-with-quarter-portion.svg" alt="">
+                  <p class="ml-lg-3 mb-0"><strong>Proportion:</strong> {{ printf "%.2f" .LivePercent }}%</p>
+                </div>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-6">
+                <div class="d-lg-flex align-items-start align-items-lg-center">
+                  <img class="mb-lg-0 mb-1" src="assets/images/servers.svg" alt="">
+                  <p class="ml-lg-3 mb-0"><strong>Network:</strong> {{ .Network }}</p>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="d-lg-flex align-items-start align-items-lg-center">
+                  <img class="mb-lg-0 mb-1" src="assets/images/status.svg" alt="">
+                  <p class="ml-lg-3 mb-0"><strong>Status:</strong> {{if .IsClosed}}Closed{{else}}Open{{end}}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <div class="row ml-1">
+        <div class="col-12 block__content">
+          <h2>All Voting Service Providers</h2>
+          <p>To encourage decentralization of the network, it is recommended to avoid VSPs that have over 5% of network votes.</p>
+          <div id="stakepool-data" class="table-scroll-y text-nowrap mb-4">
+            <noscript>
+              <div class="row col-12 block__description">
+                <p>Enable Javascript to see all available VSPs</p>
+              </div>
+            </noscript>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+</section>
 {{end}}

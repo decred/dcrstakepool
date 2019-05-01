@@ -1,11 +1,8 @@
 config.toml
 dcrstakepool
-vendor
+.vendor/
 .vscode/
 controllers/config.go*
 testing/
 *.orig
-tplstakepool/bower_components/
-tplstakepool/node_modules/
-tplstakepool/public/
-tplstakepool/.sass-cache/
+debug

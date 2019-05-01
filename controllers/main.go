@@ -76,6 +76,8 @@ type MainController struct {
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
 	maxVotedAge          int64
+	description          string
+	designation          string
 }
 
 // Get the client's real IP address using the X-Real-IP header, or if that is
@@ -106,7 +108,8 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	feeXpubStr string, grpcConnections []*grpc.ClientConn, poolFees float64,
 	poolEmail, poolLink string, emailSender email.Sender, walletHosts, walletCerts, walletUsers,
 	walletPasswords []string, minServers int, realIPHeader,
-	votingXpubStr string, maxVotedAge int64) (*MainController, error) {
+	votingXpubStr string, maxVotedAge int64, description string,
+	designation string) (*MainController, error) {
 
 	// Parse the extended public key and the pool fees.
 	feeKey, err := hdkeychain.NewKeyFromString(feeXpubStr)
@@ -157,6 +160,8 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		emailSender:          emailSender,
 		votingXpub:           voteKey,
 		maxVotedAge:          maxVotedAge,
+		description:          description,
+		designation:          designation,
 	}
 
 	voteVersion, err := mc.GetVoteVersion()
@@ -758,6 +763,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
+	dbMap := controller.GetDbMap(c)
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
@@ -768,9 +774,28 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	c.Env["Network"] = controller.getNetworkName()
 
 	c.Env["Flash"] = session.Flashes("address")
+	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+
+	// Generate an API Token for the user on demand if one does not exist and
+	// refresh the user's data before displaying it.
+	if user.APIToken == "" {
+		token, err := models.SetUserAPIToken(dbMap, controller.APISecret,
+			controller.baseURL, user.Id)
+		if err != nil {
+			session.AddFlash("Unable to set API Token", "settingsError")
+			log.Errorf("could not set API Token for UserId %v", user.Id)
+		}
+
+		c.Env["APIToken"] = token
+	} else {
+		c.Env["APIToken"] = user.APIToken
+	}
+
 	widgets := controller.Parse(t, "address", c.Env)
 
 	c.Env["Title"] = "Decred Stake Pool - Address"
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -1011,6 +1036,8 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 	c.Env["RPCStatus"] = rpcstatus
 
 	widgets := controller.Parse(t, "admin/status", c.Env)
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 
 	if controller.RPCIsStopped() {
@@ -1054,6 +1081,8 @@ func (controller *MainController) AdminTickets(c web.C, r *http.Request) (string
 	widgets := controller.Parse(t, "admin/tickets", c.Env)
 
 	c.Env["Title"] = "Decred Voting Service - Tickets (Admin)"
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -1177,7 +1206,7 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 
 	log.Infof("ip %s userid %d %s for %d ticket(s)", remoteIP, userID,
 		actionVerb, len(ticketList))
-	session.AddFlash(fmt.Sprintf("successfully %s %d ticket(s)", actionVerb,
+	session.AddFlash(fmt.Sprintf("Successfully %s %d ticket(s)", actionVerb,
 		len(ticketList)), "adminTicketsSuccess")
 
 	return "/admintickets", http.StatusSeeOther
@@ -1196,6 +1225,8 @@ func (controller *MainController) EmailUpdate(c web.C, r *http.Request) (string,
 		c.Env["FlashSuccess"] = session.Flashes("emailupdateSuccess")
 		c.Env["IsEmailUpdate"] = true
 		widgets := controller.Parse(t, "emailupdate", c.Env)
+		c.Env["Designation"] = controller.designation
+
 		c.Env["Content"] = template.HTML(widgets)
 		return controller.Parse(t, "main", c.Env)
 	}
@@ -1268,6 +1299,8 @@ func (controller *MainController) EmailVerify(c web.C, r *http.Request) (string,
 		c.Env["FlashSuccess"] = session.Flashes("emailverifySuccess")
 		c.Env["IsEmailVerify"] = true
 		widgets := controller.Parse(t, "emailverify", c.Env)
+		c.Env["Designation"] = controller.designation
+
 		c.Env["Content"] = template.HTML(widgets)
 		return controller.Parse(t, "main", c.Env)
 	}
@@ -1328,6 +1361,8 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 	c.Env["Referer"] = r.URL.Query().Get("r")
 
 	widgets := controller.Parse(t, "error", c.Env)
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -1342,7 +1377,17 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	c.Env["Network"] = controller.params.Name
 	c.Env["PoolEmail"] = controller.poolEmail
 	c.Env["PoolFees"] = controller.poolFees
+	c.Env["CustomDescription"] = controller.description
 	c.Env["PoolLink"] = controller.poolLink
+
+	gsi, err := controller.rpcServers.GetStakeInfo()
+	if err != nil {
+		log.Infof("RPC GetStakeInfo failed: %v", err)
+		return "/error?r=/stats", http.StatusSeeOther
+	}
+
+	c.Env["StakeInfo"] = gsi
+	c.Env["LivePercent"] = gsi.ProportionLive * 100
 
 	t := controller.GetTemplate(c)
 
@@ -1352,6 +1397,8 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsIndex"] = true
 	c.Env["Title"] = "Decred Voting Service - Welcome"
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 
 	return helpers.Parse(t, "main", c.Env), http.StatusOK
@@ -1367,9 +1414,12 @@ func (controller *MainController) PasswordReset(c web.C, r *http.Request) (strin
 	c.Env["FlashSuccess"] = session.Flashes("passwordresetSuccess")
 	c.Env["IsPasswordReset"] = true
 	c.Env["CaptchaID"] = captcha.New()
+	c.Env["CaptchaMsg"] = "To reset your password, first complete the captcha:"
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "passwordreset", c.Env)
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -1448,6 +1498,8 @@ func (controller *MainController) PasswordUpdate(c web.C, r *http.Request) (stri
 		c.Env["FlashSuccess"] = session.Flashes("passwordupdateSuccess")
 		c.Env["IsPasswordUpdate"] = true
 		widgets := controller.Parse(t, "passwordupdate", c.Env)
+		c.Env["Designation"] = controller.designation
+
 		c.Env["Content"] = template.HTML(widgets)
 		return controller.Parse(t, "main", c.Env)
 	}
@@ -1525,41 +1577,24 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 func (controller *MainController) Settings(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
-	dbMap := controller.GetDbMap(c)
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
 	}
 
-	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
-
-	// Generate an API Token for the user on demand if one does not exist and
-	// refresh the user's data before displaying it.
-	if user.APIToken == "" {
-		err := models.SetUserAPIToken(dbMap, controller.APISecret,
-			controller.baseURL, user.Id)
-		if err != nil {
-			session.AddFlash("Unable to set API Token", "settingsError")
-			log.Errorf("could not set API Token for UserId %v", user.Id)
-		}
-
-		user, _ = models.GetUserById(dbMap, session.Values["UserId"].(int64))
-	}
-
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
-	c.Env["APIToken"] = user.APIToken
 	c.Env["FlashError"] = append(session.Flashes("settingsError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("settingsSuccess")
 	c.Env["IsSettings"] = true
-	if user.MultiSigAddress == "" {
-		c.Env["ShowInstructions"] = true
-	}
 	c.Env["CaptchaID"] = captcha.New()
+	c.Env["CaptchaMsg"] = "To change your email address, first complete the captcha:"
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "settings", c.Env)
 
 	c.Env["Title"] = "Decred Voting Service - Settings"
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
@@ -1587,7 +1622,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 
 	log.Infof("Settings POST from %v, email %v", remoteIP, user.Email)
 
-	if updateEmail == "true" || updateEmail == "1" {
+	if updateEmail == "true" {
 		newEmail := r.FormValue("email")
 		log.Infof("user requested email change from %v to %v", user.Email, newEmail)
 
@@ -1680,11 +1715,15 @@ func (controller *MainController) SignIn(c web.C, r *http.Request) (string, int)
 	// Tell main.html what route is being rendered
 	c.Env["IsSignIn"] = true
 
-	c.Env["Flash"] = session.Flashes("auth")
+	c.Env["FlashError"] = session.Flashes("signinError")
+
 	widgets := controller.Parse(t, "auth/signin", c.Env)
 
-	c.Env["Title"] = "Decred Stake Pool - Sign In"
+	c.Env["Title"] = "Decred Stake Pool - Login"
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
+	c.Env["IsSignIn"] = true
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
@@ -1703,24 +1742,24 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 	user, err := helpers.Login(dbMap, email, password)
 	if err != nil {
 		log.Infof(email+" login failed %v, %v", err, remoteIP)
-		session.AddFlash("Invalid Email or Password", "auth")
+		session.AddFlash("Invalid Email or Password", "signinError")
 		return controller.SignIn(c, r)
 	}
 
 	log.Infof("SignIn POST from %v, email %v", remoteIP, user.Email)
 
 	if user.EmailVerified == 0 {
-		session.AddFlash("You must validate your email address", "auth")
+		session.AddFlash("You must validate your email address", "signinError")
 		return controller.SignIn(c, r)
 	}
 
 	session.Values["UserId"] = user.Id
 
-	// Go to Settings page if multisig script not yet set up.
-	// GUI users can copy and paste their API Token from here
-	// or follow the notice that directs them to the address page.
+	// Go to Address page if multisig script not yet set up.
+	// GUI users can copy their API Token from here.
+	// CLI users can paste their pubkey address
 	if user.MultiSigAddress == "" {
-		return "/settings", http.StatusSeeOther
+		return "/address", http.StatusSeeOther
 	}
 
 	// Go to Tickets page if user already set up.
@@ -1741,12 +1780,16 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 	c.Env["FlashError"] = append(session.Flashes("signupError"), session.Flashes("captchaFailed")...)
 	c.Env["FlashSuccess"] = session.Flashes("signupSuccess")
 	c.Env["CaptchaID"] = captcha.New()
+	c.Env["CaptchaMsg"] = "To register, first complete the captcha:"
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "auth/signup", c.Env)
 
-	c.Env["Title"] = "Decred Stake Pool - Sign Up"
+	c.Env["Title"] = "Decred Stake Pool - Register"
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
+	c.Env["IsSignUp"] = template.HTML(widgets)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
@@ -1771,17 +1814,17 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 		r.FormValue("password"), r.FormValue("passwordrepeat")
 
 	if !strings.Contains(email, "@") {
-		session.AddFlash("email address is invalid", "signupError")
+		session.AddFlash("Email address is invalid", "signupError")
 		return controller.SignUp(c, r)
 	}
 
 	if password == "" {
-		session.AddFlash("password cannot be empty", "signupError")
+		session.AddFlash("Password cannot be empty", "signupError")
 		return controller.SignUp(c, r)
 	}
 
 	if password != passwordRepeat {
-		session.AddFlash("passwords do not match", "signupError")
+		session.AddFlash("Passwords do not match", "signupError")
 		return controller.SignUp(c, r)
 	}
 
@@ -1789,7 +1832,7 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	user := models.GetUserByEmail(dbMap, email)
 
 	if user != nil {
-		session.AddFlash("User exists", "signupError")
+		session.AddFlash("This email address is already registered", "signupError")
 		return controller.SignUp(c, r)
 	}
 
@@ -1846,11 +1889,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	}
 
 	c.Env["Network"] = controller.params.Name
-	if controller.closePool {
-		c.Env["PoolStatus"] = "Closed"
-	} else {
-		c.Env["PoolStatus"] = "Open"
-	}
+
 	c.Env["PoolEmail"] = controller.poolEmail
 	c.Env["PoolFees"] = controller.poolFees
 	c.Env["StakeInfo"] = gsi
@@ -1858,6 +1897,8 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	c.Env["UserCountActive"] = userCountActive
 
 	widgets := controller.Parse(t, "stats", c.Env)
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -2042,6 +2083,8 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets := controller.Parse(t, "tickets", c.Env)
 
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 	c.Env["Flash"] = session.Flashes("tickets")
 
@@ -2077,6 +2120,8 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 
 	widgets := controller.Parse(t, "voting", c.Env)
 	c.Env["Title"] = "Decred Voting Service - Voting"
+	c.Env["Designation"] = controller.designation
+
 	c.Env["Content"] = template.HTML(widgets)
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -2132,7 +2177,7 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 		}
 	}
 
-	session.AddFlash("successfully updated voting preferences", "votingSuccess")
+	session.AddFlash("Successfully updated voting preferences", "votingSuccess")
 	return "/voting", http.StatusSeeOther
 }
 

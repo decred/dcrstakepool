@@ -1,25 +1,45 @@
 {{define "footer"}}
-    <footer>
-      <div class="row">
-        <div class="col-sm-15 col-md-6 center-block text-center">
-          <p><a href="https://github.com/decred/" target="_blank" rel="noopener noreferrer">Decred Developers</a> | 2016 - 2019</p>
+    <footer class="footer">
+      <div class="container">
+        <div class="row mx-3 mx-lg-0">
+          <div class="col-md-4 col-12 footer__credit-column">
+            <div class="d-flex justify-content-center h-100">
+              <div class="align-self-center">
+                <p class="mb-0">Decred developers | 2016-2019<br>The source sode is available at <a href="https://github.com/decred">GitHub</a></p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
   </div>
 
-<script src="assets/js/complete.js"></script>
-{{if .IsTickets }}
-    <script src="assets/js/dataTables.responsive.js"></script>{{end}}
+	<script src="assets/js/vendor/jquery.min.js"></script>
+	<script src="assets/js/vendor/popper.min.js"></script>
+	<script src="assets/js/vendor/bootstrap.min.js"></script>
+	
+	{{/* Homepage caorousel */}}
+	<script src="assets/js/vendor/flickity.pkgd.min.js"></script>
+	
+	{{/* Homepage VSP table */}}
+	<script src="assets/js/vendor/jquery.dataTables.min.js"></script>
+	<script src="assets/js/vendor/dataTables.bootstrap4.min.js"></script>
+	
+	{{/* Stats page charts */}}
+	<script src="assets/js/vendor/d3.min.js" charset="utf-8"></script>
+	<script src="assets/js/vendor/d3pie.min.js"></script>
+
+	{{/* dcrstakepool custom js */}}
+	<script src="assets/js/global.js"></script>
+	
+
 {{if .IsStats }}
-    <script src="assets/js/d3.min.js" charset="utf-8"></script>
-    <script src="assets/js/d3pie.min.js"></script>
 
     <script>
-var pie = new d3pie("test1", {
+var pie = new d3pie("chart1", {
 	"size": {
-		"canvasWidth": 400,
-		"canvasHeight": 400,
+		"canvasWidth": 288,
+		"canvasHeight": 288,
 		"pieOuterRadius": "100%"
 	},
 	"data": {
@@ -42,9 +62,6 @@ var pie = new d3pie("test1", {
 		"outer": {
 			"pieDistance": 32
 		},
-		"inner": {
-			"hideWhenLessThanPercentage": 100
-		},
 		"mainLabel": {
 			"fontSize": 0
 		},
@@ -70,6 +87,12 @@ var pie = new d3pie("test1", {
 			"background": "",
 			"segmentStroke": ""
 		},
+		"canvasPadding": {
+			"top": 0,
+			"right": 0,
+			"bottom": 0,
+			"left": 0
+		}
 	},
 	"tooltips": {
 		"enabled": true,
@@ -84,10 +107,10 @@ var pie = new d3pie("test1", {
 		}
 	},
 });
-var pie = new d3pie("test2", {
+var pie = new d3pie("chart2", {
 	"size": {
-		"canvasWidth": 400,
-		"canvasHeight": 400,
+		"canvasWidth": 288,
+		"canvasHeight": 288,
 		"pieOuterRadius": "100%"
 	},
 	"data": {
@@ -109,9 +132,6 @@ var pie = new d3pie("test2", {
 		"outer": {
 			"pieDistance": 32
 		},
-		"inner": {
-			"hideWhenLessThanPercentage": 100
-		},
 		"mainLabel": {
 			"fontSize": 0
 		},
@@ -136,6 +156,12 @@ var pie = new d3pie("test2", {
 			"background": "",
 			"segmentStroke": ""
 		},
+		"canvasPadding": {
+			"top": 0,
+			"right": 0,
+			"bottom": 0,
+			"left": 0
+		}
 	},
 	"tooltips": {
 		"enabled": true,
@@ -150,10 +176,10 @@ var pie = new d3pie("test2", {
 		}
 	},
 });
-var pie = new d3pie("test3", {
+var pie = new d3pie("chart3", {
 	"size": {
-		"canvasWidth": 400,
-		"canvasHeight": 400,
+		"canvasWidth": 288,
+		"canvasHeight": 288,
 		"pieOuterRadius": "100%"
 	},
 	"data": {
@@ -174,9 +200,6 @@ var pie = new d3pie("test3", {
 	"labels": {
 		"outer": {
 			"pieDistance": 32
-		},
-		"inner": {
-			"hideWhenLessThanPercentage": 100
 		},
 		"mainLabel": {
 			"fontSize": 0
@@ -203,6 +226,12 @@ var pie = new d3pie("test3", {
 			"background": "",
 			"segmentStroke": ""
 		},
+		"canvasPadding": {
+			"top": 0,
+			"right": 0,
+			"bottom": 0,
+			"left": 0
+		}
 	},
 	"tooltips": {
 		"enabled": true,
@@ -217,6 +246,57 @@ var pie = new d3pie("test3", {
 		}
 	}
 });
+</script>
+{{end}}
+
+{{ if .IsIndex }}
+<script>
+var stakepoolFinder = function () {
+  if ($("#stakepool-data").length == 0) {
+    return;
+  }
+
+  var isMainnet = {{ if eq .Network "mainnet"}}true{{else}}false{{end}};
+  
+  $("#stakepool-data").html("Loading..."); $("#stakepool-data")
+  tableMarkup = '<table id="pooldata" class="dtVerticalScroll table" cellspacing="0" width="100%"><thead class="thead-light"><tr class=""><th scope="col">ID</th><th scope="col">Address</th><th scope="col">Proportion <img src="assets/images/arrow-up-down.svg" alt=""></th><th scope="col">Pool Fees <img src="assets/images/arrow-up-down.svg" alt=""></th></tr></thead><tbody>';
+  $.ajax({
+    url: "https://api.decred.org/?c=gsd",
+    dataType: "json",
+    success: function (data, textStatus) {
+      $.each(data, function (poolName, poolData) {
+        if (isMainnet) {
+          if (poolData["Network"] === 'testnet') {
+            return;
+          } 
+        } else {
+          if (poolData["Network"] === 'mainnet') {
+            return;
+          } 
+        }
+        var proportion = poolData["ProportionLive"] * 100;
+        tableMarkup += '<tr>';
+        tableMarkup += '<td>' + poolName + '</td>';
+        tableMarkup += '<td><a target="_blank" rel="noopener noreferrer" href="' + poolData["URL"] + '">' + poolData["URL"].replace("https://", "") + '</a></td>';
+        tableMarkup += '<td>' + proportion.toFixed(2) + '%</td>';
+        tableMarkup += '<td>' + poolData["PoolFees"] + '%</td>';
+        tableMarkup += '</tr>';
+      });
+      tableMarkup += '</tbody></table>';
+      $("#stakepool-data").html(tableMarkup);
+      $('.dtVerticalScroll').DataTable({
+        "scrollY": "251px",
+        "scrollX": true,
+        "scrollCollapse": true,
+        "paging": false,
+        "searching": false,
+        "info": false
+      });
+      $('.dataTables_length').addClass('bs-select');
+    },
+  });
+}();
+
 </script>
 {{end}}
 

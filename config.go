@@ -42,6 +42,8 @@ const (
 	defaultSMTPHost       = ""
 	defaultMinServers     = 2
 	defaultMaxVotedAge    = 8640
+	defaultDescription    = ""
+	defaultDesignation    = ""
 )
 
 var (
@@ -105,6 +107,8 @@ type config struct {
 	MinServers         int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
 	EnableStakepoold   bool     `long:"enablestakepoold" description:"Enable communication with stakepoold"`
 	MaxVotedAge        int64    `long:"maxvotedage" description:"Maximum vote age (blocks since vote) to include in voted tickets table"`
+	Description        string   `long:"description" description:"Operators own description of their VSP"`
+	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service
@@ -300,6 +304,8 @@ func loadConfig() (*config, []string, error) {
 		SMTPHost:     defaultSMTPHost,
 		MinServers:   defaultMinServers,
 		MaxVotedAge:  defaultMaxVotedAge,
+		Description:  defaultDescription,
+		Designation:  defaultDesignation,
 	}
 
 	// Service options which are only added on Windows.

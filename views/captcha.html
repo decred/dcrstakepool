@@ -1,27 +1,30 @@
 {{define "captcha"}}
 
-<div class="row">
-    <div class="col-sm-10 center-block">
-        <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
-    </div>
+<div class="block__description">
+    <p>{{ .CaptchaMsg }}</p>
 </div>
 
-<div class="row">
-    <div class="col-sm-15 text-left center-block">
-        <form action="/verifyhuman" method="post" class="form-horizontal">
-        <div class="form-group center-block">
-            <label class="control-label col-sm-4" for="captchaSolution">Text in picture:</label>
-            <div class="col-sm-8">
+<div class="col-12 p-0 center-block">
+    <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
+</div>
+
+<form action="/verifyhuman" method="post" class="w-100 form form--narrow-inputs">
+    <div class="col-12 mb-4 text-left center-block">
+        <div class="form-group row mb-0 align-items-center">
+            <label class="pr-4" for="captchaSolution">Text&nbsp;in&nbsp;picture:</label>
+            <div>
                 <input name=captchaSolution class="form-control">
-                <input type=hidden name=captchaId value="{{.CaptchaID}}">
-            </div>
-            <div class="col-md-button center-block text-middle">
-                <button name=captchaSubmit type=submit class="btn btn-primary">Submit</button>
             </div>
         </div>
-        {{ $.csrfField }}
-        </form>
     </div>
-</div>
+        
+    <input type=hidden name=captchaId value="{{.CaptchaID}}">
+    {{ $.csrfField }}
+    <div class="col-md-button center-block text-middle">
+        <button name=captchaSubmit type=submit class="btn btn-primary">Submit</button>
+    </div>
+
+</form>
+
 
 {{end}}
