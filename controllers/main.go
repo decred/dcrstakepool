@@ -1410,11 +1410,12 @@ func (controller *MainController) PasswordReset(c web.C, r *http.Request) (strin
 	c.Env["Title"] = "Decred Voting Service - Password Reset"
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
-	c.Env["FlashError"] = append(session.Flashes("passwordresetError"), session.Flashes("captchaFailed")...)
+	c.Env["FlashError"] = session.Flashes("passwordresetError")
 	c.Env["FlashSuccess"] = session.Flashes("passwordresetSuccess")
 	c.Env["IsPasswordReset"] = true
 	c.Env["CaptchaID"] = captcha.New()
 	c.Env["CaptchaMsg"] = "To reset your password, first complete the captcha:"
+	c.Env["CaptchaError"] = session.Flashes("captchaFailed")
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "passwordreset", c.Env)
@@ -1583,11 +1584,12 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 	}
 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
-	c.Env["FlashError"] = append(session.Flashes("settingsError"), session.Flashes("captchaFailed")...)
+	c.Env["FlashError"] = session.Flashes("settingsError")
 	c.Env["FlashSuccess"] = session.Flashes("settingsSuccess")
 	c.Env["IsSettings"] = true
 	c.Env["CaptchaID"] = captcha.New()
 	c.Env["CaptchaMsg"] = "To change your email address, first complete the captcha:"
+	c.Env["CaptchaError"] = session.Flashes("captchaFailed")
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "settings", c.Env)
@@ -1777,10 +1779,11 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
-	c.Env["FlashError"] = append(session.Flashes("signupError"), session.Flashes("captchaFailed")...)
+	c.Env["FlashError"] = session.Flashes("signupError")
 	c.Env["FlashSuccess"] = session.Flashes("signupSuccess")
 	c.Env["CaptchaID"] = captcha.New()
 	c.Env["CaptchaMsg"] = "To register, first complete the captcha:"
+	c.Env["CaptchaError"] = session.Flashes("captchaFailed")
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "auth/signup", c.Env)
