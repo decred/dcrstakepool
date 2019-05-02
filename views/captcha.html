@@ -1,5 +1,13 @@
 {{define "captcha"}}
 
+{{range .CaptchaError}}
+    <div class="snackbar snackbar-error">
+        <div class="snackbar-message">
+            <p>{{.}}</p>
+        </div>
+    </div>
+{{end}}
+
 <div class="block__description">
     <p>{{ .CaptchaMsg }}</p>
 </div>
