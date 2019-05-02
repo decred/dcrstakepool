@@ -54,6 +54,8 @@ func (s CommandName) String() string {
 		return "SetAddedLowFeeTickets"
 	case SetUserVotingPrefs:
 		return "SetUserVotingPrefs"
+	case ImportScript:
+		return "ImportScript"
 	default:
 		log.Errorf("unknown command: %d", s)
 		return "UnknownCmd"
@@ -66,12 +68,15 @@ const (
 	GetLiveTickets
 	SetAddedLowFeeTickets
 	SetUserVotingPrefs
+	ImportScript
 )
 
 type GRPCCommandQueue struct {
 	Command                CommandName
 	RequestTicketData      map[chainhash.Hash]string
 	RequestUserData        map[string]userdata.UserVotingConfig
+	RequestScript          []byte
+	ResponseBlockHeight    chan int64
 	ResponseEmptyChan      chan struct{}
 	ResponseTicketsMSAChan chan map[chainhash.Hash]string
 }
@@ -125,6 +130,23 @@ func (s *stakepooldServer) processSetCommand(ctx context.Context, cmd *GRPCComma
 	case <-ctx.Done():
 		// hit the timeout
 		return ctx.Err()
+	}
+}
+
+func (s *stakepooldServer) processImportScriptCommand(ctx context.Context, cmd *GRPCCommandQueue) (int64, error) {
+	// send gRPC command to the handler in main
+	select {
+	case s.grpcCommandQueueChan <- cmd:
+		select {
+		case blockHeight := <-cmd.ResponseBlockHeight:
+			return blockHeight, nil
+		case <-ctx.Done():
+			// hit the timeout
+			return -1, ctx.Err()
+		}
+	case <-ctx.Done():
+		// hit the timeout
+		return -1, ctx.Err()
 	}
 }
 
@@ -234,4 +256,18 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 		return nil, err
 	}
 	return &pb.SetUserVotingPrefsResponse{}, nil
+}
+
+func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScriptRequest) (*pb.ImportScriptResponse, error) {
+	heightImported, err := s.processImportScriptCommand(ctx, &GRPCCommandQueue{
+		Command:             ImportScript,
+		RequestScript:       req.Script,
+		ResponseBlockHeight: make(chan int64),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ImportScriptResponse{
+		HeightImported: heightImported,
+	}, nil
 }

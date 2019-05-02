@@ -9,6 +9,7 @@ service StakepooldService {
 	rpc Ping (PingRequest) returns (PingResponse);
 	rpc SetAddedLowFeeTickets (SetAddedLowFeeTicketsRequest) returns (SetAddedLowFeeTicketsResponse);
 	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
+	rpc ImportScript (ImportScriptRequest) returns (ImportScriptResponse);
 }
 
 service VersionService {
@@ -43,6 +44,13 @@ message SetUserVotingPrefsResponse {
 }
 message SetUserVotingPrefsRequest {
 	repeated UserVotingConfigEntry user_voting_config = 1;
+}
+
+message ImportScriptRequest {
+	bytes Script = 1;
+}
+message ImportScriptResponse {
+	int64 HeightImported = 1;
 }
 
 message TicketEntry {

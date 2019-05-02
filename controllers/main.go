@@ -297,26 +297,22 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	if controller.RPCIsStopped() {
-		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
-	}
-	_, bestBlockHeight, err := controller.rpcServers.GetBestBlock()
-	if err != nil {
-		controller.handlePotentialFatalError("GetBestBlock", err)
-	}
-
-	if controller.RPCIsStopped() {
-		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
-	}
+	// Serialize the RedeemScript (hex string -> []byte)
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
-	err = controller.rpcServers.ImportScript(serializedScript, int(bestBlockHeight))
-	if err != nil {
-		controller.handlePotentialFatalError("ImportScript", err)
-		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+
+	// Import the RedeemScript
+	var importedHeight int64
+	for i := range controller.grpcConnections {
+		importedHeight, err = stakepooldclient.StakepooldImportScript(controller.grpcConnections[i], serializedScript)
+		if err != nil {
+			log.Errorf("Error importing script on stakepoold rpc connection %d", i)
+			return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+		}
+		log.Infof("Successfully imported script on stakepoold rpc connection %d", i)
 	}
 
 	userFeeAddr, err := controller.FeeAddressForUserID(int(user.Id))
@@ -327,7 +323,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	models.UpdateUserByID(dbMap, user.Id, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
-		userFeeAddr.EncodeAddress(), bestBlockHeight)
+		userFeeAddr.EncodeAddress(), importedHeight)
 
 	log.Infof("successfully create multisigaddress for user %d", c.Env["APIUserID"])
 
@@ -890,17 +886,6 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// Serialize the RedeemScript (hex string -> []byte)
-	if controller.RPCIsStopped() {
-		return "/error", http.StatusSeeOther
-	}
-	_, bestBlockHeight, err := controller.rpcServers.GetBestBlock()
-	if err != nil {
-		controller.handlePotentialFatalError("GetBestBlock", err)
-	}
-
-	if controller.RPCIsStopped() {
-		return "/error", http.StatusSeeOther
-	}
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
@@ -908,10 +893,14 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// Import the RedeemScript
-	err = controller.rpcServers.ImportScript(serializedScript, int(bestBlockHeight))
-	if err != nil {
-		controller.handlePotentialFatalError("ImportScript", err)
-		return "/error", http.StatusSeeOther
+	var importedHeight int64
+	for i := range controller.grpcConnections {
+		importedHeight, err = stakepooldclient.StakepooldImportScript(controller.grpcConnections[i], serializedScript)
+		if err != nil {
+			log.Errorf("Error importing script on stakepoold rpc connection %d", i)
+			return "/error", http.StatusSeeOther
+		}
+		log.Infof("Successfully imported script on stakepoold rpc connection %d", i)
 	}
 
 	// Get the pool fees address for this user
@@ -926,7 +915,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	// addresses, and the fee address
 	models.UpdateUserByID(dbMap, uid64, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
-		userFeeAddr.EncodeAddress(), bestBlockHeight)
+		userFeeAddr.EncodeAddress(), importedHeight)
 
 	if err = controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers); err != nil {
 		log.Errorf("unable to update all: %v", err)
