@@ -139,7 +139,7 @@
 								For command-line users, in-depth dcrwallet instructions can be founds at <a href="https://docs.decred.org/getting-started/user-guides/dcrwallet-tickets/">docs.decred.org.</a><br>
 								Below is a brief introduction for staking the command line environment.</blockquote>
 
-								<p>Your multisignature script for delegating votes has been generated. Please first import it locally into your wallet using dcrctl for safe keeping, so you can recover your funds and vote in the unlikely event of a pool failure:</p>
+								<p>Your multisignature script for delegating votes has been generated. Please first import it locally into your wallet using dcrctl for safe keeping, so you can recover your funds and vote in the unlikely event of a VSP failure:</p>
 
 								<p>dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet importscript “script”
 
@@ -151,7 +151,7 @@
 									</p>
 								</div>
 
-								<p>After successfully importing the script into your wallet, you may purchase tickets with voting rights delegated to the pool in either of two ways:</p>
+								<p>After successfully importing the script into your wallet, you may purchase tickets with voting rights delegated to the VSP in either of two ways:</p>
 
 								<strong>Option A - dcrwallet - Automatic purchasing</strong>
 
@@ -185,7 +185,7 @@
 									</p>
 								</div>
 
-								<p>Will purchase a ticket delegated to the the multisig address which allows either your or the pool to vote when the ticket is called. This uses funds from the default account only if the current network price for a ticket is less than 100.0 coins.</p>
+								<p>Will purchase a ticket delegated to the the multisig address which allows either your or the VSP to vote when the ticket is called. This uses funds from the default account only if the current network price for a ticket is less than 100.0 coins.</p>
 
 								<strong>Voting</strong>
 
