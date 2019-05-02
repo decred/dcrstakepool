@@ -793,7 +793,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 
 	widgets := controller.Parse(t, "address", c.Env)
 
-	c.Env["Title"] = "Decred Stake Pool - Address"
+	c.Env["Title"] = "Decred VSP - Address"
 	c.Env["Designation"] = controller.designation
 
 	c.Env["Content"] = template.HTML(widgets)
@@ -1355,7 +1355,7 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsError"] = true
-	c.Env["Title"] = "Decred Stake Pool - Error"
+	c.Env["Title"] = "Decred VSP - Error"
 	c.Env["RPCStatus"] = rpcstatus
 	c.Env["RateLimited"] = r.URL.Query().Get("rl")
 	c.Env["Referer"] = r.URL.Query().Get("r")
@@ -1719,7 +1719,7 @@ func (controller *MainController) SignIn(c web.C, r *http.Request) (string, int)
 
 	widgets := controller.Parse(t, "auth/signin", c.Env)
 
-	c.Env["Title"] = "Decred Stake Pool - Login"
+	c.Env["Title"] = "Decred VSP - Login"
 	c.Env["Designation"] = controller.designation
 
 	c.Env["Content"] = template.HTML(widgets)
@@ -1785,7 +1785,7 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "auth/signup", c.Env)
 
-	c.Env["Title"] = "Decred Stake Pool - Register"
+	c.Env["Title"] = "Decred VSP - Register"
 	c.Env["Designation"] = controller.designation
 
 	c.Env["Content"] = template.HTML(widgets)
@@ -1872,7 +1872,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	t := controller.GetTemplate(c)
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsStats"] = true
-	c.Env["Title"] = "Decred Stake Pool - Stats"
+	c.Env["Title"] = "Decred VSP - Stats"
 
 	dbMap := controller.GetDbMap(c)
 
@@ -1973,7 +1973,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	c.Env["IsTickets"] = true
 	c.Env["Network"] = controller.getNetworkName()
 	c.Env["PoolFees"] = controller.poolFees
-	c.Env["Title"] = "Decred Stake Pool - Tickets"
+	c.Env["Title"] = "Decred VSP - Tickets"
 
 	dbMap := controller.GetDbMap(c)
 	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
