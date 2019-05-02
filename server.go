@@ -243,13 +243,13 @@ func runMain() int {
 	html.Get("/settings", application.Route(controller, "Settings"))
 	html.Post("/settings", application.Route(controller, "SettingsPost"))
 
-	// Sign In routes
-	html.Get("/signin", application.Route(controller, "SignIn"))
-	html.Post("/signin", application.Route(controller, "SignInPost"))
+	// Login routes
+	html.Get("/login", application.Route(controller, "Login"))
+	html.Post("/login", application.Route(controller, "LoginPost"))
 
-	// Sign Up routes
-	html.Get("/signup", application.Route(controller, "SignUp"))
-	html.Post("/signup", application.Route(controller, "SignUpPost"))
+	// Register routes
+	html.Get("/register", application.Route(controller, "Register"))
+	html.Post("/register", application.Route(controller, "RegisterPost"))
 
 	// Captcha
 	html.Get("/captchas/*", controller.CaptchaServe)

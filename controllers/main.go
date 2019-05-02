@@ -1266,7 +1266,7 @@ func (controller *MainController) EmailUpdate(c web.C, r *http.Request) (string,
 			"emailupdateError")
 		log.Errorf("EmailChangeComplete failed %v", err)
 	} else {
-		// Logout the user to force them to sign in with their new
+		// Logout the user to force them to login with their new
 		// email address
 		session.Values["UserId"] = nil
 		session.AddFlash("Email successfully updated",
@@ -1697,31 +1697,30 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	return controller.Settings(c, r)
 }
 
-// SignIn renders the signin page.
-func (controller *MainController) SignIn(c web.C, r *http.Request) (string, int) {
+// Login renders the login page.
+func (controller *MainController) Login(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
 
 	// Tell main.html what route is being rendered
-	c.Env["IsSignIn"] = true
+	c.Env["isLogin"] = true
 
-	c.Env["FlashError"] = session.Flashes("signinError")
+	c.Env["FlashError"] = session.Flashes("loginError")
 
-	widgets := controller.Parse(t, "auth/signin", c.Env)
+	widgets := controller.Parse(t, "auth/login", c.Env)
 
 	c.Env["Title"] = "Decred VSP - Login"
 	c.Env["Designation"] = controller.designation
 
 	c.Env["Content"] = template.HTML(widgets)
-	c.Env["IsSignIn"] = true
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// SignInPost is the form submit route. Logs user in or sets an appropriate message in
+// LoginPost is the form submit route. Logs user in or sets an appropriate message in
 // session if login was not successful.
-func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, int) {
+func (controller *MainController) LoginPost(c web.C, r *http.Request) (string, int) {
 	email, password := r.FormValue("email"), r.FormValue("password")
 
 	session := controller.GetSession(c)
@@ -1733,15 +1732,15 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 	user, err := helpers.Login(dbMap, email, password)
 	if err != nil {
 		log.Infof(email+" login failed %v, %v", err, remoteIP)
-		session.AddFlash("Invalid Email or Password", "signinError")
-		return controller.SignIn(c, r)
+		session.AddFlash("Invalid Email or Password", "loginError")
+		return controller.Login(c, r)
 	}
 
-	log.Infof("SignIn POST from %v, email %v", remoteIP, user.Email)
+	log.Infof("Login POST from %v, email %v", remoteIP, user.Email)
 
 	if user.EmailVerified == 0 {
-		session.AddFlash("You must validate your email address", "signinError")
-		return controller.SignIn(c, r)
+		session.AddFlash("You must validate your email address", "loginError")
+		return controller.Login(c, r)
 	}
 
 	session.Values["UserId"] = user.Id
@@ -1757,10 +1756,10 @@ func (controller *MainController) SignInPost(c web.C, r *http.Request) (string, 
 	return "/tickets", http.StatusSeeOther
 }
 
-// SignUp renders the signup page.
-func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int) {
+// Register renders the register page.
+func (controller *MainController) Register(c web.C, r *http.Request) (string, int) {
 	// Tell main.html what route is being rendered
-	c.Env["IsSignUp"] = true
+	c.Env["isRegister"] = true
 	if controller.closePool {
 		c.Env["IsClosed"] = true
 		c.Env["ClosePoolMsg"] = controller.closePoolMsg
@@ -1768,36 +1767,35 @@ func (controller *MainController) SignUp(c web.C, r *http.Request) (string, int)
 
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
-	c.Env["FlashError"] = session.Flashes("signupError")
-	c.Env["FlashSuccess"] = session.Flashes("signupSuccess")
+	c.Env["FlashError"] = session.Flashes("registrationError")
+	c.Env["FlashSuccess"] = session.Flashes("registrationSuccess")
 	c.Env["CaptchaID"] = captcha.New()
 	c.Env["CaptchaMsg"] = "To register, first complete the captcha:"
 	c.Env["CaptchaError"] = session.Flashes("captchaFailed")
 
 	t := controller.GetTemplate(c)
-	widgets := controller.Parse(t, "auth/signup", c.Env)
+	widgets := controller.Parse(t, "auth/register", c.Env)
 
 	c.Env["Title"] = "Decred VSP - Register"
 	c.Env["Designation"] = controller.designation
 
 	c.Env["Content"] = template.HTML(widgets)
-	c.Env["IsSignUp"] = template.HTML(widgets)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-// SignUpPost form submit route. Registers new user or shows Sign Up route with
+// RegisterPost form submit route. Registers new user or shows Registration route with
 // appropriate messages set in session.
-func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, int) {
+func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string, int) {
 	if controller.closePool {
-		log.Infof("attempt to signup while registration disabled")
-		return "/error?r=/signup", http.StatusSeeOther
+		log.Infof("attempt to register while registration disabled")
+		return "/error?r=/register", http.StatusSeeOther
 	}
 
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
 	if !controller.IsCaptchaDone(c) {
-		session.AddFlash("You must complete the captcha.", "signupError")
-		return controller.SignUp(c, r)
+		session.AddFlash("You must complete the captcha.", "registrationError")
+		return controller.Register(c, r)
 	}
 
 	remoteIP := getClientIP(r, controller.realIPHeader)
@@ -1806,26 +1804,26 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 		r.FormValue("password"), r.FormValue("passwordrepeat")
 
 	if !strings.Contains(email, "@") {
-		session.AddFlash("Email address is invalid", "signupError")
-		return controller.SignUp(c, r)
+		session.AddFlash("Email address is invalid", "registrationError")
+		return controller.Register(c, r)
 	}
 
 	if password == "" {
-		session.AddFlash("Password cannot be empty", "signupError")
-		return controller.SignUp(c, r)
+		session.AddFlash("Password cannot be empty", "registrationError")
+		return controller.Register(c, r)
 	}
 
 	if password != passwordRepeat {
-		session.AddFlash("Passwords do not match", "signupError")
-		return controller.SignUp(c, r)
+		session.AddFlash("Passwords do not match", "registrationError")
+		return controller.Register(c, r)
 	}
 
 	dbMap := controller.GetDbMap(c)
 	user := models.GetUserByEmail(dbMap, email)
 
 	if user != nil {
-		session.AddFlash("This email address is already registered", "signupError")
-		return controller.SignUp(c, r)
+		session.AddFlash("This email address is already registered", "registrationError")
+		return controller.Register(c, r)
 	}
 
 	token := models.NewUserToken()
@@ -1839,24 +1837,24 @@ func (controller *MainController) SignUpPost(c web.C, r *http.Request) (string, 
 	}
 	user.HashPassword(password)
 
-	log.Infof("SignUp POST from %v, email %v. Inserting.", remoteIP, user.Email)
+	log.Infof("Register POST from %v, email %v. Inserting.", remoteIP, user.Email)
 
 	err := models.InsertUser(dbMap, user)
 	if err != nil {
-		session.AddFlash("Database error occurred while adding user", "signupError")
+		session.AddFlash("Database error occurred while adding user", "registrationError")
 		log.Errorf("Error while registering user: %v", err)
-		return controller.SignUp(c, r)
+		return controller.Register(c, r)
 	}
 
 	err = controller.emailSender.Registration(email, controller.baseURL, remoteIP, token.String())
 	if err != nil {
-		session.AddFlash("Unable to send signup email", "signupError")
+		session.AddFlash("Unable to send verification email", "registrationError")
 		log.Errorf("error sending verification email %v", err)
 	} else {
-		session.AddFlash("A verification email has been sent to "+email, "signupSuccess")
+		session.AddFlash("A verification email has been sent to "+email, "registrationSuccess")
 	}
 
-	return controller.SignUp(c, r)
+	return controller.Register(c, r)
 }
 
 // Stats renders the stats page.
