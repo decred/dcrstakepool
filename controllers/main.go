@@ -39,14 +39,11 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-var (
+const (
 	// MaxUsers is the maximum number of users supported by a voting service.
 	// This is an artificial limit and can be increased by adjusting the
 	// ticket/fee address indexes above 10000.
-	MaxUsers                    = 10000
-	StakepooldUpdateKindAll     = "ALL"
-	StakepooldUpdateKindUsers   = "USERS"
-	StakepooldUpdateKindTickets = "TICKETS"
+	MaxUsers = 10000
 )
 
 // MainController is the wallet RPC controller type.  Its methods include the
@@ -327,9 +324,9 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	log.Infof("successfully create multisigaddress for user %d", c.Env["APIUserID"])
 
-	err = controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
+	err = controller.StakepooldUpdateUsers(dbMap)
 	if err != nil {
-		log.Warnf("failure to update all: %v", err)
+		log.Warnf("failure to update users: %v", err)
 	}
 
 	return nil, codes.OK, "address successfully imported", nil
@@ -441,7 +438,7 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 	}
 
 	if uint16(oldVoteBits) != userVoteBits {
-		controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers)
+		controller.StakepooldUpdateUsers(dbMap)
 	}
 
 	log.Infof("updated voteBits for user %d from %d to %d",
@@ -494,83 +491,47 @@ func (controller *MainController) StakepooldGetIgnoredLowFeeTickets() (map[chain
 	return ignoredLowFeeTickets, err
 }
 
-// StakepooldUpdateAll attempts to trigger all connected stakepoold
+// StakepooldUpdateTickets attempts to trigger all connected stakepoold
 // instances to pull a data update of the specified kind.
-func (controller *MainController) StakepooldUpdateAll(dbMap *gorp.DbMap, updateKind string) error {
-	var votableLowFeeTickets []models.LowFeeTicket
-	var allUsers map[int64]*models.User
-	var err error
-
-	switch updateKind {
-	case StakepooldUpdateKindAll, StakepooldUpdateKindTickets, StakepooldUpdateKindUsers:
-		// valid
-	default:
-		return fmt.Errorf("TriggerStakepoolUpdate: unhandled update kind %v",
-			updateKind)
+func (controller *MainController) StakepooldUpdateTickets(dbMap *gorp.DbMap) error {
+	votableLowFeeTickets, err := models.GetVotableLowFeeTickets(dbMap)
+	if err != nil {
+		return err
 	}
 
-	switch updateKind {
-	case StakepooldUpdateKindAll, StakepooldUpdateKindTickets:
-		votableLowFeeTickets, err = models.GetVotableLowFeeTickets(dbMap)
-		if err != nil {
-			return err
-		}
-	}
-
-	switch updateKind {
-	case StakepooldUpdateKindAll, StakepooldUpdateKindUsers:
-		// reset votebits if Vote Version changed or if the stored VoteBits are
-		// somehow invalid
-		allUsers, err = controller.CheckAndResetUserVoteBits(dbMap)
-		if err != nil {
-			return err
-		}
-	}
-
-	successCount := 0
 	for i := range controller.grpcConnections {
-		var err error
-		var success bool
-
-		switch updateKind {
-		case StakepooldUpdateKindAll, StakepooldUpdateKindTickets:
-			success, err = stakepooldclient.StakepooldSetAddedLowFeeTickets(controller.grpcConnections[i], votableLowFeeTickets)
-			if err != nil {
-				log.Errorf("stakepoold host %d unable to update manual "+
-					"tickets grpc error: %v", i, err)
-			}
-			if !success {
-				// TODO(maybe) should re-try in the background until we get a
-				// successful update
-				log.Errorf("stakepoold host %d unable to update manual "+
-					"tickets stakepoold update would have blocked", i)
-			}
+		err := stakepooldclient.StakepooldSetAddedLowFeeTickets(controller.grpcConnections[i], votableLowFeeTickets)
+		if err != nil {
+			log.Errorf("stakepoold host %d unable to update manual "+
+				"tickets grpc error: %v", i, err)
+			return err
 		}
-
-		switch updateKind {
-		case StakepooldUpdateKindAll, StakepooldUpdateKindUsers:
-			success, err = stakepooldclient.StakepooldSetUserVotingPrefs(controller.grpcConnections[i], allUsers)
-			if err != nil {
-				log.Errorf("stakepoold host %d unable to update voting config "+
-					"grpc error: %v", i, err)
-			}
-			if !success {
-				// TODO(maybe) should re-try in the background until we get a
-				// successful update
-				log.Errorf("stakepoold host %d unable to update voting config "+
-					"stakepoold update would have blocked", i)
-			}
-		}
-
-		if err == nil {
-			log.Infof("successfully triggered update kind %s on stakepoold "+
-				"host %d", updateKind, i)
-			successCount++
-		}
+		log.Infof("Successfully triggered update tickets on stakepoold "+
+			"host %d", i)
 	}
 
-	if successCount == 0 {
-		log.Warn("no stakepoold connections alive/working?")
+	return nil
+}
+
+// StakepooldUpdateUsers attempts to trigger all connected stakepoold
+// instances to pull a data update of the specified kind.
+func (controller *MainController) StakepooldUpdateUsers(dbMap *gorp.DbMap) error {
+	// reset votebits if Vote Version changed or if the stored VoteBits are
+	// somehow invalid
+	allUsers, err := controller.CheckAndResetUserVoteBits(dbMap)
+	if err != nil {
+		return err
+	}
+
+	for i := range controller.grpcConnections {
+		err := stakepooldclient.StakepooldSetUserVotingPrefs(controller.grpcConnections[i], allUsers)
+		if err != nil {
+			log.Errorf("stakepoold host %d unable to update voting config "+
+				"grpc error: %v", i, err)
+			return err
+		}
+		log.Infof("successfully triggered update users on stakepoold "+
+			"host %d", i)
 	}
 
 	return nil
@@ -917,7 +878,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.EncodeAddress(), importedHeight)
 
-	if err = controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers); err != nil {
+	if err = controller.StakepooldUpdateUsers(dbMap); err != nil {
 		log.Errorf("unable to update all: %v", err)
 	}
 
@@ -1188,7 +1149,7 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 		}
 	}
 
-	err = controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindTickets)
+	err = controller.StakepooldUpdateTickets(dbMap)
 	if err != nil {
 		session.AddFlash("StakepooldUpdateAll error: "+err.Error(), "adminTicketsError")
 	}
@@ -2162,7 +2123,7 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 	log.Infof("updated voteBits for user %d from %d to %d",
 		user.Id, oldVoteBits, generatedVoteBits)
 	if uint16(oldVoteBits) != generatedVoteBits {
-		if err := controller.StakepooldUpdateAll(dbMap, StakepooldUpdateKindUsers); err != nil {
+		if err := controller.StakepooldUpdateUsers(dbMap); err != nil {
 			log.Errorf("unable to update all: %v", err)
 		}
 	}
