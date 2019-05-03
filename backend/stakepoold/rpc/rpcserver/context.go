@@ -525,11 +525,11 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 	}()
 }
 
-// processWinningTickets is called every time a new block comes in to handle
+// ProcessWinningTickets is called every time a new block comes in to handle
 // voting.  The function requires ASAP processing for each vote and therefore
 // it is not sequential and hard to read.  This is unfortunate but a reality of
 // speeding up code.
-func (ctx *AppContext) processWinningTickets(wt WinningTicketsForBlock) {
+func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 	start := time.Now()
 
 	// We use pointer because it is the fastest accessor.
@@ -622,7 +622,7 @@ func (ctx *AppContext) processWinningTickets(wt WinningTicketsForBlock) {
 				"(%v + %v): %v", w.ticket, w.txid, w.config.VoteBits, w.msa,
 				w.duration, w.signDuration, w.sendDuration, w.err)
 		}
-		log.Infof("processWinningTickets: height %v block %v "+
+		log.Infof("ProcessWinningTickets: height %v block %v "+
 			"duration %v newvotes %v duplicatevotes %v errors %v",
 			wt.BlockHeight, wt.BlockHash, time.Since(start), votedCount,
 			dupeCount, errorCount)
@@ -661,7 +661,7 @@ func (ctx *AppContext) WinningTicketHandler() {
 	for {
 		select {
 		case wt := <-ctx.WinningTicketsChan:
-			go ctx.processWinningTickets(wt)
+			go ctx.ProcessWinningTickets(wt)
 		case <-ctx.Quit:
 			return
 		}
