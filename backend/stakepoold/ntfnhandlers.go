@@ -5,18 +5,19 @@ import (
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/rpcclient/v2"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 )
 
 // Define notification handlers
-func getNodeNtfnHandlers(ctx *appContext) *rpcclient.NotificationHandlers {
+func getNodeNtfnHandlers(ctx *rpcserver.AppContext) *rpcclient.NotificationHandlers {
 	return &rpcclient.NotificationHandlers{
 		OnNewTickets: func(blockHash *chainhash.Hash, blockHeight int64, _ int64, tickets []*chainhash.Hash) {
-			nt := NewTicketsForBlock{
-				blockHash:   blockHash,
-				blockHeight: blockHeight,
-				newTickets:  tickets,
+			nt := rpcserver.NewTicketsForBlock{
+				BlockHash:   blockHash,
+				BlockHeight: blockHeight,
+				NewTickets:  tickets,
 			}
-			ctx.newTicketsChan <- nt
+			ctx.NewTicketsChan <- nt
 		},
 		OnSpentAndMissedTickets: func(blockHash *chainhash.Hash, blockHeight int64, _ int64, tickets map[chainhash.Hash]bool) {
 			ticketsFixed := make(map[*chainhash.Hash]bool)
@@ -24,20 +25,20 @@ func getNodeNtfnHandlers(ctx *appContext) *rpcclient.NotificationHandlers {
 				ticketHash := ticketHash
 				ticketsFixed[&ticketHash] = spent
 			}
-			smt := SpentMissedTicketsForBlock{
-				blockHash:   blockHash,
-				blockHeight: blockHeight,
-				smTickets:   ticketsFixed,
+			smt := rpcserver.SpentMissedTicketsForBlock{
+				BlockHash:   blockHash,
+				BlockHeight: blockHeight,
+				SmTickets:   ticketsFixed,
 			}
-			ctx.spentmissedTicketsChan <- smt
+			ctx.SpentmissedTicketsChan <- smt
 		},
 		OnWinningTickets: func(blockHash *chainhash.Hash, blockHeight int64, winningTickets []*chainhash.Hash) {
-			wt := WinningTicketsForBlock{
-				blockHash:      blockHash,
-				blockHeight:    blockHeight,
-				winningTickets: winningTickets,
+			wt := rpcserver.WinningTicketsForBlock{
+				BlockHash:      blockHash,
+				BlockHeight:    blockHeight,
+				WinningTickets: winningTickets,
 			}
-			ctx.winningTicketsChan <- wt
+			ctx.WinningTicketsChan <- wt
 		},
 	}
 }
