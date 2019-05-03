@@ -1,24 +1,28 @@
 {{define "admin/tickets"}}
 <section class="site-content">
 	<div class="container container--narrow">
-		<div class="row mx-3">
 
-			{{range .FlashError}}
+		{{range .FlashError}}
+			<div class="row">
 				<div class="snackbar snackbar-error">
 					<div class="snackbar-message">
 						<p>{{.}}</p>
 					</div>
 				</div>
-			{{end}}
+			</div>
+		{{end}}
 
-			{{range .FlashSuccess}}
+		{{range .FlashSuccess}}
+			<div class="row">
 				<div class="snackbar snackbar-success">
 					<div class="snackbar-message">
 						<p>{{.}}</p>
 					</div>
 				</div>
-			{{end}}
+			</div>
+		{{end}}
 
+		<div class="row mx-3">
 			<div class="col-md-6 col-12">
 				<div class="block__title">
 					<h1 class="d-flex justify-content-between align-items-end">
