@@ -204,7 +204,6 @@ func runMain() error {
 		DataPath:               cfg.DataDir,
 		FeeAddrs:               feeAddrs,
 		PoolFees:               cfg.PoolFees,
-		GrpcCommandQueueChan:   make(chan *rpcserver.GRPCCommandQueue),
 		NewTicketsChan:         make(chan rpcserver.NewTicketsForBlock),
 		Params:                 activeNetParams.Params,
 		Quit:                   make(chan struct{}),
@@ -326,7 +325,7 @@ func runMain() error {
 	log.Info("subscribed to notifications from dcrd")
 
 	if !cfg.NoRPCListen {
-		if _, err = startGRPCServers(ctx.GrpcCommandQueueChan); err != nil {
+		if _, err = startGRPCServers(ctx); err != nil {
 			fmt.Printf("Failed to start GRPCServers: %s\n", err.Error())
 			return err
 		}
@@ -346,8 +345,7 @@ func runMain() error {
 		close(ctx.Quit)
 	}()
 
-	ctx.Wg.Add(4)
-	go ctx.GrpcCommandQueueHandler()
+	ctx.Wg.Add(3)
 	go ctx.NewTicketHandler()
 	go ctx.SpentmissedTicketHandler()
 	go ctx.WinningTicketHandler()

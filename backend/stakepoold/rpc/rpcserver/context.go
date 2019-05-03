@@ -42,7 +42,6 @@ type AppContext struct {
 	DataPath               string
 	FeeAddrs               map[string]struct{}
 	PoolFees               float64
-	GrpcCommandQueueChan   chan *GRPCCommandQueue
 	NewTicketsChan         chan NewTicketsForBlock
 	NodeConnection         *rpcclient.Client
 	Params                 *chaincfg.Params
@@ -230,8 +229,8 @@ func (ctx *AppContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 		strings.ToLower(nt.ticketType), nt.ticket)
 }
 
-func (ctx *AppContext) updateTicketData(newAddedLowFeeTicketsMSA map[chainhash.Hash]string) {
-	log.Debug("updateTicketData ctx.Lock")
+func (ctx *AppContext) UpdateTicketData(newAddedLowFeeTicketsMSA map[chainhash.Hash]string) {
+	log.Debug("UpdateTicketData ctx.Lock")
 	ctx.Lock()
 
 	// apply unconditional updates
@@ -274,26 +273,26 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 	if err != nil {
 		return err
 	}
-	ctx.updateTicketData(newAddedLowFeeTicketsMSA)
+	ctx.UpdateTicketData(newAddedLowFeeTicketsMSA)
 	return nil
 }
 
-func (ctx *AppContext) importScript(script []byte) int64 {
+func (ctx *AppContext) ImportScript(script []byte) (int64, error) {
 	err := ctx.WalletConnection.ImportScript(script)
 	if err != nil {
-		log.Errorf("importScript: importScript rpc failed: %v", err)
-		return -1
+		log.Errorf("ImportScript: ImportScript rpc failed: %v", err)
+		return -1, err
 	}
 
 	_, block, err := ctx.WalletConnection.GetBestBlock()
 	if err != nil {
-		log.Errorf("importScript: getBetBlock rpc failed: %v", err)
-		return -1
+		log.Errorf("ImportScript: getBetBlock rpc failed: %v", err)
+		return -1, err
 	}
-	return block
+	return block, nil
 }
 
-func (ctx *AppContext) updateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
+func (ctx *AppContext) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	log.Debug("updateUserData ctx.Lock")
 	ctx.Lock()
 	ctx.UserVotingConfig = newUserVotingConfig
@@ -309,7 +308,7 @@ func (ctx *AppContext) UpdateUserDataFromMySQL() error {
 	if err != nil {
 		return err
 	}
-	ctx.updateUserData(newUserVotingConfig)
+	ctx.UpdateUserData(newUserVotingConfig)
 	return nil
 }
 
@@ -628,49 +627,6 @@ func (ctx *AppContext) processWinningTickets(wt WinningTicketsForBlock) {
 			wt.BlockHeight, wt.BlockHash, time.Since(start), votedCount,
 			dupeCount, errorCount)
 	}()
-}
-
-func (ctx *AppContext) GrpcCommandQueueHandler() {
-	defer ctx.Wg.Done()
-
-	for {
-		select {
-		case grpcCommand := <-ctx.GrpcCommandQueueChan:
-			switch grpcCommand.Command {
-			case GetAddedLowFeeTickets:
-				ctx.RLock()
-				ticketsMSA := ctx.AddedLowFeeTicketsMSA
-				ctx.RUnlock()
-				grpcCommand.ResponseTicketsMSAChan <- ticketsMSA
-			case GetIgnoredLowFeeTickets:
-				ctx.RLock()
-				ticketsMSA := ctx.IgnoredLowFeeTicketsMSA
-				grpcCommand.ResponseTicketsMSAChan <- ticketsMSA
-				ctx.RUnlock()
-			case GetLiveTickets:
-				ctx.RLock()
-				ticketsMSA := ctx.LiveTicketsMSA
-				ctx.RUnlock()
-				grpcCommand.ResponseTicketsMSAChan <- ticketsMSA
-			case SetAddedLowFeeTickets:
-				ctx.updateTicketData(grpcCommand.RequestTicketData)
-				grpcCommand.ResponseEmptyChan <- struct{}{}
-			case SetUserVotingPrefs:
-				ctx.updateUserData(grpcCommand.RequestUserData)
-				grpcCommand.ResponseEmptyChan <- struct{}{}
-			case ImportScript:
-				blockHeight := ctx.importScript(grpcCommand.RequestScript)
-				grpcCommand.ResponseBlockHeight <- blockHeight
-			default:
-				err := fmt.Errorf("grpcCommandQueueHandler: ignoring "+
-					"unregistered gRPC command '%v'",
-					grpcCommand.Command.String())
-				log.Warn(err)
-			}
-		case <-ctx.Quit:
-			return
-		}
-	}
 }
 
 func (ctx *AppContext) NewTicketHandler() {

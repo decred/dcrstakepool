@@ -188,7 +188,7 @@ func openRPCKeyPair() (tls.Certificate, error) {
 	return tls.LoadX509KeyPair(cfg.RPCCert, cfg.RPCKey)
 }
 
-func startGRPCServers(grpcCommandQueueChan chan *rpcserver.GRPCCommandQueue) (*grpc.Server, error) {
+func startGRPCServers(appContext *rpcserver.AppContext) (*grpc.Server, error) {
 	var (
 		server  *grpc.Server
 		keyPair tls.Certificate
@@ -208,7 +208,7 @@ func startGRPCServers(grpcCommandQueueChan chan *rpcserver.GRPCCommandQueue) (*g
 	creds := credentials.NewServerTLSFromCert(&keyPair)
 	server = grpc.NewServer(grpc.Creds(creds), grpc.UnaryInterceptor(interceptUnary))
 	rpcserver.StartVersionService(server)
-	rpcserver.StartStakepooldService(grpcCommandQueueChan, server)
+	rpcserver.StartStakepooldService(appContext, server)
 	for _, lis := range listeners {
 		lis := lis
 		go func() {
