@@ -133,9 +133,14 @@ func runMain() int {
 	}
 
 	if cfg.EnableStakepoold {
-		err = controller.StakepooldUpdateAll(application.DbMap, controllers.StakepooldUpdateKindAll)
+		err = controller.StakepooldUpdateUsers(application.DbMap)
 		if err != nil {
-			log.Errorf("TriggerStakepooldUpdates failed: %v", err)
+			log.Errorf("StakepooldUpdateUsers failed: %v", err)
+			return 9
+		}
+		err = controller.StakepooldUpdateTickets(application.DbMap)
+		if err != nil {
+			log.Errorf("StakepooldUpdateTickets failed: %v", err)
 			return 9
 		}
 		for i := range grpcConnections {
