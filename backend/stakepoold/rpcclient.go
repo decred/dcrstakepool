@@ -7,13 +7,14 @@ import (
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/rpcclient/v2"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
 
 var requiredChainServerAPI = semver{major: 5, minor: 1, patch: 0}
 var requiredWalletAPI = semver{major: 6, minor: 0, patch: 0}
 
-func connectNodeRPC(ctx *appContext, cfg *config) (*rpcclient.Client, semver, error) {
+func connectNodeRPC(ctx *rpcserver.AppContext, cfg *config) (*rpcclient.Client, semver, error) {
 	var nodeVer semver
 
 	dcrdCert, err := ioutil.ReadFile(cfg.DcrdCert)
@@ -110,13 +111,13 @@ func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 	return dcrwClient, walletVer, nil
 }
 
-func walletGetTickets(ctx *appContext) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
+func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
 	blockHashToHeightCache := make(map[chainhash.Hash]int32)
 
 	// This is suboptimal to copy and needs fixing.
 	userVotingConfig := make(map[string]userdata.UserVotingConfig)
 	ctx.RLock()
-	for k, v := range ctx.userVotingConfig {
+	for k, v := range ctx.UserVotingConfig {
 		userVotingConfig[k] = v
 	}
 	ctx.RUnlock()
@@ -127,7 +128,7 @@ func walletGetTickets(ctx *appContext) (map[chainhash.Hash]string, map[chainhash
 
 	log.Info("Calling GetTickets...")
 	timenow := time.Now()
-	tickets, err := ctx.walletConnection.GetTickets(false)
+	tickets, err := ctx.WalletConnection.GetTickets(false)
 	log.Infof("GetTickets: took %v", time.Since(timenow))
 
 	if err != nil {
@@ -143,7 +144,7 @@ func walletGetTickets(ctx *appContext) (map[chainhash.Hash]string, map[chainhash
 	log.Debugf("setting up GetTransactionAsync for %v tickets", len(tickets))
 	for _, ticket := range tickets {
 		// lookup ownership of each ticket
-		promises = append(promises, promise{ctx.walletConnection.GetTransactionAsync(ticket)})
+		promises = append(promises, promise{ctx.WalletConnection.GetTransactionAsync(ticket)})
 	}
 
 	counter := 0
@@ -173,12 +174,12 @@ func walletGetTickets(ctx *appContext) (map[chainhash.Hash]string, map[chainhash
 			// All tickets are present in the GetTickets response, whether they
 			// pay the correct fee or not.  So we need to verify fees and
 			// sort the tickets into their respective maps.
-			_, isAdded := ctx.addedLowFeeTicketsMSA[*hash]
+			_, isAdded := ctx.AddedLowFeeTicketsMSA[*hash]
 			if isAdded {
 				liveTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 			} else {
 
-				msgTx, err := MsgTxFromHex(gt.Hex)
+				msgTx, err := rpcserver.MsgTxFromHex(gt.Hex)
 				if err != nil {
 					log.Warnf("MsgTxFromHex failed for %v: %v", gt.Hex, err)
 					continue
@@ -196,7 +197,7 @@ func walletGetTickets(ctx *appContext) (map[chainhash.Hash]string, map[chainhash
 				if inCache {
 					ticketBlockHeight = height
 				} else {
-					gbh, err := ctx.nodeConnection.GetBlockHeader(ticketBlockHash)
+					gbh, err := ctx.NodeConnection.GetBlockHeader(ticketBlockHash)
 					if err != nil {
 						log.Warnf("GetBlockHeader failed for %v: %v", ticketBlockHash, err)
 						continue
@@ -206,14 +207,14 @@ func walletGetTickets(ctx *appContext) (map[chainhash.Hash]string, map[chainhash
 					ticketBlockHeight = int32(gbh.Height)
 				}
 
-				ticketFeesValid, err := evaluateStakePoolTicket(ctx, msgTx, ticketBlockHeight)
+				ticketFeesValid, err := ctx.EvaluateStakePoolTicket(msgTx, ticketBlockHeight)
 				if ticketFeesValid {
 					normalFee++
 					liveTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 				} else {
 					ignoredLowFeeTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 					log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
-						*hash, ctx.userVotingConfig[addr].MultiSigAddress, ticketFeesValid, err)
+						*hash, ctx.UserVotingConfig[addr].MultiSigAddress, ticketFeesValid, err)
 				}
 			}
 			break
@@ -221,7 +222,7 @@ func walletGetTickets(ctx *appContext) (map[chainhash.Hash]string, map[chainhash
 	}
 
 	log.Infof("tickets loaded -- addedLowFee %v ignoredLowFee %v normalFee %v "+
-		"live %v total %v", len(ctx.addedLowFeeTicketsMSA),
+		"live %v total %v", len(ctx.AddedLowFeeTicketsMSA),
 		len(ignoredLowFeeTickets), normalFee, len(liveTickets),
 		len(tickets))
 
