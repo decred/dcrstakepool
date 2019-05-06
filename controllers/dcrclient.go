@@ -25,8 +25,6 @@ type functionName int
 const (
 	validateAddressFn functionName = iota
 	createMultisigFn
-	ticketsForAddressFn
-	getTxOutFn
 	getStakeInfoFn
 	connectedFn
 	stakePoolUserInfoFn
@@ -72,31 +70,6 @@ type createMultisigMsg struct {
 	required  int
 	addresses []dcrutil.Address
 	reply     chan createMultisigResponse
-}
-
-// ticketsForAddressResponse
-type ticketsForAddressResponse struct {
-	tickets *dcrjson.TicketsForAddressResult
-	err     error
-}
-
-// ticketsForAddressMsg
-type ticketsForAddressMsg struct {
-	address dcrutil.Address
-	reply   chan ticketsForAddressResponse
-}
-
-// getTxOutResponse
-type getTxOutResponse struct {
-	txOut *dcrjson.GetTxOutResult
-	err   error
-}
-
-// getTxOutMsg
-type getTxOutMsg struct {
-	hash  *chainhash.Hash
-	idx   uint32
-	reply chan getTxOutResponse
 }
 
 // getStakeInfoResponse
@@ -165,14 +138,6 @@ out:
 			case createMultisigMsg:
 				resp := w.executeInSequence(createMultisigFn, msg)
 				respTyped := resp.(*createMultisigResponse)
-				msg.reply <- *respTyped
-			case ticketsForAddressMsg:
-				resp := w.executeInSequence(ticketsForAddressFn, msg)
-				respTyped := resp.(*ticketsForAddressResponse)
-				msg.reply <- *respTyped
-			case getTxOutMsg:
-				resp := w.executeInSequence(getTxOutFn, msg)
-				respTyped := resp.(*getTxOutResponse)
 				msg.reply <- *respTyped
 			case getStakeInfoMsg:
 				resp := w.executeInSequence(getStakeInfoFn, msg)
@@ -308,99 +273,6 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		for i := range cmsrs {
 			if cmsrs[i] != nil {
 				resp.multisigInfo = cmsrs[i]
-				break
-			}
-		}
-		return resp
-
-	case ticketsForAddressFn:
-		tfam := msg.(ticketsForAddressMsg)
-		resp := new(ticketsForAddressResponse)
-		tfars := make([]*dcrjson.TicketsForAddressResult, w.serversLen)
-		connectCount := 0
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				continue
-			}
-			// Returns all tickets - even unconfirmed/mempool - when wallet is
-			// queried
-			tfar, err := s.TicketsForAddress(tfam.address)
-			if err != nil && (err != rpcclient.ErrClientDisconnect &&
-				err != rpcclient.ErrClientShutdown) {
-				log.Infof("ticketsForAddressFn failure on server %v: %v", i, err)
-				resp.err = err
-				return resp
-			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
-				err == rpcclient.ErrClientShutdown) {
-				tfars[i] = nil
-				continue
-			}
-			connectCount++
-			tfars[i] = tfar
-		}
-
-		if connectCount < w.minServers {
-			log.Errorf("Unable to check any servers for stakepooluserinfo")
-			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v", connectCount, w.minServers)
-			return resp
-		}
-
-		for i := range tfars {
-			if tfars[i] != nil {
-				resp.tickets = tfars[i]
-				break
-			}
-		}
-		return resp
-
-	case getTxOutFn:
-		gtom := msg.(getTxOutMsg)
-		resp := new(getTxOutResponse)
-		gtors := make([]*dcrjson.GetTxOutResult, w.serversLen)
-		connectCount := 0
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				continue
-			}
-			gtor, err := s.GetTxOut(gtom.hash, gtom.idx, true)
-			if err != nil && (err != rpcclient.ErrClientDisconnect &&
-				err != rpcclient.ErrClientShutdown) {
-				log.Infof("getTxOutFn failure on server %v: %v", i, err)
-				resp.err = err
-				return resp
-			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
-				err == rpcclient.ErrClientShutdown) {
-				gtors[i] = nil
-				continue
-			}
-			connectCount++
-			gtors[i] = gtor
-		}
-
-		if connectCount < w.minServers {
-			log.Errorf("Unable to check any servers for getTxOutFn")
-			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v", connectCount, w.minServers)
-			return resp
-		}
-
-		for i := 0; i < w.serversLen; i++ {
-			if i == w.serversLen-1 {
-				break
-			}
-			if gtors[i] == nil || gtors[i+1] == nil {
-				continue
-			}
-			if gtors[i].ScriptPubKey.Hex != gtors[i+1].ScriptPubKey.Hex {
-				log.Infof("getTxOutFn nonequiv failure on servers "+
-					"%v, %v", i, i+1)
-				resp.err = fmt.Errorf("non equivalent ScriptPubKey returned")
-				return resp
-			}
-		}
-
-		for i := range gtors {
-			if gtors[i] != nil {
-				resp.txOut = gtors[i]
 				break
 			}
 		}
@@ -769,57 +641,6 @@ func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*w
 	return response.multisigInfo, response.err
 }
 
-// TicketsForAddress
-//
-// This can race depending on what wallet is currently processing, so failures
-// from this function should NOT cause fatal errors on the web server like the
-// other RPC client calls.
-func (w *walletSvrManager) TicketsForAddress(address dcrutil.Address) (*dcrjson.TicketsForAddressResult, error) {
-	w.cachedGetTicketsMutex.Lock()
-	defer w.cachedGetTicketsMutex.Unlock()
-
-	// See if we already have a cached copy of this information.
-	// If it isn't too old, return that instead.
-	cachedResp, ok := w.cachedGetTicketsMap[address.EncodeAddress()]
-	if ok {
-		if time.Since(cachedResp.timer) < cacheTimerGetTickets {
-			return cachedResp.res, nil
-		}
-	}
-
-	reply := make(chan ticketsForAddressResponse)
-	w.msgChan <- ticketsForAddressMsg{
-		address: address,
-		reply:   reply,
-	}
-	response := <-reply
-
-	// If there was no error, cache the response now.
-	if response.err != nil {
-		w.cachedGetTicketsMap[address.EncodeAddress()] =
-			NewGetTicketsCacheData(response.tickets)
-	}
-
-	return response.tickets, response.err
-}
-
-// GetTxOut gets a txOut status given a hash and an output index. It returns
-// nothing if the output is spent, and a standard response if it is unspent.
-//
-// This can race depending on what wallet is currently processing, so failures
-// from this function should NOT cause fatal errors on the web server like the
-// other RPC client calls.
-func (w *walletSvrManager) GetTxOut(hash *chainhash.Hash, idx uint32) (*dcrjson.GetTxOutResult, error) {
-	reply := make(chan getTxOutResponse)
-	w.msgChan <- getTxOutMsg{
-		hash:  hash,
-		idx:   idx,
-		reply: reply,
-	}
-	response := <-reply
-	return response.txOut, response.err
-}
-
 // StakePoolUserInfo gets the voting service user information for a given user.
 //
 // This can race depending on what wallet is currently processing, so failures
@@ -1011,34 +832,6 @@ func (w *walletSvrManager) CheckWalletsReady() error {
 		}
 	}
 	return nil
-}
-
-// GetUnspentUserTickets gets live and immature tickets for a stakepool user
-func (w *walletSvrManager) GetUnspentUserTickets(userMultiSigAddress dcrutil.Address) ([]*chainhash.Hash, error) {
-	// live tickets only
-	var tickethashes []*chainhash.Hash
-
-	// TicketsForAddress returns all tickets, not just live, when wallet is
-	// queried rather than just the node. With StakePoolUserInfo, "live" status
-	// includes immature, but not spent.
-	spui, err := w.StakePoolUserInfo(userMultiSigAddress, false)
-	if err != nil {
-		return tickethashes, err
-	}
-
-	for _, ticket := range spui.Tickets {
-		// "live" includes immature
-		if ticket.Status == "live" {
-			th, err := chainhash.NewHashFromStr(ticket.Ticket)
-			if err != nil {
-				log.Errorf("NewHashFromStr failed for %v", ticket)
-				return tickethashes, err
-			}
-			tickethashes = append(tickethashes, th)
-		}
-	}
-
-	return tickethashes, nil
 }
 
 func (w *walletSvrManager) WalletStatus() ([]*wallettypes.WalletInfoResult, error) {
