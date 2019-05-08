@@ -1390,6 +1390,8 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	if !controller.IsCaptchaDone(c) {
 		session.AddFlash("You must complete the captcha.", "passwordresetError")
 		return controller.PasswordReset(c, r)
+	} else {
+		session.Values["CaptchaDone"] = false
 	}
 
 	remoteIP := getClientIP(r, controller.realIPHeader)
@@ -1561,6 +1563,8 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
 	}
+
+	session.Values["CaptchaDone"] = false
 
 	password, updateEmail, updatePassword := r.FormValue("password"),
 		r.FormValue("updateEmail"), r.FormValue("updatePassword")
@@ -1757,6 +1761,8 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 	if !controller.IsCaptchaDone(c) {
 		session.AddFlash("You must complete the captcha.", "registrationError")
 		return controller.Register(c, r)
+	} else {
+		session.Values["CaptchaDone"] = false
 	}
 
 	remoteIP := getClientIP(r, controller.realIPHeader)
