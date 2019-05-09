@@ -7953,10 +7953,12 @@ input[type="submit"]:disabled {
 
 .ticket_accordion input[type='checkbox']:checked + label + .accordion__contents {
   max-height: 300px;
-  overflow-y: scroll; }
+  overflow-y: auto; }
 
 .ticket_accordion .accordion__contents {
   margin-top: -3px; }
+.ticket_accordion .accordion__empty {
+  color: #c4cbd2; }
   .ticket_accordion .accordion__contents div {
     padding-top: 20px;
     padding-bottom: 20px;
