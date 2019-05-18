@@ -275,15 +275,6 @@ func GetAllCurrentMultiSigScripts(dbMap *gorp.DbMap) ([]User, error) {
 	return multiSigs, nil
 }
 
-func GetAllLowFeeTickets(dbMap *gorp.DbMap) ([]LowFeeTicket, error) {
-	var lowFeeTickets []LowFeeTicket
-	_, err := dbMap.Select(&lowFeeTickets, "SELECT * FROM LowFeeTicket")
-	if err != nil {
-		return nil, err
-	}
-	return lowFeeTickets, nil
-}
-
 func GetVotableLowFeeTickets(dbMap *gorp.DbMap) ([]LowFeeTicket, error) {
 	var votableLowFeeTickets []LowFeeTicket
 	_, err := dbMap.Select(&votableLowFeeTickets, "SELECT * FROM LowFeeTicket WHERE Voted = 0 AND Expires > UNIX_TIMESTAMP()")
