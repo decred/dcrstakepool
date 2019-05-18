@@ -34,9 +34,7 @@ import (
 	"github.com/gorilla/csrf"
 	"github.com/zenazn/goji/web"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/connectivity"
 )
 
 const (
@@ -61,7 +59,7 @@ type MainController struct {
 	closePoolMsg         string
 	enableStakepoold     bool
 	feeXpub              *hdkeychain.ExtendedKey
-	grpcConnections      []*grpc.ClientConn
+	StakepooldServers    *stakepooldclient.StakepooldManager
 	poolEmail            string
 	poolFees             float64
 	poolLink             string
@@ -102,7 +100,7 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 func NewMainController(params *chaincfg.Params, adminIPs []string,
 	adminUserIDs []string, APISecret string, APIVersionsSupported []int,
 	baseURL string, closePool bool, closePoolMsg string, enablestakepoold bool,
-	feeXpubStr string, grpcConnections []*grpc.ClientConn, poolFees float64,
+	feeXpubStr string, stakepooldConnMan *stakepooldclient.StakepooldManager, poolFees float64,
 	poolEmail, poolLink string, emailSender email.Sender, walletHosts, walletCerts, walletUsers,
 	walletPasswords []string, minServers int, realIPHeader,
 	votingXpubStr string, maxVotedAge int64, description string,
@@ -146,7 +144,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		closePoolMsg:         closePoolMsg,
 		enableStakepoold:     enablestakepoold,
 		feeXpub:              feeKey,
-		grpcConnections:      grpcConnections,
+		StakepooldServers:    stakepooldConnMan,
 		poolEmail:            poolEmail,
 		poolFees:             poolFees,
 		poolLink:             poolLink,
@@ -303,13 +301,9 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	// Import the RedeemScript
 	var importedHeight int64
-	for i := range controller.grpcConnections {
-		importedHeight, err = stakepooldclient.StakepooldImportScript(controller.grpcConnections[i], serializedScript)
-		if err != nil {
-			log.Errorf("Error importing script on stakepoold rpc connection %d", i)
-			return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
-		}
-		log.Infof("Successfully imported script on stakepoold rpc connection %d", i)
+	importedHeight, err = controller.StakepooldServers.ImportScript(serializedScript)
+	if err != nil {
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
 	userFeeAddr, err := controller.FeeAddressForUserID(int(user.Id))
@@ -472,25 +466,6 @@ func (controller *MainController) isAdmin(c web.C, r *http.Request) (bool, error
 	return true, nil
 }
 
-// StakepooldGetIgnoredLowFeeTickets performs a gRPC GetIgnoredLowFeeTickets
-// request against all stakepoold instances and returns the first result fetched
-// without errors
-func (controller *MainController) StakepooldGetIgnoredLowFeeTickets() (map[chainhash.Hash]string, error) {
-	var err error
-	ignoredLowFeeTickets := make(map[chainhash.Hash]string)
-
-	// TODO need some better code here
-	for i := range controller.grpcConnections {
-		ignoredLowFeeTickets, err = stakepooldclient.StakepooldGetIgnoredLowFeeTickets(controller.grpcConnections[i])
-		// take the first non-error result
-		if err == nil {
-			return ignoredLowFeeTickets, err
-		}
-	}
-
-	return ignoredLowFeeTickets, err
-}
-
 // StakepooldUpdateTickets attempts to trigger all connected stakepoold
 // instances to pull a data update of the specified kind.
 func (controller *MainController) StakepooldUpdateTickets(dbMap *gorp.DbMap) error {
@@ -499,15 +474,10 @@ func (controller *MainController) StakepooldUpdateTickets(dbMap *gorp.DbMap) err
 		return err
 	}
 
-	for i := range controller.grpcConnections {
-		err := stakepooldclient.StakepooldSetAddedLowFeeTickets(controller.grpcConnections[i], votableLowFeeTickets)
-		if err != nil {
-			log.Errorf("stakepoold host %d unable to update manual "+
-				"tickets grpc error: %v", i, err)
-			return err
-		}
-		log.Infof("Successfully triggered update tickets on stakepoold "+
-			"host %d", i)
+	err = controller.StakepooldServers.SetAddedLowFeeTickets(votableLowFeeTickets)
+	if err != nil {
+		log.Errorf("error updating tickets on stakepoold: %v", err)
+		return err
 	}
 
 	return nil
@@ -523,15 +493,10 @@ func (controller *MainController) StakepooldUpdateUsers(dbMap *gorp.DbMap) error
 		return err
 	}
 
-	for i := range controller.grpcConnections {
-		err := stakepooldclient.StakepooldSetUserVotingPrefs(controller.grpcConnections[i], allUsers)
-		if err != nil {
-			log.Errorf("stakepoold host %d unable to update voting config "+
-				"grpc error: %v", i, err)
-			return err
-		}
-		log.Infof("successfully triggered update users on stakepoold "+
-			"host %d", i)
+	err = controller.StakepooldServers.SetUserVotingPrefs(allUsers)
+	if err != nil {
+		log.Errorf("error updating users on stakepoold: %v", err)
+		return err
 	}
 
 	return nil
@@ -855,13 +820,9 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	// Import the RedeemScript
 	var importedHeight int64
-	for i := range controller.grpcConnections {
-		importedHeight, err = stakepooldclient.StakepooldImportScript(controller.grpcConnections[i], serializedScript)
-		if err != nil {
-			log.Errorf("Error importing script on stakepoold rpc connection %d", i)
-			return "/error", http.StatusSeeOther
-		}
-		log.Infof("Successfully imported script on stakepoold rpc connection %d", i)
+	importedHeight, err = controller.StakepooldServers.ImportScript(serializedScript)
+	if err != nil {
+		return "/error", http.StatusSeeOther
 	}
 
 	// Get the pool fees address for this user
@@ -894,28 +855,16 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 	}
 
 	type stakepooldInfoPage struct {
-		Status string
+		RPCStatus string
 	}
 
-	stakepooldPageInfo := make([]stakepooldInfoPage, len(controller.grpcConnections))
+	stakepooldRPCStatus := controller.StakepooldServers.RPCStatus()
 
-	for i, conn := range controller.grpcConnections {
-		grpcStatus := "Unknown"
-		state := conn.GetState()
-		switch state {
-		case connectivity.Idle:
-			grpcStatus = "Idle"
-		case connectivity.Shutdown:
-			grpcStatus = "Shutdown"
-		case connectivity.Ready:
-			grpcStatus = "Ready"
-		case connectivity.Connecting:
-			grpcStatus = "Connecting"
-		case connectivity.TransientFailure:
-			grpcStatus = "TransientFailure"
-		}
+	stakepooldPageInfo := make([]stakepooldInfoPage, len(stakepooldRPCStatus))
+
+	for i, grpcStatus := range stakepooldRPCStatus {
 		stakepooldPageInfo[i] = stakepooldInfoPage{
-			Status: grpcStatus,
+			RPCStatus: grpcStatus,
 		}
 	}
 
@@ -1021,6 +970,12 @@ func (controller *MainController) AdminTickets(c web.C, r *http.Request) (string
 		}
 	}
 
+	ignoredLowFeeTickets, err := controller.StakepooldServers.GetIgnoredLowFeeTickets()
+	if err != nil {
+		log.Errorf("Could not retrieve ignored low fee tickets from stakepoold: %v", err)
+		session.AddFlash("Could not retrieve ignored low fee tickets from stakepoold", "adminTicketsError")
+	}
+
 	c.Env["Admin"] = isAdmin
 	c.Env["IsAdminTickets"] = true
 	c.Env["Network"] = controller.getNetworkName()
@@ -1029,7 +984,8 @@ func (controller *MainController) AdminTickets(c web.C, r *http.Request) (string
 	c.Env["FlashSuccess"] = session.Flashes("adminTicketsSuccess")
 
 	c.Env["AddedLowFeeTickets"] = votableLowFeeTickets
-	c.Env["IgnoredLowFeeTickets"], _ = controller.StakepooldGetIgnoredLowFeeTickets()
+	c.Env["IgnoredLowFeeTickets"] = ignoredLowFeeTickets
+
 	widgets := controller.Parse(t, "admin/tickets", c.Env)
 
 	c.Env["Title"] = "Decred Voting Service - Tickets (Admin)"
@@ -1093,7 +1049,7 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 	switch action {
 	case "add":
 		actionVerb = "added"
-		ignoredLowFeeTickets, err := controller.StakepooldGetIgnoredLowFeeTickets()
+		ignoredLowFeeTickets, err := controller.StakepooldServers.GetIgnoredLowFeeTickets()
 		if err != nil {
 			session.AddFlash("GetIgnoredLowFeeTickets error: "+err.Error(),
 				"adminTicketsError")

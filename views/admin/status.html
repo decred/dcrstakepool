@@ -25,14 +25,14 @@
 								<thead class="thead-light">
 									<tr>
 										<th scope="col" class="text-center">Stakepoold Number</th>
-										<th scope="col" class="text-center">GRPC Connection Number</th>
+										<th scope="col" class="text-center">RPC Status</th>
 									</tr>
 								</thead>
 								<tbody>
 									{{ range $i, $data := .StakepooldInfo }}
 									<tr class="table-light">
 										<td class="text-center">{{$i}}</td>
-										<td class="text-center">{{ $data.Status }}</td>
+										<td class="text-center">{{ $data.RPCStatus }}</td>
 									</tr>
 									{{end}}
 								</tbody>
