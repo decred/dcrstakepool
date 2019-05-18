@@ -73,12 +73,12 @@ func StartStakepooldService(appContext *AppContext, server *grpc.Server) {
 	})
 }
 
-func processTickets(ticketsMSA map[chainhash.Hash]string) []*pb.TicketEntry {
-	tickets := make([]*pb.TicketEntry, 0)
+func processTickets(ticketsMSA map[chainhash.Hash]string) []*pb.Ticket {
+	tickets := make([]*pb.Ticket, 0)
 	for tickethash, msa := range ticketsMSA {
-		tickets = append(tickets, &pb.TicketEntry{
-			TicketAddress: msa,
-			TicketHash:    tickethash.CloneBytes(),
+		tickets = append(tickets, &pb.Ticket{
+			Address: msa,
+			Hash:    tickethash.CloneBytes(),
 		})
 	}
 	return tickets
@@ -118,13 +118,13 @@ func (s *stakepooldServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.P
 func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.SetAddedLowFeeTicketsRequest) (*pb.SetAddedLowFeeTicketsResponse, error) {
 	addedLowFeeTickets := make(map[chainhash.Hash]string)
 
-	for _, data := range req.Tickets {
-		hash, err := chainhash.NewHash(data.TicketHash)
+	for _, ticket := range req.Tickets {
+		hash, err := chainhash.NewHash(ticket.Hash)
 		if err != nil {
-			log.Warnf("NewHashFromStr failed for %v", data.TicketHash)
+			log.Warnf("NewHashFromStr failed for %v", ticket.Hash)
 			continue
 		}
-		addedLowFeeTickets[*hash] = data.TicketAddress
+		addedLowFeeTickets[*hash] = ticket.Address
 	}
 
 	s.appContext.UpdateTicketData(addedLowFeeTickets)

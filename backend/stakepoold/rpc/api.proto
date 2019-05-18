@@ -18,24 +18,24 @@ service VersionService {
 
 message GetAddedLowFeeTicketsRequest {}
 message GetAddedLowFeeTicketsResponse {
-	repeated TicketEntry tickets = 1;
+	repeated Ticket tickets = 1;
 }
 
 message GetIgnoredLowFeeTicketsRequest {}
 message GetIgnoredLowFeeTicketsResponse {
-	repeated TicketEntry tickets = 1;
+	repeated Ticket tickets = 1;
 }
 
 message GetLiveTicketsRequest {}
 message GetLiveTicketsResponse {
-	repeated TicketEntry tickets = 1;
+	repeated Ticket tickets = 1;
 }
 
 message PingRequest {}
 message PingResponse {}
 
 message SetAddedLowFeeTicketsRequest {
-	repeated TicketEntry tickets = 1;
+	repeated Ticket tickets = 1;
 }
 message SetAddedLowFeeTicketsResponse {
 }
@@ -53,9 +53,9 @@ message ImportScriptResponse {
 	int64 HeightImported = 1;
 }
 
-message TicketEntry {
-	string TicketAddress = 1;
-	bytes TicketHash = 2;
+message Ticket {
+	string Address = 1;
+	bytes Hash = 2;
 }
 
 message UserVotingConfigEntry {
