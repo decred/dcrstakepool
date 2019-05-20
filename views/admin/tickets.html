@@ -22,122 +22,123 @@
 			</div>
 		{{end}}
 
-		<div class="row mx-3">
-			<div class="col-md-6 col-12">
-				<div class="block__title">
-					<h1 class="d-flex justify-content-between align-items-end">
-						<span>Ignored Low Fee Tickets</span>
-							{{if gt (len .IgnoredLowFeeTickets) 1 }}
-							<div class="text--size-13 d-none d-md-block">
-								<a id="select_all_ignored" class="js-only" style="display:none;" href="#">Select all</a>
-							</div>
-							{{end}}
-					</h1>	
-				</div>
-
-				{{with .IgnoredLowFeeTickets}}
-					<form id="addTicketsForm" method="post">
-						<div class="mb-3">
-							<div class="bg-white">
-								<table id="ignored_table" class="table">
-									<tbody>
-										{{ range $tickethash, $msa := .}}
-										<tr>
-											<td class="pl-sm-5 pl-4 align-middle" width="25%"><img src="assets/images/group-1119.svg" alt=""></th>
-											<td class="pl-0 align-middle" width="55%">{{printf "%.12s" $tickethash}}...</td>
-											<td width="20%">
-												<label class="control control-checkbox">
-													<input type="checkbox" name="tickets[]" value="{{$tickethash}}">
-													<div class="control_indicator"></div>
-												</label>
-											</td>
-										</tr>
-										{{end}}
-									</tbody>
-								</table>
-							</div>
+		<div class="p-x0">
+			<div class="block__title">
+				<h1 class="d-flex justify-content-between align-items-end">
+					<span>Ignored Low Fee Tickets</span>
+						{{if gt (len .IgnoredLowFeeTickets) 1 }}
+						<div class="text--size-13">
+							<a id="select_all_ignored" class="js-only" style="display:none;" href="#">Select all</a>
 						</div>
-						<input type="hidden" name="action" value="add">
-      			{{ $.csrfField }}
-						<input id="addTickets" type="submit" class="btn" value="Add Tickets To Live Voting List" />
-					</form>
-				{{else}}
-					<div class="col-12 block__description--white">
-						<p>Currently there are no ignored low fee tickets.</p>
-					</div>
-				{{end}}
+						{{end}}
+				</h1>	
 			</div>
 
-			<div class="col-md-6 col-12">
-				<div class="block__title">
-					<h1 class="d-flex justify-content-between align-items-end">
-						<span>Added Low Fee Tickets</span>
-						<div class="text--size-13 d-none d-md-block">
-          					{{if gt (len .AddedLowFeeTickets) 1 }}
-							<div class="text--size-13 d-none d-md-block">
-								<a id="select_all_added" class="js-only" style="display:none;" href="#">Select all</a>
-							</div>
-							{{end}}
-          				</div>
-					</h1>
-				</div>
-				
-				{{with .AddedLowFeeTickets}}
-					<form id="removeTicketsForm" method="post">
-						<div class="mb-3">
-							<div class="bg-white">
-								<table id="added_table" class="table">
-									<tbody>
-										{{ range $tickethash, $msa := .}}
-										<tr>
-											<td class="pl-sm-5 pl-4 align-middle" width="25%"><img src="assets/images/group-1119.svg" alt=""></th>
-											<td class="pl-0 align-middle" width="55%">{{printf "%.12s" $tickethash}}...</td>
-											<td width="20%">
-												<label class="control control-checkbox">
-													<input type="checkbox" name="tickets[]" value="{{$tickethash}}">
-													<div class="control_indicator"></div>
-												</label>
-											</td>
-										</tr>
-										{{end}}
-									</tbody>
-								</table>
-							</div>
+			{{with .IgnoredLowFeeTickets}}
+				<form id="addTicketsForm" method="post">
+					<div class="mb-3">
+						<div class="bg-white">
+							<table id="ignored_table" class="table">
+								<tbody>
+									{{ range $tickethash, $msa := .}}
+									<tr>
+										<td class="pl-sm-5 pl-4 align-middle"><img src="assets/images/group-1119.svg" alt=""></th>
+										<td class="align-middle">{{printf "%.16s" $tickethash}}...</td>
+										<td class="align-middle">{{$msa}}</td>
+										<td class="align-middle"><a href="https://{{$.Network}}.dcrdata.org/tx/{{$tickethash}}">Block Explorer</a></td>
+										<td>
+											<label class="control control-checkbox">
+												<input type="checkbox" name="tickets[]" value="{{$tickethash}}">
+												<div class="control_indicator"></div>
+											</label>
+										</td>
+									</tr>
+									{{end}}
+								</tbody>
+							</table>
 						</div>
-						<input type="hidden" name="action" value="remove">
-						{{ $.csrfField }}
-						<input id="rmTickets" type="submit" class="btn" value="Remove Tickets From Live Voting List" />
-					</form>
-				{{else}}
-					<div class="col-12 block__description--white">
-						<p>Currently there are no added low fee tickets.</p>
 					</div>
-				{{end}}
-			</div>
-
-
-			<script type="text/javascript">
-				(function() {
-					// Display elements with class js-only
-					var elements = document.getElementsByClassName("js-only");
-					for (var i = 0; i < elements.length; i++) {
-						elements[i].style.display = "block";
-					}
-
-					// Change checkbox state if user clicks anywhere on the row.
-					// Not just the actual checkbox
-					var rows = document.getElementsByTagName("tr")
-					for (var i = 0; i < rows.length; i++) {
-						rows[i].addEventListener("click", function() {
-							box = this.querySelector("input[type=checkbox]");
-							box.checked = !box.checked
-						});
-					}
-					
-				})();
-			</script>
-
+					<input type="hidden" name="action" value="add">
+			{{ $.csrfField }}
+					<input id="addTickets" type="submit" class="btn" value="Add Tickets To Live Voting List" />
+				</form>
+			{{else}}
+				<div class="col-12 block__description--white">
+					<p>Currently there are no ignored low fee tickets.</p>
+				</div>
+			{{end}}
 		</div>
+
+		<div class="p-x0">
+			<div class="block__title">
+				<h1 class="d-flex justify-content-between align-items-end">
+					<span>Added Low Fee Tickets</span>
+					{{if gt (len .AddedLowFeeTickets) 1 }}
+					<div class="text--size-13">
+						<a id="select_all_added" class="js-only" style="display:none;" href="#">Select all</a>
+					</div>
+					{{end}}
+				</h1>
+			</div>
+			
+			{{with .AddedLowFeeTickets}}
+				<form id="removeTicketsForm" method="post">
+					<div class="mb-3">
+						<div class="bg-white">
+							<table id="added_table" class="table">
+								<tbody>
+									{{ range $tickethash, $msa := .}}
+									<tr>
+										<td class="pl-sm-5 pl-4 align-middle"><img src="assets/images/group-1119.svg" alt=""></th>
+										<td class="align-middle">{{printf "%.16s" $tickethash}}...</td>
+										<td class="align-middle">{{$msa}}</td>
+										<td class="align-middle"><a href="https://{{$.Network}}.dcrdata.org/tx/{{$tickethash}}">Block Explorer</a></td>
+										<td>
+											<label class="control control-checkbox">
+												<input type="checkbox" name="tickets[]" value="{{$tickethash}}">
+												<div class="control_indicator"></div>
+											</label>
+										</td>
+									</tr>
+									{{end}}
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<input type="hidden" name="action" value="remove">
+					{{ $.csrfField }}
+					<input id="rmTickets" type="submit" class="btn" value="Remove Tickets From Live Voting List" />
+				</form>
+			{{else}}
+				<div class="col-12 block__description--white">
+					<p>Currently there are no added low fee tickets.</p>
+				</div>
+			{{end}}
+		</div>
+
+
+		<script type="text/javascript">
+			(function() {
+				// Display elements with class js-only
+				var elements = document.getElementsByClassName("js-only");
+				for (var i = 0; i < elements.length; i++) {
+					elements[i].style.display = "block";
+				}
+
+				// Change checkbox state if user clicks anywhere on the row.
+				// Not just the actual checkbox
+				var rows = document.getElementsByTagName("tr")
+				for (var i = 0; i < rows.length; i++) {
+					rows[i].addEventListener("click", function(e) {
+						if (e.target.tagName == "A") return;
+						box = this.querySelector("input[type=checkbox]");
+						box.checked = !box.checked
+					});
+				}
+				
+			})();
+		</script>
+
 	</div>
 </section>
 {{end}}

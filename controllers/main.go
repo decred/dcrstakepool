@@ -998,6 +998,8 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 }
 
 // AdminTickets renders the administrative tickets page.
+// Tickets purchased with an incorrect VSP fee will be listed on this page.
+// Admin users can choose whether the pool should vote these tickets or not.
 func (controller *MainController) AdminTickets(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)

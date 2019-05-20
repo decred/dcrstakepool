@@ -62,13 +62,13 @@ func StakepooldGetAddedLowFeeTickets(conn *grpc.ClientConn) (map[chainhash.Hash]
 		return addedLowFeeTickets, err
 	}
 
-	for _, ticketData := range resp.Tickets {
-		hash, err := chainhash.NewHash(ticketData.TicketHash)
+	for _, ticket := range resp.Tickets {
+		hash, err := chainhash.NewHash(ticket.Hash)
 		if err != nil {
-			log.Warnf("NewHash failed for %v: %v", ticketData.TicketHash, err)
+			log.Warnf("NewHash failed for %v: %v", ticket.Hash, err)
 			continue
 		}
-		addedLowFeeTickets[*hash] = ticketData.TicketAddress
+		addedLowFeeTickets[*hash] = ticket.Address
 	}
 
 	return addedLowFeeTickets, err
@@ -84,13 +84,13 @@ func StakepooldGetIgnoredLowFeeTickets(conn *grpc.ClientConn) (map[chainhash.Has
 		return ignoredLowFeeTickets, err
 	}
 
-	for _, ticketData := range resp.Tickets {
-		hash, err := chainhash.NewHash(ticketData.TicketHash)
+	for _, ticket := range resp.Tickets {
+		hash, err := chainhash.NewHash(ticket.Hash)
 		if err != nil {
-			log.Warnf("NewHash failed for %v: %v", ticketData.TicketHash, err)
+			log.Warnf("NewHash failed for %v: %v", ticket.Hash, err)
 			continue
 		}
-		ignoredLowFeeTickets[*hash] = ticketData.TicketAddress
+		ignoredLowFeeTickets[*hash] = ticket.Address
 	}
 
 	return ignoredLowFeeTickets, err
@@ -106,29 +106,29 @@ func StakepooldGetLiveTickets(conn *grpc.ClientConn) (map[chainhash.Hash]string,
 		return liveTickets, err
 	}
 
-	for _, ticketData := range resp.Tickets {
-		hash, err := chainhash.NewHash(ticketData.TicketHash)
+	for _, ticket := range resp.Tickets {
+		hash, err := chainhash.NewHash(ticket.Hash)
 		if err != nil {
-			log.Warnf("NewHash failed for %v: %v", ticketData.TicketHash, err)
+			log.Warnf("NewHash failed for %v: %v", ticket.Hash, err)
 			continue
 		}
-		liveTickets[*hash] = ticketData.TicketAddress
+		liveTickets[*hash] = ticket.Address
 	}
 
 	return liveTickets, err
 }
 
 func StakepooldSetAddedLowFeeTickets(conn *grpc.ClientConn, dbTickets []models.LowFeeTicket) error {
-	var tickets []*pb.TicketEntry
+	var tickets []*pb.Ticket
 	for _, ticket := range dbTickets {
 		hash, err := chainhash.NewHashFromStr(ticket.TicketHash)
 		if err != nil {
 			log.Warnf("NewHashFromStr failed for %v: %v", ticket.TicketHash, err)
 			continue
 		}
-		tickets = append(tickets, &pb.TicketEntry{
-			TicketAddress: ticket.TicketAddress,
-			TicketHash:    hash.CloneBytes(),
+		tickets = append(tickets, &pb.Ticket{
+			Address: ticket.TicketAddress,
+			Hash:    hash.CloneBytes(),
 		})
 	}
 
