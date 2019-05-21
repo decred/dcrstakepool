@@ -1392,6 +1392,7 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 		return controller.PasswordReset(c, r)
 	} else {
 		session.Values["CaptchaDone"] = false
+		c.Env["CaptchaDone"] = false
 	}
 
 	remoteIP := getClientIP(r, controller.realIPHeader)
@@ -1564,10 +1565,19 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		return "/", http.StatusSeeOther
 	}
 
-	session.Values["CaptchaDone"] = false
 
 	password, updateEmail, updatePassword := r.FormValue("password"),
 		r.FormValue("updateEmail"), r.FormValue("updatePassword")
+
+	if updateEmail == "true" {
+		if !controller.IsCaptchaDone(c) {
+			session.AddFlash("You must complete the captcha.", "settingsError")
+			return controller.Settings(c, r)
+		} else {
+			session.Values["CaptchaDone"] = false
+			c.Env["CaptchaDone"] = false
+		}
+	}
 
 	// Changes to email or password require the current password.
 	user, err := helpers.PasswordValidById(dbMap, session.Values["UserId"].(int64), password)
@@ -1579,13 +1589,9 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	log.Infof("Settings POST from %v, email %v", remoteIP, user.Email)
 
 	if updateEmail == "true" {
+		
 		newEmail := r.FormValue("email")
 		log.Infof("user requested email change from %v to %v", user.Email, newEmail)
-
-		if !controller.IsCaptchaDone(c) {
-			session.AddFlash("You must complete the captcha.", "settingsError")
-			return controller.Settings(c, r)
-		}
 
 		userExists := models.GetUserByEmail(dbMap, newEmail)
 		if userExists != nil {
@@ -1763,6 +1769,7 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 		return controller.Register(c, r)
 	} else {
 		session.Values["CaptchaDone"] = false
+		c.Env["CaptchaDone"] = false
 	}
 
 	remoteIP := getClientIP(r, controller.realIPHeader)
