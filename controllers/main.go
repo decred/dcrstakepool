@@ -1565,7 +1565,6 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		return "/", http.StatusSeeOther
 	}
 
-
 	password, updateEmail, updatePassword := r.FormValue("password"),
 		r.FormValue("updateEmail"), r.FormValue("updatePassword")
 
@@ -1589,7 +1588,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	log.Infof("Settings POST from %v, email %v", remoteIP, user.Email)
 
 	if updateEmail == "true" {
-		
+
 		newEmail := r.FormValue("email")
 		log.Infof("user requested email change from %v to %v", user.Email, newEmail)
 
