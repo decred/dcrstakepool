@@ -31,7 +31,7 @@
 							{{ range $i, $data := .TicketsLive }}
 							<div>
 								<img src="assets/images/group-1119.svg" alt="">
-								<span>{{printf "%.16s" $data.Ticket}}...</span>
+								<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 								<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 							</div>
 							{{else}}
@@ -55,7 +55,7 @@
 								{{ range $i, $data := .TicketsVoted }}
 								<div>
 									<img src="assets/images/symbol-8-1.svg" alt="">
-									<span>{{printf "%.16s" $data.Ticket}}...</span>
+									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 									<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 								</div>
 								{{else}}
@@ -79,7 +79,7 @@
 								{{ range $i, $data := .TicketsMissed }}
 									<div>
 										<img src="assets/images/symbol-9-1.svg" alt="">
-										<span>{{printf "%.16s" $data.Ticket}}...</span>
+										<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 										<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 									</div>
 								{{else}}
@@ -103,7 +103,7 @@
 								{{ range $i, $data := .TicketsExpired }}
 								<div>
 									<img src="assets/images/symbol-5-1.svg" alt="">
-									<span>{{printf "%.16s" $data.Ticket}}...</span>
+									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 									<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 								</div>
 								{{else}}
@@ -127,7 +127,7 @@
 								{{ range $i, $data := .TicketsInvalid }}
 								<div>
 									<img src="assets/images/symbol-5-1-1.svg" alt="">
-									<span>{{printf "%.16s" $data.Ticket}}...</span>
+									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 									<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 								</div>
 								{{else}}
