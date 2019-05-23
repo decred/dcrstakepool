@@ -10,8 +10,14 @@
           </div>
 				  
           <h1 class="mb-4 text--size-27">Register</h1>
-				
-          {{if .CaptchaDone}}
+
+          {{if .IsClosed }}
+            <div class="snackbar snackbar-error">
+              <div class="snackbar-message">
+                <p>{{.ClosePoolMsg}}</p>
+              </div>
+            </div>				
+          {{else if .CaptchaDone}}
             <form id="Register" data-empty="" action="#" method="post">
                 {{if .FlashSuccess}}
                   {{range .FlashSuccess}}<p><span style="font-size: larger;">{{.}}</span></p>{{end}}
@@ -21,14 +27,6 @@
                     <div class="snackbar snackbar-error">
                       <div class="snackbar-message">
                         <p>{{.}}</p>
-                      </div>
-                    </div>
-                  {{end}}
-
-                  {{if .IsClosed }}
-                    <div class="snackbar snackbar-error">
-                      <div class="snackbar-message">
-                        <p>{{.ClosePoolMsg}}</p>
                       </div>
                     </div>
                   {{end}}
