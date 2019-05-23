@@ -7872,8 +7872,6 @@ input[type="submit"]:disabled {
   display: block;
   position: relative;
   padding-left: 30px;
-  margin-bottom: 5px;
-  padding-top: 3px;
   cursor: pointer;
   font-size: 13px; }
 
@@ -7884,8 +7882,6 @@ input[type="submit"]:disabled {
 
 .control_indicator {
   position: absolute;
-  top: 6px;
-  right: 20px;
   height: 12px;
   width: 12px;
   background: #ffffff;
