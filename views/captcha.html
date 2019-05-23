@@ -1,38 +1,41 @@
 {{define "captcha"}}
 
-{{range .CaptchaError}}
-    <div class="snackbar snackbar-error">
-        <div class="snackbar-message">
-            <p>{{.}}</p>
-        </div>
-    </div>
-{{end}}
+<div class="d-flex flex-column p-0 w-100">
 
-<div class="block__description">
-    <p>{{ .CaptchaMsg }}</p>
-</div>
-
-<div class="col-12 p-0 center-block">
-    <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
-</div>
-
-<form action="/verifyhuman" method="post" class="w-100 form form--narrow-inputs">
-    <div class="col-12 mb-4 text-left center-block">
-        <div class="form-group row mb-0 align-items-center">
-            <label class="pr-4" for="captchaSolution">Text&nbsp;in&nbsp;picture:</label>
-            <div>
-                <input name=captchaSolution class="form-control">
+    {{range .CaptchaError}}
+        <div class="snackbar snackbar-error align-self-center">
+            <div class="snackbar-message">
+                <p>{{.}}</p>
             </div>
         </div>
-    </div>
-        
-    <input type=hidden name=captchaId value="{{.CaptchaID}}">
-    {{ $.csrfField }}
-    <div class="col-md-button center-block text-middle">
-        <button name=captchaSubmit type=submit class="btn btn-primary">Submit</button>
+    {{end}}
+
+    <div class="block__description">
+        <p>{{ .CaptchaMsg }}</p>
     </div>
 
-</form>
+    <div class="col-12 p-0 center-block">
+        <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
+    </div>
 
+    <form action="/verifyhuman" method="post" class="w-100 form form--narrow-inputs">
+        <div class="col-12 mb-4 text-left center-block">
+            <div class="form-group row mb-0 align-items-center">
+                <label class="pr-4" for="captchaSolution">Text&nbsp;in&nbsp;picture:</label>
+                <div>
+                    <input name=captchaSolution class="form-control">
+                </div>
+            </div>
+        </div>
+            
+        <input type=hidden name=captchaId value="{{.CaptchaID}}">
+        {{ $.csrfField }}
+        <div class="col-md-button center-block text-middle">
+            <button name=captchaSubmit type=submit class="btn btn-primary">Submit</button>
+        </div>
+
+    </form>
+
+</div>
 
 {{end}}
