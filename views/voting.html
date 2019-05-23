@@ -2,21 +2,23 @@
 <section class="site-content">
 	<div class="container container--narrow">
 
-		{{range .FlashSuccess}}
-			<div class="snackbar snackbar-success">
-				<div class="snackbar-message">
-					<p>{{.}}</p>
+		<div class="d-flex flex-column p-0 w-100">
+			{{range .FlashSuccess}}
+				<div class="snackbar snackbar-success align-self-center">
+					<div class="snackbar-message">
+						<p>{{.}}</p>
+					</div>
 				</div>
-			</div>
-		{{end}}
+			{{end}}
 
-		{{range .FlashError}}
-			<div class="snackbar snackbar-error">
-				<div class="snackbar-message">
-					<p>{{.}}</p>
+			{{range .FlashError}}
+				<div class="snackbar snackbar-error align-self-center">
+					<div class="snackbar-message">
+						<p>{{.}}</p>
+					</div>
 				</div>
-			</div>
-		{{end}}
+			{{end}}
+		</div>
 
 		<div class="row mx-3">
 			<section class="block">
