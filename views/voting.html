@@ -4,7 +4,7 @@
 
 		<div class="d-flex flex-column p-0 w-100">
 			{{range .FlashSuccess}}
-				<div class="snackbar snackbar-success align-self-center">
+				<div class="snackbar snackbar-vote-success">
 					<div class="snackbar-message">
 						<p>{{.}}</p>
 					</div>
@@ -12,7 +12,7 @@
 			{{end}}
 
 			{{range .FlashError}}
-				<div class="snackbar snackbar-error align-self-center">
+				<div class="snackbar snackbar-vote-failed">
 					<div class="snackbar-message">
 						<p>{{.}}</p>
 					</div>
