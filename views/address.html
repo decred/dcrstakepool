@@ -163,6 +163,7 @@ $ dcrctl {{ if eq .Network "testnet"}}--testnet{{end}} --wallet validateaddress 
 						{{range .Flash}}
 							<div class="snackbar snackbar-key-failed">
 								<div class="snackbar-message">
+									<div class="snackbar-close-button-top d-none"></div>
 									<p>{{.}}</p>
 								</div>
 							</div>
