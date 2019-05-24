@@ -45,12 +45,12 @@ func listenTo(bind string) (net.Listener, error) {
 	return nil, fmt.Errorf("error while parsing bind arg %v", bind)
 }
 
-func runMain() int {
+func runMain() error {
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	loadedCfg, _, err := loadConfig()
 	if err != nil {
-		return 1
+		return fmt.Errorf("Failed to load config: %v", err)
 	}
 	cfg = loadedCfg
 	log.Infof("Network: %s", activeNetParams.Params.Name)
@@ -67,12 +67,10 @@ func runMain() int {
 		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
 		cfg.DBUser)
 	if application.DbMap == nil {
-		log.Critical("Failed to open database.")
-		return 7
+		return fmt.Errorf("Failed to open database.")
 	}
 	if err = application.LoadTemplates(cfg.TemplatePath); err != nil {
-		log.Criticalf("Failed to load templates: %v", err)
-		return 2
+		return fmt.Errorf("Failed to load templates: %v", err)
 	}
 
 	// Set up signal handler
@@ -89,16 +87,14 @@ func runMain() int {
 	if cfg.EnableStakepoold {
 		stakepooldConnMan, err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts)
 		if err != nil {
-			log.Errorf("Failed to connect to stakepoold host: %v", err)
-			return 8
+			return fmt.Errorf("Failed to connect to stakepoold host: %v", err)
 		}
 	}
 
 	sender, err := email.NewSender(cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom, cfg.UseSMTPS)
 	if err != nil {
 		application.Close()
-		log.Errorf("Failed to initialize the smtp server: %v", err)
-		return 1
+		return fmt.Errorf("Failed to initialize the smtp server: %v", err)
 	}
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
@@ -110,56 +106,47 @@ func runMain() int {
 		cfg.VotingWalletExtPub, cfg.MaxVotedAge, cfg.Description, cfg.Designation)
 	if err != nil {
 		application.Close()
-		log.Errorf("Failed to initialize the main controller: %v",
+		return fmt.Errorf("Failed to initialize the main controller: %v",
 			err)
-		fmt.Fprintf(os.Stderr, "Fatal error in controller init: %v",
-			err)
-		return 3
 	}
 
 	// reset votebits if Vote Version changed or stored VoteBits are invalid
 	_, err = controller.CheckAndResetUserVoteBits(application.DbMap)
 	if err != nil {
 		application.Close()
-		log.Errorf("failed to check and reset user vote bits: %v",
+		return fmt.Errorf("failed to check and reset user vote bits: %v",
 			err)
-		fmt.Fprintf(os.Stderr, "failed to check and reset user vote bits: %v",
-			err)
-		return 3
 	}
 
 	if cfg.EnableStakepoold {
 		err = controller.StakepooldUpdateUsers(application.DbMap)
 		if err != nil {
-			log.Errorf("StakepooldUpdateUsers failed: %v", err)
-			return 9
+			return fmt.Errorf("StakepooldUpdateUsers failed: %v", err)
 		}
 		err = controller.StakepooldUpdateTickets(application.DbMap)
 		if err != nil {
-			log.Errorf("StakepooldUpdateTickets failed: %v", err)
-			return 9
+			return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
 		}
 		// Log the reported count of ignored/added/live tickets from each stakepoold
 		_, err = controller.StakepooldServers.GetIgnoredLowFeeTickets()
 		if err != nil {
-			return 9
+			return fmt.Errorf("StakepooldGetIgnoredLowFeeTickets failed: %v", err)
 		}
 		_, err = controller.StakepooldServers.GetAddedLowFeeTickets()
 		if err != nil {
-			return 9
+			return fmt.Errorf("StakepooldGetAddedLowFeeTickets failed: %v", err)
 		}
 		_, err = controller.StakepooldServers.GetLiveTickets()
 		if err != nil {
-			return 9
+			return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
 		}
 	}
 
 	err = controller.RPCSync(application.DbMap)
 	if err != nil {
 		application.Close()
-		log.Errorf("Failed to sync the wallets: %v",
+		return fmt.Errorf("Failed to sync the wallets: %v",
 			err)
-		return 4
 	}
 
 	controller.RPCStart()
@@ -275,20 +262,21 @@ func runMain() int {
 	server := &http.Server{Handler: app}
 	listener, err := listenTo(cfg.Listen)
 	if err != nil {
-		log.Errorf("could not bind %v", err)
-		return 5
+		return fmt.Errorf("could not bind %v", err)
 	}
 
 	log.Infof("listening on %v", listener.Addr())
 
 	if err = server.Serve(listener); err != nil {
-		log.Errorf("Serve error: %s", err.Error())
-		return 6
+		return fmt.Errorf("Serve error: %s", err.Error())
 	}
 
-	return 0
+	return nil
 }
 
 func main() {
-	os.Exit(runMain())
+	if err := runMain(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
