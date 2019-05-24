@@ -27,7 +27,6 @@ const (
 	createMultisigFn
 	getStakeInfoFn
 	connectedFn
-	stakePoolUserInfoFn
 	getBestBlockFn
 )
 
@@ -94,19 +93,6 @@ type connectedMsg struct {
 	reply chan connectedResponse
 }
 
-// stakePoolUserInfoResponse
-type stakePoolUserInfoResponse struct {
-	userInfo *wallettypes.StakePoolUserInfoResult
-	err      error
-}
-
-// stakePoolUserInfoMsg
-type stakePoolUserInfoMsg struct {
-	userAddr          dcrutil.Address
-	reply             chan stakePoolUserInfoResponse
-	takeFirstResponse bool
-}
-
 // getBestBlockResponse
 type getBestBlockResponse struct {
 	bestBlockHash   *chainhash.Hash
@@ -146,10 +132,6 @@ out:
 			case connectedMsg:
 				resp := w.executeInSequence(connectedFn, msg)
 				respTyped := resp.(*connectedResponse)
-				msg.reply <- *respTyped
-			case stakePoolUserInfoMsg:
-				resp := w.executeInSequence(stakePoolUserInfoFn, msg)
-				respTyped := resp.(*stakePoolUserInfoResponse)
 				msg.reply <- *respTyped
 			case getBestBlockMsg:
 				resp := w.executeInSequence(getBestBlockFn, msg)
@@ -387,71 +369,6 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		// but err out and disallow if only 1/3 etc
 		return resp
 
-	case stakePoolUserInfoFn:
-		spuim := msg.(stakePoolUserInfoMsg)
-		resp := new(stakePoolUserInfoResponse)
-		// Taking first response, continuing on error
-		if spuim.takeFirstResponse {
-			for i, s := range w.servers {
-				spuir, err := s.StakePoolUserInfo(spuim.userAddr)
-				if err != nil {
-					log.Infof("stakePoolUserInfoFn failure on server %v: %v", i, err)
-					resp.err = err
-					continue
-				}
-				resp.err = nil
-				resp.userInfo = spuir
-				return resp
-			}
-			log.Warnf("All wallet servers failed to respond for StakePoolUserInfo.")
-			return resp
-		}
-		// Getting each wallet's response, checking for "syncness"
-		spuirs := make([]*wallettypes.StakePoolUserInfoResult, w.serversLen)
-		// use connectCount to increment total number of successful responses
-		// if we have > 0 then we proceed as though nothing is wrong for the user
-		connectCount := 0
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				spuirs[i] = nil
-				continue
-			}
-			spuir, err := s.StakePoolUserInfo(spuim.userAddr)
-			if err != nil && (err != rpcclient.ErrClientDisconnect &&
-				err != rpcclient.ErrClientShutdown) {
-				log.Infof("stakePoolUserInfoFn failure on server %v: %v", i, err)
-				resp.err = err
-				return resp
-			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
-				err == rpcclient.ErrClientShutdown) {
-				spuirs[i] = nil
-				continue
-			}
-			connectCount++
-			spuirs[i] = spuir
-		}
-
-		if connectCount < w.minServers {
-			log.Errorf("Unable to check any servers for stakepooluserinfo")
-			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v", connectCount, w.minServers)
-			return resp
-		}
-
-		if !w.checkForSyncness(spuirs) {
-			log.Infof("StakePoolUserInfo across wallets are not synced.  Attempting to sync now")
-			err := w.syncTickets(spuirs)
-			if err != nil {
-				log.Warnf("failed to syncTickets: %v", err)
-			}
-		}
-
-		for i := range spuirs {
-			if spuirs[i] != nil {
-				resp.userInfo = spuirs[i]
-				break
-			}
-		}
-		return resp
 	case getBestBlockFn:
 		resp := new(getBestBlockResponse)
 		for i, s := range w.servers {
@@ -490,114 +407,6 @@ func (w *walletSvrManager) connected() ([]*wallettypes.WalletInfoResult, error) 
 	}
 	response := <-reply
 	return response.walletInfo, response.err
-}
-
-// syncTickets is called when checkForSyncness has returned false and the wallets
-// PoolTickets need to be synced due to manual addtickets, or a status is off.
-// If a ticket is seen to be valid in 1 wallet and invalid in another, we use
-// addticket rpc command to add that ticket to the invalid wallet.
-func (w *walletSvrManager) syncTickets(spuirs []*wallettypes.StakePoolUserInfoResult) error {
-	for i := 0; i < len(spuirs); i++ {
-		if w.servers[i] == nil {
-			continue
-		}
-		for j := 0; j < len(spuirs); j++ {
-			if w.servers[j] == nil {
-				continue
-			}
-			if i == j {
-				continue
-			}
-			for _, validTicket := range spuirs[i].Tickets {
-				for _, invalidTicket := range spuirs[j].InvalidTickets {
-					if validTicket.Ticket == invalidTicket {
-						hash, err := chainhash.NewHashFromStr(validTicket.Ticket)
-						if err != nil {
-							return err
-						}
-						tx, err := w.fetchTransaction(hash)
-						if err != nil {
-							return err
-						}
-
-						log.Infof("adding formally invalid ticket %v to %v", hash, i)
-						err = w.servers[j].AddTicket(tx)
-						if err != nil {
-							return err
-						}
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-
-// checkForSyncness is a helper function to iterate through results
-// of StakePoolUserInfo requests from all the wallets and ensure
-// that each share the others PoolTickets and have the same
-// valid/invalid lists.  If any thing is deemed off then syncTickets
-// call is made.
-func (w *walletSvrManager) checkForSyncness(spuirs []*wallettypes.StakePoolUserInfoResult) bool {
-	for i := 0; i < len(spuirs); i++ {
-		if spuirs[i] == nil {
-			continue
-		}
-		for k := 0; k < len(spuirs); k++ {
-			if spuirs[k] == nil {
-				continue
-			}
-			if &spuirs[i] == &spuirs[k] {
-				continue
-			}
-			if len(spuirs[i].Tickets) != len(spuirs[k].Tickets) {
-				log.Infof("valid tickets len don't match! server %v has %v "+
-					"server %v has %v", i, len(spuirs[i].Tickets), k,
-					len(spuirs[k].Tickets))
-				return false
-			}
-			if len(spuirs[i].InvalidTickets) != len(spuirs[k].InvalidTickets) {
-				log.Infof("invalid tickets len don't match! server %v has %v "+
-					"server %v has %v", i, len(spuirs[i].Tickets), k,
-					len(spuirs[k].Tickets))
-				return false
-			}
-			/* TODO
-			// for now we are going to just consider the situation where the
-			// lengths of invalid/valid tickets differ.  When we have
-			// better infrastructure in stakepool wallets to update pool
-			// ticket status we can dig deeper into the scenarios and
-			// how best to resolve them.
-			for y := range spuirs[i].Tickets {
-				found := false
-				for z := range spuirs[k].Tickets {
-					if spuirs[i].Tickets[y] == spuirs[k].Tickets[z] {
-						found = true
-						break
-					}
-				}
-				if !found {
-					log.Infof("ticket not found! %v %v", i, spuirs[i].Tickets[y])
-					return false
-				}
-			}
-			for y := range spuirs[i].InvalidTickets {
-				found := false
-				for z := range spuirs[k].InvalidTickets {
-					if spuirs[i].InvalidTickets[y] == spuirs[k].InvalidTickets[z] {
-						found = true
-						break
-					}
-				}
-				if !found {
-					log.Infof("invalid ticket not found! %v %v", i, spuirs[i].InvalidTickets[y])
-					return false
-				}
-			}
-			*/
-		}
-	}
-	return true
 }
 
 // ValidateAddress
@@ -639,22 +448,6 @@ func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*w
 	}
 	response := <-reply
 	return response.multisigInfo, response.err
-}
-
-// StakePoolUserInfo gets the voting service user information for a given user.
-//
-// This can race depending on what wallet is currently processing, so failures
-// from this function should NOT cause fatal errors on the web server like the
-// other RPC client calls.
-func (w *walletSvrManager) StakePoolUserInfo(userAddr dcrutil.Address, takeFirstResponse bool) (*wallettypes.StakePoolUserInfoResult, error) {
-	reply := make(chan stakePoolUserInfoResponse)
-	w.msgChan <- stakePoolUserInfoMsg{
-		userAddr:          userAddr,
-		reply:             reply,
-		takeFirstResponse: takeFirstResponse,
-	}
-	response := <-reply
-	return response.userInfo, response.err
 }
 
 // GetBestBlock gets the current best block according the first wallet asked.
