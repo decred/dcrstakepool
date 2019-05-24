@@ -11,8 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"google.golang.org/grpc"
-
 	"github.com/gorilla/context"
 	"github.com/gorilla/csrf"
 
@@ -84,14 +82,12 @@ func runMain() error {
 	// Supported API versions are advertised in the API stats result
 	APIVersionsSupported := []int{1, 2}
 
-	grpcConnections := make([]*grpc.ClientConn, len(cfg.StakepooldHosts))
+	var stakepooldConnMan *stakepooldclient.StakepooldManager
 
 	if cfg.EnableStakepoold {
-		for i := range cfg.StakepooldHosts {
-			grpcConnections[i], err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts, i)
-			if err != nil {
-				return fmt.Errorf("Failed to connect to stakepoold host %d: %v", i, err)
-			}
+		stakepooldConnMan, err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts)
+		if err != nil {
+			return fmt.Errorf("Failed to connect to stakepoold host: %v", err)
 		}
 	}
 
@@ -104,7 +100,7 @@ func runMain() error {
 	controller, err := controllers.NewMainController(activeNetParams.Params,
 		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported,
 		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
-		cfg.ColdWalletExtPub, grpcConnections, cfg.PoolFees, cfg.PoolEmail,
+		cfg.ColdWalletExtPub, stakepooldConnMan, cfg.PoolFees, cfg.PoolEmail,
 		cfg.PoolLink, sender, cfg.WalletHosts, cfg.WalletCerts,
 		cfg.WalletUsers, cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader,
 		cfg.VotingWalletExtPub, cfg.MaxVotedAge, cfg.Description, cfg.Designation)
@@ -131,22 +127,18 @@ func runMain() error {
 		if err != nil {
 			return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
 		}
-		for i := range grpcConnections {
-			addedLowFeeTickets, err := stakepooldclient.StakepooldGetAddedLowFeeTickets(grpcConnections[i])
-			if err != nil {
-				return fmt.Errorf("GetAddedLowFeeTickets failed on host %d: %v", i, err)
-			}
-			ignoredLowFeeTickets, err := stakepooldclient.StakepooldGetIgnoredLowFeeTickets(grpcConnections[i])
-			if err != nil {
-				return fmt.Errorf("GetIgnoredLowFeeTickets failed on host %d: %v", i, err)
-			}
-			liveTickets, err := stakepooldclient.StakepooldGetLiveTickets(grpcConnections[i])
-			if err != nil {
-				return fmt.Errorf("GetLiveTickets failed on host %d: %v", i, err)
-			}
-			log.Infof("stakepoold %d reports ticket totals of AddedLowFee %v "+
-				"IgnoredLowFee %v Live %v", i, len(addedLowFeeTickets),
-				len(ignoredLowFeeTickets), len(liveTickets))
+		// Log the reported count of ignored/added/live tickets from each stakepoold
+		_, err = controller.StakepooldServers.GetIgnoredLowFeeTickets()
+		if err != nil {
+			return fmt.Errorf("GetIgnoredLowFeeTickets failed on host: %v", err)
+		}
+		_, err = controller.StakepooldServers.GetAddedLowFeeTickets()
+		if err != nil {
+			return fmt.Errorf("GetAddedLowFeeTickets failed on host: %v", err)
+		}
+		_, err = controller.StakepooldServers.GetLiveTickets()
+		if err != nil {
+			return fmt.Errorf("GetLiveTickets failed on host: %v", err)
 		}
 	}
 
