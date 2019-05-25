@@ -263,24 +263,24 @@ func fileExists(name string) bool {
 	return true
 }
 
-// validate pub vote and key keys as belonging to the network
+// validate pub vote and fee keys as belonging to the network
 func (c *config) parsePubKeys(params *chaincfg.Params) error {
 	// Parse the extended public key and the pool fees.
 	var err error
 	coldWalletFeeKey, err = hdkeychain.NewKeyFromString(c.ColdWalletExtPub)
 	if err != nil {
-		return err
+		return fmt.Errorf("cold wallet extended public key: %v", err)
 	}
 	if !coldWalletFeeKey.IsForNet(params) {
-		return fmt.Errorf("fee extended public key is for wrong network")
+		return fmt.Errorf("cold wallet extended public key is for wrong network")
 	}
 	// Parse the extended public key for the voting addresses.
 	votingWalletVoteKey, err = hdkeychain.NewKeyFromString(c.VotingWalletExtPub)
 	if err != nil {
-		return err
+		return fmt.Errorf("voting wallet extended public key: %v", err)
 	}
 	if !votingWalletVoteKey.IsForNet(params) {
-		return fmt.Errorf("voting extended public key is for wrong network")
+		return fmt.Errorf("voting wallet extended public key is for wrong network")
 	}
 	return nil
 }
@@ -495,13 +495,6 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
-	if err := cfg.parsePubKeys(activeNetParams.Params); err != nil {
-		str := "%s: Failed to parse Pubkeys"
-		err := fmt.Errorf(str+": %v", funcName, err)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
 	if cfg.APISecret == "" {
 		str := "%s: APIsecret is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -547,6 +540,12 @@ func loadConfig() (*config, []string, error) {
 	if len(cfg.VotingWalletExtPub) == 0 {
 		str := "%s: votingwalletextpub is not set in config"
 		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if err := cfg.parsePubKeys(activeNetParams.Params); err != nil {
+		err := fmt.Errorf("%s: failed to parse extended public keys: %v", funcName, err)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
