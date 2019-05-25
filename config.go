@@ -285,14 +285,6 @@ func (c *config) parsePubKeys(params *chaincfg.Params) error {
 	return nil
 }
 
-func (c *config) GetFeeKey() *hdkeychain.ExtendedKey {
-	return coldWalletFeeKey
-}
-
-func (c *config) GetVoteKey() *hdkeychain.ExtendedKey {
-	return votingWalletVoteKey
-}
-
 // newConfigParser returns a new command line flags parser.
 func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *flags.Parser {
 	parser := flags.NewParser(cfg, options)
