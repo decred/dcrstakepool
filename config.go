@@ -15,7 +15,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrstakepool/internal/version"
 	flags "github.com/jessevdk/go-flags"
 )
@@ -51,6 +53,8 @@ var (
 	defaultConfigFile   = filepath.Join(dcrstakepoolHomeDir, defaultConfigFilename)
 	defaultDataDir      = filepath.Join(dcrstakepoolHomeDir, defaultDataDirname)
 	defaultLogDir       = filepath.Join(dcrstakepoolHomeDir, defaultLogDirname)
+	coldWalletFeeKey    *hdkeychain.ExtendedKey
+	votingWalletVoteKey *hdkeychain.ExtendedKey
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -259,6 +263,36 @@ func fileExists(name string) bool {
 	return true
 }
 
+// validate pub vote and key keys as belonging to the network
+func (c *config) parsePubKeys(params *chaincfg.Params) error {
+	// Parse the extended public key and the pool fees.
+	var err error
+	coldWalletFeeKey, err = hdkeychain.NewKeyFromString(c.ColdWalletExtPub)
+	if err != nil {
+		return err
+	}
+	if !coldWalletFeeKey.IsForNet(params) {
+		return fmt.Errorf("fee extended public key is for wrong network")
+	}
+	// Parse the extended public key for the voting addresses.
+	votingWalletVoteKey, err = hdkeychain.NewKeyFromString(c.VotingWalletExtPub)
+	if err != nil {
+		return err
+	}
+	if !votingWalletVoteKey.IsForNet(params) {
+		return fmt.Errorf("voting extended public key is for wrong network")
+	}
+	return nil
+}
+
+func (c *config) GetFeeKey() *hdkeychain.ExtendedKey {
+	return coldWalletFeeKey
+}
+
+func (c *config) GetVoteKey() *hdkeychain.ExtendedKey {
+	return votingWalletVoteKey
+}
+
 // newConfigParser returns a new command line flags parser.
 func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *flags.Parser {
 	parser := flags.NewParser(cfg, options)
@@ -459,6 +493,13 @@ func loadConfig() (*config, []string, error) {
 			fmt.Fprintln(os.Stderr, usageMessage)
 			return nil, nil, err
 		}
+	}
+
+	if err := cfg.parsePubKeys(activeNetParams.Params); err != nil {
+		str := "%s: Failed to parse Pubkeys"
+		err := fmt.Errorf(str+": %v", funcName, err)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
 	}
 
 	if cfg.APISecret == "" {
