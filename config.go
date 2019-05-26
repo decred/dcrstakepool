@@ -109,7 +109,6 @@ type config struct {
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
 	MinServers         int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
-	EnableStakepoold   bool     `long:"enablestakepoold" description:"Enable communication with stakepoold"`
 	MaxVotedAge        int64    `long:"maxvotedage" description:"Maximum vote age (blocks since vote) to include in voted tickets table"`
 	Description        string   `long:"description" description:"Operators own description of their VSP"`
 	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
@@ -624,59 +623,57 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
-	if cfg.EnableStakepoold {
-		if len(cfg.StakepooldHosts) == 0 {
-			str := "%s: stakepooldhosts is not set in config"
-			err := fmt.Errorf(str, funcName)
-			fmt.Fprintln(os.Stderr, err)
-			return nil, nil, err
-		}
+	if len(cfg.StakepooldHosts) == 0 {
+		str := "%s: stakepooldhosts is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
 
-		if len(cfg.StakepooldCerts) == 0 {
-			str := "%s: stakepooldcerts is not set in config"
-			err := fmt.Errorf(str, funcName)
-			fmt.Fprintln(os.Stderr, err)
-			return nil, nil, err
-		}
+	if len(cfg.StakepooldCerts) == 0 {
+		str := "%s: stakepooldcerts is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
 
-		cfg.StakepooldHosts = strings.Split(cfg.StakepooldHosts[0], ",")
-		cfg.StakepooldCerts = strings.Split(cfg.StakepooldCerts[0], ",")
+	cfg.StakepooldHosts = strings.Split(cfg.StakepooldHosts[0], ",")
+	cfg.StakepooldCerts = strings.Split(cfg.StakepooldCerts[0], ",")
 
-		// Add default stakepoold port for the active network if there's
-		// no port specified
-		cfg.StakepooldHosts = normalizeAddresses(cfg.StakepooldHosts,
-			activeNetParams.StakepooldRPCServerPort)
-		if len(cfg.StakepooldHosts) < 2 {
-			str := "%s: you must specify at least 2 stakepooldhosts"
-			err := fmt.Errorf(str, funcName)
-			fmt.Fprintln(os.Stderr, err)
-			return nil, nil, err
-		}
+	// Add default stakepoold port for the active network if there's
+	// no port specified
+	cfg.StakepooldHosts = normalizeAddresses(cfg.StakepooldHosts,
+		activeNetParams.StakepooldRPCServerPort)
+	if len(cfg.StakepooldHosts) < 2 {
+		str := "%s: you must specify at least 2 stakepooldhosts"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
 
-		if len(cfg.StakepooldHosts) != len(cfg.StakepooldCerts) {
-			str := "%s: wallet configuration mismatch " +
-				"(stakepooldcerts and stakepooldhosts " +
-				"counts differ)"
-			err := fmt.Errorf(str, funcName)
-			fmt.Fprintln(os.Stderr, err)
-			return nil, nil, err
-		}
+	if len(cfg.StakepooldHosts) != len(cfg.StakepooldCerts) {
+		str := "%s: wallet configuration mismatch " +
+			"(stakepooldcerts and stakepooldhosts " +
+			"counts differ)"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
 
-		for idx := range cfg.StakepooldCerts {
-			if !fileExists(cfg.StakepooldCerts[idx]) {
-				path := filepath.Join(dcrstakepoolHomeDir,
-					cfg.StakepooldCerts[idx])
-				if !fileExists(path) {
-					str := "%s: stakepooldcert " +
-						cfg.StakepooldCerts[idx] +
-						" and " + path + " don't exist"
-					err := fmt.Errorf(str, funcName)
-					fmt.Fprintln(os.Stderr, err)
-					return nil, nil, err
-				}
-
-				cfg.StakepooldCerts[idx] = path
+	for idx := range cfg.StakepooldCerts {
+		if !fileExists(cfg.StakepooldCerts[idx]) {
+			path := filepath.Join(dcrstakepoolHomeDir,
+				cfg.StakepooldCerts[idx])
+			if !fileExists(path) {
+				str := "%s: stakepooldcert " +
+					cfg.StakepooldCerts[idx] +
+					" and " + path + " don't exist"
+				err := fmt.Errorf(str, funcName)
+				fmt.Fprintln(os.Stderr, err)
+				return nil, nil, err
 			}
+
+			cfg.StakepooldCerts[idx] = path
 		}
 	}
 
