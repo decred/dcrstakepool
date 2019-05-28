@@ -39,9 +39,7 @@
                 {{end}}
             </form>
           {{else}} <!-- Render CAPTCHA -->
-            <div class="col-12 p-0">
-              {{ template "captcha" . }}
-            </div>
+            {{ template "captcha" . }}
           {{end}}
         </div>
 				

@@ -24,8 +24,8 @@
 					<div class="col-12 block__title">
 						<h1><span>Change Email Address</span></h1>
 					</div>
-					<div class="w-100 form form--narrow-inputs">
 					{{if .CaptchaDone}}
+					<div class="w-100 form form--narrow-inputs">
 						<form method="post" id="ChangeEmail" >
 							<div class="col-12 mb-4">
 								<div class="form-group row mb-0 align-items-center">
@@ -43,12 +43,10 @@
 							<input type="hidden" name="updateEmail" value="true">
 							<input type="submit" class="btn mb-2" value="Change Email">
 						</form>
-					{{else}} <!-- Render CAPTCHA -->
-						<div class="col-12">
-							{{ template "captcha" . }}
-						</div>
-					{{end}}
 					</div>
+					{{else}} <!-- Render CAPTCHA -->
+						{{ template "captcha" . }}
+					{{end}}
 
 				</section>
 			
