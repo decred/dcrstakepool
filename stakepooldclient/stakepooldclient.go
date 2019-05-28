@@ -174,7 +174,9 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 	return nil
 }
 
-//
+// StakePoolUserInfo performs gRPC StakePoolUserInfo. It sends requests to
+// instances of stakepoold and returns the first successful response. Returns
+// an error if RPC to all instances of stakepoold fail
 func (s *StakepooldManager) StakePoolUserInfo(multiSigAddress string) (*pb.StakePoolUserInfoResponse, error) {
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
