@@ -40,17 +40,17 @@ type keyParse struct {
 //in keys, expected out keys, and error value
 var keyTestValues = []keyParse{
 	//testnet
-	keyParse{testNet3Params.Params, keysIn{testnetXPub1, testnetXPub2}, keysOut{hd(testnetXPub1), hd(testnetXPub2)}, false},
-	keyParse{testNet3Params.Params, keysIn{testnetXPub1, mainnetXPub2}, keysOut{hd(testnetXPub1), hd(mainnetXPub2)}, true},
-	keyParse{testNet3Params.Params, keysIn{"", mainnetXPub2}, keysOut{hd(""), hd(mainnetXPub2)}, true},
+	{testNet3Params.Params, keysIn{testnetXPub1, testnetXPub2}, keysOut{hd(testnetXPub1), hd(testnetXPub2)}, false},
+	{testNet3Params.Params, keysIn{testnetXPub1, mainnetXPub2}, keysOut{hd(testnetXPub1), hd(mainnetXPub2)}, true},
+	{testNet3Params.Params, keysIn{"", mainnetXPub2}, keysOut{hd(""), hd(mainnetXPub2)}, true},
 	//mainnet
-	keyParse{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2}, keysOut{hd(mainnetXPub1), hd(mainnetXPub2)}, false},
-	keyParse{mainNetParams.Params, keysIn{simnetXPub1, mainnetXPub2}, keysOut{hd(simnetXPub1), hd(mainnetXPub2)}, true},
-	keyParse{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2 + "a"}, keysOut{hd(mainnetXPub1), hd(mainnetXPub2 + "a")}, true},
+	{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2}, keysOut{hd(mainnetXPub1), hd(mainnetXPub2)}, false},
+	{mainNetParams.Params, keysIn{simnetXPub1, mainnetXPub2}, keysOut{hd(simnetXPub1), hd(mainnetXPub2)}, true},
+	{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2 + "a"}, keysOut{hd(mainnetXPub1), hd(mainnetXPub2 + "a")}, true},
 	//simnnet
-	keyParse{simNetParams.Params, keysIn{simnetXPub1, simnetXPub2}, keysOut{hd(simnetXPub1), hd(simnetXPub2)}, false},
-	keyParse{simNetParams.Params, keysIn{testnetXPub1, simnetXPub2}, keysOut{hd(testnetXPub1), hd(simnetXPub2)}, true},
-	keyParse{simNetParams.Params, keysIn{simnetXPub1[:len(simnetXPub1)-1], simnetXPub2}, keysOut{hd(simnetXPub1[:len(simnetXPub1)-1]), hd(simnetXPub2)}, true},
+	{simNetParams.Params, keysIn{simnetXPub1, simnetXPub2}, keysOut{hd(simnetXPub1), hd(simnetXPub2)}, false},
+	{simNetParams.Params, keysIn{testnetXPub1, simnetXPub2}, keysOut{hd(testnetXPub1), hd(simnetXPub2)}, true},
+	{simNetParams.Params, keysIn{simnetXPub1[:len(simnetXPub1)-1], simnetXPub2}, keysOut{hd(simnetXPub1[:len(simnetXPub1)-1]), hd(simnetXPub2)}, true},
 }
 
 //helper func string to extended key
