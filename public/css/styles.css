@@ -8699,8 +8699,9 @@ https://flickity.metafizzy.co
 .flickity-page-dots .dot.is-selected {
   opacity: 1; }
 
-  .snackbar {
+.snackbar {
   color: #48566E;
+  position: relative;
   margin: auto;
   border-radius: 5px;
   line-height: 17px;
@@ -8744,4 +8745,16 @@ https://flickity.metafizzy.co
 }
 .snackbar.snackbar-key-success {
   background-image: url(/assets/images/notifications/key-success.svg);
+}
+
+.snackbar-close-button-top {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  height: 11px;
+  width: 11px;
+  background-image: url(/assets/images/close-cross-icon.svg);
+  background-size: 11px;
+  background-repeat: no-repeat;
+  cursor: pointer;
 }

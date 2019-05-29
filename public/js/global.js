@@ -113,6 +113,15 @@ $('.form-check-input').change(function () {
   }
 });
 
+$(document).ready(function () {
+  // display close buttons on snackbar notifications
+  $('.snackbar-close-button-top').removeClass('d-none');
+  // add click listener to close buttons
+  $('.snackbar-close-button-top').on('click', function(e){
+    $(this).parent().parent().fadeOut();
+  });
+});
+
 //carousel dot tooltip setup
 $(document).ready(function() {
   $('.carousel-nav__dot').tooltip({
