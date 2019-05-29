@@ -8709,6 +8709,7 @@ https://flickity.metafizzy.co
   display:inline-block;
   font-size: 15px;
   min-height: 60px;
+  max-width: 500px;
   padding: 20px 34px 10px 60px;
   transition: box-shadow 0.2s;
   background-position: 15px 15px;
