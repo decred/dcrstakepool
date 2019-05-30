@@ -113,7 +113,7 @@ type config struct {
 	Description        string   `long:"description" description:"Operators own description of their VSP"`
 	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
 	//deprecated
-	EnableStakepoold   bool     `long:"enablestakepoold" description:"This option has been deprecated and is not settable"`
+	EnableStakepoold bool `long:"enablestakepoold" description:"This option has been deprecated and is not settable"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service

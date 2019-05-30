@@ -102,7 +102,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	closePool bool, closePoolMsg string, feeKey *hdkeychain.ExtendedKey,
 	stakepooldConnMan *stakepooldclient.StakepooldManager, poolFees float64,
 	poolEmail, poolLink string, emailSender email.Sender, walletHosts, walletCerts,
-	walletUsers, walletPasswords []string, minServers int, realIPHeader,
+	walletUsers, walletPasswords []string, minServers int, realIPHeader string,
 	voteKey *hdkeychain.ExtendedKey, maxVotedAge int64, description string,
 	designation string) (*MainController, error) {
 
