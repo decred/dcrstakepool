@@ -13,12 +13,12 @@
     <h1>We could not process your request</h1>
 	{{if .RateLimited}}
             <p>Your request has been rate limited to lighten the load on the servers.
-            {{if .Referer}}<a href="{{ .Referer }}">{{end}}Please re-try your request.{{if .Referer}}</a>{{end}}</p>
+            Please re-try your request.</p>
         {{end}}
         {{if not .RateLimited}}
 	{{if eq .RPCStatus "Running"}}
            <p>A temporary error occurred. This can happen due to RPC results being temporarily out of sync.
-         {{if .Referer}}<a href="{{ .Referer }}">{{end}}Please re-try your request.{{if .Referer}}</a>{{end}}</p>
+         Please re-try your request.</p>
          {{end}}
          {{if eq .RPCStatus "Stopped"}}
             <p>The voting service is currently not processing RPC commands so most functionality of the web interface will not work until connections to the RPC server is restored.  <b>Wallets are still online and voting.</b></p>

@@ -1266,7 +1266,6 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 	c.Env["Title"] = "Decred VSP - Error"
 	c.Env["RPCStatus"] = rpcstatus
 	c.Env["RateLimited"] = r.URL.Query().Get("rl")
-	c.Env["Referer"] = r.URL.Query().Get("r")
 
 	widgets := controller.Parse(t, "error", c.Env)
 	c.Env["Designation"] = controller.designation
