@@ -15,7 +15,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrstakepool/internal/version"
 	flags "github.com/jessevdk/go-flags"
 )
@@ -51,6 +53,8 @@ var (
 	defaultConfigFile   = filepath.Join(dcrstakepoolHomeDir, defaultConfigFilename)
 	defaultDataDir      = filepath.Join(dcrstakepoolHomeDir, defaultDataDirname)
 	defaultLogDir       = filepath.Join(dcrstakepoolHomeDir, defaultLogDirname)
+	coldWalletFeeKey    *hdkeychain.ExtendedKey
+	votingWalletVoteKey *hdkeychain.ExtendedKey
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -257,6 +261,28 @@ func fileExists(name string) bool {
 		}
 	}
 	return true
+}
+
+// validate pub vote and fee keys as belonging to the network
+func (c *config) parsePubKeys(params *chaincfg.Params) error {
+	// Parse the extended public key and the pool fees.
+	var err error
+	coldWalletFeeKey, err = hdkeychain.NewKeyFromString(c.ColdWalletExtPub)
+	if err != nil {
+		return fmt.Errorf("cold wallet extended public key: %v", err)
+	}
+	if !coldWalletFeeKey.IsForNet(params) {
+		return fmt.Errorf("cold wallet extended public key is for wrong network")
+	}
+	// Parse the extended public key for the voting addresses.
+	votingWalletVoteKey, err = hdkeychain.NewKeyFromString(c.VotingWalletExtPub)
+	if err != nil {
+		return fmt.Errorf("voting wallet extended public key: %v", err)
+	}
+	if !votingWalletVoteKey.IsForNet(params) {
+		return fmt.Errorf("voting wallet extended public key is for wrong network")
+	}
+	return nil
 }
 
 // newConfigParser returns a new command line flags parser.
@@ -506,6 +532,12 @@ func loadConfig() (*config, []string, error) {
 	if len(cfg.VotingWalletExtPub) == 0 {
 		str := "%s: votingwalletextpub is not set in config"
 		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if err := cfg.parsePubKeys(activeNetParams.Params); err != nil {
+		err := fmt.Errorf("%s: failed to parse extended public keys: %v", funcName, err)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
