@@ -162,7 +162,7 @@ func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakeP
 		return nil, err
 	}
 
-	tickets := make([]*pb.StakePoolUserTicket, len(response.Tickets))
+	tickets := make([]*pb.StakePoolUserTicket, 0, len(response.Tickets))
 	for _, t := range response.Tickets {
 		tickets = append(tickets, &pb.StakePoolUserTicket{
 			Status:        t.Status,
