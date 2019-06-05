@@ -155,3 +155,26 @@ func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScrip
 		HeightImported: heightImported,
 	}, nil
 }
+
+func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakePoolUserInfoRequest) (*pb.StakePoolUserInfoResponse, error) {
+	response, err := s.appContext.StakePoolUserInfo(req.MultiSigAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	tickets := make([]*pb.StakePoolUserTicket, 0, len(response.Tickets))
+	for _, t := range response.Tickets {
+		tickets = append(tickets, &pb.StakePoolUserTicket{
+			Status:        t.Status,
+			Ticket:        t.Ticket,
+			TicketHeight:  t.TicketHeight,
+			SpentBy:       t.SpentBy,
+			SpentByHeight: t.SpentByHeight,
+		})
+	}
+
+	return &pb.StakePoolUserInfoResponse{
+		Tickets:        tickets,
+		InvalidTickets: response.InvalidTickets,
+	}, nil
+}

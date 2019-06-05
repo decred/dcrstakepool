@@ -10,6 +10,7 @@ service StakepooldService {
 	rpc SetAddedLowFeeTickets (SetAddedLowFeeTicketsRequest) returns (SetAddedLowFeeTicketsResponse);
 	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
 	rpc ImportScript (ImportScriptRequest) returns (ImportScriptResponse);
+	rpc StakePoolUserInfo (StakePoolUserInfoRequest) returns (StakePoolUserInfoResponse);
 }
 
 service VersionService {
@@ -51,6 +52,22 @@ message ImportScriptRequest {
 }
 message ImportScriptResponse {
 	int64 HeightImported = 1;
+}
+
+message StakePoolUserInfoRequest {
+	string MultiSigAddress = 1;
+}
+message StakePoolUserInfoResponse {
+	repeated StakePoolUserTicket Tickets = 1;
+	repeated string InvalidTickets = 2;
+}
+
+message StakePoolUserTicket {
+	string Status = 1;
+	string Ticket = 2;
+	uint32 TicketHeight = 3;
+	string SpentBy = 4;
+	uint32 SpentByHeight = 5;
 }
 
 message Ticket {

@@ -174,6 +174,28 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 	return nil
 }
 
+// StakePoolUserInfo performs gRPC StakePoolUserInfo. It sends requests to
+// instances of stakepoold and returns the first successful response. Returns
+// an error if RPC to all instances of stakepoold fail
+func (s *StakepooldManager) StakePoolUserInfo(multiSigAddress string) (*pb.StakePoolUserInfoResponse, error) {
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		request := &pb.StakePoolUserInfoRequest{
+			MultiSigAddress: multiSigAddress,
+		}
+		response, err := client.StakePoolUserInfo(context.Background(), request)
+		if err != nil {
+			log.Warnf("StakePoolUserInfo RPC failed on stakepoold instance %d: %v", i, err)
+			continue
+		}
+
+		return response, nil
+	}
+
+	// All RPC requests failed
+	return nil, errors.New("StakePoolUserInfo RPC failed on all stakepoold instances")
+}
+
 // SetUserVotingPrefs performs gRPC SetUserVotingPrefs. It stops
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) error {

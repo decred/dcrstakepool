@@ -292,6 +292,22 @@ func (ctx *AppContext) ImportScript(script []byte) (int64, error) {
 	return block, nil
 }
 
+func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
+	decodedMultisig, err := dcrutil.DecodeAddress(multisigAddress)
+	if err != nil {
+		log.Errorf("StakePoolUserInfo: Address could not be decoded %v: %v", multisigAddress, err)
+		return nil, err
+	}
+
+	response, err := ctx.WalletConnection.StakePoolUserInfo(decodedMultisig)
+	if err != nil {
+		log.Errorf("StakePoolUserInfo: StakePoolUserInfo rpc failed: %v", err)
+		return nil, err
+	}
+
+	return response, nil
+}
+
 func (ctx *AppContext) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	log.Debug("updateUserData ctx.Lock")
 	ctx.Lock()
