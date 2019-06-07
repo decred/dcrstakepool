@@ -308,6 +308,16 @@ func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.S
 	return response, nil
 }
 
+func (ctx *AppContext) WalletInfo() (*wallettypes.WalletInfoResult, error) {
+	response, err := ctx.WalletConnection.WalletInfo()
+	if err != nil {
+		log.Errorf("WalletInfo: WalletInfo rpc failed: %v", err)
+		return nil, err
+	}
+
+	return response, nil
+}
+
 func (ctx *AppContext) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	log.Debug("updateUserData ctx.Lock")
 	ctx.Lock()

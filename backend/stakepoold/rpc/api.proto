@@ -11,6 +11,7 @@ service StakepooldService {
 	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
 	rpc ImportScript (ImportScriptRequest) returns (ImportScriptResponse);
 	rpc StakePoolUserInfo (StakePoolUserInfoRequest) returns (StakePoolUserInfoResponse);
+	rpc WalletInfo (WalletInfoRequest) returns (WalletInfoResponse);
 }
 
 service VersionService {
@@ -60,6 +61,12 @@ message StakePoolUserInfoRequest {
 message StakePoolUserInfoResponse {
 	repeated StakePoolUserTicket Tickets = 1;
 	repeated string InvalidTickets = 2;
+}
+
+message WalletInfoRequest {
+}
+message WalletInfoResponse {
+	uint32 VoteVersion = 1;
 }
 
 message StakePoolUserTicket {
