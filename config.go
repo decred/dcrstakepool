@@ -624,6 +624,10 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
+	if cfg.EnableStakepoold {
+		fmt.Fprintln(os.Stderr, "Option --enablestakepoold is deprecated.  Please remove from your config file")
+	}
+
 	if len(cfg.StakepooldHosts) == 0 {
 		str := "%s: stakepooldhosts is not set in config"
 		err := fmt.Errorf(str, funcName)
