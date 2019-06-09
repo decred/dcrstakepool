@@ -70,7 +70,7 @@ type MainController struct {
 	emailSender          email.Sender
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
-	maxVotedAge          int64
+	maxVotedTickets      int
 	description          string
 	designation          string
 }
@@ -103,7 +103,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	stakepooldConnMan *stakepooldclient.StakepooldManager, poolFees float64,
 	poolEmail, poolLink string, emailSender email.Sender, walletHosts, walletCerts,
 	walletUsers, walletPasswords []string, minServers int, realIPHeader string,
-	voteKey *hdkeychain.ExtendedKey, maxVotedAge int64, description string,
+	voteKey *hdkeychain.ExtendedKey, maxVotedTickets int, description string,
 	designation string) (*MainController, error) {
 
 	rpcs, err := newWalletSvrManager(walletHosts, walletCerts, walletUsers, walletPasswords, minServers)
@@ -135,7 +135,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		realIPHeader:         realIPHeader,
 		emailSender:          emailSender,
 		votingXpub:           voteKey,
-		maxVotedAge:          maxVotedAge,
+		maxVotedTickets:      maxVotedTickets,
 		description:          description,
 		designation:          designation,
 	}
@@ -1890,8 +1890,6 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	log.Infof("Tickets GET from %v, multisig %v", remoteIP,
 		user.MultiSigAddress)
 
-	w := controller.rpcServers
-
 	start := time.Now()
 
 	spui, err := controller.StakepooldServers.StakePoolUserInfo(multisig.String())
@@ -1905,16 +1903,6 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	log.Debugf(":: StakePoolUserInfo (msa = %v) execution time: %v",
 		user.MultiSigAddress, time.Since(start))
-
-	// Compute the oldest (min) ticket spend height to include in the table
-	_, height, err := w.GetBestBlock()
-	if err != nil {
-		log.Infof("RPC GetBestBlock failed: %v", err)
-		session.AddFlash("Unable to get best block height", "main")
-		c.Env["Flash"] = session.Flashes("main")
-		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
-	}
-	minVotedHeight := height - controller.maxVotedAge
 
 	// If the user has tickets, get their info
 	if spui != nil && len(spui.Tickets) > 0 {
@@ -1939,7 +1927,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 				})
 			case "voted":
 				numVoted++
-				if int64(ticket.SpentByHeight) >= minVotedHeight {
+				if len(ticketInfoVoted) < controller.maxVotedTickets {
 					ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
 						Ticket:        ticket.Ticket,
 						SpentBy:       ticket.SpentBy,
