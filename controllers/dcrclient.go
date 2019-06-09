@@ -631,15 +631,6 @@ func (w *walletSvrManager) WalletStatus() ([]*wallettypes.WalletInfoResult, erro
 	return w.connected()
 }
 
-func getWalletVoteVersion(client *rpcclient.Client) (uint32, error) {
-	wi, err := client.WalletInfo()
-	if err != nil {
-		return 0, err
-	}
-
-	return wi.VoteVersion, nil
-}
-
 // checkIfWalletConnected checks to see if the passed wallet's client is connected
 // and if the wallet is unlocked.
 func checkIfWalletConnected(client *rpcclient.Client) error {
@@ -682,47 +673,6 @@ func (w *walletSvrManager) fetchTransaction(txHash *chainhash.Hash) (*dcrutil.Tx
 	}
 
 	return tx, nil
-}
-
-// checkWalletsVoteVersion returns a consistent vote version between all wallets
-// or an error indicating a mismatch
-func checkWalletsVoteVersion(wsm *walletSvrManager) (uint32, error) {
-	defaultVoteVersion := uint32(0)
-	walletVoteVersions := make(map[int]uint32)
-
-	// grab Vote Version from all wallets
-	for i := range wsm.servers {
-		if wsm.servers[i] == nil {
-			continue
-		}
-
-		wvv, err := getWalletVoteVersion(wsm.servers[i])
-		if err != nil {
-			return defaultVoteVersion, err
-		}
-		walletVoteVersions[i] = wvv
-	}
-
-	// ensure Vote Version matches on all wallets
-	lastVersion := uint32(0)
-	lastServer := 0
-	firstrun := true
-	for k, v := range walletVoteVersions {
-		if firstrun {
-			firstrun = false
-			lastVersion = v
-		}
-
-		if v != lastVersion {
-			vErr := fmt.Errorf("wallets %d and %d have mismatched vote versions",
-				k, lastServer)
-			return defaultVoteVersion, vErr
-		}
-
-		lastServer = k
-	}
-
-	return lastVersion, nil
 }
 
 // walletSvrsSync ensures that the wallet servers are all in sync with each
