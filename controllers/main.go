@@ -1848,7 +1848,14 @@ type TicketInfoInvalid struct {
 	Ticket string
 }
 
-// TicketInfoLive represents live or immature (mined) tickets that have yet to
+// TicketInfoImmature represents immature (mined) tickets that have yet to
+// be spent by either a vote or revocation.
+type TicketInfoImmature struct {
+	TicketHeight uint32
+	Ticket       string
+}
+
+// TicketInfoLive represents live tickets that have yet to
 // be spent by either a vote or revocation.
 type TicketInfoLive struct {
 	TicketHeight uint32
@@ -1859,6 +1866,7 @@ type TicketInfoLive struct {
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
 
 	var ticketInfoInvalid []TicketInfoInvalid
+	var ticketInfoImmature []TicketInfoImmature
 	var ticketInfoLive []TicketInfoLive
 	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
 	var numVoted int
@@ -1930,10 +1938,21 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		for _, ticket := range spui.Tickets {
 			switch ticket.Status {
 			case "live":
-				ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
-					TicketHeight: ticket.TicketHeight,
-					Ticket:       ticket.Ticket,
-				})
+
+				maturedHeight := int64(ticket.TicketHeight + uint32(controller.params.TicketMaturity) + 1)
+
+				if height >= maturedHeight {
+					ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
+						TicketHeight: ticket.TicketHeight,
+						Ticket:       ticket.Ticket,
+					})
+				} else {
+					ticketInfoImmature = append(ticketInfoImmature, TicketInfoImmature{
+						TicketHeight: ticket.TicketHeight,
+						Ticket:       ticket.Ticket,
+					})
+				}
+
 			case "expired":
 				ticketInfoExpired = append(ticketInfoExpired, TicketInfoHistoric{
 					Ticket:        ticket.Ticket,
@@ -1977,6 +1996,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["TicketsInvalid"] = ticketInfoInvalid
+	c.Env["TicketsImmature"] = ticketInfoImmature
 	c.Env["TicketsLive"] = ticketInfoLive
 	c.Env["TicketsExpired"] = ticketInfoExpired
 	c.Env["TicketsMissed"] = ticketInfoMissed
