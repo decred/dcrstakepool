@@ -3,6 +3,7 @@ package stakepooldclient
 import (
 	"errors"
 	"fmt"
+	"github.com/decred/dcrd/dcrutil"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -263,6 +264,48 @@ func (s *StakepooldManager) VoteVersion() (uint32, error) {
 	}
 
 	return lastVersion, nil
+}
+
+// ValidateAddress calls ValidateAddress RPC on all stakepoold servers.
+// Returns an error if responses are not the same from all stakepoold instances.
+func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateAddressResponse, error) {
+	responses := make(map[int]*pb.ValidateAddressResponse)
+
+	// Get ValidateAddress response from all wallets
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		req := &pb.ValidateAddressRequest{
+			Address: addr.EncodeAddress(),
+		}
+		resp, err := client.ValidateAddress(context.Background(), req)
+		if err != nil {
+			log.Errorf("ValidateAddress RPC failed on stakepoold instance %d: %v", i, err)
+			return nil, err
+		}
+		responses[i] = resp
+	}
+
+	// Ensure responses are identical
+	var lastResponse *pb.ValidateAddressResponse
+	lastServer := 0
+	firstrun := true
+	for k, v := range responses {
+		if firstrun {
+			firstrun = false
+			lastResponse = v
+		}
+
+		if v.IsMine != lastResponse.IsMine ||
+			v.PubKeyAddr != lastResponse.PubKeyAddr {
+			vErr := fmt.Errorf("wallets %d and %d have different ValideAddress responses",
+				k, lastServer)
+			return nil, vErr
+		}
+
+		lastServer = k
+	}
+
+	return lastResponse, nil
 }
 
 // ImportScript calls ImportScript RPC on all stakepoold instances. It stops

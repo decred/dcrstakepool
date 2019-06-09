@@ -318,6 +318,22 @@ func (ctx *AppContext) WalletInfo() (*wallettypes.WalletInfoResult, error) {
 	return response, nil
 }
 
+func (ctx *AppContext) ValidateAddress(address string) (*wallettypes.ValidateAddressWalletResult, error) {
+	addr, err := dcrutil.DecodeAddress(address)
+	if err != nil {
+		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
+		return nil, err
+	}
+
+	response, err := ctx.WalletConnection.ValidateAddress(addr)
+	if err != nil {
+		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
+		return nil, err
+	}
+
+	return response, nil
+}
+
 func (ctx *AppContext) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	log.Debug("updateUserData ctx.Lock")
 	ctx.Lock()

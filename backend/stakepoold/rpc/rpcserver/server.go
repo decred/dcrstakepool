@@ -189,3 +189,15 @@ func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoReq
 		VoteVersion: response.VoteVersion,
 	}, nil
 }
+
+func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.ValidateAddressRequest) (*pb.ValidateAddressResponse, error) {
+	response, err := s.appContext.ValidateAddress(req.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ValidateAddressResponse{
+		IsMine:     response.IsMine,
+		PubKeyAddr: response.PubKeyAddr,
+	}, nil
+}
