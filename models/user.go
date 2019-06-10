@@ -210,7 +210,7 @@ func InsertPasswordReset(dbMap *gorp.DbMap, passwordReset *PasswordReset) error 
 
 // SetUserAPIToken generates and saves a unique API Token for a user.
 func SetUserAPIToken(dbMap *gorp.DbMap, APISecret string, baseURL string,
-	id int64) error {
+	id int64) (string, error) {
 	var user *User
 	token := jwt.New(jwt.SigningMethodHS256)
 
@@ -223,17 +223,17 @@ func SetUserAPIToken(dbMap *gorp.DbMap, APISecret string, baseURL string,
 
 	tokenString, err := token.SignedString([]byte(APISecret))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 	user.APIToken = tokenString
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, err = dbMap.Update(user)
-	return err
+	return tokenString, err
 }
 
 // UpdateUserByID updates a user, specified by id, in the DB with a new
@@ -273,15 +273,6 @@ func GetAllCurrentMultiSigScripts(dbMap *gorp.DbMap) ([]User, error) {
 		return nil, err
 	}
 	return multiSigs, nil
-}
-
-func GetAllLowFeeTickets(dbMap *gorp.DbMap) ([]LowFeeTicket, error) {
-	var lowFeeTickets []LowFeeTicket
-	_, err := dbMap.Select(&lowFeeTickets, "SELECT * FROM LowFeeTicket")
-	if err != nil {
-		return nil, err
-	}
-	return lowFeeTickets, nil
 }
 
 func GetVotableLowFeeTickets(dbMap *gorp.DbMap) ([]LowFeeTicket, error) {
@@ -387,7 +378,7 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	}
 
 	for _, u := range users {
-		err := SetUserAPIToken(dbMap, APISecret, baseURL, u.Id)
+		_, err := SetUserAPIToken(dbMap, APISecret, baseURL, u.Id)
 		if err != nil {
 			log.Errorf("Unable to set API Token for UserId %v: %v", u.Id, err)
 		}

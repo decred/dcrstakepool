@@ -1,55 +1,121 @@
 {{define "main"}}
 {{template "header" .}}
-  <div class="container">
-  <nav class="navbar navbar-default">
-  <div class="container-fluid">
-    <!-- Brand and toggle get grouped for better mobile display -->
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="navbar-brand" href="#">
-        <svg class="svg-logo">
-        <use xlink:href="assets/svg/sprites.svg#svg-decred-logo" />
-        </svg>
-      </a>
+
+  <nav class="site-header px-3 pt-3">
+    <div class="px-5 pb-3 pb-md-2 float-left">
+      <a class="py-1 border-0 d-flex justify-content-start align-items-center" href="/">
+            <div class="logo--logo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="23" height="20" fill="none" viewBox="0 0 23 20">
+              <path fill="#000" fill-opacity="0" d="M0 0h23v19.167H0z"/>
+              <path fill="#091440" d="M4.792 4.792L0 0h5.175l7.667 7.667H7.667a3.834 3.834 0 1 0 0 7.666h1.917l3.833 3.834h-5.75A7.667 7.667 0 0 1 0 11.5c0-3.11 1.533-5.615 4.792-6.708z"/>
+              <path fill="#091440" d="M18.208 14.375L23 19.167h-5.175L10.158 11.5h5.175a3.834 3.834 0 0 0 0-7.667h-1.917L9.583 0h5.75A7.667 7.667 0 0 1 23 7.667c0 3.109-1.533 5.615-4.792 6.708z"/>
+          </svg>
+        </div>
+            <div class="logo--text">
+          VSP<br>
+          <b>{{$.Designation}}</b>
+        </div>
+          </a>
+        </div>
+        <div class="float-left pl-2">
+
+          <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+              {{if .IsIndex}}active{{end}}"
+            href="/">Home</a>
+
+          <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+              {{if .IsStats}}active{{end}}"
+            href="/stats">Stats</a>
+
+          {{if .Admin}}
+            <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+                {{if .IsAdminTickets}}active{{end}}"
+              href="/admintickets">Add Low Fee Tickets</a>
+
+            <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+                {{if .IsAdminStatus}}active{{end}}"
+              href="/status">Status</a>
+          {{end}}  
+
+          {{if .User}}
+              <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+                  {{if .IsAddress}}active{{end}}"
+                href="/address">Connect to Wallet</a>
+
+              <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+                  {{if .IsSettings}}active{{end}}"
+                href="/settings">Settings</a>
+
+              {{if .User.MultiSigAddress}}
+                <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+                    {{if .IsTickets }}active{{end}}"
+                  href="/tickets">Tickets</a>
+              
+                <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+                    {{if .IsVoting  }}active{{end}}"
+                  href="/voting">Voting</a>
+              {{end}}
+          {{end}}
+
+        </div>
+
+        <div class="pr-5 d-flex float-right">
+          {{if .User}}
+            <p class="m-0 mr-3 pt-2 d-none d-xl-inline-block">Hello, <span class="e-mail">{{ .User.Email}}</span></p>
+            <a class="pb-3 pt-2 d-none d-md-inline-block" href="/logout">Logout</a>
+            {{else}}
+              <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+                {{if .isLogin }}active{{end}}" href="/login">Login</a>
+              <a class="mr-5 pt-2 pb-3 d-none d-md-inline-block
+                {{if .isRegister }}active{{end}}" href="/register">Register</a>
+          {{end}}
+          <div id="sidebarCollapse" class="py-1 d-inline-block d-md-none">
+        <div class="menu-trigger first">
+          <span class="line line-1"></span>
+          <span class="line line-2"></span>
+          <span class="line line-3"></span>
+        </div>
+      </div>
     </div>
-    <!-- Collect the nav links, forms, and other content for toggling -->
-    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-      <ul class="nav navbar-nav">
-  {{if .Admin}}<li {{if .IsAdminTickets}}class="active"{{end}}><a href="/admintickets">Add Low Fee Tickets</a></li>{{end}}
-  {{if .Admin}}<li {{if .IsAdminStatus}}class="active"{{end}}><a href="/status">Status</a></li>{{end}}  
-	<li {{if .IsIndex }}class="active"{{end}}><a href="/">Home</a></li>
-	<li {{if .IsStats }}class="active"{{end}}><a href="/stats">Stats</a></li>
-	{{if .User}}<li {{if .IsAddress }}class="active"{{end}}><a href="/address">Address</a></li>{{end}}
-  {{if .User}}<li {{if .IsSettings }}class="active"{{end}}><a href="/settings">Settings</a></li>{{end}}
-	{{if .User}}{{if .User.MultiSigAddress}}<li {{if .IsTickets }}class="active"{{end}}><a href="/tickets">Tickets</a></li>{{end}}{{end}}
-  {{if .User}}{{if .User.MultiSigAddress}}<li {{if .IsVoting }}class="active"{{end}}><a href="/voting">Voting</a></li>{{end}}{{end}}
-      </ul>
-{{if .User}}
-      <ul class="nav navbar-nav navbar-right">
-	<li>
-	<p class="navbar-text">
-	Hello, {{ .User.Email}}
-	</p>
-	</li>
-	<li><a href="/logout">Logout</a></li>
-      </ul>
-{{else}}
-      <ul class="nav navbar-nav navbar-right">
-	{{if .IsEmailUpdate }}<li><a href="/emailupdate">Email Update</a></li>{{end}}
-	{{if .IsEmailVerify }}<li><a href="/emailverify">Email Verification</a></li>{{end}}
-	{{if .IsPasswordReset }}<li><a href="/passwordreset">Password Reset</a></li>{{end}}
-	{{if .IsPasswordUpdate }}<li><a href="/passwordupdate">Password Update</a></li>{{end}}
-	<li><a href="/signin">Sign In</a></li>
-	<li><a href="/signup">Sign Up</a></li>
-      </ul>
-{{end}}	
-    </div><!-- /.navbar-collapse -->
-  </div><!-- /.container-fluid -->
+</nav>
+
+<nav id="sidebar" class="d-block d-md-none">
+  <div id="dismiss">
+    <div class="wrapper py-1">
+      <div class="menu-trigger first active">
+        <span class="line line-1"></span>
+        <span class="line line-2"></span>
+        <span class="line line-3"></span>
+      </div>
+    </div>
+  </div>
+  <ul class="mb-5">
+    {{if .User}}
+      <li><p>Hello, <span class="e-mail">maria@gr.co</span></p></li>
+    {{end}}
+    <li><a class="{{if .IsIndex}}active{{end}}" href="/">Home</a></li>
+    <li><a class="{{if .IsStats}}active{{end}}" href="/stats">Stats</a></li>
+    {{if .Admin}}
+      <li><a class="{{if .IsAdminTickets}}active{{end}}" href="/admintickets">Add Low Fee Tickets</a></li>
+      <li><a class="{{if .IsAdminStatus}}active{{end}}" href="/status">Status</a></li>
+    {{end}}
+    {{if .User}}
+      <li><a class="{{if .IsAddress}}active{{end}}" href="/address">Connect to Wallet</a></li>
+      <li><a class="{{if .IsSettings}}active{{end}}" href="/settings">Settings</a></li>
+      {{if .User.MultiSigAddress}}
+        <li><a class="{{if .IsTickets}}active{{end}}" href="/tickets">Tickets</a></li>
+        <li><a class="{{if .IsVoting}}active{{end}}" href="/voting">Voting</a></li>
+      {{end}}
+    {{end}}
+  </ul>
+  <ul>
+    {{if .User}}
+      <li><a href="/logout">Logout</a></li>
+    {{else}}
+      <li><a class="{{if .isLogin}}active{{end}}" href="/login">Login</a></li>
+      <li><a class="{{if .isRegister}}active{{end}}" href="/register">Register</a></li>
+    {{end}}
+  </ul>
 </nav>
 {{.Content}}
 {{template "footer" .}}

@@ -1,0 +1,50 @@
+{{define "auth/register"}}
+<section class="site-content site-content--form-only">
+	<div class="container container--narrow">
+		<div class="row justify-content-center">
+				
+        <div class="col-sm-9 col-11 p-sm-5 px-2 pt-5 pb-3 form block--shadow text-center">
+          <div class="d-flex justify-content-center form__tabs">
+            <a class="btn" href="/login">Login</a>
+            <a class="btn" href="/register" disabled>Register</a>
+          </div>
+				  
+          <h1 class="mb-4 text--size-27">Register</h1>
+
+          {{if .IsClosed }}
+            <div class="snackbar snackbar-error">
+              <div class="snackbar-message">
+                <p>{{.ClosePoolMsg}}</p>
+              </div>
+            </div>				
+          {{else if .CaptchaDone}}
+            <form id="Register" data-empty="" action="#" method="post">
+                {{if .FlashSuccess}}
+                  {{range .FlashSuccess}}<p><span style="font-size: larger;">{{.}}</span></p>{{end}}
+                {{else}}
+                  
+                  {{range .FlashError}}
+                    <div class="snackbar snackbar-error">
+                      <div class="snackbar-message">
+                        <div class="snackbar-close-button-top d-none"></div>
+                        <p>{{.}}</p>
+                      </div>
+                    </div>
+                  {{end}}
+
+                  <input type="email" name="email" class="form-control mb-4 w-75 mx-auto" placeholder="Email" required autofocus>
+                  <input type="password" name="password" class="form-control mb-4 w-75 mx-auto" placeholder="Password" required>
+                  <input type="password" name="passwordrepeat" class="form-control mb-4 w-75 mx-auto" placeholder="Repeat your new password" required>
+                  <input class="btn btn-primary mb-3" type="submit" value="Register">
+                  {{ $.csrfField }}
+                {{end}}
+            </form>
+          {{else}} <!-- Render CAPTCHA -->
+            {{ template "captcha" . }}
+          {{end}}
+        </div>
+				
+		</div>
+	</div>
+</section>
+{{end}}

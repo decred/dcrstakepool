@@ -1,59 +1,146 @@
 {{define "admin/tickets"}}
-<div class="wrapper">
- <div class="row">
-  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-    {{range .FlashError}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-    {{range .FlashSuccess}}<div class="well well-notification green-notification">{{.}}</div>{{end}}
-  </div>
+<section class="site-content">
+	<div class="container container--narrow">
 
-  <div class="col-sm-15 col-md-10 text-left center-block">
-    <h1>Add Low Fee Tickets</h1>
+		{{range .FlashError}}
+			<div class="row">
+				<div class="snackbar snackbar-ticket-failed">
+					<div class="snackbar-message">
+						<div class="snackbar-close-button-top d-none"></div>
+						<p>{{.}}</p>
+					</div>
+				</div>
+			</div>
+		{{end}}
 
-    <hr />
+		{{range .FlashSuccess}}
+			<div class="row">
+				<div class="snackbar snackbar-ticket-success">
+					<div class="snackbar-message">
+						<div class="snackbar-close-button-top d-none"></div>
+						<p>{{.}}</p>
+					</div>
+				</div>
+			</div>
+		{{end}}
 
-    <!-- IGNORED INVALID/LOW FEE TICKETS -->
-    <h2>Ignored Low Fee Tickets</h2>
-    {{with .IgnoredLowFeeTickets}}
-    <form id="addTicketsForm" method="post">
-      {{ range $tickethash, $msa := .}}
-      <div class="form-group">
-        <div class="checkbox">
-            <label><input type="checkbox" name="tickets[]" value="{{$tickethash}}"><span style="color: white; font-size: x-large;">{{$tickethash}} ({{$msa}})</span></label>
-        </div>
-      </div>
-      {{end}}
-      <div class="form-group">
-          <button id="addTickets" name="action" class="btn btn-primary" value="Add">Add Tickets To Live Voting List</button>
-      </div>
-      <input type="hidden" name="{{$.CsrfKey}}" value={{$.CsrfToken}}>
-    </form>
-    {{else}}
-    <p><strong>Currently there are no ignored low fee tickets.</strong></p>
-    {{end}}
+		<div class="p-x0">
+			<div class="block__title">
+				<h1 class="d-flex justify-content-between align-items-end">
+					<span>Ignored Low Fee Tickets</span>
+						{{if gt (len .IgnoredLowFeeTickets) 1 }}
+						<div class="text--size-13">
+							<a id="select_all_ignored" class="js-only" style="display:none;" href="#">Select all</a>
+						</div>
+						{{end}}
+				</h1>	
+			</div>
 
-    <!-- ADDED INVALID/LOW FEE TICKETS -->
-    <h2>Added Low Fee Tickets</h2>
-    {{with .AddedLowFeeTickets}}
-    <form id="removeTicketsForm" method="post">
-      {{ range $tickethash, $msa := .}}
-      <div class="form-group">
-        <div class="checkbox">
-            <label><input type="checkbox" name="tickets[]" value="{{$tickethash}}"><span style="color: white; font-size: x-large;">{{$tickethash}} ({{$msa}})</span></label>
-        </div>
-      </div>
-      {{end}}
-      <div class="form-group">
-          <button id="rmTickets" name="action" class="btn btn-primary" value="Remove">Remove Tickets From Live Voting List</button>
-      </div>
-      <input type="hidden" name="{{$.CsrfKey}}" value={{$.CsrfToken}}>
-    </form>
-    {{else}}
-    <p><strong>Currently there are no added low fee tickets.</strong></p>
-    {{end}}
+			{{with .IgnoredLowFeeTickets}}
+				<form id="addTicketsForm" method="post">
+					<div class="mb-3">
+						<div class="bg-white">
+							<table id="ignored_table" class="table">
+								<tbody>
+									{{ range $tickethash, $msa := .}}
+									<tr>
+										<td class="pl-sm-5 pl-4 align-middle"><img src="assets/images/group-1119.svg" alt=""></th>
+										<td class="align-middle"><pre class="m-0">{{printf "%.16s" $tickethash}}...</pre></td>
+										<td class="align-middle"><pre class="m-0">{{$msa}}</pre></td>
+										<td class="align-middle"><a href="https://{{$.Network}}.dcrdata.org/tx/{{$tickethash}}" rel="noopener noreferrer">Block Explorer</a></td>
+										<td class="align-middle">
+											<label class="control control-checkbox">
+												<input type="checkbox" name="tickets[]" value="{{$tickethash}}">
+												<div class="control_indicator"></div>
+											</label>
+										</td>
+									</tr>
+									{{end}}
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<input type="hidden" name="action" value="add">
+			{{ $.csrfField }}
+					<input id="addTickets" type="submit" class="btn" value="Add Tickets To Live Voting List" />
+				</form>
+			{{else}}
+				<div class="col-12 block__description--white">
+					<p>Currently there are no ignored low fee tickets.</p>
+				</div>
+			{{end}}
+		</div>
 
-  </div>
+		<div class="p-x0">
+			<div class="block__title">
+				<h1 class="d-flex justify-content-between align-items-end">
+					<span>Added Low Fee Tickets</span>
+					{{if gt (len .AddedLowFeeTickets) 1 }}
+					<div class="text--size-13">
+						<a id="select_all_added" class="js-only" style="display:none;" href="#">Select all</a>
+					</div>
+					{{end}}
+				</h1>
+			</div>
+			
+			{{with .AddedLowFeeTickets}}
+				<form id="removeTicketsForm" method="post">
+					<div class="mb-3">
+						<div class="bg-white">
+							<table id="added_table" class="table">
+								<tbody>
+									{{ range $tickethash, $msa := .}}
+									<tr>
+										<td class="pl-sm-5 pl-4 align-middle"><img src="assets/images/group-1119.svg" alt=""></th>
+										<td class="align-middle"><pre class="m-0">{{printf "%.16s" $tickethash}}...</pre></td>
+										<td class="align-middle"><pre class="m-0">{{$msa}}</pre></td>
+										<td class="align-middle"><a href="https://{{$.Network}}.dcrdata.org/tx/{{$tickethash}}" rel="noopener noreferrer">Block Explorer</a></td>
+										<td class="align-middle">
+											<label class="control control-checkbox">
+												<input type="checkbox" name="tickets[]" value="{{$tickethash}}">
+												<div class="control_indicator"></div>
+											</label>
+										</td>
+									</tr>
+									{{end}}
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<input type="hidden" name="action" value="remove">
+					{{ $.csrfField }}
+					<input id="rmTickets" type="submit" class="btn" value="Remove Tickets From Live Voting List" />
+				</form>
+			{{else}}
+				<div class="col-12 block__description--white">
+					<p>Currently there are no added low fee tickets.</p>
+				</div>
+			{{end}}
+		</div>
 
- </div>
-</div>
+
+		<script type="text/javascript">
+			(function() {
+				// Display elements with class js-only
+				var elements = document.getElementsByClassName("js-only");
+				for (var i = 0; i < elements.length; i++) {
+					elements[i].style.display = "block";
+				}
+
+				// Change checkbox state if user clicks anywhere on the row.
+				// Not just the actual checkbox
+				var rows = document.getElementsByTagName("tr")
+				for (var i = 0; i < rows.length; i++) {
+					rows[i].addEventListener("click", function(e) {
+						if (e.target.tagName == "A") return;
+						box = this.querySelector("input[type=checkbox]");
+						box.checked = !box.checked
+					});
+				}
+				
+			})();
+		</script>
+
+	</div>
+</section>
 {{end}}
-

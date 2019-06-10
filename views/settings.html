@@ -1,110 +1,86 @@
 {{define "settings"}}
-<div class="wrapper">
- <div class="row">
-  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-    {{range .FlashError}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-    {{range .FlashSuccess}}<div class="well well-notification green-notification">{{.}}</div>{{end}}
-  </div>
+<section class="site-content">
 
-  <div class="col-sm-15 col-md-10 text-left center-block">
-      {{if .ShowInstructions }}
-      <p><strong>To start staking, you need to submit a public key address.  This can be
-      done automatically by the GUI wallet Decrediton (see below).
-      You may also proceed by following the command-line instructions on the
-      <a href="/address">Address Page</a>.</strong></p><br>
-      {{end}}
-        <p><strong>The official Decred GUI wallet
-        <a href="https://decred.org/downloads/#decrediton">Decrediton</a>
-        is the recommended way to use voting services.  All you need to get started
-        is to copy and paste the API Token below when prompted.  A more
-        comprehensive guide is available for
-        <a href="https://docs.decred.org/getting-started/user-guides/decrediton-setup/">Decrediton</a>.
-        There is also a more general overview of the staking process available
-				<a href="https://docs.decred.org/mining/proof-of-stake/#automatic-purchasing-of-tickets" target="_blank" rel="noopener noreferrer">here</a>.</strong></p>
-  </div>
+		<div class="container container--narrow">
+			<div class="row mx-3 justify-content-center">
+				
+				{{range .FlashSuccess}}
+					<div class="snackbar snackbar-success">
+						<div class="snackbar-message">
+							<div class="snackbar-close-button-top d-none"></div>
+							<p>{{.}}</p>
+						</div>
+					</div>
+				{{end}}
 
-  <div class="col-sm-15 col-md-10 text-left center-block">
-    <h1>Settings</h1>
- 
-    <p><strong>API Token:</strong></p>
-    <pre>{{ .APIToken }}</pre>
-    <hr />
+				{{range .FlashError}}
+					<div class="snackbar snackbar-error">
+						<div class="snackbar-message">
+							<div class="snackbar-close-button-top d-none"></div>
+							<p>{{.}}</p>
+						</div>
+					</div>
+				{{end}}
+				
+				<section class="block">
+					<div class="col-12 block__title">
+						<h1><span>Change Email Address</span></h1>
+					</div>
+					{{if .CaptchaDone}}
+					<div class="w-100 form form--narrow-inputs">
+						<form method="post" id="ChangeEmail" >
+							<div class="col-12 mb-4">
+								<div class="form-group row mb-0 align-items-center">
+								<label for="inputNewEmail" class="col-md-2 pr-0">New email:</label>
+								<div class="col-md-10">
+									<input type="email" class="form-control" id="inputNewEmail" name="email" placeholder="New email" required>
+								</div>
+								<label for="inputPassword" class="col-md-2 pr-0">Password:</label>
+								<div class="col-md-10">
+									<input type="password" class="form-control" id="inputPassword" name="password" placeholder="Password" required>
+								</div>
+							</div>
+							</div>
+							{{ $.csrfField }}
+							<input type="hidden" name="updateEmail" value="true">
+							<input type="submit" class="btn mb-2" value="Change Email">
+						</form>
+					</div>
+					{{else}} <!-- Render CAPTCHA -->
+						{{ template "captcha" . }}
+					{{end}}
 
-    <h2>Change Email Address</h2>
-    {{if .CaptchaDone}}
-    <form method="post" class="form-horizontal">
-      <div class="form-group">
-        <label class="control-label col-sm-2" for="email">New Email:</label>
-        <div class="col-sm-13">
-          <input id="email" name="email" placeholder="New Email Address" type="email" class="form-control" required>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="control-label col-sm-2" for="emailpassword">Password:</label>
-        <div class="col-sm-13">
-          <input id="emailpassword" name="password" placeholder="Password" type="password" class="form-control" required>
-        </div>
-      </div>
-      <div class="form-group">
-            <button id="updateEmail" name="updateEmail" value="true" class="btn btn-primary">Change Email Address</button>
-      </div>
-      <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-    </form>
-    {{else}}
-    <p>To change your email address, first complete the captcha:</p>
-    <div class="row">
-      <div class="col-sm-10 center-block">
-        <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-sm-15 text-left center-block">
-        <form action="/verifyhuman" method="post" class="form-horizontal">
-          <div class="form-group center-block">
-            <label class="control-label col-sm-4" for="captchaSolution">Text in picture:</label>
-            <div class="col-sm-8">
-              <input name=captchaSolution class="form-control">
-              <input type=hidden name=captchaId value="{{.CaptchaID}}">
-            </div>
-            <div class="col-md-button center-block text-middle">
-              <button name=captchaSubmit type=submit class="btn btn-primary">Submit</button>
-            </div>
-          </div>
-          <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-        </form>
-      </div>
-    </div>
-    {{end}}
+				</section>
+			
+			<section class="block">
+					<div class="col-12 block__title">
+						<h1><span>Change Password</span></h1>
+					</div>
+					<form method="post" id="ChangePassword" class="w-100 form form--narrow-inputs">
+						<div class="col-12 mb-4">
+							<div class="form-group row mb-0 align-items-center">
+							<label for="inputCurrentPassword" class="col-md-2 pr-0">Current password:</label>
+							<div class="col-md-10">
+								<input type="password" id="inputCurrentPassword" class="form-control" name="password" placeholder="Current password" required>
+							</div>
+							<label for="inputNewPassword" class="col-md-2 pr-0">New password:</label>
+							<div class="col-md-10">
+								<input type="password" id="inputNewPassword" class="form-control" name="newpassword" placeholder="New password" required>
+							</div>
+							<label for="inputRepeatPassword" class="col-md-2 pr-0">Repeat password:</label>
+							<div class="col-md-10">
+								<input type="password" class="form-control" name="newpasswordrepeat" placeholder="Repeat password" required>
+							</div>
+						</div>
+						</div>
+						{{ $.csrfField }}
+            <input type="hidden" name="updatePassword" value="true">
+						<input type="submit" class="btn mb-2" value="Update Password">
+					</form>
+			</section>
+			</div>
+		</div>
+</section>
 
-    <hr />
-    <h2>Change Password</h2>
-    <form class="form-horizontal" method="post">
-      <div class="form-group">
-        <label for="curpassword" class="control-label col-sm-2">Current<br />Password</label>
-        <div class="col-sm-13">
-          <input id="curpassword" name="password" type="password" placeholder="Current Password" class="form-control" required>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="control-label col-sm-2" for="newpassword">New<br />Password</label>
-        <div class="col-sm-13">
-          <input id="newpassword" name="newpassword" type="password" placeholder="New Password" class="form-control" required>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="control-label col-sm-2" for="newpasswordrepeat">Repeat New Password</label>
-        <div class="col-sm-13">
-          <input id="newpasswordrepeat" name="newpasswordrepeat" type="password" placeholder="Repeat New Password" class="form-control" required>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="control-label" for="updatepassword"></label>
-        <button id="updatepassword" name="updatePassword" value="true" class="btn btn-primary">Update Password</button>
-      </div>
-      <input type="hidden" name="{{.CsrfKey}}" value={{.CsrfToken}}>
-    </form>
-  </div> <!-- forms column -->
- </div> <!-- row -->
-</div> <!-- wrapper -->
 {{end}}
 

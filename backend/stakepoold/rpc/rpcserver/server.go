@@ -39,43 +39,6 @@ const (
 	semverPatch        = 0
 )
 
-// CommandName maps function names to an integer.
-type CommandName int
-
-func (s CommandName) String() string {
-	switch s {
-	case GetAddedLowFeeTickets:
-		return "GetAddedLowFeeTickets"
-	case GetIgnoredLowFeeTickets:
-		return "GetIgnoredLowFeeTickets"
-	case GetLiveTickets:
-		return "GetLiveTickets"
-	case SetAddedLowFeeTickets:
-		return "SetAddedLowFeeTickets"
-	case SetUserVotingPrefs:
-		return "SetUserVotingPrefs"
-	default:
-		log.Errorf("unknown command: %d", s)
-		return "UnknownCmd"
-	}
-}
-
-const (
-	GetAddedLowFeeTickets CommandName = iota
-	GetIgnoredLowFeeTickets
-	GetLiveTickets
-	SetAddedLowFeeTickets
-	SetUserVotingPrefs
-)
-
-type GRPCCommandQueue struct {
-	Command                CommandName
-	RequestTicketData      map[chainhash.Hash]string
-	RequestUserData        map[string]userdata.UserVotingConfig
-	ResponseEmptyChan      chan struct{}
-	ResponseTicketsMSAChan chan map[chainhash.Hash]string
-}
-
 // versionServer provides RPC clients with the ability to query the RPC server
 // version.
 type versionServer struct {
@@ -99,91 +62,52 @@ func (v *versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*p
 // StakepooldServer provides RPC clients with the ability to trigger updates
 // to the user voting config
 type stakepooldServer struct {
-	grpcCommandQueueChan chan *GRPCCommandQueue
+	appContext *AppContext
 }
 
 // StartStakepooldService creates an implementation of the StakepooldService
 // and registers it.
-func StartStakepooldService(grpcCommandQueueChan chan *GRPCCommandQueue, server *grpc.Server) {
+func StartStakepooldService(appContext *AppContext, server *grpc.Server) {
 	pb.RegisterStakepooldServiceServer(server, &stakepooldServer{
-		grpcCommandQueueChan: grpcCommandQueueChan,
+		appContext: appContext,
 	})
 }
 
-func (s *stakepooldServer) processSetCommand(ctx context.Context, cmd *GRPCCommandQueue) error {
-	// send gRPC command to the handler in main
-	select {
-	case s.grpcCommandQueueChan <- cmd:
-		select {
-		case <-cmd.ResponseEmptyChan:
-			// either it worked or there's a deadlock and timeout will happen
-			return nil
-		case <-ctx.Done():
-			// hit the timeout
-			return ctx.Err()
-		}
-	case <-ctx.Done():
-		// hit the timeout
-		return ctx.Err()
+func processTickets(ticketsMSA map[chainhash.Hash]string) []*pb.Ticket {
+	tickets := make([]*pb.Ticket, 0)
+	for tickethash, msa := range ticketsMSA {
+		tickets = append(tickets, &pb.Ticket{
+			Address: msa,
+			Hash:    tickethash.CloneBytes(),
+		})
 	}
+	return tickets
 }
 
-func (s *stakepooldServer) processGetTicketCommand(ctx context.Context, cmd *GRPCCommandQueue) ([]*pb.TicketEntry, error) {
-	tickets := make([]*pb.TicketEntry, 0)
+func (s *stakepooldServer) GetAddedLowFeeTickets(c context.Context, req *pb.GetAddedLowFeeTicketsRequest) (*pb.GetAddedLowFeeTicketsResponse, error) {
+	s.appContext.RLock()
+	ticketsMSA := s.appContext.AddedLowFeeTicketsMSA
+	s.appContext.RUnlock()
 
-	// send gRPC command to the handler in main
-	select {
-	case s.grpcCommandQueueChan <- cmd:
-		select {
-		case ticketsResponse := <-cmd.ResponseTicketsMSAChan:
-			// format and return the gRPC response
-			for tickethash, msa := range ticketsResponse {
-				tickets = append(tickets, &pb.TicketEntry{
-					TicketAddress: msa,
-					TicketHash:    tickethash.CloneBytes(),
-				})
-			}
-			return tickets, nil
-		case <-ctx.Done():
-			// hit the timeout
-			return nil, ctx.Err()
-		}
-	case <-ctx.Done():
-		// hit the timeout
-		return nil, ctx.Err()
-	}
-}
-
-func (s *stakepooldServer) GetAddedLowFeeTickets(ctx context.Context, req *pb.GetAddedLowFeeTicketsRequest) (*pb.GetAddedLowFeeTicketsResponse, error) {
-	tickets, err := s.processGetTicketCommand(ctx, &GRPCCommandQueue{
-		Command:                GetAddedLowFeeTickets,
-		ResponseTicketsMSAChan: make(chan map[chainhash.Hash]string),
-	})
-	if err != nil {
-		return nil, err
-	}
+	tickets := processTickets(ticketsMSA)
 	return &pb.GetAddedLowFeeTicketsResponse{Tickets: tickets}, nil
 }
 
-func (s *stakepooldServer) GetIgnoredLowFeeTickets(ctx context.Context, req *pb.GetIgnoredLowFeeTicketsRequest) (*pb.GetIgnoredLowFeeTicketsResponse, error) {
-	tickets, err := s.processGetTicketCommand(ctx, &GRPCCommandQueue{
-		Command:                GetIgnoredLowFeeTickets,
-		ResponseTicketsMSAChan: make(chan map[chainhash.Hash]string),
-	})
-	if err != nil {
-		return nil, err
-	}
+func (s *stakepooldServer) GetIgnoredLowFeeTickets(c context.Context, req *pb.GetIgnoredLowFeeTicketsRequest) (*pb.GetIgnoredLowFeeTicketsResponse, error) {
+	s.appContext.RLock()
+	ticketsMSA := s.appContext.IgnoredLowFeeTicketsMSA
+	s.appContext.RUnlock()
+
+	tickets := processTickets(ticketsMSA)
 	return &pb.GetIgnoredLowFeeTicketsResponse{Tickets: tickets}, nil
 }
 
-func (s *stakepooldServer) GetLiveTickets(ctx context.Context, req *pb.GetLiveTicketsRequest) (*pb.GetLiveTicketsResponse, error) {
-	tickets, err := s.processGetTicketCommand(ctx, &GRPCCommandQueue{
-		Command:                GetLiveTickets,
-		ResponseTicketsMSAChan: make(chan map[chainhash.Hash]string),
-	})
-	if err != nil {
-		return nil, err
-	}
+func (s *stakepooldServer) GetLiveTickets(c context.Context, req *pb.GetLiveTicketsRequest) (*pb.GetLiveTicketsResponse, error) {
+	s.appContext.RLock()
+	ticketsMSA := s.appContext.LiveTicketsMSA
+	s.appContext.RUnlock()
+
+	tickets := processTickets(ticketsMSA)
 	return &pb.GetLiveTicketsResponse{Tickets: tickets}, nil
 }
 
@@ -194,23 +118,16 @@ func (s *stakepooldServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.P
 func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.SetAddedLowFeeTicketsRequest) (*pb.SetAddedLowFeeTicketsResponse, error) {
 	addedLowFeeTickets := make(map[chainhash.Hash]string)
 
-	for _, data := range req.Tickets {
-		hash, err := chainhash.NewHash(data.TicketHash)
+	for _, ticket := range req.Tickets {
+		hash, err := chainhash.NewHash(ticket.Hash)
 		if err != nil {
-			log.Warnf("NewHashFromStr failed for %v", data.TicketHash)
+			log.Warnf("NewHashFromStr failed for %v", ticket.Hash)
 			continue
 		}
-		addedLowFeeTickets[*hash] = data.TicketAddress
+		addedLowFeeTickets[*hash] = ticket.Address
 	}
 
-	err := s.processSetCommand(ctx, &GRPCCommandQueue{
-		Command:           SetAddedLowFeeTickets,
-		RequestTicketData: addedLowFeeTickets,
-		ResponseEmptyChan: make(chan struct{}),
-	})
-	if err != nil {
-		return nil, err
-	}
+	s.appContext.UpdateTicketData(addedLowFeeTickets)
 	return &pb.SetAddedLowFeeTicketsResponse{}, nil
 }
 
@@ -225,13 +142,39 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 		}
 	}
 
-	err := s.processSetCommand(ctx, &GRPCCommandQueue{
-		Command:           SetUserVotingPrefs,
-		RequestUserData:   userVotingPrefs,
-		ResponseEmptyChan: make(chan struct{}),
-	})
+	s.appContext.UpdateUserData(userVotingPrefs)
+	return &pb.SetUserVotingPrefsResponse{}, nil
+}
+
+func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScriptRequest) (*pb.ImportScriptResponse, error) {
+	heightImported, err := s.appContext.ImportScript(req.Script)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.SetUserVotingPrefsResponse{}, nil
+	return &pb.ImportScriptResponse{
+		HeightImported: heightImported,
+	}, nil
+}
+
+func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakePoolUserInfoRequest) (*pb.StakePoolUserInfoResponse, error) {
+	response, err := s.appContext.StakePoolUserInfo(req.MultiSigAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	tickets := make([]*pb.StakePoolUserTicket, 0, len(response.Tickets))
+	for _, t := range response.Tickets {
+		tickets = append(tickets, &pb.StakePoolUserTicket{
+			Status:        t.Status,
+			Ticket:        t.Ticket,
+			TicketHeight:  t.TicketHeight,
+			SpentBy:       t.SpentBy,
+			SpentByHeight: t.SpentByHeight,
+		})
+	}
+
+	return &pb.StakePoolUserInfoResponse{
+		Tickets:        tickets,
+		InvalidTickets: response.InvalidTickets,
+	}, nil
 }

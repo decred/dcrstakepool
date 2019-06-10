@@ -15,7 +15,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrstakepool/internal/version"
 	flags "github.com/jessevdk/go-flags"
 )
@@ -42,6 +44,8 @@ const (
 	defaultSMTPHost       = ""
 	defaultMinServers     = 2
 	defaultMaxVotedAge    = 8640
+	defaultDescription    = ""
+	defaultDesignation    = ""
 )
 
 var (
@@ -49,6 +53,8 @@ var (
 	defaultConfigFile   = filepath.Join(dcrstakepoolHomeDir, defaultConfigFilename)
 	defaultDataDir      = filepath.Join(dcrstakepoolHomeDir, defaultDataDirname)
 	defaultLogDir       = filepath.Join(dcrstakepoolHomeDir, defaultLogDirname)
+	coldWalletFeeKey    *hdkeychain.ExtendedKey
+	votingWalletVoteKey *hdkeychain.ExtendedKey
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -92,6 +98,7 @@ type config struct {
 	SMTPHost           string   `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
 	SMTPUsername       string   `long:"smtpusername" description:"SMTP username for authentication if required"`
 	SMTPPassword       string   `long:"smtppassword" description:"SMTP password for authentication if required"`
+	UseSMTPS           bool     `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
 	StakepooldHosts    []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
 	StakepooldCerts    []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
 	WalletHosts        []string `long:"wallethosts" description:"Hostnames for wallet servers"`
@@ -104,6 +111,8 @@ type config struct {
 	MinServers         int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
 	EnableStakepoold   bool     `long:"enablestakepoold" description:"Enable communication with stakepoold"`
 	MaxVotedAge        int64    `long:"maxvotedage" description:"Maximum vote age (blocks since vote) to include in voted tickets table"`
+	Description        string   `long:"description" description:"Operators own description of their VSP"`
+	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service
@@ -254,6 +263,28 @@ func fileExists(name string) bool {
 	return true
 }
 
+// validate pub vote and fee keys as belonging to the network
+func (c *config) parsePubKeys(params *chaincfg.Params) error {
+	// Parse the extended public key and the pool fees.
+	var err error
+	coldWalletFeeKey, err = hdkeychain.NewKeyFromString(c.ColdWalletExtPub)
+	if err != nil {
+		return fmt.Errorf("cold wallet extended public key: %v", err)
+	}
+	if !coldWalletFeeKey.IsForNet(params) {
+		return fmt.Errorf("cold wallet extended public key is for wrong network")
+	}
+	// Parse the extended public key for the voting addresses.
+	votingWalletVoteKey, err = hdkeychain.NewKeyFromString(c.VotingWalletExtPub)
+	if err != nil {
+		return fmt.Errorf("voting wallet extended public key: %v", err)
+	}
+	if !votingWalletVoteKey.IsForNet(params) {
+		return fmt.Errorf("voting wallet extended public key is for wrong network")
+	}
+	return nil
+}
+
 // newConfigParser returns a new command line flags parser.
 func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *flags.Parser {
 	parser := flags.NewParser(cfg, options)
@@ -299,6 +330,8 @@ func loadConfig() (*config, []string, error) {
 		SMTPHost:     defaultSMTPHost,
 		MinServers:   defaultMinServers,
 		MaxVotedAge:  defaultMaxVotedAge,
+		Description:  defaultDescription,
+		Designation:  defaultDesignation,
 	}
 
 	// Service options which are only added on Windows.
@@ -503,6 +536,12 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	if err := cfg.parsePubKeys(activeNetParams.Params); err != nil {
+		err := fmt.Errorf("%s: failed to parse extended public keys: %v", funcName, err)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
 	if len(cfg.WalletHosts) == 0 {
 		str := "%s: wallethosts is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -533,6 +572,7 @@ func loadConfig() (*config, []string, error) {
 
 	// Convert comma separated list into a slice
 	cfg.AdminIPs = strings.Split(cfg.AdminIPs[0], ",")
+	cfg.AdminUserIDs = strings.Split(cfg.AdminUserIDs[0], ",")
 	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
 	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
 	cfg.WalletPasswords = strings.Split(cfg.WalletPasswords[0], ",")

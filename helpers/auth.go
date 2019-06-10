@@ -21,6 +21,11 @@ func EmailChangeComplete(dbMap *gorp.DbMap, token models.UserToken) error {
 		return err
 	}
 
+	_, err = dbMap.Exec("DELETE FROM PasswordReset WHERE UserId = ?", emailChange.UserId)
+	if err != nil {
+		return err
+	}
+
 	_, err = dbMap.Exec("DELETE FROM EmailChange WHERE Token = ?", token.String())
 	return err
 }

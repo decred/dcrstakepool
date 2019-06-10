@@ -1,74 +1,91 @@
 {{define "admin/status"}}
-<div class="wrapper">
- <div class="row">
+<section class="site-content">
+	<div class="container container--narrow">
 
-  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-    {{if .Error}}<div class="well well-notification  orange-notification">{{.Error}}</div>{{end}}
-    {{range .Flash}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-    {{range .FlashWarn}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-  </div>
- 
-  <div class="col-sm-15 col-md-10 text-left center-block">
+		<div class="row mx-3">
+			<section class="block">
+				
+				<div class="col-12 block__title">
+					<h1 class="d-flex justify-content-between align-items-center">
+						<span>Status</span> <div class="status">RPC Status: {{ .RPCStatus }}</div>
+					</h1>
+				</div>
 
-	<div class="panel panel-default panel-control">
-		<div class="panel-heading">
-			<h4 class="panel-title">Status</h4>
+
+				{{if not .StakepooldInfo}}
+					<div class="snackbar snackbar-error">
+						<div class="snackbar-message">
+							<div class="snackbar-close-button-top d-none"></div>
+							<p>Error retrieving stakepoold info</p>
+						</div>
+					</div>
+				{{else}}
+					<div class="col-12 mb-3 px-0">
+						<div class="table-scroll-y table-responsive text-nowrap">
+							<table class="table" cellspacing="0" width="100%">
+								<thead class="thead-light">
+									<tr>
+										<th scope="col" class="text-center">Stakepoold Number</th>
+										<th scope="col" class="text-center">RPC Status</th>
+									</tr>
+								</thead>
+								<tbody>
+									{{ range $i, $data := .StakepooldInfo }}
+									<tr class="table-light">
+										<td class="text-center">{{$i}}</td>
+										<td class="text-center">{{ $data.RPCStatus }}</td>
+									</tr>
+									{{end}}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				{{end}}
+
+				{{if not .WalletInfo}}
+					<div class="snackbar snackbar-error">
+						<div class="snackbar-message">
+							<div class="snackbar-close-button-top d-none"></div>
+							<p>Error retrieving wallet info</p>
+						</div>
+					</div>
+				{{else}}
+
+				<div class="col-12 px-0">
+					<div class="table-scroll-y table-responsive text-nowrap">
+						<table class="table" cellspacing="0" width="100%">
+							<thead class="thead-light">
+								<tr>
+									<th scope="col" class="text-center">Wallet Number</th>
+									<th scope="col" class="text-center">Connected</th>
+									<th scope="col" class="text-center">DaemonConnected</th>
+									<th scope="col" class="text-center">EnableVoting</th>
+								</tr>
+							</thead>
+							<tbody>
+								{{ range $i, $data := .WalletInfo }}
+								<tr class="table-light">
+									{{ if $data.Connected }}
+										<td class="text-center">{{$i}}</td>
+										<td class="text-center">{{ $data.Connected }}</td>
+										<td class="text-center">{{ $data.DaemonConnected }}</td>
+										<td class="text-center">{{ $data.EnableVoting }}</td> 
+									{{else}}
+										<td class="text-center">{{$i}}</td>
+										<td class="text-center">{{ $data.Connected }}</td>
+										<td class="text-center"></td>
+										<td class="text-center"></td>
+									{{end}}
+								</tr>
+								{{end}}
+							</tbody>
+						</table>
+					</div>
+				</div>
+				{{end}}
+
+			</section>
 		</div>
-		<div class="panel-body">
-			{{if .StakepooldInfo}}
-			<table id="stakepooldinfo" class="table table-condensed datatablesort responsive">
-				<thead>
-					<tr>
-						<th>Stakepoold Number</th>
-						<th>GRPC Connection Status</th>
-					</tr>
-				</thead>
-				<tbody>
-				{{ range $i, $data := .StakepooldInfo }}
-					<tr>
-						<td>{{$i}}</td>
-						<td>{{ $data.Status }}</td>
-					</tr>
-				{{end}}
-				</tbody>
-			</table>
-			{{end}}
-			{{if not .WalletInfo}}
-			<p><span style="font-size: larger;"><b>Error receiving walletinfo</b></span></p>
-			{{end}}
-			{{if .WalletInfo}}
-			<table id="walletinfo" class="table table-condensed datatablesort responsive">
-				<thead>
-					<tr>
-						<th>Wallet Number</th>
-						<th>Connected</th>
-						<th>DaemonConnected</th>
-						<th>EnableVoting</th>
-					</tr>
-				</thead>
-				<tbody>
-				{{ range $i, $data := .WalletInfo }}
-					<tr>
-						{{ if $data.Connected }}
-						<td>{{$i}}</td>
-						<td>{{ $data.Connected }}</td>
-						<td>{{ $data.DaemonConnected }}</td>
-						<td>{{ $data.EnableVoting }}</td> 
-						{{else}}
-						<td>{{$i}}</td>
-						<td>{{ $data.Connected }}</td>
-						<td></td>
-						<td></td>
-						{{end}}
-					</tr>
-				{{end}}
-				</tbody>
-			</table>
-			{{end}}
-			<p>RPC Status: {{ .RPCStatus }}
-		</div><!-- panel-body -->
-	</div><!-- panel-default -->
-  </div><!-- center-block -->
-</div><!-- row -->
-</div><!-- wrapper -->
+	</div>
+</section>
 {{end}}

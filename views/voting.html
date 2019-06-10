@@ -1,46 +1,86 @@
 {{define "voting"}}
-<div class="wrapper">
- <div class="row">
-  <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-    {{range .FlashError}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-    {{range .FlashSuccess}}<div class="well well-notification green-notification">{{.}}</div>{{end}}
-  </div>
- 
-  <div class="col-sm-15 col-md-10 text-left center-block">
-    <h1>Voting Preferences (v{{.VoteVersion}})</h1>
+<section class="site-content">
+	<div class="container container--narrow">
 
-    <hr />
+		<div class="d-flex flex-column p-0 w-100">
+			{{range .FlashSuccess}}
+				<div class="snackbar snackbar-vote-success">
+					<div class="snackbar-message">
+					<div class="snackbar-close-button-top d-none"></div>
+						<p>{{.}}</p>
+					</div>
+				</div>
+			{{end}}
 
-    <!-- AGENDAS -->
-    <h2>Agendas</h2>
-    <p><em>See the <a href="https://voting.decred.org">Decred Voting Site</a> for more information.</em></p>
-    {{with .Agendas}}
-    <form method="post" class="form-horizontal">
-      {{ range $i, $data := . }}
-        <div class="form-group">
-          <label class="control-label col-sm-15" for="agenda{{$i}}">{{$data.Vote.Id}} - {{$data.Vote.Description}}</label>
-          <div class="col-sm-15">
-            <select class="form-control" name="agenda{{$i}}" id="agenda{{$i}}">
-              {{ range $j, $choicesdata := $data.Vote.Choices}}
-                <option value="{{$choicesdata.Bits}}"{{if eq $choicesdata.Bits (index $ (print "Agenda" $i "Selected"))}} selected{{end}}>{{$choicesdata.Description}}</option>
-              {{end}}
-            </select>
-          </div>
-        </div>
-      {{end}}
-    <div class="form-group">
-        <button id="updateVoting" name="updateVoting" class="btn btn-primary">Update Voting Preferences</button>
-    </div>
-    <input type="hidden" name="{{$.CsrfKey}}" value={{$.CsrfToken}}>
-    </form>
-    {{else}}
-    <p><strong>There are no active agendas to vote on currently.</strong></p>
-    {{end}}
+			{{range .FlashError}}
+				<div class="snackbar snackbar-vote-failed">
+					<div class="snackbar-message">
+					<div class="snackbar-close-button-top d-none"></div>
+						<p>{{.}}</p>
+					</div>
+				</div>
+			{{end}}
+		</div>
 
-
-  </div>
-
- </div>
-</div>
+		<div class="row mx-3">
+			<section class="block">
+				<div class="col-12 block__title">
+					<h1><span>Voting Preferences (v{{.VoteVersion}})</span></h1>
+				</div>
+				<div class="col-12 block__description">
+					<p>Select the option for your tickets to vote for. On-going agendas can be tracked at <a href="https://voting.decred.org" rel="noopener noreferrer">voting.decred.org.</a></p>
+				</div>
+			</section>
+		</div>
+	
+		{{with .Agendas}}
+		<form method="post" class="form-horizontal">
+			<div class="row mx-0 row--voting">
+				{{ range $i, $data := . }}
+				<div class="col-md-6 col-12 mb-4">
+					<div class="accordion voting_accordion">
+						<input id="accordion-control-{{$i}}" class="accordion-control" type="checkbox" />
+						<label for="accordion-control-{{$i}}">
+							<div class="row accordion__toggle">
+								<div class="col-6">
+									<h2>{{$data.Vote.Id}}</h2>
+								</div>
+								<div class="col-12 my-3">
+									<p class="description"><span>ID:</span> #{{$data.Vote.Id}}</p>
+								</div>
+								<div class="col-12">
+									<p class="description">{{$data.Vote.Description}}</p>
+								</div>
+							</div>
+						</label>
+						<div class="row mx-0 accordion__contents">
+							<div class="col-12 position-relative px-0">
+								<select class="form-control" name="agenda{{$i}}" id="agenda{{$i}}">
+								{{ range $j, $choicesdata := $data.Vote.Choices}}
+									<option value="{{$choicesdata.Bits}}"{{if eq $choicesdata.Bits (index $ (print "Agenda" $i "Selected"))}} selected{{end}}>{{$choicesdata.Description}}</option>
+								{{end}}
+								</select>
+							</div>
+						</div>
+					</div>
+				</div>
+				{{end}}
+			</div>
+			<div class="row mx-0 row--voting">
+				<button id="updateVoting" name="updateVoting" class="btn btn-primary">Update Voting Preferences</button>
+				{{ $.csrfField }}
+			</div>
+		</form>
+		{{else}}
+		<div class="col pt-5 justify-content-center align-items-center">
+			<div class="text-center">
+				<h1>No agendas found</h1>
+			</div>
+			<div>
+				<img class="mx-auto d-block" src="assets/images/dcr-symbols-not found.svg" alt="">
+			</div>
+		</div>
+		{{end}}
+	</div>
+</section>
 {{end}}
-

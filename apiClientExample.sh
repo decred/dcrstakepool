@@ -63,11 +63,11 @@ command -v jq >/dev/null 2>&1 || { fatal "I require the binary jq (https://stedo
 
 #apiCmd "startsession"
 
-#apiCmd "signup" "email=$email&password=$password&passwordrepeat=$password"
+#apiCmd "register" "email=$email&password=$password&passwordrepeat=$password"
 
 #waitForVerification
 
-#apiCmd "signin" "email=$email&password=$password"
+#apiCmd "login" "email=$email&password=$password"
 
 apiCmd "address" "UserPubKeyAddr=$pubKeyAddr"
 

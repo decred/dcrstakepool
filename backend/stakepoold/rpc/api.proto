@@ -9,6 +9,8 @@ service StakepooldService {
 	rpc Ping (PingRequest) returns (PingResponse);
 	rpc SetAddedLowFeeTickets (SetAddedLowFeeTicketsRequest) returns (SetAddedLowFeeTicketsResponse);
 	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
+	rpc ImportScript (ImportScriptRequest) returns (ImportScriptResponse);
+	rpc StakePoolUserInfo (StakePoolUserInfoRequest) returns (StakePoolUserInfoResponse);
 }
 
 service VersionService {
@@ -17,24 +19,24 @@ service VersionService {
 
 message GetAddedLowFeeTicketsRequest {}
 message GetAddedLowFeeTicketsResponse {
-	repeated TicketEntry tickets = 1;
+	repeated Ticket tickets = 1;
 }
 
 message GetIgnoredLowFeeTicketsRequest {}
 message GetIgnoredLowFeeTicketsResponse {
-	repeated TicketEntry tickets = 1;
+	repeated Ticket tickets = 1;
 }
 
 message GetLiveTicketsRequest {}
 message GetLiveTicketsResponse {
-	repeated TicketEntry tickets = 1;
+	repeated Ticket tickets = 1;
 }
 
 message PingRequest {}
 message PingResponse {}
 
 message SetAddedLowFeeTicketsRequest {
-	repeated TicketEntry tickets = 1;
+	repeated Ticket tickets = 1;
 }
 message SetAddedLowFeeTicketsResponse {
 }
@@ -45,9 +47,32 @@ message SetUserVotingPrefsRequest {
 	repeated UserVotingConfigEntry user_voting_config = 1;
 }
 
-message TicketEntry {
-	string TicketAddress = 1;
-	bytes TicketHash = 2;
+message ImportScriptRequest {
+	bytes Script = 1;
+}
+message ImportScriptResponse {
+	int64 HeightImported = 1;
+}
+
+message StakePoolUserInfoRequest {
+	string MultiSigAddress = 1;
+}
+message StakePoolUserInfoResponse {
+	repeated StakePoolUserTicket Tickets = 1;
+	repeated string InvalidTickets = 2;
+}
+
+message StakePoolUserTicket {
+	string Status = 1;
+	string Ticket = 2;
+	uint32 TicketHeight = 3;
+	string SpentBy = 4;
+	uint32 SpentByHeight = 5;
+}
+
+message Ticket {
+	string Address = 1;
+	bytes Hash = 2;
 }
 
 message UserVotingConfigEntry {
