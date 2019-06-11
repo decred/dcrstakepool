@@ -23,8 +23,7 @@ import (
 type functionName int
 
 const (
-	validateAddressFn functionName = iota
-	createMultisigFn
+	createMultisigFn functionName = iota
 	getStakeInfoFn
 	connectedFn
 )
@@ -44,18 +43,6 @@ var (
 	// account as a string.
 	defaultAccountName = "default"
 )
-
-// validateAddressResponse
-type validateAddressResponse struct {
-	addrInfo *wallettypes.ValidateAddressWalletResult
-	err      error
-}
-
-// validateAddressMsg
-type validateAddressMsg struct {
-	address dcrutil.Address
-	reply   chan validateAddressResponse
-}
 
 // createMultisigResponse
 type createMultisigResponse struct {
@@ -104,10 +91,6 @@ out:
 		select {
 		case m := <-w.msgChan:
 			switch msg := m.(type) {
-			case validateAddressMsg:
-				resp := w.executeInSequence(validateAddressFn, msg)
-				respTyped := resp.(*validateAddressResponse)
-				msg.reply <- *respTyped
 			case createMultisigMsg:
 				resp := w.executeInSequence(createMultisigFn, msg)
 				respTyped := resp.(*createMultisigResponse)
@@ -137,59 +120,6 @@ out:
 // executeInSequence is the mainhandler of all the incoming client functions.
 func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) interface{} {
 	switch fn {
-	case validateAddressFn:
-		vam := msg.(validateAddressMsg)
-		resp := new(validateAddressResponse)
-		vawrs := make([]*wallettypes.ValidateAddressWalletResult, w.serversLen)
-		connectCount := 0
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				continue
-			}
-			vawr, err := s.ValidateAddress(vam.address)
-			if err != nil && (err != rpcclient.ErrClientDisconnect &&
-				err != rpcclient.ErrClientShutdown) {
-				log.Infof("validateAddressFn failure on server %v: %v", i, err)
-				resp.err = err
-				return resp
-			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
-				err == rpcclient.ErrClientShutdown) {
-				vawrs[i] = nil
-				continue
-			}
-			connectCount++
-			vawrs[i] = vawr
-		}
-
-		if connectCount < w.minServers {
-			log.Errorf("Unable to check any servers for validateAddressFn")
-			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v", connectCount, w.minServers)
-			return resp
-		}
-
-		for i := 0; i < w.serversLen; i++ {
-			if i == w.serversLen-1 {
-				break
-			}
-			if vawrs[i] == nil || vawrs[i+1] == nil {
-				continue
-			}
-			if vawrs[i].PubKey != vawrs[i+1].PubKey {
-				log.Infof("validateAddressFn nonequiv failure on servers "+
-					"%v, %v (%v != %v)", i, i+1, vawrs[i].PubKey, vawrs[i+1].PubKey)
-				resp.err = fmt.Errorf("non equivalent pubkey returned")
-				return resp
-			}
-		}
-
-		for i := range vawrs {
-			if vawrs[i] != nil {
-				resp.addrInfo = vawrs[i]
-				break
-			}
-		}
-		return resp
-
 	case createMultisigFn:
 		cmsm := msg.(createMultisigMsg)
 		resp := new(createMultisigResponse)
@@ -366,26 +296,6 @@ func (w *walletSvrManager) connected() ([]*wallettypes.WalletInfoResult, error) 
 	}
 	response := <-reply
 	return response.walletInfo, response.err
-}
-
-// ValidateAddress
-//
-// This should return equivalent results from all wallet RPCs. If this
-// encounters a failure, it should be considered fatal.
-func (w *walletSvrManager) ValidateAddress(addr dcrutil.Address) (*wallettypes.ValidateAddressWalletResult, error) {
-	// Assert that all servers are online.
-	_, err := w.connected()
-	if err != nil {
-		return nil, connectionError(err)
-	}
-
-	reply := make(chan validateAddressResponse)
-	w.msgChan <- validateAddressMsg{
-		address: addr,
-		reply:   reply,
-	}
-	response := <-reply
-	return response.addrInfo, response.err
 }
 
 // CreateMultisig
