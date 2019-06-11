@@ -84,11 +84,9 @@ func runMain() error {
 
 	var stakepooldConnMan *stakepooldclient.StakepooldManager
 
-	if cfg.EnableStakepoold {
-		stakepooldConnMan, err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts)
-		if err != nil {
-			return fmt.Errorf("Failed to connect to stakepoold host: %v", err)
-		}
+	stakepooldConnMan, err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts)
+	if err != nil {
+		return fmt.Errorf("Failed to connect to stakepoold host: %v", err)
 	}
 
 	sender, err := email.NewSender(cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom, cfg.UseSMTPS)
@@ -99,11 +97,11 @@ func runMain() error {
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
 		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported,
-		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, cfg.EnableStakepoold,
-		coldWalletFeeKey, stakepooldConnMan, cfg.PoolFees, cfg.PoolEmail,
-		cfg.PoolLink, sender, cfg.WalletHosts, cfg.WalletCerts,
-		cfg.WalletUsers, cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader,
-		votingWalletVoteKey, cfg.MaxVotedAge, cfg.Description, cfg.Designation)
+		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, coldWalletFeeKey,
+		stakepooldConnMan, cfg.PoolFees, cfg.PoolEmail, cfg.PoolLink,
+		sender, cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers,
+		cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader, votingWalletVoteKey,
+		cfg.MaxVotedAge, cfg.Description, cfg.Designation)
 	if err != nil {
 		application.Close()
 		return fmt.Errorf("Failed to initialize the main controller: %v",
@@ -118,28 +116,26 @@ func runMain() error {
 			err)
 	}
 
-	if cfg.EnableStakepoold {
-		err = controller.StakepooldUpdateUsers(application.DbMap)
-		if err != nil {
-			return fmt.Errorf("StakepooldUpdateUsers failed: %v", err)
-		}
-		err = controller.StakepooldUpdateTickets(application.DbMap)
-		if err != nil {
-			return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
-		}
-		// Log the reported count of ignored/added/live tickets from each stakepoold
-		_, err = controller.StakepooldServers.GetIgnoredLowFeeTickets()
-		if err != nil {
-			return fmt.Errorf("StakepooldGetIgnoredLowFeeTickets failed: %v", err)
-		}
-		_, err = controller.StakepooldServers.GetAddedLowFeeTickets()
-		if err != nil {
-			return fmt.Errorf("StakepooldGetAddedLowFeeTickets failed: %v", err)
-		}
-		_, err = controller.StakepooldServers.GetLiveTickets()
-		if err != nil {
-			return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
-		}
+	err = controller.StakepooldUpdateUsers(application.DbMap)
+	if err != nil {
+		return fmt.Errorf("StakepooldUpdateUsers failed: %v", err)
+	}
+	err = controller.StakepooldUpdateTickets(application.DbMap)
+	if err != nil {
+		return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
+	}
+	// Log the reported count of ignored/added/live tickets from each stakepoold
+	_, err = controller.StakepooldServers.GetIgnoredLowFeeTickets()
+	if err != nil {
+		return fmt.Errorf("StakepooldGetIgnoredLowFeeTickets failed: %v", err)
+	}
+	_, err = controller.StakepooldServers.GetAddedLowFeeTickets()
+	if err != nil {
+		return fmt.Errorf("StakepooldGetAddedLowFeeTickets failed: %v", err)
+	}
+	_, err = controller.StakepooldServers.GetLiveTickets()
+	if err != nil {
+		return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
 	}
 
 	err = controller.RPCSync(application.DbMap)

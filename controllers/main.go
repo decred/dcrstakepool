@@ -98,11 +98,11 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 
 // NewMainController is the constructor for the entire controller routing.
 func NewMainController(params *chaincfg.Params, adminIPs []string,
-	adminUserIDs []string, APISecret string, APIVersionsSupported []int,
-	baseURL string, closePool bool, closePoolMsg string, enablestakepoold bool,
-	feeKey *hdkeychain.ExtendedKey, stakepooldConnMan *stakepooldclient.StakepooldManager,
-	poolFees float64, poolEmail, poolLink string, emailSender email.Sender, walletHosts,
-	walletCerts, walletUsers, walletPasswords []string, minServers int, realIPHeader string,
+	adminUserIDs []string, APISecret string, APIVersionsSupported []int, baseURL string,
+	closePool bool, closePoolMsg string, feeKey *hdkeychain.ExtendedKey,
+	stakepooldConnMan *stakepooldclient.StakepooldManager, poolFees float64,
+	poolEmail, poolLink string, emailSender email.Sender, walletHosts, walletCerts,
+	walletUsers, walletPasswords []string, minServers int, realIPHeader string,
 	voteKey *hdkeychain.ExtendedKey, maxVotedAge int64, description string,
 	designation string) (*MainController, error) {
 
@@ -124,7 +124,6 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		baseURL:              baseURL,
 		closePool:            closePool,
 		closePoolMsg:         closePoolMsg,
-		enableStakepoold:     enablestakepoold,
 		feeXpub:              feeKey,
 		StakepooldServers:    stakepooldConnMan,
 		poolEmail:            poolEmail,
