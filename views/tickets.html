@@ -1,13 +1,23 @@
 {{define "tickets"}}
 <section class="site-content">
 	<div class="container container--narrow">
-			<div class="row mx-3">
+		<div class="row mx-3">
 
 		{{range .Flash}}
 			<div class="snackbar snackbar-ticket-failed">
 				<div class="snackbar-message">
 					<div class="snackbar-close-button-top d-none"></div>
 					<p>{{.}}</p>
+				</div>
+			</div>
+		{{end}}
+
+		{{with .TicketsInvalid}}
+			<div class="snackbar snackbar-ticket-failed">
+				<div class="snackbar-message">
+					<div class="snackbar-close-button-top d-none"></div>
+					<p class="font-weight-bold">You have {{len .}} invalid ticket{{if gt (len .) 1}}s{{end}}!</p>
+					<p>You will either need to vote {{if gt (len .) 1}}these tickets{{else}}this ticket{{end}} yourself or contact your voting service provider admin to have them add the ticket{{if gt (len .) 1}}s{{end}} to the voting service manually.</p>
 				</div>
 			</div>
 		{{end}}
@@ -114,7 +124,8 @@
 								{{end}}
 							</div>
 					</div>  
-					
+
+					{{with .TicketsInvalid}}
 					<div class="accordion ticket_accordion">
 						<input id="accordion-control-6" class="accordion-control" type="checkbox" />
 						<label for="accordion-control-6">
@@ -125,7 +136,7 @@
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
-								{{ range $i, $data := .TicketsInvalid }}
+								{{ range $i, $data := . }}
 								<div>
 									<img src="assets/images/symbol-5-1-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
@@ -139,6 +150,8 @@
 							</div>
 							
 					</div>
+					{{end}}
+
 				</div>
 			</section>
 
