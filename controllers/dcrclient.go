@@ -27,7 +27,6 @@ const (
 	createMultisigFn
 	getStakeInfoFn
 	connectedFn
-	getBestBlockFn
 )
 
 var (
@@ -93,18 +92,6 @@ type connectedMsg struct {
 	reply chan connectedResponse
 }
 
-// getBestBlockResponse
-type getBestBlockResponse struct {
-	bestBlockHash   *chainhash.Hash
-	bestBlockHeight int64
-	err             error
-}
-
-// getBestBlockMsg
-type getBestBlockMsg struct {
-	reply chan getBestBlockResponse
-}
-
 // connectionError is an error relating to the connection,
 // so that connection failures can be handled without
 // crashing the server.
@@ -132,10 +119,6 @@ out:
 			case connectedMsg:
 				resp := w.executeInSequence(connectedFn, msg)
 				respTyped := resp.(*connectedResponse)
-				msg.reply <- *respTyped
-			case getBestBlockMsg:
-				resp := w.executeInSequence(getBestBlockFn, msg)
-				respTyped := resp.(*getBestBlockResponse)
 				msg.reply <- *respTyped
 			default:
 				log.Infof("Invalid message type in wallet RPC "+
@@ -369,30 +352,6 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		// but err out and disallow if only 1/3 etc
 		return resp
 
-	case getBestBlockFn:
-		resp := new(getBestBlockResponse)
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				continue
-			}
-			hash, height, err := s.GetBestBlock()
-			if err != nil && (err != rpcclient.ErrClientDisconnect &&
-				err != rpcclient.ErrClientShutdown) {
-				log.Infof("getBestBlockFn failure on server %v: %v", i, err)
-				resp.err = err
-				return resp
-			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
-				err == rpcclient.ErrClientShutdown) {
-				continue
-			}
-			resp.bestBlockHeight = height
-			resp.bestBlockHash = hash
-			return resp
-		}
-		log.Errorf("Unable to check any servers for getBestBlockFn")
-		resp.err = fmt.Errorf("unable to get best block")
-		return resp
-
 	}
 
 	return nil
@@ -448,17 +407,6 @@ func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*w
 	}
 	response := <-reply
 	return response.multisigInfo, response.err
-}
-
-// GetBestBlock gets the current best block according the first wallet asked.
-func (w *walletSvrManager) GetBestBlock() (*chainhash.Hash, int64, error) {
-	reply := make(chan getBestBlockResponse)
-	w.msgChan <- getBestBlockMsg{
-		reply: reply,
-	}
-	response := <-reply
-
-	return response.bestBlockHash, response.bestBlockHeight, response.err
 }
 
 // getStakeInfo returns the cached current stake statistics about the wallet if

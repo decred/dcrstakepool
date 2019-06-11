@@ -23,29 +23,29 @@ import (
 )
 
 const (
-	defaultBaseURL        = "http://127.0.0.1:8000"
-	defaultClosePoolMsg   = "The voting service is temporarily closed to new signups."
-	defaultConfigFilename = "dcrstakepool.conf"
-	defaultDataDirname    = "data"
-	defaultLogLevel       = "info"
-	defaultLogDirname     = "logs"
-	defaultLogFilename    = "dcrstakepool.log"
-	defaultCookieSecure   = false
-	defaultDBHost         = "localhost"
-	defaultDBName         = "stakepool"
-	defaultDBPort         = "3306"
-	defaultDBUser         = "stakepool"
-	defaultListen         = ":8000"
-	defaultPoolEmail      = "admin@example.com"
-	defaultPoolFees       = 7.5
-	defaultPoolLink       = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
-	defaultPublicPath     = "public"
-	defaultTemplatePath   = "views"
-	defaultSMTPHost       = ""
-	defaultMinServers     = 2
-	defaultMaxVotedAge    = 8640
-	defaultDescription    = ""
-	defaultDesignation    = ""
+	defaultBaseURL         = "http://127.0.0.1:8000"
+	defaultClosePoolMsg    = "The voting service is temporarily closed to new signups."
+	defaultConfigFilename  = "dcrstakepool.conf"
+	defaultDataDirname     = "data"
+	defaultLogLevel        = "info"
+	defaultLogDirname      = "logs"
+	defaultLogFilename     = "dcrstakepool.log"
+	defaultCookieSecure    = false
+	defaultDBHost          = "localhost"
+	defaultDBName          = "stakepool"
+	defaultDBPort          = "3306"
+	defaultDBUser          = "stakepool"
+	defaultListen          = ":8000"
+	defaultPoolEmail       = "admin@example.com"
+	defaultPoolFees        = 7.5
+	defaultPoolLink        = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
+	defaultPublicPath      = "public"
+	defaultTemplatePath    = "views"
+	defaultSMTPHost        = ""
+	defaultMinServers      = 2
+	defaultMaxVotedTickets = 1000
+	defaultDescription     = ""
+	defaultDesignation     = ""
 )
 
 var (
@@ -110,7 +110,8 @@ type config struct {
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
 	MinServers         int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
 	EnableStakepoold   bool     `long:"enablestakepoold" description:"Deprecated: Do not use. Stakepoold is required."`
-	MaxVotedAge        int64    `long:"maxvotedage" description:"Maximum vote age (blocks since vote) to include in voted tickets table"`
+	MaxVotedAge        int64    `long:"maxvotedage" description:"Deprecated: Use maxvotedtickets instead"`
+	MaxVotedTickets    int      `long:"maxvotedtickets" description:"Maximum number of voted tickets to show on tickets page."`
 	Description        string   `long:"description" description:"Operators own description of their VSP"`
 	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
 }
@@ -309,29 +310,29 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
-		BaseURL:      defaultBaseURL,
-		ClosePool:    false,
-		ClosePoolMsg: defaultClosePoolMsg,
-		ConfigFile:   defaultConfigFile,
-		DebugLevel:   defaultLogLevel,
-		DataDir:      defaultDataDir,
-		LogDir:       defaultLogDir,
-		CookieSecure: defaultCookieSecure,
-		DBHost:       defaultDBHost,
-		DBName:       defaultDBName,
-		DBPort:       defaultDBPort,
-		DBUser:       defaultDBUser,
-		Listen:       defaultListen,
-		PoolEmail:    defaultPoolEmail,
-		PoolFees:     defaultPoolFees,
-		PoolLink:     defaultPoolLink,
-		PublicPath:   defaultPublicPath,
-		TemplatePath: defaultTemplatePath,
-		SMTPHost:     defaultSMTPHost,
-		MinServers:   defaultMinServers,
-		MaxVotedAge:  defaultMaxVotedAge,
-		Description:  defaultDescription,
-		Designation:  defaultDesignation,
+		BaseURL:         defaultBaseURL,
+		ClosePool:       false,
+		ClosePoolMsg:    defaultClosePoolMsg,
+		ConfigFile:      defaultConfigFile,
+		DebugLevel:      defaultLogLevel,
+		DataDir:         defaultDataDir,
+		LogDir:          defaultLogDir,
+		CookieSecure:    defaultCookieSecure,
+		DBHost:          defaultDBHost,
+		DBName:          defaultDBName,
+		DBPort:          defaultDBPort,
+		DBUser:          defaultDBUser,
+		Listen:          defaultListen,
+		PoolEmail:       defaultPoolEmail,
+		PoolFees:        defaultPoolFees,
+		PoolLink:        defaultPoolLink,
+		PublicPath:      defaultPublicPath,
+		TemplatePath:    defaultTemplatePath,
+		SMTPHost:        defaultSMTPHost,
+		MinServers:      defaultMinServers,
+		MaxVotedTickets: defaultMaxVotedTickets,
+		Description:     defaultDescription,
+		Designation:     defaultDesignation,
 	}
 
 	// Service options which are only added on Windows.
@@ -681,6 +682,11 @@ func loadConfig() (*config, []string, error) {
 	// Warn about deprecated config items if they have been set
 	if cfg.EnableStakepoold {
 		str := "%s: Config enablestakepoold is deprecated.  Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if cfg.MaxVotedAge != 0 {
+		str := "%s: Config maxVotedAge is deprecated and has no effect. Use maxVotedTickets instead"
 		log.Warnf(str, funcName)
 	}
 

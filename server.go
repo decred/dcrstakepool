@@ -101,7 +101,7 @@ func runMain() error {
 		stakepooldConnMan, cfg.PoolFees, cfg.PoolEmail, cfg.PoolLink,
 		sender, cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers,
 		cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader, votingWalletVoteKey,
-		cfg.MaxVotedAge, cfg.Description, cfg.Designation)
+		cfg.MaxVotedTickets, cfg.Description, cfg.Designation)
 	if err != nil {
 		application.Close()
 		return fmt.Errorf("Failed to initialize the main controller: %v",
