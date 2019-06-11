@@ -226,6 +226,45 @@ func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) e
 	return nil
 }
 
+// VoteVersion returns a consistent vote version between all wallets
+// or an error indicating a mismatch
+func (s *StakepooldManager) VoteVersion() (uint32, error) {
+	walletVoteVersions := make(map[int]uint32)
+
+	// Get vote version from all wallets
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		req := &pb.WalletInfoRequest{}
+		wvv, err := client.WalletInfo(context.Background(), req)
+		if err != nil {
+			log.Errorf("WalletInfo RPC failed on stakepoold instance %d: %v", i, err)
+			return 0, err
+		}
+		walletVoteVersions[i] = wvv.VoteVersion
+	}
+
+	// Ensure vote version matches on all wallets
+	lastVersion := uint32(0)
+	lastServer := 0
+	firstrun := true
+	for k, v := range walletVoteVersions {
+		if firstrun {
+			firstrun = false
+			lastVersion = v
+		}
+
+		if v != lastVersion {
+			vErr := fmt.Errorf("wallets %d and %d have mismatched vote versions",
+				k, lastServer)
+			return 0, vErr
+		}
+
+		lastServer = k
+	}
+
+	return lastVersion, nil
+}
+
 // ImportScript calls ImportScript RPC on all stakepoold instances. It stops
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) ImportScript(script []byte) (heightImported int64, err error) {

@@ -140,11 +140,13 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		designation:          designation,
 	}
 
-	voteVersion, err := mc.GetVoteVersion()
+	voteVersion, err := stakepooldConnMan.VoteVersion()
 	if err != nil || voteVersion == 0 {
 		cErr := fmt.Errorf("Failed to get wallets' Vote Version: %v", err)
 		return nil, cErr
 	}
+
+	log.Infof("All wallets are VoteVersion %d", voteVersion)
 
 	mc.voteVersion = voteVersion
 
@@ -552,16 +554,6 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 
 	err = walletSvrsSync(controller.rpcServers, multisigScripts)
 	return err
-}
-
-// GetVoteVersion
-func (controller *MainController) GetVoteVersion() (uint32, error) {
-	voteVersion, err := checkWalletsVoteVersion(controller.rpcServers)
-	if err != nil {
-		return 0, err
-	}
-
-	return voteVersion, err
 }
 
 // CheckAndResetUserVoteBits reset users VoteBits if the VoteVersion has

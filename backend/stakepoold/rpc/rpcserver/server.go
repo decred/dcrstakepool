@@ -178,3 +178,14 @@ func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakeP
 		InvalidTickets: response.InvalidTickets,
 	}, nil
 }
+
+func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoRequest) (*pb.WalletInfoResponse, error) {
+	response, err := s.appContext.WalletInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.WalletInfoResponse{
+		VoteVersion: response.VoteVersion,
+	}, nil
+}
