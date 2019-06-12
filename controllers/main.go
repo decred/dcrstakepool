@@ -1848,19 +1848,20 @@ type TicketInfoInvalid struct {
 	Ticket string
 }
 
-// TicketInfoImmature represents immature (mined) tickets that have yet to
+// TicketInfo represents live immature (mined) tickets that have yet to
 // be spent by either a vote or revocation.
-type TicketInfoImmature struct {
+type TicketInfo struct {
 	TicketHeight uint32
 	Ticket       string
 }
 
+// TicketInfoImmature represents immature (mined) tickets that have yet to
+// be spent by either a vote or revocation.
+type TicketInfoImmature TicketInfo
+
 // TicketInfoLive represents live tickets that have yet to
 // be spent by either a vote or revocation.
-type TicketInfoLive struct {
-	TicketHeight uint32
-	Ticket       string
-}
+type TicketInfoLive TicketInfo
 
 // Tickets renders the tickets page.
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
@@ -1937,21 +1938,16 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	if spui != nil && len(spui.Tickets) > 0 {
 		for _, ticket := range spui.Tickets {
 			switch ticket.Status {
+			case "immature":
+				ticketInfoImmature = append(ticketInfoImmature, TicketInfoImmature{
+					TicketHeight: ticket.TicketHeight,
+					Ticket:       ticket.Ticket,
+				})
 			case "live":
-
-				maturedHeight := int64(ticket.TicketHeight + uint32(controller.params.TicketMaturity) + 1)
-
-				if height >= maturedHeight {
-					ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
-						TicketHeight: ticket.TicketHeight,
-						Ticket:       ticket.Ticket,
-					})
-				} else {
-					ticketInfoImmature = append(ticketInfoImmature, TicketInfoImmature{
-						TicketHeight: ticket.TicketHeight,
-						Ticket:       ticket.Ticket,
-					})
-				}
+				ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
+					TicketHeight: ticket.TicketHeight,
+					Ticket:       ticket.Ticket,
+				})
 
 			case "expired":
 				ticketInfoExpired = append(ticketInfoExpired, TicketInfoHistoric{
