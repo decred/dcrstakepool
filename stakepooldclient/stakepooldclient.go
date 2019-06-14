@@ -246,7 +246,7 @@ func (s *StakepooldManager) VoteVersion() (uint32, error) {
 
 	// Ensure vote version matches on all wallets
 	lastVersion := uint32(0)
-	lastServer := 0
+	var lastServer int
 	firstrun := true
 	for k, v := range walletVoteVersions {
 		if firstrun {
@@ -287,7 +287,7 @@ func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateA
 
 	// Ensure responses are identical
 	var lastResponse *pb.ValidateAddressResponse
-	lastServer := 0
+	var lastServer int
 	firstrun := true
 	for k, v := range responses {
 		if firstrun {

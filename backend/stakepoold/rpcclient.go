@@ -124,7 +124,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 
 	ignoredLowFeeTickets := make(map[chainhash.Hash]string)
 	liveTickets := make(map[chainhash.Hash]string)
-	normalFee := 0
+	var normalFee int
 
 	log.Info("Calling GetTickets...")
 	timenow := time.Now()
@@ -147,7 +147,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 		promises = append(promises, promise{ctx.WalletConnection.GetTransactionAsync(ticket)})
 	}
 
-	counter := 0
+	var counter int
 	for _, p := range promises {
 		counter++
 		log.Debugf("Receiving GetTransaction result for ticket %v/%v", counter, len(tickets))

@@ -532,8 +532,8 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 		spenttickets = append(spenttickets, sm.ticket)
 	}
 
-	ticketCountNew := 0
-	ticketCountOld := 0
+	var ticketCountNew int
+	var ticketCountOld int
 
 	log.Debug("processSpentMissedTickets ctx.Lock")
 	ctx.Lock()
