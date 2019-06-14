@@ -5,9 +5,10 @@
 package main
 
 import (
+	"testing"
+
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/hdkeychain"
-	"testing"
 )
 
 const (
