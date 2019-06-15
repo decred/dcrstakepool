@@ -113,6 +113,15 @@ type PasswordReset struct {
 	Expires int64
 }
 
+type Session struct {
+	Id      int64 `db:"SessionID"`
+	Token   string
+	Data    []byte
+	UserId  int64
+	Created int64
+	Expires int64
+}
+
 type User struct {
 	Id               int64 `db:"UserId"`
 	Email            string
@@ -313,6 +322,7 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	dbMap.AddTableWithName(EmailChange{}, "EmailChange").SetKeys(true, "Id")
 	dbMap.AddTableWithName(LowFeeTicket{}, "LowFeeTicket").SetKeys(true, "Id")
 	dbMap.AddTableWithName(PasswordReset{}, "PasswordReset").SetKeys(true, "Id")
+	dbMap.AddTableWithName(Session{}, "Session").SetKeys(true, "Id")
 	usersTableName := "Users"
 	dbMap.AddTableWithName(User{}, usersTableName).SetKeys(true, "Id")
 

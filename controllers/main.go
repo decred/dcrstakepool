@@ -1157,9 +1157,12 @@ func (controller *MainController) EmailUpdate(c web.C, r *http.Request) (string,
 			"emailupdateError")
 		log.Errorf("EmailChangeComplete failed %v", err)
 	} else {
-		// Logout the user to force them to login with their new
-		// email address
-		session.Values["UserId"] = nil
+
+		// destroy session data and force re-login
+		userID, _ := session.Values["UserId"].(int64)
+		session.Options.MaxAge = -1
+		system.DestroySessionsForUserID(dbMap, userID)
+
 		session.AddFlash("Email successfully updated",
 			"emailupdateSuccess")
 	}
@@ -1452,6 +1455,9 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 		log.Errorf("error deleting token %v", err)
 	}
 
+	// destroy session data
+	system.DestroySessionsForUserID(dbMap, user.Id)
+
 	session.AddFlash("Password successfully updated", "passwordupdateSuccess")
 	return controller.PasswordUpdate(c, r)
 }
@@ -1580,6 +1586,9 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 			session.AddFlash("Unable to update password", "settingsError")
 			return controller.Settings(c, r)
 		}
+
+		// destroy session data
+		system.DestroySessionsForUserID(dbMap, user.Id)
 
 		// send a confirmation email.
 		err = controller.emailSender.PasswordChangeConfirm(user.Email, controller.baseURL, remoteIP)
@@ -2083,8 +2092,11 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 func (controller *MainController) Logout(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
+	if session.Values["UserId"] == nil {
+		return "/", http.StatusSeeOther
+	}
 
-	session.Values["UserId"] = nil
+	session.Options.MaxAge = -1
 
 	return "/", http.StatusSeeOther
 }
