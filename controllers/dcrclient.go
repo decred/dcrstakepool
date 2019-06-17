@@ -124,7 +124,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		cmsm := msg.(createMultisigMsg)
 		resp := new(createMultisigResponse)
 		cmsrs := make([]*wallettypes.CreateMultiSigResult, w.serversLen)
-		connectCount := 0
+		var connectCount int
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
@@ -176,7 +176,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case getStakeInfoFn:
 		resp := new(getStakeInfoResponse)
 		gsirs := make([]*wallettypes.GetStakeInfoResult, w.serversLen)
-		connectCount := 0
+		var connectCount int
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
@@ -232,7 +232,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp.err = nil
 		wirs := make([]*wallettypes.WalletInfoResult, w.serversLen)
 		resp.walletInfo = wirs
-		connectCount := 0
+		var connectCount int
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue

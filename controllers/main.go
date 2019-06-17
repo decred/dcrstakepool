@@ -855,7 +855,7 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 		EnableVoting    bool
 	}
 	walletPageInfo := make([]WalletInfoPage, len(walletInfo))
-	connectedWallets := 0
+	var connectedWallets int
 	for i, v := range walletInfo {
 		// If something is nil in the slice means it is disconnected.
 		if v == nil {

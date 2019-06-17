@@ -3,13 +3,13 @@ package stakepooldclient
 import (
 	"errors"
 	"fmt"
-	"github.com/decred/dcrd/dcrutil"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrd/dcrutil"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/models"
 	"golang.org/x/net/context"
@@ -246,7 +246,7 @@ func (s *StakepooldManager) VoteVersion() (uint32, error) {
 
 	// Ensure vote version matches on all wallets
 	lastVersion := uint32(0)
-	lastServer := 0
+	var lastServer int
 	firstrun := true
 	for k, v := range walletVoteVersions {
 		if firstrun {
@@ -287,7 +287,7 @@ func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateA
 
 	// Ensure responses are identical
 	var lastResponse *pb.ValidateAddressResponse
-	lastServer := 0
+	var lastServer int
 	firstrun := true
 	for k, v := range responses {
 		if firstrun {
@@ -297,7 +297,7 @@ func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateA
 
 		if v.IsMine != lastResponse.IsMine ||
 			v.PubKeyAddr != lastResponse.PubKeyAddr {
-			vErr := fmt.Errorf("wallets %d and %d have different ValideAddress responses",
+			vErr := fmt.Errorf("wallets %d and %d have different ValidateAddress responses",
 				k, lastServer)
 			return nil, vErr
 		}
