@@ -1718,6 +1718,12 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 		return controller.Register(c, r)
 	}
 
+	// At this point we have completed all trivial pre-registration checks. The new account
+	// is about to be created, so lets consume the CAPTCHA. Any failure beyond this point
+	// and we want the user to complete another CAPTCHA.
+	session.Values["CaptchaDone"] = false
+	c.Env["CaptchaDone"] = false
+
 	dbMap := controller.GetDbMap(c)
 	user := models.GetUserByEmail(dbMap, email)
 
@@ -1725,11 +1731,6 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 		session.AddFlash("This email address is already registered", "registrationError")
 		return controller.Register(c, r)
 	}
-
-	// At this point we have completed all pre-registration checks. The new account
-	// is about to be created, so lets consume the CAPTCHA.
-	session.Values["CaptchaDone"] = false
-	c.Env["CaptchaDone"] = false
 
 	token := models.NewUserToken()
 	user = &models.User{
