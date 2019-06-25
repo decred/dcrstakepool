@@ -11,33 +11,34 @@
 				  
           <h1 class="mb-4 text--size-27">Register</h1>
 
+          {{range .FlashError}}
+            <div class="snackbar snackbar-error">
+              <div class="snackbar-message">
+                <div class="snackbar-close-button-top d-none"></div>
+                <p>{{.}}</p>
+              </div>
+            </div>
+          {{end}}
+            
           {{if .IsClosed }}
             <div class="snackbar snackbar-error">
               <div class="snackbar-message">
                 <p>{{.ClosePoolMsg}}</p>
               </div>
-            </div>				
+            </div>
+
+          {{else if .FlashSuccess}}
+            {{range .FlashSuccess}}
+              <p><span style="font-size: larger;">{{.}}</span></p>
+            {{end}}
+
           {{else if .CaptchaDone}}
             <form id="Register" data-empty="" action="#" method="post">
-                {{if .FlashSuccess}}
-                  {{range .FlashSuccess}}<p><span style="font-size: larger;">{{.}}</span></p>{{end}}
-                {{else}}
-                  
-                  {{range .FlashError}}
-                    <div class="snackbar snackbar-error">
-                      <div class="snackbar-message">
-                        <div class="snackbar-close-button-top d-none"></div>
-                        <p>{{.}}</p>
-                      </div>
-                    </div>
-                  {{end}}
-
-                  <input type="email" name="email" class="form-control mb-4 w-75 mx-auto" placeholder="Email" required autofocus>
-                  <input type="password" name="password" class="form-control mb-4 w-75 mx-auto" placeholder="Password" required>
-                  <input type="password" name="passwordrepeat" class="form-control mb-4 w-75 mx-auto" placeholder="Repeat your new password" required>
-                  <input class="btn btn-primary mb-3" type="submit" value="Register">
-                  {{ $.csrfField }}
-                {{end}}
+                <input type="email" name="email" class="form-control mb-4 w-75 mx-auto" placeholder="Email" required autofocus>
+                <input type="password" name="password" class="form-control mb-4 w-75 mx-auto" placeholder="Password" required>
+                <input type="password" name="passwordrepeat" class="form-control mb-4 w-75 mx-auto" placeholder="Repeat your new password" required>
+                <input class="btn btn-primary mb-3" type="submit" value="Register">
+                {{ $.csrfField }}
             </form>
           {{else}} <!-- Render CAPTCHA -->
             {{ template "captcha" . }}

@@ -1696,9 +1696,6 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 	if !controller.IsCaptchaDone(c) {
 		session.AddFlash("You must complete the captcha.", "registrationError")
 		return controller.Register(c, r)
-	} else {
-		session.Values["CaptchaDone"] = false
-		c.Env["CaptchaDone"] = false
 	}
 
 	remoteIP := getClientIP(r, controller.realIPHeader)
@@ -1720,6 +1717,12 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 		session.AddFlash("Passwords do not match", "registrationError")
 		return controller.Register(c, r)
 	}
+
+	// At this point we have completed all trivial pre-registration checks. The new account
+	// is about to be created, so lets consume the CAPTCHA. Any failure beyond this point
+	// and we want the user to complete another CAPTCHA.
+	session.Values["CaptchaDone"] = false
+	c.Env["CaptchaDone"] = false
 
 	dbMap := controller.GetDbMap(c)
 	user := models.GetUserByEmail(dbMap, email)
