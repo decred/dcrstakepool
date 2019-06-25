@@ -4,49 +4,73 @@
 		<div class="row mx-3">
 			<section class="block">
 				<div class="col-12 block__title">
-					<h1><span>Stats and Status</span></h1>
+					<h1><span>Pool Stats</span></h1>
 				</div>
 				<div class="col-12 mb-4">
 					<div class="row">
 						<div class="col text-center bg-white py-2">
-							<p class="font-weight-bold text--size-13 mb-0">Live</p>
+							<p class="font-weight-bold text--size-13 mb-0">Live Tickets</p>
 							<p class="mb-0 text--size-13">{{ .StakeInfo.Live }}</p>
 						</div>
 						<div class="col text-center bg-white mb-3 py-2">
-							<p class="font-weight-bold text--size-13 mb-0">Expired</p>
+							<p class="font-weight-bold text--size-13 mb-0">Expired Tickets</p>
 							<p class="mb-0 text--size-13">{{ .StakeInfo.Expired }}</p>
 						</div>
 						<div class="col text-center bg-white py-2">
-							<p class="font-weight-bold text--size-13 mb-0">Voted</p>
+							<p class="font-weight-bold text--size-13 mb-0">Voted Tickets</p>
 							<p class="mb-0 text--size-13">{{ .StakeInfo.Voted }}</p>
 						</div>
 						<div class="col text-center bg-white mb-3 py-2">
-							<p class="font-weight-bold text--size-13 mb-0">Missed</p>
+							<p class="font-weight-bold text--size-13 mb-0">Missed Tickets</p>
 							<p class="mb-0 text--size-13">{{ .StakeInfo.Missed }}</p>
 						</div>
 						<div class="col text-center bg-white mb-3 py-2">
-							<p class="font-weight-bold text--size-13 mb-0">Immature</p>
+							<p class="font-weight-bold text--size-13 mb-0">Immature Tickets</p>
 							<p class="mb-0 text--size-13">{{ .StakeInfo.Immature }}</p>
-						</div>
-						<div class="col text-center bg-white mb-3 py-2">
-							<p class="font-weight-bold text--size-13 mb-0">AllMempoolTix</p>
-							<p class="mb-0 text--size-13">{{ .StakeInfo.AllMempoolTix }}</p>
-						</div>
-						<div class="col text-center bg-white py-2">
-							<p class="font-weight-bold text--size-13 mb-0">ProportionLive</p>
-							<p class="mb-0 text--size-13">{{ .StakeInfo.ProportionLive }}</p>
-						</div>
-						<div class="col text-center bg-white py-2">
-							<p class="font-weight-bold text--size-13 mb-0">Pool Size</p>
-							<p class="mb-0 text--size-13">{{ .StakeInfo.PoolSize }}</p>
 						</div>
 						<div class="col text-center bg-white py-2">
 							<p class="font-weight-bold text--size-13 mb-0">ProportionMissed</p>
 							<p class="mb-0 text--size-13">{{ .StakeInfo.ProportionMissed }}</p>
 						</div>
 						<div class="col text-center bg-white py-2">
-							<p class="font-weight-bold text--size-13 mb-0">Revoked</p>
+							<p class="font-weight-bold text--size-13 mb-0">Revoked Ticket</p>
 							<p class="mb-0 text--size-13">{{ .StakeInfo.Revoked }}</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Pool Fees</p>
+							<p class="mb-0 text--size-13">{{ .PoolFees }}%</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">TotalSubsidy</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.TotalSubsidy }}&nbsp;DCR</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Total Users</p>
+							<p class="mb-0 text--size-13">{{ .UserCount }}</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Active Users</p>
+							<p class="mb-0 text--size-13">{{ .UserCountActive }}</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-12 block__title">
+					<h1><span>Network Stats</span></h1>
+				</div>
+				<div class="col-12 mb-4">
+					<div class="row">
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Ticket Price</p>
+							<p class="mb-0 text--size-13">{{printf "%0.2f" .StakeInfo.Difficulty}}&nbsp;DCR</p>
+						</div>
+						<div class="col text-center bg-white py-2">
+							<p class="font-weight-bold text--size-13 mb-0">Pool Size</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.PoolSize }}</p>
+						</div>
+						<div class="col text-center bg-white mb-3 py-2">
+							<p class="font-weight-bold text--size-13 mb-0">AllMempoolTix</p>
+							<p class="mb-0 text--size-13">{{ .StakeInfo.AllMempoolTix }}</p>
 						</div>
 					</div>
 				</div>
