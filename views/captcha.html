@@ -19,7 +19,7 @@
         <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
     </div>
 
-    <form action="/verifyhuman" method="post" class="w-100 form form--narrow-inputs">
+    <form action="/verifyhuman" method="post" class="w-100 form form--narrow-inputs" autocomplete="off">
         <div class="col-12 mb-4 text-left center-block">
             <div class="form-group row mb-0 align-items-center">
                 <label class="pr-4" for="captchaSolution">Text&nbsp;in&nbsp;picture:</label>
