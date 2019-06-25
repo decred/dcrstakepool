@@ -12,7 +12,7 @@ import (
 )
 
 var requiredChainServerAPI = semver{major: 5, minor: 1, patch: 0}
-var requiredWalletAPI = semver{major: 6, minor: 0, patch: 0}
+var requiredWalletAPI = semver{major: 6, minor: 0, patch: 1}
 
 func connectNodeRPC(ctx *rpcserver.AppContext, cfg *config) (*rpcclient.Client, semver, error) {
 	var nodeVer semver

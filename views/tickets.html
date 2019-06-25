@@ -30,11 +30,35 @@
 				<div class="col-12 mb-4 px-0">
 					
 					<div class="accordion ticket_accordion">
+						<input id="accordion-control-1" class="accordion-control" type="checkbox" />
+						<label for="accordion-control-1">
+							<div class="accordion__toggle">
+								<div class="d-flex justify-content-between align-items-center">
+									<span><img src="assets/images/group-1120.svg" alt="">Immature</span><div class="arrow-down"></div>
+								</div>
+							</div>
+						</label>
+							<div class="accordion__contents mb-1">
+							{{ range $i, $data := .TicketsImmature }}
+							<div>
+								<img src="assets/images/group-1120.svg" alt="">
+								<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
+								<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+							</div>
+							{{else}}
+								<div class="accordion__empty">
+									<span>No immature tickets</span>
+								</div>
+							{{end}}
+							</div>
+						</div>  
+
+					<div class="accordion ticket_accordion">
 						<input id="accordion-control-2" class="accordion-control" type="checkbox" />
 						<label for="accordion-control-2">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/group-1119.svg" alt="">Live/Immature</span><div class="arrow-down"></div>
+									<span><img src="assets/images/group-1119.svg" alt="">Live</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
@@ -47,7 +71,7 @@
 							</div>
 							{{else}}
 								<div class="accordion__empty">
-									<span>No live/immature tickets</span>
+									<span>No live tickets</span>
 								</div>
 							{{end}}
 							</div>

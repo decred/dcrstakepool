@@ -1842,17 +1842,26 @@ type TicketInfoInvalid struct {
 	Ticket string
 }
 
-// TicketInfoLive represents live or immature (mined) tickets that have yet to
+// TicketInfo represents live immature (mined) tickets that have yet to
 // be spent by either a vote or revocation.
-type TicketInfoLive struct {
+type TicketInfo struct {
 	TicketHeight uint32
 	Ticket       string
 }
+
+// TicketInfoImmature represents immature (mined) tickets that have yet to
+// be spent by either a vote or revocation.
+type TicketInfoImmature TicketInfo
+
+// TicketInfoLive represents live tickets that have yet to
+// be spent by either a vote or revocation.
+type TicketInfoLive TicketInfo
 
 // Tickets renders the tickets page.
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
 
 	var ticketInfoInvalid []TicketInfoInvalid
+	var ticketInfoImmature []TicketInfoImmature
 	var ticketInfoLive []TicketInfoLive
 	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
 	var numVoted int
@@ -1911,11 +1920,17 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	if spui != nil && len(spui.Tickets) > 0 {
 		for _, ticket := range spui.Tickets {
 			switch ticket.Status {
+			case "immature":
+				ticketInfoImmature = append(ticketInfoImmature, TicketInfoImmature{
+					TicketHeight: ticket.TicketHeight,
+					Ticket:       ticket.Ticket,
+				})
 			case "live":
 				ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
 					TicketHeight: ticket.TicketHeight,
 					Ticket:       ticket.Ticket,
 				})
+
 			case "expired":
 				ticketInfoExpired = append(ticketInfoExpired, TicketInfoHistoric{
 					Ticket:        ticket.Ticket,
@@ -1959,6 +1974,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["TicketsInvalid"] = ticketInfoInvalid
+	c.Env["TicketsImmature"] = ticketInfoImmature
 	c.Env["TicketsLive"] = ticketInfoLive
 	c.Env["TicketsExpired"] = ticketInfoExpired
 	c.Env["TicketsMissed"] = ticketInfoMissed
