@@ -1957,9 +1957,9 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	// end by javascript.
 	sort.Sort(sort.Reverse(ByTicketHeight(ticketInfoLive)))
 	sort.Sort(sort.Reverse(ByTicketHeight(ticketInfoImmature)))
-	sort.Sort(BySpentByHeight(ticketInfoExpired))
-	sort.Sort(BySpentByHeight(ticketInfoVoted))
-	sort.Sort(BySpentByHeight(ticketInfoMissed))
+	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoExpired)))
+	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoVoted)))
+	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoMissed)))
 
 	// Truncate the slice of voted tickets if there are too many
 	if len(ticketInfoVoted) > controller.maxVotedTickets {
