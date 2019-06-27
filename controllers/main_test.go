@@ -43,16 +43,16 @@ func TestSortByTicketHeight(t *testing.T) {
 	// Create a large list of tickets to sort, voted over many blocks
 	ticketCount, maxTxHeight := 55000, int64(123000)
 
-	ticketInfoLive := make([]TicketInfoLive, 0, ticketCount)
+	ticketInfoLive := make([]TicketInfo, 0, ticketCount)
 	for i := 0; i < ticketCount; i++ {
-		ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
+		ticketInfoLive = append(ticketInfoLive, TicketInfo{
 			TicketHeight: uint32(mrand.Int63n(maxTxHeight)),
 			Ticket:       randHashString(), // could be nothing unless we sort with it
 		})
 	}
 
 	// Make a copy to sort with ref method
-	ticketInfoLive2 := make([]TicketInfoLive, len(ticketInfoLive))
+	ticketInfoLive2 := make([]TicketInfo, len(ticketInfoLive))
 	copy(ticketInfoLive2, ticketInfoLive)
 
 	// Sort with ByTicketHeight, the test subject
@@ -87,9 +87,9 @@ func benchmarkSortByTicketHeight(ticketCount int, b *testing.B) {
 	// Create a large list of tickets to sort, voted over many blocks
 	maxTxHeight := int64(53000)
 
-	ticketInfoLive := make([]TicketInfoLive, 0, ticketCount)
+	ticketInfoLive := make([]TicketInfo, 0, ticketCount)
 	for i := 0; i < ticketCount; i++ {
-		ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
+		ticketInfoLive = append(ticketInfoLive, TicketInfo{
 			TicketHeight: uint32(mrand.Int63n(maxTxHeight)),
 			Ticket:       randHashString(), // could be nothing unless we sort with it
 		})
@@ -97,7 +97,7 @@ func benchmarkSortByTicketHeight(ticketCount int, b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// Make a copy to sort
-		ticketInfoLive2 := make([]TicketInfoLive, len(ticketInfoLive))
+		ticketInfoLive2 := make([]TicketInfo, len(ticketInfoLive))
 		copy(ticketInfoLive2, ticketInfoLive)
 
 		// Sort with ByTicketHeight, the test subject
