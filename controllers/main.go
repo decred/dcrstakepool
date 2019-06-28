@@ -685,21 +685,28 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 
 func validateUserPubKeyAddr(pubKeyAddr string) (dcrutil.Address, error) {
 	if len(pubKeyAddr) < 40 {
-		return nil, errors.New("Address is too short")
+		str := "Address is too short"
+		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
+		return nil, errors.New(str)
 	}
 
 	if len(pubKeyAddr) > 65 {
-		return nil, errors.New("Address is too long")
+		str := "Address is too long"
+		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
+		return nil, errors.New(str)
 	}
 
 	u, err := dcrutil.DecodeAddress(pubKeyAddr)
 	if err != nil {
+		log.Warnf("User submitted invalid address: %s - %v", pubKeyAddr, err)
 		return nil, errors.New("Couldn't decode address")
 	}
 
 	_, is := u.(*dcrutil.AddressSecpPubKey)
 	if !is {
-		return nil, errors.New("Incorrect address type")
+		str := "Incorrect address type"
+		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
+		return nil, errors.New(str)
 	}
 
 	return u, nil
