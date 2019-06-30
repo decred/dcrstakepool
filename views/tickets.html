@@ -43,7 +43,8 @@
 							<div>
 								<img src="assets/images/group-1120.svg" alt="">
 								<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-								<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+								<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+								<span>Purchase height:&nbsp;{{$data.TicketHeight}}</span>
 							</div>
 							{{else}}
 								<div class="accordion__empty">
@@ -67,7 +68,8 @@
 							<div>
 								<img src="assets/images/group-1119.svg" alt="">
 								<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-								<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+								<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+								<span>Purchase height:&nbsp;{{$data.TicketHeight}}</span>
 							</div>
 							{{else}}
 								<div class="accordion__empty">
@@ -87,11 +89,19 @@
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
+
+								{{ if gt .TicketsVotedCount .TicketsVotedMaxDisplay}}
+									<div class="text-center">
+										<span>You have {{.TicketsVotedCount}} voted tickets. Only the most recent {{.TicketsVotedMaxDisplay}} are shown here.</span>
+									</div>
+								{{end}}
+
 								{{ range $i, $data := .TicketsVoted }}
 								<div>
 									<img src="assets/images/symbol-8-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-									<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<span>Voted height:&nbsp;{{$data.SpentByHeight}}</span>
 								</div>
 								{{else}}
 									<div class="accordion__empty">
@@ -115,7 +125,8 @@
 									<div>
 										<img src="assets/images/symbol-9-1.svg" alt="">
 										<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-										<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+										<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+										<span>Revoked height:&nbsp;{{$data.SpentByHeight}}</span>
 									</div>
 								{{else}}
 									<div class="accordion__empty">
@@ -139,7 +150,8 @@
 								<div>
 									<img src="assets/images/symbol-5-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-									<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<span>Revoked height:&nbsp;{{$data.SpentByHeight}}</span>
 								</div>
 								{{else}}
 									<div class="accordion__empty">
@@ -164,7 +176,8 @@
 								<div>
 									<img src="assets/images/symbol-5-1-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-									<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<span>Purchase height:&nbsp;{{$data.TicketHeight}}</span>
 								</div>
 								{{else}}
 									<div class="accordion__empty">

@@ -1802,7 +1802,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 
 // ByTicketHeight type implements sort.Sort for types with a TicketHeight field.
 // This includes all valid tickets, including spend tickets.
-type ByTicketHeight []TicketInfoLive
+type ByTicketHeight []TicketInfo
 
 func (a ByTicketHeight) Len() int {
 	return len(a)
@@ -1842,27 +1842,18 @@ type TicketInfoInvalid struct {
 	Ticket string
 }
 
-// TicketInfo represents live immature (mined) tickets that have yet to
+// TicketInfo represents live or immature tickets that have yet to
 // be spent by either a vote or revocation.
 type TicketInfo struct {
 	TicketHeight uint32
 	Ticket       string
 }
 
-// TicketInfoImmature represents immature (mined) tickets that have yet to
-// be spent by either a vote or revocation.
-type TicketInfoImmature TicketInfo
-
-// TicketInfoLive represents live tickets that have yet to
-// be spent by either a vote or revocation.
-type TicketInfoLive TicketInfo
-
 // Tickets renders the tickets page.
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
 
 	var ticketInfoInvalid []TicketInfoInvalid
-	var ticketInfoImmature []TicketInfoImmature
-	var ticketInfoLive []TicketInfoLive
+	var ticketInfoLive, ticketInfoImmature []TicketInfo
 	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
 	var numVoted int
 
@@ -1921,12 +1912,12 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		for _, ticket := range spui.Tickets {
 			switch ticket.Status {
 			case "immature":
-				ticketInfoImmature = append(ticketInfoImmature, TicketInfoImmature{
+				ticketInfoImmature = append(ticketInfoImmature, TicketInfo{
 					TicketHeight: ticket.TicketHeight,
 					Ticket:       ticket.Ticket,
 				})
 			case "live":
-				ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
+				ticketInfoLive = append(ticketInfoLive, TicketInfo{
 					TicketHeight: ticket.TicketHeight,
 					Ticket:       ticket.Ticket,
 				})
@@ -1944,18 +1935,17 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 					TicketHeight:  ticket.TicketHeight,
 				})
 			case "voted":
-				numVoted++
-				if len(ticketInfoVoted) < controller.maxVotedTickets {
-					ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
-						Ticket:        ticket.Ticket,
-						SpentBy:       ticket.SpentBy,
-						SpentByHeight: ticket.SpentByHeight,
-						TicketHeight:  ticket.TicketHeight,
-					})
-				}
+				ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
+					Ticket:        ticket.Ticket,
+					SpentBy:       ticket.SpentBy,
+					SpentByHeight: ticket.SpentByHeight,
+					TicketHeight:  ticket.TicketHeight,
+				})
 			}
 		}
 	}
+
+	numVoted = len(ticketInfoVoted)
 
 	if spui != nil && len(spui.InvalidTickets) > 0 {
 		for _, ticket := range spui.InvalidTickets {
@@ -1963,14 +1953,18 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		}
 	}
 
-	// Sort live tickets. This is commented because the JS tables will perform
-	// their own sorting anyway. However, depending on the UI implementation, it
-	// may be desirable to sort it here.
-	// sort.Sort(ByTicketHeight(ticketInfoLive))
+	// Sort tickets for display. Ideally these would be sorted on the front
+	// end by javascript.
+	sort.Sort(sort.Reverse(ByTicketHeight(ticketInfoLive)))
+	sort.Sort(sort.Reverse(ByTicketHeight(ticketInfoImmature)))
+	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoExpired)))
+	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoVoted)))
+	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoMissed)))
 
-	// Sort historic (voted and revoked) tickets
-	sort.Sort(BySpentByHeight(ticketInfoVoted))
-	sort.Sort(BySpentByHeight(ticketInfoMissed))
+	// Truncate the slice of voted tickets if there are too many
+	if len(ticketInfoVoted) > controller.maxVotedTickets {
+		ticketInfoVoted = ticketInfoVoted[0:controller.maxVotedTickets]
+	}
 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["TicketsInvalid"] = ticketInfoInvalid
@@ -1979,7 +1973,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	c.Env["TicketsExpired"] = ticketInfoExpired
 	c.Env["TicketsMissed"] = ticketInfoMissed
 	c.Env["TicketsVotedCount"] = numVoted
-	c.Env["TicketsVotedArchivedCount"] = numVoted - len(ticketInfoVoted)
+	c.Env["TicketsVotedMaxDisplay"] = controller.maxVotedTickets
 	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets := controller.Parse(t, "tickets", c.Env)
 
