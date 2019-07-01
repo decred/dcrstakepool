@@ -103,9 +103,10 @@ func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 	walletVer = semver{dcrwVer.Major, dcrwVer.Minor, dcrwVer.Patch}
 
 	if !semverCompatible(requiredWalletAPI, walletVer) {
-		log.Warnf("Node JSON-RPC server %v does not have "+
+		log.Errorf("Node JSON-RPC server %v does not have "+
 			"a compatible API version. Advertizes %v but require %v",
 			cfg.WalletHost, walletVer, requiredWalletAPI)
+		return nil, walletVer, fmt.Errorf("Incompatible dcrwallet RPC version")
 	}
 
 	return dcrwClient, walletVer, nil
