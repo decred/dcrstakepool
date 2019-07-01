@@ -75,6 +75,18 @@ body {
   text-align: left;
   background-color: #fff; }
 
+/* 
+   Read this link to understand the purpose of the following two lines.
+   https://stackoverflow.com/questions/32862394/bootstrap-modals-keep-adding-padding-right-to-body-after-closed
+*/
+body:not(.modal-open){
+  padding-right: 0px !important;
+}
+.modal-open {
+    overflow: hidden;
+    padding-right: 0 !important;
+}
+
 [tabindex="-1"]:focus {
   outline: 0 !important; }
 
