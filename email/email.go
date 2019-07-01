@@ -97,7 +97,7 @@ func (s *Sender) EmailChangeNotification(baseURL, currentEmail, newEmail, client
 		"for your voting service account at " + baseURL +
 		" from " + currentEmail + " to " + newEmail + "\r\n\n" +
 		"The request was made from IP address " + clientIP + "\r\n\n" +
-		"If you did not make this request, please contact the" +
+		"If you did not make this request, please contact the " +
 		"Voting service administrator immediately.\r\n"
 
 	return s.sendMail(currentEmail, "Voting service email change", body)
