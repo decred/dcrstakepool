@@ -24,7 +24,7 @@
 
 		<section class="block">
 				<div class="col-12 block__title">
-					<h1><span>Ticket Groups</span></h1>
+					<h1><span>Your Tickets</span></h1>
 				</div>
 
 				<div class="col-12 mb-4 px-0">
@@ -191,107 +191,7 @@
 
 				</div>
 			</section>
-
-			<section class="block">
-					<div class="col-12 block__title">
-						<h1 class="d-flex justify-content-between align-items-center"><span>Ticket Information</span> <img class="icon--info" src="assets/images/info-icon.svg" data-toggle="modal" data-target="#connectTicketInfo" alt=""></h1>
-					</div>
-
-				<div class="modal fade" id="connectTicketInfo" tabindex="-1" role="dialog" aria-labelledby="connectTicketInfoTitle" aria-hidden="true">
-					<div class="container container--narrow modal-dialog px-0" role="document">
-						<div class="modal-content px-md-3 py-md-4">
-							<div class="modal-header d-md-flex d-none">
-								<h1 class="modal-title d-flex justify-content-between align-items-center" id="connectSubAddressTitle"><img src="assets/images/info-icon-lg.svg" alt=""><span class="px-3">Buying Tickets with dcrwallet using command-line tools</span></h1>
-								<button type="button" class="modal-close" data-dismiss="modal" aria-label="Close">
-									<span aria-hidden="true"><img src="assets/images/close-cross-icon.svg" alt=""></span>
-								</button>
-							</div>
-							<div class="modal-header modal-header--long-title d-md-none d-block mb-3 p-4">
-								<div class="d-flex justify-content-between align-items-start">
-									<button type="button" class="modal-close" data-dismiss="modal" aria-label="Close">
-										<span aria-hidden="true"><img src="assets/images/arrow-back--blue.svg" alt=""></span>
-									</button>
-									<h1 class="modal-title" id="connectSubAddressTitle"><img src="assets/images/info-icon-sm.svg" alt=""><span class="pl-1">Buying Tickets with dcrwallet using command-line tools</span></h1>
-								</div>
-							</div>
-							<div class="modal-body mx-3 px-sm-5 px-0">
-								<blockquote class="modal-blockquote"><span>Note!</span> <br>
-								For ease of use, it’s recommended to participate in staking by using the <a href="https://decred.org/downloads" rel="noopener noreferrer">Decrediton Wallet &darr;</a><br>
-								For command-line users, in-depth dcrwallet instructions can be founds at <a href="https://docs.decred.org/getting-started/user-guides/dcrwallet-tickets/" rel="noopener noreferrer">docs.decred.org.</a><br>
-								Below is a brief introduction for staking the command line environment.</blockquote>
-
-								<p>Your multisignature script for delegating votes has been generated. Please first import it locally into your wallet using dcrctl for safe keeping, so you can recover your funds and vote in the unlikely event of a VSP failure:</p>
-
-								<p>dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet importscript “script”
-
-								<p>For example:</p>
-
-								<div class="modal-code">
-									<p>
-										$ dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet importscript {{ .User.MultiSigScript }}
-									</p>
-								</div>
-
-								<p>After successfully importing the script into your wallet, you may purchase tickets with voting rights delegated to the VSP in either of two ways:</p>
-
-								<strong>Option A - dcrwallet - Automatic purchasing</strong>
-
-								<p>Stop dcrwallet if it is currently running and add the following to dcrwallet.conf:</p>
-
-								<div class="modal-code">
-									<p>
-										[Application Options] <br>
-										enableticketbuyer=true <br>
-										pooladdress={{ .User.UserFeeAddr }} <br>
-										poolfees={{ .PoolFees }} <br>
-										;; DEPRECATED -- use ticketbuyer.votingaddress instead <br>
-										;; ticketaddress={{ .User.MultiSigAddress }} <br>
-										[Ticket Buyer Options] <br>
-										ticketbuyer.votingaddress={{ .User.MultiSigAddress }} <br>
-										ticketbuyer.maxpriceabsolute=100
-									</p>
-								</div>
-								
-								<p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the voting service address.</p>
-
-								<strong>Option B - dcrwallet - Manual purchasing</strong>
-
-								<p>Start a wallet with funds available and manually purchase tickets with the following command using dcrctl:</p>
-
-								<p>dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</p>
-
-								<div class="modal-code">
-									<p>
-										dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet purchaseticket "default" 100 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}
-									</p>
-								</div>
-
-								<p>Will purchase a ticket delegated to the the multisig address which allows either your or the VSP to vote when the ticket is called. This uses funds from the default account only if the current network price for a ticket is less than 100.0 coins.</p>
-
-								<strong>Voting</strong>
-
-								<p>If you wish to cast votes yourself, please review the guides
-								<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#how-to-vote" rel="noopener noreferrer">How To Vote</a>
-								and
-								<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#solo-voting" rel="noopener noreferrer">Solo-Voting</a>.
-								The preferences you set on this voting service's <a href="/voting">voting page</a>
-								only affect the stake voting service's voting wallets and not your own.</p>
-							</div>
-						</div>
-					</div>
-				</div>
-
-					<div class="col-12 mb-4 block__key">
-						<h2>P2SH Address</h2>
-						<p>{{ .User.MultiSigAddress }}</p>
-					</div>
-
-					<div class="col-12 mb-5 block__key">
-						<h2>Redeem Script</h2>
-						<p>{{ .User.MultiSigScript }}</p>
-					</div>
-
-				</section>
+			
 			</div>
 		</div>
 </section>

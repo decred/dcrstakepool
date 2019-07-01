@@ -222,22 +222,9 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	userPubKeyAddr := r.FormValue("UserPubKeyAddr")
 
-	if len(userPubKeyAddr) < 40 {
-		return nil, codes.InvalidArgument, "address error", errors.New("address too short")
-	}
-
-	if len(userPubKeyAddr) > 65 {
-		return nil, codes.InvalidArgument, "address error", errors.New("address too long")
-	}
-
-	u, err := dcrutil.DecodeAddress(userPubKeyAddr)
+	u, err := validateUserPubKeyAddr(userPubKeyAddr)
 	if err != nil {
-		return nil, codes.InvalidArgument, "address error", errors.New("couldn't decode address")
-	}
-
-	_, is := u.(*dcrutil.AddressSecpPubKey)
-	if !is {
-		return nil, codes.InvalidArgument, "address error", errors.New("incorrect address type")
+		return nil, codes.InvalidArgument, "address error", err
 	}
 
 	// Get the ticket address for this user
@@ -696,6 +683,35 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
+func validateUserPubKeyAddr(pubKeyAddr string) (dcrutil.Address, error) {
+	if len(pubKeyAddr) < 40 {
+		str := "Address is too short"
+		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
+		return nil, errors.New(str)
+	}
+
+	if len(pubKeyAddr) > 65 {
+		str := "Address is too long"
+		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
+		return nil, errors.New(str)
+	}
+
+	u, err := dcrutil.DecodeAddress(pubKeyAddr)
+	if err != nil {
+		log.Warnf("User submitted invalid address: %s - %v", pubKeyAddr, err)
+		return nil, errors.New("Couldn't decode address")
+	}
+
+	_, is := u.(*dcrutil.AddressSecpPubKey)
+	if !is {
+		str := "Incorrect address type"
+		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
+		return nil, errors.New(str)
+	}
+
+	return u, nil
+}
+
 // AddressPost is address form submit route.
 func (controller *MainController) AddressPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
@@ -719,26 +735,9 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	log.Infof("Address POST from %v, pubkeyaddr %v", remoteIP, userPubKeyAddr)
 
-	if len(userPubKeyAddr) < 40 {
-		session.AddFlash("Address is too short", "address")
-		return controller.Address(c, r)
-	}
-
-	if len(userPubKeyAddr) > 65 {
-		session.AddFlash("Address is too long", "address")
-		return controller.Address(c, r)
-	}
-
-	// Get dcrutil.Address for user from pubkey address string
-	u, err := dcrutil.DecodeAddress(userPubKeyAddr)
+	u, err := validateUserPubKeyAddr(userPubKeyAddr)
 	if err != nil {
-		session.AddFlash("Couldn't decode address", "address")
-		return controller.Address(c, r)
-	}
-
-	_, is := u.(*dcrutil.AddressSecpPubKey)
-	if !is {
-		session.AddFlash("Incorrect address type", "address")
+		session.AddFlash(err.Error(), "address")
 		return controller.Address(c, r)
 	}
 
