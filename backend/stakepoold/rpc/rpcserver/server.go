@@ -156,6 +156,14 @@ func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScrip
 	}, nil
 }
 
+func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMissingTicketRequest) (*pb.AddMissingTicketResponse, error) {
+	err := s.appContext.AddMissingTicket(req.Hash)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.AddMissingTicketResponse{}, nil
+}
+
 func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakePoolUserInfoRequest) (*pb.StakePoolUserInfoResponse, error) {
 	response, err := s.appContext.StakePoolUserInfo(req.MultiSigAddress)
 	if err != nil {
