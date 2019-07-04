@@ -156,6 +156,20 @@ func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScrip
 	}, nil
 }
 
+func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
+	tickets, err := s.appContext.GetTickets(req.IncludeImmature)
+	if err != nil {
+		return nil, err
+	}
+
+	ticketBytes := make([][]byte, len(tickets))
+	for i := 0; i < len(tickets); i++ {
+		ticketBytes[i] = tickets[i][:]
+	}
+
+	return &pb.GetTicketsResponse{Tickets: ticketBytes}, nil
+}
+
 func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMissingTicketRequest) (*pb.AddMissingTicketResponse, error) {
 	err := s.appContext.AddMissingTicket(req.Hash)
 	if err != nil {

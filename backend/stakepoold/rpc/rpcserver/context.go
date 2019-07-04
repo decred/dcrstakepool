@@ -316,6 +316,16 @@ func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
 	return nil
 }
 
+func (ctx *AppContext) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
+	tickets, err := ctx.WalletConnection.GetTickets(includeImmature)
+	if err != nil {
+		log.Errorf("GetTickets: GetTickets rpc failed: %v", err)
+		return nil, err
+	}
+
+	return tickets, nil
+}
+
 func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
 	decodedMultisig, err := dcrutil.DecodeAddress(multisigAddress)
 	if err != nil {

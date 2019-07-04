@@ -14,6 +14,7 @@ service StakepooldService {
 	rpc WalletInfo (WalletInfoRequest) returns (WalletInfoResponse);
 	rpc ValidateAddress (ValidateAddressRequest) returns (ValidateAddressResponse);
 	rpc AddMissingTicket (AddMissingTicketRequest) returns (AddMissingTicketResponse);
+	rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
 }
 
 service VersionService {
@@ -54,6 +55,13 @@ message AddMissingTicketRequest {
 	bytes Hash = 1;
 }
 message AddMissingTicketResponse {
+}
+
+message GetTicketsRequest {
+	bool IncludeImmature = 1;
+}
+message GetTicketsResponse {
+	repeated bytes Tickets = 1;
 }
 
 message ImportScriptRequest {
