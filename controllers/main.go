@@ -539,7 +539,7 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 		return err
 	}
 
-	err = walletSvrsSync(controller.rpcServers, multisigScripts)
+	err = walletSvrsSync(controller.rpcServers, controller.StakepooldServers, multisigScripts)
 	return err
 }
 

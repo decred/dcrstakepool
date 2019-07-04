@@ -162,6 +162,8 @@ func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsReq
 		return nil, err
 	}
 
+	// Serialise for sending back over RPC.
+	// Need to change *chainhash.Hash into []byte.
 	ticketBytes := make([][]byte, len(tickets))
 	for i := 0; i < len(tickets); i++ {
 		ticketBytes[i] = tickets[i][:]
