@@ -326,6 +326,16 @@ func (ctx *AppContext) ListScripts() ([][]byte, error) {
 	return scripts, nil
 }
 
+func (ctx *AppContext) AccountSyncAddressIndex(account string, branch uint32, index int) error {
+	err := ctx.WalletConnection.AccountSyncAddressIndex(account, branch, index)
+	if err != nil {
+		log.Errorf("AccountSyncAddressIndex: AccountSyncAddressIndex rpc failed: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 func (ctx *AppContext) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
 	tickets, err := ctx.WalletConnection.GetTickets(includeImmature)
 	if err != nil {

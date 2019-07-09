@@ -16,6 +16,7 @@ service StakepooldService {
 	rpc AddMissingTicket (AddMissingTicketRequest) returns (AddMissingTicketResponse);
 	rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
 	rpc ListScripts (ListScriptsRequest) returns (ListScriptsResponse);
+	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
 }
 
 service VersionService {
@@ -69,6 +70,14 @@ message ListScriptsRequest {
 }
 message ListScriptsResponse {
 	repeated bytes Scripts = 1;
+}
+
+message AccountSyncAddressIndexRequest {
+	string Account = 1;
+	uint32 Branch = 2;
+	int64 Index = 3;
+}
+message AccountSyncAddressIndexResponse {
 }
 
 message ImportScriptRequest {

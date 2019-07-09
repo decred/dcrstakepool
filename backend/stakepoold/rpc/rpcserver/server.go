@@ -165,6 +165,15 @@ func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsR
 	return &pb.ListScriptsResponse{Scripts: scripts}, nil
 }
 
+func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.AccountSyncAddressIndexRequest) (*pb.AccountSyncAddressIndexResponse, error) {
+	err := s.appContext.AccountSyncAddressIndex(req.Account, req.Branch, int(req.Index))
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.AccountSyncAddressIndexResponse{}, nil
+}
+
 func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
 	tickets, err := s.appContext.GetTickets(req.IncludeImmature)
 	if err != nil {
