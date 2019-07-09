@@ -316,6 +316,16 @@ func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
 	return nil
 }
 
+func (ctx *AppContext) ListScripts() ([][]byte, error) {
+	scripts, err := ctx.WalletConnection.ListScripts()
+	if err != nil {
+		log.Errorf("ListScripts: ListScripts rpc failed: %v", err)
+		return nil, err
+	}
+
+	return scripts, nil
+}
+
 func (ctx *AppContext) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
 	tickets, err := ctx.WalletConnection.GetTickets(includeImmature)
 	if err != nil {

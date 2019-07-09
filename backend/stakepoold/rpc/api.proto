@@ -15,6 +15,7 @@ service StakepooldService {
 	rpc ValidateAddress (ValidateAddressRequest) returns (ValidateAddressResponse);
 	rpc AddMissingTicket (AddMissingTicketRequest) returns (AddMissingTicketResponse);
 	rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
+	rpc ListScripts (ListScriptsRequest) returns (ListScriptsResponse);
 }
 
 service VersionService {
@@ -62,6 +63,12 @@ message GetTicketsRequest {
 }
 message GetTicketsResponse {
 	repeated bytes Tickets = 1;
+}
+
+message ListScriptsRequest {
+}
+message ListScriptsResponse {
+	repeated bytes Scripts = 1;
 }
 
 message ImportScriptRequest {

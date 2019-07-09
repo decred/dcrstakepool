@@ -156,6 +156,15 @@ func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScrip
 	}, nil
 }
 
+func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsRequest) (*pb.ListScriptsResponse, error) {
+	scripts, err := s.appContext.ListScripts()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ListScriptsResponse{Scripts: scripts}, nil
+}
+
 func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
 	tickets, err := s.appContext.GetTickets(req.IncludeImmature)
 	if err != nil {
