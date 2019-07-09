@@ -66,6 +66,8 @@ message GetTicketsResponse {
 
 message ImportScriptRequest {
 	bytes Script = 1;
+	bool Rescan = 2;
+	int64 RescanHeight = 3;
 }
 message ImportScriptResponse {
 	int64 HeightImported = 1;

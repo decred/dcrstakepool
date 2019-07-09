@@ -147,7 +147,7 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 }
 
 func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScriptRequest) (*pb.ImportScriptResponse, error) {
-	heightImported, err := s.appContext.ImportScript(req.Script)
+	heightImported, err := s.appContext.ImportScript(req.Script, req.Rescan, req.RescanHeight)
 	if err != nil {
 		return nil, err
 	}

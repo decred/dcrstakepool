@@ -277,8 +277,8 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 	return nil
 }
 
-func (ctx *AppContext) ImportScript(script []byte) (int64, error) {
-	err := ctx.WalletConnection.ImportScript(script)
+func (ctx *AppContext) ImportScript(script []byte, rescan bool, rescanHeight int64) (int64, error) {
+	err := ctx.WalletConnection.ImportScriptRescanFrom(script, rescan, int(rescanHeight))
 	if err != nil {
 		log.Errorf("ImportScript: ImportScript rpc failed: %v", err)
 		return -1, err
