@@ -15,6 +15,7 @@ import (
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/rpcclient/v2"
 	"github.com/decred/dcrstakepool/models"
+	"github.com/decred/dcrstakepool/stakepooldclient"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 	"github.com/decred/dcrwallet/wallet/v2/udb"
 )
@@ -506,36 +507,9 @@ func checkIfWalletConnected(client *rpcclient.Client) error {
 	return nil
 }
 
-// fetchTransaction cycles through all servers and attempts to review a
-// transaction. It returns a not found error if the transaction is
-// missing.
-func (w *walletSvrManager) fetchTransaction(txHash *chainhash.Hash) (*dcrutil.Tx,
-	error) {
-	var tx *dcrutil.Tx
-	var err error
-	for i := range w.servers {
-		if w.servers[i] == nil {
-			continue
-		}
-		tx, err = w.servers[i].GetRawTransaction(txHash)
-		if err != nil {
-			continue
-		}
-
-		break
-	}
-
-	if tx == nil {
-		return nil, fmt.Errorf("couldn't find transaction on any server or " +
-			"server failure")
-	}
-
-	return tx, nil
-}
-
 // walletSvrsSync ensures that the wallet servers are all in sync with each
 // other in terms of redeemscripts and address indexes.
-func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error {
+func walletSvrsSync(wsm *walletSvrManager, stakepoold *stakepooldclient.StakepooldManager, multiSigScripts []models.User) error {
 	// Check for connectivity and if unlocked.
 	for i := range wsm.servers {
 		if wsm.servers[i] == nil {
@@ -633,52 +607,8 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 	if desynced {
 		log.Infof("desynced had been detected, now attempting to " +
 			"resync all tickets acrosss each wallet.")
-		ticketsPerServer := make([]map[chainhash.Hash]struct{},
-			wsm.serversLen)
-		allTickets := make(map[chainhash.Hash]struct{})
 
-		// Get the tickets and popular the maps.
-		for i := range wsm.servers {
-			if wsm.servers[i] == nil {
-				continue
-			}
-			ticketsServer, err := wsm.servers[i].GetTickets(true)
-			if err != nil {
-				return err
-			}
-
-			ticketsPerServer[i] = make(map[chainhash.Hash]struct{})
-			for j := range ticketsServer {
-				ticketHash := ticketsServer[j]
-				ticketsPerServer[i][*ticketHash] = struct{}{}
-				allTickets[*ticketHash] = struct{}{}
-			}
-		}
-
-		// Look up the tickets and insert them into the servers
-		// that are missing them.
-		// TODO Don't look up more than once (cache)
-		for i := range wsm.servers {
-			if wsm.servers[i] == nil {
-				continue
-			}
-			for ticketHash := range allTickets {
-				_, ok := ticketsPerServer[i][ticketHash]
-				if !ok {
-					h := ticketHash
-					log.Infof("wallet %v: is missing ticket %v", i, h)
-					tx, err := wsm.fetchTransaction(&h)
-					if err != nil {
-						return err
-					}
-
-					err = wsm.servers[i].AddTicket(tx)
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
+		stakepoold.SyncTickets()
 	}
 
 	return nil

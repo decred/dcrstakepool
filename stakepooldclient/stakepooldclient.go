@@ -175,6 +175,54 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 	return nil
 }
 
+func (s *StakepooldManager) SyncTickets() {
+	ticketsPerServer := make([]map[string]struct{}, len(s.grpcConnections))
+	allTickets := make(map[string]struct{})
+
+	log.Infof("SyncTickets: Attempting to synchronise tickets across wallets")
+
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		request := &pb.GetTicketsRequest{
+			IncludeImmature: true,
+		}
+
+		resp, err := client.GetTickets(context.Background(), request)
+		if err != nil {
+			log.Errorf("SyncTickets: GetTickets RPC failed on stakepoold instance %d: %v", i, err)
+			return
+		}
+
+		ticketsPerServer[i] = make(map[string]struct{})
+		for _, ticketHash := range resp.Tickets {
+			ticketsPerServer[i][string(ticketHash)] = struct{}{}
+			allTickets[string(ticketHash)] = struct{}{}
+		}
+
+		log.Infof("SyncTickets: stakepoold %d reports %d tickets", i, len(ticketsPerServer[i]))
+	}
+
+	for i, conn := range s.grpcConnections {
+		for ticketHash := range allTickets {
+			_, ok := ticketsPerServer[i][ticketHash]
+			if !ok {
+				log.Infof("SyncTickets: stakepoold %v is missing ticket %v", i, ticketHash)
+
+				client := pb.NewStakepooldServiceClient(conn)
+				request := &pb.AddMissingTicketRequest{
+					Hash: []byte(ticketHash),
+				}
+				_, err := client.AddMissingTicket(context.Background(), request)
+				if err != nil {
+					log.Errorf("SyncTickets: AddMissingTicket RPC failed on stakepoold instance %d: %v", i, err)
+				}
+			}
+		}
+	}
+
+	log.Infof("SyncTickets: Complete")
+}
+
 // StakePoolUserInfo performs gRPC StakePoolUserInfo. It sends requests to
 // instances of stakepoold and returns the first successful response. Returns
 // an error if RPC to all instances of stakepoold fail

@@ -292,6 +292,40 @@ func (ctx *AppContext) ImportScript(script []byte) (int64, error) {
 	return block, nil
 }
 
+func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
+	log.Infof("AddMissingTicket: Adding ticket with hash %s", ticketHash)
+
+	hash, err := chainhash.NewHash(ticketHash)
+	if err != nil {
+		log.Errorf("AddMissingTicket: Failed to parse ticket hash: %v", err)
+		return err
+	}
+
+	tx, err := ctx.WalletConnection.GetRawTransaction(hash)
+	if err != nil {
+		log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
+		return err
+	}
+
+	err = ctx.WalletConnection.AddTicket(tx)
+	if err != nil {
+		log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (ctx *AppContext) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
+	tickets, err := ctx.WalletConnection.GetTickets(includeImmature)
+	if err != nil {
+		log.Errorf("GetTickets: GetTickets rpc failed: %v", err)
+		return nil, err
+	}
+
+	return tickets, nil
+}
+
 func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
 	decodedMultisig, err := dcrutil.DecodeAddress(multisigAddress)
 	if err != nil {
