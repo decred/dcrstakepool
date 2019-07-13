@@ -1,6 +1,7 @@
 package stakepooldclient
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -175,11 +176,105 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 	return nil
 }
 
-func (s *StakepooldManager) SyncTickets() {
+func (s *StakepooldManager) SyncWatchedAddresses(accountName string, branch uint32,
+	maxUsers int64) error {
+
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		request := &pb.AccountSyncAddressIndexRequest{
+			Account: accountName,
+			Branch:  branch,
+			Index:   maxUsers,
+		}
+
+		_, err := client.AccountSyncAddressIndex(context.Background(), request)
+		if err != nil {
+			log.Errorf("SyncWatchedAddresses: AccountSyncAddressIndex RPC failed on stakepoold instance %d: %v", i, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *StakepooldManager) SyncScripts(multiSigScripts []models.User) error {
+
+	type ScriptHeight struct {
+		Script []byte
+		Height int
+	}
+
+	log.Info("SyncScripts: Attempting to synchronise redeem scripts across voting wallets")
+
+	// Fetch the redeem scripts from each server.
+	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
+		len(s.grpcConnections))
+	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
+
+	// add all scripts from db
+	for _, v := range multiSigScripts {
+		byteScript, err := hex.DecodeString(v.MultiSigScript)
+		if err != nil {
+			log.Errorf("SyncScripts: Skipping script %s due to err %v", v.MultiSigScript, err)
+			return err
+		}
+		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
+	}
+
+	// Go through each server and see who is synced to the most redeemscripts.
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		request := &pb.ListScriptsRequest{}
+
+		resp, err := client.ListScripts(context.Background(), request)
+		if err != nil {
+			return err
+		}
+
+		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
+		for _, script := range resp.Scripts {
+			redeemScriptsPerServer[i][chainhash.HashH(script)] = &ScriptHeight{script, 0}
+			_, ok := allRedeemScripts[chainhash.HashH(script)]
+			if !ok {
+				allRedeemScripts[chainhash.HashH(script)] = &ScriptHeight{script, 0}
+			}
+		}
+
+		log.Infof("SyncScripts: stakepoold %d reports %d scripts", i, len(redeemScriptsPerServer[i]))
+	}
+
+	for i, conn := range s.grpcConnections {
+
+		for k, v := range allRedeemScripts {
+			_, ok := redeemScriptsPerServer[i][k]
+			if !ok {
+				log.Infof("SyncScripts: RedeemScript from DB not found on server %v. ImportScript for %x at height %v", i, v.Script, v.Height)
+				client := pb.NewStakepooldServiceClient(conn)
+
+				request := &pb.ImportScriptRequest{
+					Script:       v.Script,
+					Rescan:       true,
+					RescanHeight: int64(v.Height),
+				}
+
+				_, err := client.ImportScript(context.Background(), request)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	log.Infof("SyncScripts: Complete")
+
+	return nil
+}
+
+func (s *StakepooldManager) SyncTickets() error {
 	ticketsPerServer := make([]map[string]struct{}, len(s.grpcConnections))
 	allTickets := make(map[string]struct{})
 
-	log.Infof("SyncTickets: Attempting to synchronise tickets across wallets")
+	log.Infof("SyncTickets: Attempting to synchronise tickets across voting wallets")
 
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
@@ -190,7 +285,7 @@ func (s *StakepooldManager) SyncTickets() {
 		resp, err := client.GetTickets(context.Background(), request)
 		if err != nil {
 			log.Errorf("SyncTickets: GetTickets RPC failed on stakepoold instance %d: %v", i, err)
-			return
+			return err
 		}
 
 		ticketsPerServer[i] = make(map[string]struct{})
@@ -215,12 +310,15 @@ func (s *StakepooldManager) SyncTickets() {
 				_, err := client.AddMissingTicket(context.Background(), request)
 				if err != nil {
 					log.Errorf("SyncTickets: AddMissingTicket RPC failed on stakepoold instance %d: %v", i, err)
+					return err
 				}
 			}
 		}
 	}
 
 	log.Infof("SyncTickets: Complete")
+
+	return nil
 }
 
 // StakePoolUserInfo performs gRPC StakePoolUserInfo. It sends requests to

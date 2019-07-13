@@ -3,14 +3,12 @@
 package controllers
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson/v2"
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/rpcclient/v2"
@@ -522,93 +520,27 @@ func walletSvrsSync(wsm *walletSvrManager, stakepoold *stakepooldclient.Stakepoo
 		}
 	}
 
-	type ScriptHeight struct {
-		Script []byte
-		Height int
+	// Set watched address index to maxUsers so all generated ticket
+	// addresses show as 'ismine'.
+	err := stakepoold.SyncWatchedAddresses(defaultAccountName, udb.ExternalBranch, MaxUsers)
+	if err != nil {
+		return err
 	}
 
-	for i := range wsm.servers {
-		if wsm.servers[i] == nil {
-			continue
-		}
-		// Set watched address index to MaxUsers so all generated ticket
-		// addresses show as 'ismine'.
-		err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
-			udb.ExternalBranch, MaxUsers)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Fetch the redeem scripts from each server.
-	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
-		wsm.serversLen)
-	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
-
-	// add all scripts from db
-	for _, v := range multiSigScripts {
-		byteScript, err := hex.DecodeString(v.MultiSigScript)
-		if err != nil {
-			log.Warnf("skipping script %s due to err %v", v.MultiSigScript, err)
-			continue
-		}
-		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
-	}
-	// Go through each server and see who is synced to the most redeemscripts.
-	log.Info("Getting importscript information from wallets")
-	for i := range wsm.servers {
-		if wsm.servers[i] == nil {
-			continue
-		}
-		redeemScripts, err := wsm.servers[i].ListScripts()
-		if err != nil {
-			return err
-		}
-
-		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
-		for j := range redeemScripts {
-			redeemScriptsPerServer[i][chainhash.HashH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
-			_, ok := allRedeemScripts[chainhash.HashH(redeemScripts[j])]
-			if !ok {
-				allRedeemScripts[chainhash.HashH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
-			}
-		}
-	}
-
-	// Synchronize the address indexes if needed, then synchronize the
+	// Synchronize the address indexes, then synchronize the
 	// redeemscripts. Ignore the errors when importing scripts and
 	// assume it'll just skip reimportation if it already has it.
-	log.Info("Syncing wallets' redeem scripts")
-	desynced := false
-	for i := range wsm.servers {
-		if wsm.servers[i] == nil {
-			continue
-		}
-
-		// Sync redeemscripts.
-		for k, v := range allRedeemScripts {
-			_, ok := redeemScriptsPerServer[i][k]
-			if !ok {
-				log.Infof("RedeemScript from DB not found on server %v. importscript for %x at height %v", i, v.Script, v.Height)
-				err := wsm.servers[i].ImportScriptRescanFrom(v.Script, true, v.Height)
-				if err != nil {
-					return err
-				}
-				desynced = true
-			}
-		}
+	err = stakepoold.SyncScripts(multiSigScripts)
+	if err != nil {
+		return err
 	}
 
 	// If we had to sync then we might be missing some tickets.
 	// Scan for the tickets now and try to import any that another wallet may
 	// be missing.
-	// TODO we should block until the rescans triggered by importing the scripts
-	// have been completed.
-	if desynced {
-		log.Infof("desynced had been detected, now attempting to " +
-			"resync all tickets acrosss each wallet.")
-
-		stakepoold.SyncTickets()
+	err = stakepoold.SyncTickets()
+	if err != nil {
+		return err
 	}
 
 	return nil
