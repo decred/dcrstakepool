@@ -1,16 +1,19 @@
 {{define "emailupdate"}}
-<div class="wrapper">
-  <div class="row main-row">
-   <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-	{{range .FlashError}}<div class="well well-notification  orange-notification">{{.}}</div>{{end}}
-	{{range .FlashSuccess}}<div class="well well-notification green-notification">{{.}}</div>{{end}}
-    </div>
-    <div class="col-sm-12 col-md-10 col-lg-6 center-block">
-	<h1>Email Update</h1>
-	{{if .FlashSuccess}}
-	<p><span style="font-size: larger;">You may now <a href="/login">login</a> with your new email address.</span></p>
-	{{end}}
-   </div>
-  </div>
-</div>
+<section class="site-content site-content--form-only">
+	<div class="container container--narrow">
+		<div class="row justify-content-center">
+			<div class="col-lg-8 col-11 p-5 block--shadow">
+				{{with .FlashSuccess}}
+					<h1>Email Successfully Updated</h1>
+					<p><span style="font-size: larger;">You may now <a href="/login">Login</a> with your new email address.</span></p>
+				{{else}}
+					<h1>Email Update Error</h1>
+					{{range .FlashError}}
+					<p><span style="font-size: larger;">{{.}}</span></p>
+					{{end}}
+				{{end}}
+			</div>
+		</div>
+	</div>
+</section>
 {{end}}
