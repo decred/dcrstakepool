@@ -302,6 +302,13 @@ absolute path.
 If you are modifying templates, sending the USR1 signal to the dcrstakepool
 process will trigger a template reload.
 
+### Protoc
+In order to regenerate the api.pb.go file, for the gRPC connection with
+stakepoold, the following are required:
+
+- libprotoc 3.0.0 (3.4.0 is recommended)
+- protoc-gen-go 1.3.0 (1.3.2 is recommended)
+
 ## Operations
 
 - dcrstakepool will connect to the database or error out if it cannot do so.
