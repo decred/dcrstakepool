@@ -1996,6 +1996,11 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 
 	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
 
+	if user.MultiSigAddress == "" {
+		log.Info("Multisigaddress empty")
+		return "/address", http.StatusSeeOther
+	}
+
 	t := controller.GetTemplate(c)
 
 	choicesSelected := controller.choicesForAgendas(uint16(user.VoteBits))
