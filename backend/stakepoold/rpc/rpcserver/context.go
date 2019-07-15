@@ -277,8 +277,8 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 	return nil
 }
 
-func (ctx *AppContext) ImportScript(script []byte) (int64, error) {
-	err := ctx.WalletConnection.ImportScript(script)
+func (ctx *AppContext) ImportScript(script []byte, rescan bool, rescanHeight int64) (int64, error) {
+	err := ctx.WalletConnection.ImportScriptRescanFrom(script, rescan, int(rescanHeight))
 	if err != nil {
 		log.Errorf("ImportScript: ImportScript rpc failed: %v", err)
 		return -1, err
@@ -310,6 +310,26 @@ func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
 	err = ctx.WalletConnection.AddTicket(tx)
 	if err != nil {
 		log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (ctx *AppContext) ListScripts() ([][]byte, error) {
+	scripts, err := ctx.WalletConnection.ListScripts()
+	if err != nil {
+		log.Errorf("ListScripts: ListScripts rpc failed: %v", err)
+		return nil, err
+	}
+
+	return scripts, nil
+}
+
+func (ctx *AppContext) AccountSyncAddressIndex(account string, branch uint32, index int) error {
+	err := ctx.WalletConnection.AccountSyncAddressIndex(account, branch, index)
+	if err != nil {
+		log.Errorf("AccountSyncAddressIndex: AccountSyncAddressIndex rpc failed: %v", err)
 		return err
 	}
 

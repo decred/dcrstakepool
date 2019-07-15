@@ -147,13 +147,31 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 }
 
 func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScriptRequest) (*pb.ImportScriptResponse, error) {
-	heightImported, err := s.appContext.ImportScript(req.Script)
+	heightImported, err := s.appContext.ImportScript(req.Script, req.Rescan, req.RescanHeight)
 	if err != nil {
 		return nil, err
 	}
 	return &pb.ImportScriptResponse{
 		HeightImported: heightImported,
 	}, nil
+}
+
+func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsRequest) (*pb.ListScriptsResponse, error) {
+	scripts, err := s.appContext.ListScripts()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ListScriptsResponse{Scripts: scripts}, nil
+}
+
+func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.AccountSyncAddressIndexRequest) (*pb.AccountSyncAddressIndexResponse, error) {
+	err := s.appContext.AccountSyncAddressIndex(req.Account, req.Branch, int(req.Index))
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.AccountSyncAddressIndexResponse{}, nil
 }
 
 func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
