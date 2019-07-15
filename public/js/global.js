@@ -114,6 +114,14 @@ $('.form-check-input').change(function () {
 });
 
 $(document).ready(function () {
+  // Display elements with class js-only
+  var els = document.getElementsByClassName("js-only")
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove('d-none')
+  }
+});
+
+$(document).ready(function () {
   // display close buttons on snackbar notifications
   $('.snackbar-close-button-top').removeClass('d-none');
   // add click listener to close buttons
