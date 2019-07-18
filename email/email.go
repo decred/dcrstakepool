@@ -7,6 +7,7 @@ package email
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 
 	"github.com/dajohi/goemail"
 )
@@ -33,7 +34,9 @@ func NewSender(smtpHost string, smtpUsername string, smtpPassword string,
 	}
 	smtpURL += smtpHost
 
-	tlsConfig := tls.Config{}
+	host, _, _ := net.SplitHostPort(smtpHost)
+	tlsConfig := tls.Config{ServerName: host}
+
 	smtpServer, err := goemail.NewSMTP(smtpURL, &tlsConfig)
 	if err != nil {
 		return Sender{}, err
