@@ -34,7 +34,11 @@ func NewSender(smtpHost string, smtpUsername string, smtpPassword string,
 	}
 	smtpURL += smtpHost
 
-	host, _, _ := net.SplitHostPort(smtpHost)
+	host, _, err := net.SplitHostPort(smtpHost)
+	if err != nil {
+		return Sender{}, err
+	}
+
 	tlsConfig := tls.Config{ServerName: host}
 
 	smtpServer, err := goemail.NewSMTP(smtpURL, &tlsConfig)

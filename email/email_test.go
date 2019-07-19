@@ -14,6 +14,13 @@ type config struct {
 	SMTPSkipTLSVerify bool   `long:"smtpskiptlsverify" description:"Skip TLS verification when it establish connection to the SMTP server."`
 }
 
+// this test require real credentials!
+// to do so use
+// SMTPHost="smtp.fastmail.com:587" SMTPUsername="**"  SMTPPassword="**" SMTPFrom="**" go test github.com/decred/dcrstakepool/email -run TestSMTPSendMail
+// or
+// export SMTPHost="smtp.fastmail.com:587" && export SMTPUsername="**" \
+// export SMTPPassword="**" && export SMTPFrom="**" \
+// go test
 func TestSMTPSendMail(t *testing.T) {
 	cfg := config{
 		SMTPHost:     os.Getenv("SMTPHost"),
@@ -35,6 +42,6 @@ func TestSMTPSendMail(t *testing.T) {
 
 	toEmail := "example@example.com"
 	if err := sender.sendMail(toEmail, "testsubject", "testbody"); err != nil {
-		t.Fatalf("Failed to initialize the smtp server: %v", sender)
+		t.Fatalf("Failed to send mail: %v", sender)
 	}
 }
