@@ -14,6 +14,9 @@
             <p>VSPs are used to delegate your voting powers. The VSP can cast a vote on your behalf when a ticket is called to vote. VSPs do not hold, manage, or transfer any of your DCR funds. The VSP cannot steal your funds.</p>
 
             <p>{{$.CustomDescription}}</p>
+
+            <p>Support email:&nbsp;<a href="mailto:{{$.PoolEmail}}" rel="noopener noreferrer">{{$.PoolEmail}}</a></p>
+
             {{if not .User}}
               <a href="/register" class="btn btn-outline-primary btn-outline-primary--inverted d-lg-inline-block d-block mb-3">Register</a>
             {{end}}
