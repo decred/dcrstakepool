@@ -16,7 +16,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-var requiredStakepooldAPI = semver{major: 4, minor: 0, patch: 0}
+var requiredStakepooldAPI = semver{major: 5, minor: 0, patch: 0}
 
 type StakepooldManager struct {
 	grpcConnections []*grpc.ClientConn
