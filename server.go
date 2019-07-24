@@ -14,7 +14,7 @@ import (
 	"github.com/gorilla/context"
 	"github.com/gorilla/csrf"
 
-	"github.com/decred/dcrd/rpcclient/v2"
+	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/stakepooldclient"

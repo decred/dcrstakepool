@@ -11,7 +11,7 @@ import (
 
 	"github.com/decred/dcrd/dcrjson/v2"
 	"github.com/decred/dcrd/dcrutil"
-	"github.com/decred/dcrd/rpcclient/v2"
+	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
