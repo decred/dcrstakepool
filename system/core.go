@@ -24,7 +24,7 @@ type Application struct {
 	APISecret     string
 	Template      *template.Template
 	TemplatesPath string
-	Store         *sessions.CookieStore
+	Store         *SQLStore
 	DbMap         *gorp.DbMap
 }
 
@@ -41,15 +41,6 @@ func (application *Application) Init(APISecret string, baseURL string,
 	DBPassword string,
 	DBPort string, DBUser string) {
 
-	hash := sha256.New()
-	io.WriteString(hash, cookieSecret)
-	application.Store = sessions.NewCookieStore(hash.Sum(nil))
-	application.Store.Options = &sessions.Options{
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   cookieSecure,
-	}
-
 	application.DbMap = models.GetDbMap(
 		APISecret,
 		baseURL,
@@ -58,6 +49,17 @@ func (application *Application) Init(APISecret string, baseURL string,
 		DBHost,
 		DBPort,
 		DBName)
+
+	hash := sha256.New()
+	io.WriteString(hash, cookieSecret)
+	application.Store = NewSQLStore(application.DbMap, hash.Sum(nil))
+	application.Store.Options = &sessions.Options{
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   cookieSecure,
+		//six hours
+		MaxAge: 60 * 60 * 6,
+	}
 
 	application.APISecret = APISecret
 }

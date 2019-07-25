@@ -1,6 +1,7 @@
 module github.com/decred/dcrstakepool
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.3.3
 	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/dajohi/goemail v1.0.0
 	github.com/dchest/captcha v0.0.0-20170622155422-6a29415a8364
@@ -22,6 +23,7 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/csrf v1.5.1
+	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.1.3
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
