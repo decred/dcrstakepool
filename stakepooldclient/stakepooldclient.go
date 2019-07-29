@@ -176,6 +176,40 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 	return nil
 }
 
+// CreateMultisig performs gRPC CreateMultisig on all servers. It stops
+// executing and returns an error if any RPC call fails. It will
+// also return an error if any of the responses are different. This
+// should be considered fatal, as it indicates the a voting wallet is
+// misconfigured
+func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisigResponse, error) {
+
+	respPerServer := make([]*pb.CreateMultisigResponse, len(s.grpcConnections))
+
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		request := &pb.CreateMultisigRequest{
+			Address: address,
+		}
+
+		resp, err := client.CreateMultisig(context.Background(), request)
+		if err != nil {
+			log.Errorf("CreateMultisig: CreateMultisig RPC failed on stakepoold instance %d: %v", i, err)
+			return nil, err
+		}
+		respPerServer[i] = resp
+	}
+
+	for i := 0; i < len(s.grpcConnections)-1; i++ {
+		if respPerServer[i].RedeemScript != respPerServer[i+1].RedeemScript {
+			log.Errorf("CreateMultisig: nonequiv failure on servers "+
+				"%v, %v (%v != %v)", i, i+1, respPerServer[i].RedeemScript, respPerServer[i+1].RedeemScript)
+			return nil, fmt.Errorf("non equivalent redeem script returned")
+		}
+	}
+
+	return respPerServer[0], nil
+}
+
 func (s *StakepooldManager) SyncWatchedAddresses(accountName string, branch uint32,
 	maxUsers int64) error {
 
