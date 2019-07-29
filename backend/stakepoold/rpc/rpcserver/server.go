@@ -243,3 +243,15 @@ func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.Validate
 		PubKeyAddr: response.PubKeyAddr,
 	}, nil
 }
+
+func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMultisigRequest) (*pb.CreateMultisigResponse, error) {
+	response, err := s.appContext.CreateMultisig(req.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.CreateMultisigResponse{
+		RedeemScript: response.RedeemScript,
+		Address:      response.Address,
+	}, nil
+}

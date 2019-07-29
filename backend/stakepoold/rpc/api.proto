@@ -17,6 +17,7 @@ service StakepooldService {
 	rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
 	rpc ListScripts (ListScriptsRequest) returns (ListScriptsResponse);
 	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
+	rpc CreateMultisig (CreateMultisigRequest) returns (CreateMultisigResponse);
 }
 
 service VersionService {
@@ -109,6 +110,14 @@ message ValidateAddressRequest {
 message ValidateAddressResponse {
 	bool IsMine = 1;
 	string PubKeyAddr = 2;
+}
+
+message CreateMultisigRequest {
+	repeated string Address = 1;
+}
+message CreateMultisigResponse {
+	string RedeemScript = 1;
+	string Address = 2;
 }
 
 message StakePoolUserTicket {
