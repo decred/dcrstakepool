@@ -89,10 +89,13 @@ func runMain() error {
 		return fmt.Errorf("Failed to connect to stakepoold host: %v", err)
 	}
 
-	sender, err := email.NewSender(cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom, cfg.UseSMTPS)
-	if err != nil {
-		application.Close()
-		return fmt.Errorf("Failed to initialize the smtp server: %v", err)
+	var sender email.Sender
+	if cfg.SMTPHost != "" {
+		sender, err = email.NewSender(cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom, cfg.UseSMTPS)
+		if err != nil {
+			application.Close()
+			return fmt.Errorf("Failed to initialize the smtp server: %v", err)
+		}
 	}
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,
