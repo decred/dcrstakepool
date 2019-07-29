@@ -6,7 +6,6 @@ service StakepooldService {
 	rpc GetAddedLowFeeTickets (GetAddedLowFeeTicketsRequest) returns (GetAddedLowFeeTicketsResponse);
 	rpc GetIgnoredLowFeeTickets (GetIgnoredLowFeeTicketsRequest) returns (GetIgnoredLowFeeTicketsResponse);
 	rpc GetLiveTickets (GetLiveTicketsRequest) returns (GetLiveTicketsResponse);
-	rpc Ping (PingRequest) returns (PingResponse);
 	rpc SetAddedLowFeeTickets (SetAddedLowFeeTicketsRequest) returns (SetAddedLowFeeTicketsResponse);
 	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
 	rpc ImportScript (ImportScriptRequest) returns (ImportScriptResponse);
@@ -38,9 +37,6 @@ message GetLiveTicketsRequest {}
 message GetLiveTicketsResponse {
 	repeated Ticket tickets = 1;
 }
-
-message PingRequest {}
-message PingResponse {}
 
 message SetAddedLowFeeTicketsRequest {
 	repeated Ticket tickets = 1;

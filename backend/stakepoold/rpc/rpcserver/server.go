@@ -111,10 +111,6 @@ func (s *stakepooldServer) GetLiveTickets(c context.Context, req *pb.GetLiveTick
 	return &pb.GetLiveTicketsResponse{Tickets: tickets}, nil
 }
 
-func (s *stakepooldServer) Ping(ctx context.Context, req *pb.PingRequest) (*pb.PingResponse, error) {
-	return &pb.PingResponse{}, nil
-}
-
 func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.SetAddedLowFeeTicketsRequest) (*pb.SetAddedLowFeeTicketsResponse, error) {
 	addedLowFeeTickets := make(map[chainhash.Hash]string)
 
