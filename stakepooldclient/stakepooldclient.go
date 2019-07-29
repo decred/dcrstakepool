@@ -16,7 +16,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-var requiredStakepooldAPI = semver{major: 7, minor: 0, patch: 0}
+var requiredStakepooldAPI = semver{major: 6, minor: 0, patch: 0}
 
 type StakepooldManager struct {
 	grpcConnections []*grpc.ClientConn
@@ -407,43 +407,21 @@ func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) e
 	return nil
 }
 
-// VoteVersion returns a consistent vote version between all wallets
-// or an error indicating a mismatch
-func (s *StakepooldManager) VoteVersion() (uint32, error) {
-	walletVoteVersions := make(map[int]uint32)
+func (s *StakepooldManager) WalletInfo() ([]*pb.WalletInfoResponse, error) {
+	responses := make([]*pb.WalletInfoResponse, len(s.grpcConnections))
 
-	// Get vote version from all wallets
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
 		req := &pb.WalletInfoRequest{}
-		wvv, err := client.WalletInfo(context.Background(), req)
+		resp, err := client.WalletInfo(context.Background(), req)
 		if err != nil {
 			log.Errorf("WalletInfo RPC failed on stakepoold instance %d: %v", i, err)
-			return 0, err
+			return nil, err
 		}
-		walletVoteVersions[i] = wvv.VoteVersion
+		responses[i] = resp
 	}
 
-	// Ensure vote version matches on all wallets
-	lastVersion := uint32(0)
-	var lastServer int
-	firstrun := true
-	for k, v := range walletVoteVersions {
-		if firstrun {
-			firstrun = false
-			lastVersion = v
-		}
-
-		if v != lastVersion {
-			vErr := fmt.Errorf("wallets %d and %d have mismatched vote versions",
-				k, lastServer)
-			return 0, vErr
-		}
-
-		lastServer = k
-	}
-
-	return lastVersion, nil
+	return responses, nil
 }
 
 // ValidateAddress calls ValidateAddress RPC on all stakepoold servers.

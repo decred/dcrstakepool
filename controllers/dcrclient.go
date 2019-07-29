@@ -366,10 +366,6 @@ func (w *walletSvrManager) CheckWalletsReady() error {
 	return nil
 }
 
-func (w *walletSvrManager) WalletStatus() ([]*wallettypes.WalletInfoResult, error) {
-	return w.connected()
-}
-
 // checkIfWalletConnected checks to see if the passed wallet's client is connected
 // and if the wallet is unlocked.
 func checkIfWalletConnected(client *rpcclient.Client) error {

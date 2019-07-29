@@ -33,8 +33,8 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "7.0.0"
-	semverMajor        = 7
+	semverString       = "6.0.0"
+	semverMajor        = 6
 	semverMinor        = 0
 	semverPatch        = 0
 )

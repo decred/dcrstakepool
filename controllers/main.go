@@ -28,7 +28,6 @@ import (
 	"github.com/decred/dcrstakepool/poolapi"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
-	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 	"github.com/decred/dcrwallet/wallet/v2/udb"
 	"github.com/go-gorp/gorp"
 	"github.com/gorilla/csrf"
@@ -140,15 +139,34 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		designation:          designation,
 	}
 
-	voteVersion, err := stakepooldConnMan.VoteVersion()
-	if err != nil || voteVersion == 0 {
+	walletInfo, err := stakepooldConnMan.WalletInfo()
+	if err != nil {
 		cErr := fmt.Errorf("Failed to get wallets' Vote Version: %v", err)
 		return nil, cErr
 	}
 
-	log.Infof("All wallets are VoteVersion %d", voteVersion)
+	// Ensure vote version matches on all wallets
+	lastVersion := uint32(0)
+	var lastServer int
+	firstrun := true
+	for k, v := range walletInfo {
+		if firstrun {
+			firstrun = false
+			lastVersion = v.VoteVersion
+		}
 
-	mc.voteVersion = voteVersion
+		if v.VoteVersion != lastVersion {
+			vErr := fmt.Errorf("wallets %d and %d have mismatched vote versions",
+				k, lastServer)
+			return nil, vErr
+		}
+
+		lastServer = k
+	}
+
+	log.Infof("All wallets are VoteVersion %d", lastVersion)
+
+	mc.voteVersion = lastVersion
 
 	return mc, nil
 }
@@ -623,11 +641,6 @@ func (controller *MainController) RPCIsStopped() bool {
 	return controller.rpcServers.IsStopped()
 }
 
-// WalletStatus returns current WalletInfo from all rpcServers.
-func (controller *MainController) WalletStatus() ([]*wallettypes.WalletInfoResult, error) {
-	return controller.rpcServers.WalletStatus()
-}
-
 // handlePotentialFatalError is a helper function to do log possibly
 // fatal rpc errors and also stops the servers to avoid any potential
 // further damage.
@@ -841,7 +854,7 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 	}
 
 	// Attempt to query wallet statuses
-	walletInfo, err := controller.WalletStatus()
+	walletInfo, err := controller.StakepooldServers.WalletInfo()
 	if err != nil {
 		log.Errorf("Failed to execute WalletStatus: %v", err)
 		return "/error", http.StatusSeeOther
