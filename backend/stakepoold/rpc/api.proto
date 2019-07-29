@@ -98,6 +98,9 @@ message WalletInfoRequest {
 }
 message WalletInfoResponse {
 	uint32 VoteVersion = 1;
+	bool DaemonConnected = 2;
+	bool Unlocked = 3;
+	bool Voting = 4;
 }
 
 message ValidateAddressRequest {

@@ -33,8 +33,8 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "5.0.0"
-	semverMajor        = 5
+	semverString       = "7.0.0"
+	semverMajor        = 7
 	semverMinor        = 0
 	semverPatch        = 0
 )
@@ -224,7 +224,10 @@ func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoReq
 	}
 
 	return &pb.WalletInfoResponse{
-		VoteVersion: response.VoteVersion,
+		VoteVersion:     response.VoteVersion,
+		DaemonConnected: response.DaemonConnected,
+		Unlocked:        response.Unlocked,
+		Voting:          response.Voting,
 	}, nil
 }
 
