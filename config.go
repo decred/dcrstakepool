@@ -582,9 +582,9 @@ func loadConfig() (*config, []string, error) {
 	// Add default wallet port for the active network if there's no port specified
 	cfg.WalletHosts = normalizeAddresses(cfg.WalletHosts, activeNetParams.WalletRPCServerPort)
 
-	if len(cfg.WalletHosts) < 2 {
-		str := "%s: you must specify at least 2 wallethosts"
-		err := fmt.Errorf(str, funcName)
+	if len(cfg.WalletHosts) < cfg.MinServers {
+		str := "%s: you must specify at least %d wallethosts"
+		err := fmt.Errorf(str, funcName, cfg.MinServers)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
@@ -646,9 +646,9 @@ func loadConfig() (*config, []string, error) {
 	// no port specified
 	cfg.StakepooldHosts = normalizeAddresses(cfg.StakepooldHosts,
 		activeNetParams.StakepooldRPCServerPort)
-	if len(cfg.StakepooldHosts) < 2 {
-		str := "%s: you must specify at least 2 stakepooldhosts"
-		err := fmt.Errorf(str, funcName)
+	if len(cfg.StakepooldHosts) < cfg.MinServers {
+		str := "%s: you must specify at least %d stakepooldhosts"
+		err := fmt.Errorf(str, funcName, cfg.MinServers)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
