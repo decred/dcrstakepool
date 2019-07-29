@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/decred/dcrd/dcrjson/v2"
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrstakepool/models"
@@ -32,11 +31,6 @@ var (
 	// access the wallet and update the stake information instead
 	// of returning cached stake information.
 	cacheTimerStakeInfo = 5 * time.Minute
-
-	// cacheTimerGetTickets is the duration of time after which to
-	// access the wallet and update the ticket list for an address
-	// instead of returning cached ticket information.
-	cacheTimerGetTickets = 20 * time.Second
 
 	// defaultAccountName is the account name for the default wallet
 	// account as a string.
@@ -362,19 +356,6 @@ func (w *walletSvrManager) GetStakeInfo() (*wallettypes.GetStakeInfoResult, erro
 	return w.getStakeInfo()
 }
 
-// getTicketsCacheData is a TicketsForAddressResult that also contains a time
-// at which TicketsForAddress was last called. The results should only update.
-type getTicketsCacheData struct {
-	res   *dcrjson.TicketsForAddressResult
-	timer time.Time
-}
-
-// NewGetTicketsCacheData is a contructor for getTicketsCacheData that sets the
-// last get time to now.
-func NewGetTicketsCacheData(tfar *dcrjson.TicketsForAddressResult) *getTicketsCacheData {
-	return &getTicketsCacheData{tfar, time.Now()}
-}
-
 // walletSvrManager provides a concurrency safe RPC call manager for handling
 // all incoming wallet server requests.
 type walletSvrManager struct {
@@ -397,12 +378,6 @@ type walletSvrManager struct {
 	cachedStakeInfo      *wallettypes.GetStakeInfoResult
 	cachedStakeInfoTimer time.Time
 	cachedStakeInfoMutex sync.Mutex
-
-	// cachedGetTicketsMap caches TicketsForAddress responses and
-	// is used to only provide new calls to the wallet RPC after a
-	// cooldown period to prevent DoS attacks.
-	cachedGetTicketsMap   map[string]*getTicketsCacheData
-	cachedGetTicketsMutex sync.Mutex
 
 	// minServers is the minimum number of servers required before alerting
 	minServers int
@@ -477,7 +452,7 @@ func (w *walletSvrManager) CheckWalletsReady() error {
 	for i, s := range w.servers {
 		_, err := s.GetStakeInfo()
 		if err != nil {
-			log.Errorf("GetStakeInfo failured on server %v: %v", i, err)
+			log.Errorf("GetStakeInfo failed on server %v: %v", i, err)
 			return err
 		}
 	}
@@ -609,7 +584,6 @@ func newWalletSvrManager(walletHosts []string, walletCerts []string,
 		servers:              localServers,
 		serversLen:           len(localServers),
 		cachedStakeInfoTimer: time.Now().Add(-cacheTimerStakeInfo),
-		cachedGetTicketsMap:  make(map[string]*getTicketsCacheData),
 		msgChan:              make(chan interface{}, 500),
 		quit:                 make(chan struct{}),
 		minServers:           minServers,
