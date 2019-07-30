@@ -34,14 +34,14 @@
 						<label for="accordion-control-1">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/group-1120.svg" alt="">Immature</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/group-1120.svg" alt="">Immature</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
 							{{ range $i, $data := .TicketsImmature }}
 							<div>
-								<img src="assets/images/group-1120.svg" alt="">
+								<img src="/assets/images/group-1120.svg" alt="">
 								<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 								<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 								<span>Purchase height:&nbsp;{{$data.TicketHeight}}</span>
@@ -59,14 +59,14 @@
 						<label for="accordion-control-2">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/group-1119.svg" alt="">Live</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/group-1119.svg" alt="">Live</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
 							{{ range $i, $data := .TicketsLive }}
 							<div>
-								<img src="assets/images/group-1119.svg" alt="">
+								<img src="/assets/images/group-1119.svg" alt="">
 								<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 								<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 								<span>Purchase height:&nbsp;{{$data.TicketHeight}}</span>
@@ -84,7 +84,7 @@
 						<label for="accordion-control-3">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/symbol-8-1.svg" alt="">Voted</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/symbol-8-1.svg" alt="">Voted</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
@@ -98,7 +98,7 @@
 
 								{{ range $i, $data := .TicketsVoted }}
 								<div>
-									<img src="assets/images/symbol-8-1.svg" alt="">
+									<img src="/assets/images/symbol-8-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 									<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 									<span>Voted height:&nbsp;{{$data.SpentByHeight}}</span>
@@ -116,14 +116,14 @@
 						<label for="accordion-control-4">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/symbol-9-1.svg" alt="">Missed</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/symbol-9-1.svg" alt="">Missed</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
 								{{ range $i, $data := .TicketsMissed }}
 									<div>
-										<img src="assets/images/symbol-9-1.svg" alt="">
+										<img src="/assets/images/symbol-9-1.svg" alt="">
 										<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 										<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 										<span>Revoked height:&nbsp;{{$data.SpentByHeight}}</span>
@@ -141,14 +141,14 @@
 						<label for="accordion-control-5">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/symbol-5-1.svg" alt="">Expired</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/symbol-5-1.svg" alt="">Expired</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
 								{{ range $i, $data := .TicketsExpired }}
 								<div>
-									<img src="assets/images/symbol-5-1.svg" alt="">
+									<img src="/assets/images/symbol-5-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 									<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 									<span>Revoked height:&nbsp;{{$data.SpentByHeight}}</span>
@@ -167,14 +167,14 @@
 						<label for="accordion-control-6">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/symbol-5-1-1.svg" alt="">Invalid</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/symbol-5-1-1.svg" alt="">Invalid</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
 								{{ range $i, $data := . }}
 								<div>
-									<img src="assets/images/symbol-5-1-1.svg" alt="">
+									<img src="/assets/images/symbol-5-1-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
 									<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
 									<span>Purchase height:&nbsp;{{$data.TicketHeight}}</span>

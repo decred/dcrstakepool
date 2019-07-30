@@ -171,8 +171,8 @@ for (i = 0; i < total; i++) {
 }
 
 
-$('.carousel-nav').prepend('<li class="carousel-nav__previous"><img src="assets/images/arrow-prev.svg"></li>');
-$('.carousel-nav').append('<li class="carousel-nav__next"><img src="assets/images/arrow-next.svg"></li>');
+$('.carousel-nav').prepend('<li class="carousel-nav__previous"><img src="/assets/images/arrow-prev.svg"></li>');
+$('.carousel-nav').append('<li class="carousel-nav__next"><img src="/assets/images/arrow-next.svg"></li>');
 
 var $cellButtons = $cellButtonGroup.find('.carousel-nav__dot');
 
