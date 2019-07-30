@@ -30,9 +30,9 @@
             <div class="row">
               <div class="col-lg-5 col-12 main-carousel__image-container px-0 pl-lg-3">
                 <picture>
-                  <source media="(min-width: 992px)" srcset="assets/images/1-panel-desktop.png">
-                  <source media="(min-width: 768px)" srcset="assets/images/1-panel-tablet.png">
-                  <img src="assets/images/1-panel-mobile.png" class="img-fluid">
+                  <source media="(min-width: 992px)" srcset="/assets/images/1-panel-desktop.png">
+                  <source media="(min-width: 768px)" srcset="/assets/images/1-panel-tablet.png">
+                  <img src="/assets/images/1-panel-mobile.png" class="img-fluid">
                 </picture>
               </div>
               <div class="col-lg-7 col-12 block__content">
@@ -46,9 +46,9 @@
             <div class="row">
               <div class="col-lg-5 col-12 main-carousel__image-container px-0 pl-lg-3">
                 <picture>
-                  <source media="(min-width: 992px)" srcset="assets/images/2-panel-desktop.png">
-                  <source media="(min-width: 768px)" srcset="assets/images/2-panel-tablet.png">
-                  <img src="assets/images/2-panel-mobile.png" class="img-fluid">
+                  <source media="(min-width: 992px)" srcset="/assets/images/2-panel-desktop.png">
+                  <source media="(min-width: 768px)" srcset="/assets/images/2-panel-tablet.png">
+                  <img src="/assets/images/2-panel-mobile.png" class="img-fluid">
                 </picture>
               </div>
               <div class="col-lg-7 col-12 block__content">
@@ -64,9 +64,9 @@
             <div class="row">
               <div class="col-lg-5 col-12 main-carousel__image-container px-0 pl-lg-3">
                 <picture>
-                  <source media="(min-width: 992px)" srcset="assets/images/3-panel-desktop.png">
-                  <source media="(min-width: 768px)" srcset="assets/images/3-panel-tablet.png">
-                  <img src="assets/images/3-panel-mobile.png" class="img-fluid">
+                  <source media="(min-width: 992px)" srcset="/assets/images/3-panel-desktop.png">
+                  <source media="(min-width: 768px)" srcset="/assets/images/3-panel-tablet.png">
+                  <img src="/assets/images/3-panel-mobile.png" class="img-fluid">
                 </picture>
               </div>
               <div class="col-lg-7 col-12 block__content">
@@ -91,13 +91,13 @@
             <div class="row mb-3">
               <div class="col-6">
                 <div class="d-lg-flex align-items-start align-items-lg-center">
-                  <img class="mb-lg-0 mb-1" src="assets/images/group-1079.svg" alt="">
+                  <img class="mb-lg-0 mb-1" src="/assets/images/group-1079.svg" alt="">
                   <p class="ml-lg-3 mb-0"><strong>VSP fee:</strong> {{ .PoolFees }}%</p>
                 </div>
               </div>
               <div class="col-6">
                 <div class="d-lg-flex align-items-start align-items-lg-center">
-                  <img class="mb-lg-0 mb-1" src="assets/images/circular-graphic-with-quarter-portion.svg" alt="">
+                  <img class="mb-lg-0 mb-1" src="/assets/images/circular-graphic-with-quarter-portion.svg" alt="">
                   <p class="ml-lg-3 mb-0"><strong>Proportion:</strong> {{ printf "%.2f" .LivePercent }}%</p>
                 </div>
               </div>
@@ -105,13 +105,13 @@
             <div class="row mb-3">
               <div class="col-6">
                 <div class="d-lg-flex align-items-start align-items-lg-center">
-                  <img class="mb-lg-0 mb-1" src="assets/images/servers.svg" alt="">
+                  <img class="mb-lg-0 mb-1" src="/assets/images/servers.svg" alt="">
                   <p class="ml-lg-3 mb-0"><strong>Network:</strong> {{ .Network }}</p>
                 </div>
               </div>
               <div class="col-6">
                 <div class="d-lg-flex align-items-start align-items-lg-center">
-                  <img class="mb-lg-0 mb-1" src="assets/images/status.svg" alt="">
+                  <img class="mb-lg-0 mb-1" src="/assets/images/status.svg" alt="">
                   <p class="ml-lg-3 mb-0"><strong>Status:</strong> {{if .IsClosed}}Closed{{else}}Open{{end}}</p>
                 </div>
               </div>

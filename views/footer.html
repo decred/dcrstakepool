@@ -14,23 +14,23 @@
     </footer>
   </div>
 
-	<script src="assets/js/vendor/jquery.min.js"></script>
-	<script src="assets/js/vendor/popper.min.js"></script>
-	<script src="assets/js/vendor/bootstrap.min.js"></script>
+	<script src="/assets/js/vendor/jquery.min.js"></script>
+	<script src="/assets/js/vendor/popper.min.js"></script>
+	<script src="/assets/js/vendor/bootstrap.min.js"></script>
 	
 	{{/* Homepage caorousel */}}
-	<script src="assets/js/vendor/flickity.pkgd.min.js"></script>
+	<script src="/assets/js/vendor/flickity.pkgd.min.js"></script>
 	
 	{{/* Homepage VSP table */}}
-	<script src="assets/js/vendor/jquery.dataTables.min.js"></script>
-	<script src="assets/js/vendor/dataTables.bootstrap4.min.js"></script>
+	<script src="/assets/js/vendor/jquery.dataTables.min.js"></script>
+	<script src="/assets/js/vendor/dataTables.bootstrap4.min.js"></script>
 	
 	{{/* Stats page charts */}}
-	<script src="assets/js/vendor/d3.min.js" charset="utf-8"></script>
-	<script src="assets/js/vendor/d3pie.min.js"></script>
+	<script src="/assets/js/vendor/d3.min.js" charset="utf-8"></script>
+	<script src="/assets/js/vendor/d3pie.min.js"></script>
 
 	{{/* dcrstakepool custom js */}}
-	<script src="assets/js/global.js"></script>
+	<script src="/assets/js/global.js"></script>
 	
 
 {{if .IsStats }}
@@ -259,7 +259,7 @@ var stakepoolFinder = function () {
   var isMainnet = {{ if eq .Network "mainnet"}}true{{else}}false{{end}};
   
   $("#stakepool-data").html("Loading..."); $("#stakepool-data")
-  tableMarkup = '<table id="pooldata" class="dtVerticalScroll table" cellspacing="0" width="100%"><thead class="thead-light"><tr class=""><th scope="col">ID</th><th scope="col">Address</th><th scope="col">Proportion <img src="assets/images/arrow-up-down.svg" alt=""></th><th scope="col">VSP Fees <img src="assets/images/arrow-up-down.svg" alt=""></th></tr></thead><tbody>';
+  tableMarkup = '<table id="pooldata" class="dtVerticalScroll table" cellspacing="0" width="100%"><thead class="thead-light"><tr class=""><th scope="col">ID</th><th scope="col">Address</th><th scope="col">Proportion <img src="/assets/images/arrow-up-down.svg" alt=""></th><th scope="col">VSP Fees <img src="/assets/images/arrow-up-down.svg" alt=""></th></tr></thead><tbody>';
   $.ajax({
     url: "https://api.decred.org/?c=gsd",
     dataType: "json",
