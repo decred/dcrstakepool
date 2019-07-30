@@ -39,7 +39,7 @@ submitState('#Password');
 submitState('#Reset');
 submitState('#ChangeEmail');
 submitState('#ChangePassword');
-submitState('#DeleteAccount');
+submitState('#captcha-form');
 
 //controls tables with selections and checkboxes
 var selectMsg = "Select all";
