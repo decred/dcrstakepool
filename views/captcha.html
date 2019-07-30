@@ -19,12 +19,12 @@
         <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
     </div>
 
-    <form action="/verifyhuman" method="post" class="w-100 form form--narrow-inputs" autocomplete="off">
+    <form action="/verifyhuman" id="captcha-form" method="post" class="w-100 form form--narrow-inputs" autocomplete="off">
         <div class="col-12 mb-4 text-left center-block">
             <div class="form-group row mb-0 align-items-center">
                 <label class="pr-4" for="captchaSolution">Text&nbsp;in&nbsp;picture:</label>
                 <div>
-                    <input name=captchaSolution class="form-control">
+                    <input name=captchaSolution required class="form-control">
                 </div>
             </div>
         </div>
@@ -32,7 +32,7 @@
         <input type=hidden name=captchaId value="{{.CaptchaID}}">
         {{ $.csrfField }}
         <div class="col-md-button center-block text-middle">
-            <button name=captchaSubmit type=submit class="btn btn-primary">Submit</button>
+            <input name=captchaSubmit type=submit class="btn btn-primary" value="Submit">
         </div>
 
     </form>
