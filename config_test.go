@@ -21,37 +21,27 @@ const (
 	simnetXPub2  = "spubVVBn1KgTWoDRefX2cjSRjhBYFahdbTvhMzB1Lia3hCseDjB4tdxFJ3FDPG3NGkBpA6XEjRxw1r9LnU5nRpkvKGkfxfAqqFtc72kaU5Fmn6r"
 )
 
-type keysIn struct {
-	coldFeeWallet string
-	voteWallet    string
-}
-
-type keysOut struct {
-	coldFeeWallet *hdkeychain.ExtendedKey
-	voteWallet    *hdkeychain.ExtendedKey
-}
-
 type keyParse struct {
-	params  *chaincfg.Params
-	keysIn  keysIn
-	keysOut keysOut
-	isError bool
+	params     *chaincfg.Params
+	coldFeeIn  string
+	coldFeeOut *hdkeychain.ExtendedKey
+	isError    bool
 }
 
 //in keys, expected out keys, and error value
 var keyTestValues = []keyParse{
 	//testnet
-	{testNet3Params.Params, keysIn{testnetXPub1, testnetXPub2}, keysOut{hd(testnetXPub1), hd(testnetXPub2)}, false},
-	{testNet3Params.Params, keysIn{testnetXPub1, mainnetXPub2}, keysOut{hd(testnetXPub1), hd(mainnetXPub2)}, true},
-	{testNet3Params.Params, keysIn{"", mainnetXPub2}, keysOut{hd(""), hd(mainnetXPub2)}, true},
+	{testNet3Params.Params, testnetXPub1, hd(testnetXPub1), false},
+	{testNet3Params.Params, mainnetXPub2, hd(mainnetXPub2), true},
+	{testNet3Params.Params, "", hd(""), true},
 	//mainnet
-	{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2}, keysOut{hd(mainnetXPub1), hd(mainnetXPub2)}, false},
-	{mainNetParams.Params, keysIn{simnetXPub1, mainnetXPub2}, keysOut{hd(simnetXPub1), hd(mainnetXPub2)}, true},
-	{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2 + "a"}, keysOut{hd(mainnetXPub1), hd(mainnetXPub2 + "a")}, true},
+	{mainNetParams.Params, mainnetXPub1, hd(mainnetXPub1), false},
+	{mainNetParams.Params, simnetXPub2, hd(simnetXPub2), true},
+	{mainNetParams.Params, mainnetXPub2 + "a", hd(mainnetXPub2 + "a"), true},
 	//simnnet
-	{simNetParams.Params, keysIn{simnetXPub1, simnetXPub2}, keysOut{hd(simnetXPub1), hd(simnetXPub2)}, false},
-	{simNetParams.Params, keysIn{testnetXPub1, simnetXPub2}, keysOut{hd(testnetXPub1), hd(simnetXPub2)}, true},
-	{simNetParams.Params, keysIn{simnetXPub1[:len(simnetXPub1)-1], simnetXPub2}, keysOut{hd(simnetXPub1[:len(simnetXPub1)-1]), hd(simnetXPub2)}, true},
+	{simNetParams.Params, simnetXPub1, hd(simnetXPub1), false},
+	{simNetParams.Params, testnetXPub2, hd(testnetXPub2), true},
+	{simNetParams.Params, simnetXPub1[:len(simnetXPub1)-1], hd(simnetXPub1[:len(simnetXPub1)-1]), true},
 }
 
 //helper func string to extended key
@@ -73,13 +63,12 @@ func TestParsePubKeys(t *testing.T) {
 	var cfg config
 	for _, test := range keyTestValues {
 		//parsePubKeys uses these fields
-		cfg.ColdWalletExtPub = test.keysIn.coldFeeWallet
-		cfg.VotingWalletExtPub = test.keysIn.voteWallet
+		cfg.ColdWalletExtPub = test.coldFeeIn
 		//testing func
 		err := cfg.parsePubKeys(test.params)
 		//err if expected output key strings and real output key strings don't match or expected error status is different
-		if strFromHd(test.keysOut.coldFeeWallet) != strFromHd(coldWalletFeeKey) || strFromHd(test.keysOut.voteWallet) != strFromHd(votingWalletVoteKey) || (err != nil) != test.isError {
-			t.Error("for", test.keysIn, "expected", strFromHd(test.keysOut.coldFeeWallet), strFromHd(test.keysOut.voteWallet), "and is error=", test.isError, "got", strFromHd(coldWalletFeeKey), strFromHd(votingWalletVoteKey), "and is error=", err != nil)
+		if strFromHd(test.coldFeeOut) != strFromHd(coldWalletFeeKey) || (err != nil) != test.isError {
+			t.Error("for", test.coldFeeIn, "expected", strFromHd(test.coldFeeOut), "and is error=", test.isError, "got", strFromHd(coldWalletFeeKey), "and is error=", err != nil)
 		}
 	}
 }

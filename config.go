@@ -108,7 +108,7 @@ type config struct {
 	WalletUsers        []string `long:"walletusers" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
 	WalletPasswords    []string `long:"walletpasswords" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
 	WalletCerts        []string `long:"walletcerts" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
-	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
+	VotingWalletExtPub string   `long:"votingwalletextpub" description:"Deprecated: Do not use. This will not be an option in a future release of dcrstakepool, and	setting it will cause a startup error."`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
 	MinServers         int      `long:"minservers" description:"Deprecated: Do not use. Minimum of 2 servers are required when running on mainnet. Testnet and simnet require minimum 1."`
@@ -277,14 +277,6 @@ func (c *config) parsePubKeys(params *chaincfg.Params) error {
 	}
 	if !coldWalletFeeKey.IsForNet(params) {
 		return fmt.Errorf("cold wallet extended public key is for wrong network")
-	}
-	// Parse the extended public key for the voting addresses.
-	votingWalletVoteKey, err = hdkeychain.NewKeyFromString(c.VotingWalletExtPub)
-	if err != nil {
-		return fmt.Errorf("voting wallet extended public key: %v", err)
-	}
-	if !votingWalletVoteKey.IsForNet(params) {
-		return fmt.Errorf("voting wallet extended public key is for wrong network")
 	}
 	return nil
 }
@@ -522,13 +514,6 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	if len(cfg.VotingWalletExtPub) == 0 {
-		str := "%s: votingwalletextpub is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
 	if err := cfg.parsePubKeys(activeNetParams.Params); err != nil {
 		err := fmt.Errorf("%s: failed to parse extended public keys: %v", funcName, err)
 		fmt.Fprintln(os.Stderr, err)
@@ -656,6 +641,11 @@ func loadConfig() (*config, []string, error) {
 
 	if len(cfg.WalletPasswords) > 0 {
 		str := "%s: Config WalletPasswords is deprecated and has no effect. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if cfg.VotingWalletExtPub != "" {
+		str := "%s: Config VotingWalletExtPub is deprecated and has no effect. Please remove from your config file. This will not be an option in a future release of dcrstakepool, and	setting it will cause a startup error."
 		log.Warnf(str, funcName)
 	}
 
