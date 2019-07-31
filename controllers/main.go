@@ -70,7 +70,7 @@ type MainController struct {
 	emailSender          email.Sender
 	voteVersion          uint32
 	votingXpub           *hdkeychain.ExtendedKey
-	maxVotedAge          int64
+	maxVotedTickets      int
 	description          string
 	designation          string
 }
@@ -98,12 +98,12 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 
 // NewMainController is the constructor for the entire controller routing.
 func NewMainController(params *chaincfg.Params, adminIPs []string,
-	adminUserIDs []string, APISecret string, APIVersionsSupported []int,
-	baseURL string, closePool bool, closePoolMsg string, enablestakepoold bool,
-	feeKey *hdkeychain.ExtendedKey, stakepooldConnMan *stakepooldclient.StakepooldManager,
-	poolFees float64, poolEmail, poolLink string, emailSender email.Sender, walletHosts,
-	walletCerts, walletUsers, walletPasswords []string, minServers int, realIPHeader string,
-	voteKey *hdkeychain.ExtendedKey, maxVotedAge int64, description string,
+	adminUserIDs []string, APISecret string, APIVersionsSupported []int, baseURL string,
+	closePool bool, closePoolMsg string, feeKey *hdkeychain.ExtendedKey,
+	stakepooldConnMan *stakepooldclient.StakepooldManager, poolFees float64,
+	poolEmail, poolLink string, emailSender email.Sender, walletHosts, walletCerts,
+	walletUsers, walletPasswords []string, minServers int, realIPHeader string,
+	voteKey *hdkeychain.ExtendedKey, maxVotedTickets int, description string,
 	designation string) (*MainController, error) {
 
 	rpcs, err := newWalletSvrManager(walletHosts, walletCerts, walletUsers, walletPasswords, minServers)
@@ -124,7 +124,6 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		baseURL:              baseURL,
 		closePool:            closePool,
 		closePoolMsg:         closePoolMsg,
-		enableStakepoold:     enablestakepoold,
 		feeXpub:              feeKey,
 		StakepooldServers:    stakepooldConnMan,
 		poolEmail:            poolEmail,
@@ -136,16 +135,18 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		realIPHeader:         realIPHeader,
 		emailSender:          emailSender,
 		votingXpub:           voteKey,
-		maxVotedAge:          maxVotedAge,
+		maxVotedTickets:      maxVotedTickets,
 		description:          description,
 		designation:          designation,
 	}
 
-	voteVersion, err := mc.GetVoteVersion()
+	voteVersion, err := stakepooldConnMan.VoteVersion()
 	if err != nil || voteVersion == 0 {
 		cErr := fmt.Errorf("Failed to get wallets' Vote Version: %v", err)
 		return nil, cErr
 	}
+
+	log.Infof("All wallets are VoteVersion %d", voteVersion)
 
 	mc.voteVersion = voteVersion
 
@@ -221,22 +222,9 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	userPubKeyAddr := r.FormValue("UserPubKeyAddr")
 
-	if len(userPubKeyAddr) < 40 {
-		return nil, codes.InvalidArgument, "address error", errors.New("address too short")
-	}
-
-	if len(userPubKeyAddr) > 65 {
-		return nil, codes.InvalidArgument, "address error", errors.New("address too long")
-	}
-
-	u, err := dcrutil.DecodeAddress(userPubKeyAddr)
+	u, err := validateUserPubKeyAddr(userPubKeyAddr)
 	if err != nil {
-		return nil, codes.InvalidArgument, "address error", errors.New("couldn't decode address")
-	}
-
-	_, is := u.(*dcrutil.AddressSecpPubKey)
-	if !is {
-		return nil, codes.InvalidArgument, "address error", errors.New("incorrect address type")
+		return nil, codes.InvalidArgument, "address error", err
 	}
 
 	// Get the ticket address for this user
@@ -246,7 +234,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	poolValidateAddress, err := controller.rpcServers.ValidateAddress(pooladdress)
+	poolValidateAddress, err := controller.StakepooldServers.ValidateAddress(pooladdress)
 	if err != nil {
 		log.Errorf("unable to validate address: %v", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
@@ -551,18 +539,8 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 		return err
 	}
 
-	err = walletSvrsSync(controller.rpcServers, multisigScripts)
+	err = walletSvrsSync(controller.rpcServers, controller.StakepooldServers, multisigScripts)
 	return err
-}
-
-// GetVoteVersion
-func (controller *MainController) GetVoteVersion() (uint32, error) {
-	voteVersion, err := checkWalletsVoteVersion(controller.rpcServers)
-	if err != nil {
-		return 0, err
-	}
-
-	return voteVersion, err
 }
 
 // CheckAndResetUserVoteBits reset users VoteBits if the VoteVersion has
@@ -705,6 +683,35 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
+func validateUserPubKeyAddr(pubKeyAddr string) (dcrutil.Address, error) {
+	if len(pubKeyAddr) < 40 {
+		str := "Address is too short"
+		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
+		return nil, errors.New(str)
+	}
+
+	if len(pubKeyAddr) > 65 {
+		str := "Address is too long"
+		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
+		return nil, errors.New(str)
+	}
+
+	u, err := dcrutil.DecodeAddress(pubKeyAddr)
+	if err != nil {
+		log.Warnf("User submitted invalid address: %s - %v", pubKeyAddr, err)
+		return nil, errors.New("Couldn't decode address")
+	}
+
+	_, is := u.(*dcrutil.AddressSecpPubKey)
+	if !is {
+		str := "Incorrect address type"
+		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
+		return nil, errors.New(str)
+	}
+
+	return u, nil
+}
+
 // AddressPost is address form submit route.
 func (controller *MainController) AddressPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
@@ -728,26 +735,9 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	log.Infof("Address POST from %v, pubkeyaddr %v", remoteIP, userPubKeyAddr)
 
-	if len(userPubKeyAddr) < 40 {
-		session.AddFlash("Address is too short", "address")
-		return controller.Address(c, r)
-	}
-
-	if len(userPubKeyAddr) > 65 {
-		session.AddFlash("Address is too long", "address")
-		return controller.Address(c, r)
-	}
-
-	// Get dcrutil.Address for user from pubkey address string
-	u, err := dcrutil.DecodeAddress(userPubKeyAddr)
+	u, err := validateUserPubKeyAddr(userPubKeyAddr)
 	if err != nil {
-		session.AddFlash("Couldn't decode address", "address")
-		return controller.Address(c, r)
-	}
-
-	_, is := u.(*dcrutil.AddressSecpPubKey)
-	if !is {
-		session.AddFlash("Incorrect address type", "address")
+		session.AddFlash(err.Error(), "address")
 		return controller.Address(c, r)
 	}
 
@@ -763,7 +753,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
-	poolValidateAddress, err := controller.rpcServers.ValidateAddress(pooladdress)
+	poolValidateAddress, err := controller.StakepooldServers.ValidateAddress(pooladdress)
 	if err != nil {
 		controller.handlePotentialFatalError("ValidateAddress pooladdress", err)
 		return "/error", http.StatusSeeOther
@@ -864,7 +854,7 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 		EnableVoting    bool
 	}
 	walletPageInfo := make([]WalletInfoPage, len(walletInfo))
-	connectedWallets := 0
+	var connectedWallets int
 	for i, v := range walletInfo {
 		// If something is nil in the slice means it is disconnected.
 		if v == nil {
@@ -1167,9 +1157,12 @@ func (controller *MainController) EmailUpdate(c web.C, r *http.Request) (string,
 			"emailupdateError")
 		log.Errorf("EmailChangeComplete failed %v", err)
 	} else {
-		// Logout the user to force them to login with their new
-		// email address
-		session.Values["UserId"] = nil
+
+		// destroy session data and force re-login
+		userID, _ := session.Values["UserId"].(int64)
+		session.Options.MaxAge = -1
+		system.DestroySessionsForUserID(dbMap, userID)
+
 		session.AddFlash("Email successfully updated",
 			"emailupdateSuccess")
 	}
@@ -1462,6 +1455,9 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 		log.Errorf("error deleting token %v", err)
 	}
 
+	// destroy session data
+	system.DestroySessionsForUserID(dbMap, user.Id)
+
 	session.AddFlash("Password successfully updated", "passwordupdateSuccess")
 	return controller.PasswordUpdate(c, r)
 }
@@ -1591,6 +1587,9 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 			return controller.Settings(c, r)
 		}
 
+		// destroy session data
+		system.DestroySessionsForUserID(dbMap, user.Id)
+
 		// send a confirmation email.
 		err = controller.emailSender.PasswordChangeConfirm(user.Email, controller.baseURL, remoteIP)
 		if err != nil {
@@ -1705,9 +1704,6 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 	if !controller.IsCaptchaDone(c) {
 		session.AddFlash("You must complete the captcha.", "registrationError")
 		return controller.Register(c, r)
-	} else {
-		session.Values["CaptchaDone"] = false
-		c.Env["CaptchaDone"] = false
 	}
 
 	remoteIP := getClientIP(r, controller.realIPHeader)
@@ -1729,6 +1725,12 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 		session.AddFlash("Passwords do not match", "registrationError")
 		return controller.Register(c, r)
 	}
+
+	// At this point we have completed all trivial pre-registration checks. The new account
+	// is about to be created, so lets consume the CAPTCHA. Any failure beyond this point
+	// and we want the user to complete another CAPTCHA.
+	session.Values["CaptchaDone"] = false
+	c.Env["CaptchaDone"] = false
 
 	dbMap := controller.GetDbMap(c)
 	user := models.GetUserByEmail(dbMap, email)
@@ -1808,7 +1810,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 
 // ByTicketHeight type implements sort.Sort for types with a TicketHeight field.
 // This includes all valid tickets, including spend tickets.
-type ByTicketHeight []TicketInfoLive
+type ByTicketHeight []TicketInfo
 
 func (a ByTicketHeight) Len() int {
 	return len(a)
@@ -1848,9 +1850,9 @@ type TicketInfoInvalid struct {
 	Ticket string
 }
 
-// TicketInfoLive represents live or immature (mined) tickets that have yet to
+// TicketInfo represents live or immature tickets that have yet to
 // be spent by either a vote or revocation.
-type TicketInfoLive struct {
+type TicketInfo struct {
 	TicketHeight uint32
 	Ticket       string
 }
@@ -1859,7 +1861,7 @@ type TicketInfoLive struct {
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
 
 	var ticketInfoInvalid []TicketInfoInvalid
-	var ticketInfoLive []TicketInfoLive
+	var ticketInfoLive, ticketInfoImmature []TicketInfo
 	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
 	var numVoted int
 
@@ -1899,8 +1901,6 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	log.Infof("Tickets GET from %v, multisig %v", remoteIP,
 		user.MultiSigAddress)
 
-	w := controller.rpcServers
-
 	start := time.Now()
 
 	spui, err := controller.StakepooldServers.StakePoolUserInfo(multisig.String())
@@ -1915,25 +1915,21 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	log.Debugf(":: StakePoolUserInfo (msa = %v) execution time: %v",
 		user.MultiSigAddress, time.Since(start))
 
-	// Compute the oldest (min) ticket spend height to include in the table
-	_, height, err := w.GetBestBlock()
-	if err != nil {
-		log.Infof("RPC GetBestBlock failed: %v", err)
-		session.AddFlash("Unable to get best block height", "main")
-		c.Env["Flash"] = session.Flashes("main")
-		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
-	}
-	minVotedHeight := height - controller.maxVotedAge
-
 	// If the user has tickets, get their info
 	if spui != nil && len(spui.Tickets) > 0 {
 		for _, ticket := range spui.Tickets {
 			switch ticket.Status {
-			case "live":
-				ticketInfoLive = append(ticketInfoLive, TicketInfoLive{
+			case "immature":
+				ticketInfoImmature = append(ticketInfoImmature, TicketInfo{
 					TicketHeight: ticket.TicketHeight,
 					Ticket:       ticket.Ticket,
 				})
+			case "live":
+				ticketInfoLive = append(ticketInfoLive, TicketInfo{
+					TicketHeight: ticket.TicketHeight,
+					Ticket:       ticket.Ticket,
+				})
+
 			case "expired":
 				ticketInfoExpired = append(ticketInfoExpired, TicketInfoHistoric{
 					Ticket:        ticket.Ticket,
@@ -1947,18 +1943,17 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 					TicketHeight:  ticket.TicketHeight,
 				})
 			case "voted":
-				numVoted++
-				if int64(ticket.SpentByHeight) >= minVotedHeight {
-					ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
-						Ticket:        ticket.Ticket,
-						SpentBy:       ticket.SpentBy,
-						SpentByHeight: ticket.SpentByHeight,
-						TicketHeight:  ticket.TicketHeight,
-					})
-				}
+				ticketInfoVoted = append(ticketInfoVoted, TicketInfoHistoric{
+					Ticket:        ticket.Ticket,
+					SpentBy:       ticket.SpentBy,
+					SpentByHeight: ticket.SpentByHeight,
+					TicketHeight:  ticket.TicketHeight,
+				})
 			}
 		}
 	}
+
+	numVoted = len(ticketInfoVoted)
 
 	if spui != nil && len(spui.InvalidTickets) > 0 {
 		for _, ticket := range spui.InvalidTickets {
@@ -1966,22 +1961,27 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 		}
 	}
 
-	// Sort live tickets. This is commented because the JS tables will perform
-	// their own sorting anyway. However, depending on the UI implementation, it
-	// may be desirable to sort it here.
-	// sort.Sort(ByTicketHeight(ticketInfoLive))
+	// Sort tickets for display. Ideally these would be sorted on the front
+	// end by javascript.
+	sort.Sort(sort.Reverse(ByTicketHeight(ticketInfoLive)))
+	sort.Sort(sort.Reverse(ByTicketHeight(ticketInfoImmature)))
+	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoExpired)))
+	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoVoted)))
+	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoMissed)))
 
-	// Sort historic (voted and revoked) tickets
-	sort.Sort(BySpentByHeight(ticketInfoVoted))
-	sort.Sort(BySpentByHeight(ticketInfoMissed))
+	// Truncate the slice of voted tickets if there are too many
+	if len(ticketInfoVoted) > controller.maxVotedTickets {
+		ticketInfoVoted = ticketInfoVoted[0:controller.maxVotedTickets]
+	}
 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["TicketsInvalid"] = ticketInfoInvalid
+	c.Env["TicketsImmature"] = ticketInfoImmature
 	c.Env["TicketsLive"] = ticketInfoLive
 	c.Env["TicketsExpired"] = ticketInfoExpired
 	c.Env["TicketsMissed"] = ticketInfoMissed
 	c.Env["TicketsVotedCount"] = numVoted
-	c.Env["TicketsVotedArchivedCount"] = numVoted - len(ticketInfoVoted)
+	c.Env["TicketsVotedMaxDisplay"] = controller.maxVotedTickets
 	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets := controller.Parse(t, "tickets", c.Env)
 
@@ -2004,6 +2004,11 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 	}
 
 	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+
+	if user.MultiSigAddress == "" {
+		log.Info("Multisigaddress empty")
+		return "/address", http.StatusSeeOther
+	}
 
 	t := controller.GetTemplate(c)
 
@@ -2087,8 +2092,11 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 func (controller *MainController) Logout(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
+	if session.Values["UserId"] == nil {
+		return "/", http.StatusSeeOther
+	}
 
-	session.Values["UserId"] = nil
+	session.Options.MaxAge = -1
 
 	return "/", http.StatusSeeOther
 }

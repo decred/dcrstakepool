@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/rpcclient/v2"
+	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 )
 

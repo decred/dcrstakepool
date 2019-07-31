@@ -24,7 +24,10 @@ func (application *Application) ApplyTemplates(c *web.C, h http.Handler) http.Ha
 // Makes sure controllers can have access to session
 func (application *Application) ApplySessions(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		session, _ := application.Store.Get(r, "session")
+		session, err := application.Store.New(r, "session")
+		if err != nil {
+			log.Warnf("session load err: %v ", err)
+		}
 		c.Env["Session"] = session
 		h.ServeHTTP(w, r)
 	}
@@ -90,7 +93,7 @@ func (application *Application) ApplyCaptcha(c *web.C, h http.Handler) http.Hand
 func (application *Application) ApplyAuth(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		session := c.Env["Session"].(*sessions.Session)
-		if userId, ok := session.Values["UserId"]; ok {
+		if userId := session.Values["UserId"]; userId != nil {
 			dbMap := c.Env["DbMap"].(*gorp.DbMap)
 
 			user, err := dbMap.Get(models.User{}, userId)

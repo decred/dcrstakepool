@@ -11,6 +11,12 @@ service StakepooldService {
 	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
 	rpc ImportScript (ImportScriptRequest) returns (ImportScriptResponse);
 	rpc StakePoolUserInfo (StakePoolUserInfoRequest) returns (StakePoolUserInfoResponse);
+	rpc WalletInfo (WalletInfoRequest) returns (WalletInfoResponse);
+	rpc ValidateAddress (ValidateAddressRequest) returns (ValidateAddressResponse);
+	rpc AddMissingTicket (AddMissingTicketRequest) returns (AddMissingTicketResponse);
+	rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
+	rpc ListScripts (ListScriptsRequest) returns (ListScriptsResponse);
+	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
 }
 
 service VersionService {
@@ -47,8 +53,37 @@ message SetUserVotingPrefsRequest {
 	repeated UserVotingConfigEntry user_voting_config = 1;
 }
 
+message AddMissingTicketRequest {
+	bytes Hash = 1;
+}
+message AddMissingTicketResponse {
+}
+
+message GetTicketsRequest {
+	bool IncludeImmature = 1;
+}
+message GetTicketsResponse {
+	repeated bytes Tickets = 1;
+}
+
+message ListScriptsRequest {
+}
+message ListScriptsResponse {
+	repeated bytes Scripts = 1;
+}
+
+message AccountSyncAddressIndexRequest {
+	string Account = 1;
+	uint32 Branch = 2;
+	int64 Index = 3;
+}
+message AccountSyncAddressIndexResponse {
+}
+
 message ImportScriptRequest {
 	bytes Script = 1;
+	bool Rescan = 2;
+	int64 RescanHeight = 3;
 }
 message ImportScriptResponse {
 	int64 HeightImported = 1;
@@ -60,6 +95,20 @@ message StakePoolUserInfoRequest {
 message StakePoolUserInfoResponse {
 	repeated StakePoolUserTicket Tickets = 1;
 	repeated string InvalidTickets = 2;
+}
+
+message WalletInfoRequest {
+}
+message WalletInfoResponse {
+	uint32 VoteVersion = 1;
+}
+
+message ValidateAddressRequest {
+	string Address = 1;
+}
+message ValidateAddressResponse {
+	bool IsMine = 1;
+	string PubKeyAddr = 2;
 }
 
 message StakePoolUserTicket {

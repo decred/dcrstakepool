@@ -91,7 +91,7 @@
   </div>
   <ul class="mb-5">
     {{if .User}}
-      <li><p>Hello, <span class="e-mail">maria@gr.co</span></p></li>
+      <li><p>Hello, <span class="e-mail">{{ .User.Email}}</span></p></li>
     {{end}}
     <li><a class="{{if .IsIndex}}active{{end}}" href="/">Home</a></li>
     <li><a class="{{if .IsStats}}active{{end}}" href="/stats">Stats</a></li>

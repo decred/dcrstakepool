@@ -1,7 +1,7 @@
 {{define "tickets"}}
 <section class="site-content">
 	<div class="container container--narrow">
-			<div class="row mx-3">
+		<div class="row mx-3">
 
 		{{range .Flash}}
 			<div class="snackbar snackbar-ticket-failed">
@@ -12,32 +12,68 @@
 			</div>
 		{{end}}
 
+		{{with .TicketsInvalid}}
+			<div class="snackbar snackbar-ticket-failed">
+				<div class="snackbar-message">
+					<div class="snackbar-close-button-top d-none"></div>
+					<p class="font-weight-bold">You have {{len .}} invalid ticket{{if gt (len .) 1}}s{{end}}!</p>
+					<p>You will either need to vote {{if gt (len .) 1}}these tickets{{else}}this ticket{{end}} yourself or contact your voting service provider admin to have them add the ticket{{if gt (len .) 1}}s{{end}} to the voting service manually.</p>
+				</div>
+			</div>
+		{{end}}
+
 		<section class="block">
 				<div class="col-12 block__title">
-					<h1><span>Ticket Groups</span></h1>
+					<h1><span>Your Tickets</span></h1>
 				</div>
 
 				<div class="col-12 mb-4 px-0">
 					
 					<div class="accordion ticket_accordion">
+						<input id="accordion-control-1" class="accordion-control" type="checkbox" />
+						<label for="accordion-control-1">
+							<div class="accordion__toggle">
+								<div class="d-flex justify-content-between align-items-center">
+									<span><img src="/assets/images/group-1120.svg" alt="">Immature</span><div class="arrow-down"></div>
+								</div>
+							</div>
+						</label>
+							<div class="accordion__contents mb-1">
+							{{ range $i, $data := .TicketsImmature }}
+							<div>
+								<img src="/assets/images/group-1120.svg" alt="">
+								<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
+								<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+								<span>Purchase height:&nbsp;{{$data.TicketHeight}}</span>
+							</div>
+							{{else}}
+								<div class="accordion__empty">
+									<span>No immature tickets</span>
+								</div>
+							{{end}}
+							</div>
+						</div>  
+
+					<div class="accordion ticket_accordion">
 						<input id="accordion-control-2" class="accordion-control" type="checkbox" />
 						<label for="accordion-control-2">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/group-1119.svg" alt="">Live/Immature</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/group-1119.svg" alt="">Live</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
 							{{ range $i, $data := .TicketsLive }}
 							<div>
-								<img src="assets/images/group-1119.svg" alt="">
+								<img src="/assets/images/group-1119.svg" alt="">
 								<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-								<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+								<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+								<span>Purchase height:&nbsp;{{$data.TicketHeight}}</span>
 							</div>
 							{{else}}
 								<div class="accordion__empty">
-									<span>No live/immature tickets</span>
+									<span>No live tickets</span>
 								</div>
 							{{end}}
 							</div>
@@ -48,16 +84,24 @@
 						<label for="accordion-control-3">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/symbol-8-1.svg" alt="">Voted</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/symbol-8-1.svg" alt="">Voted</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
+
+								{{ if gt .TicketsVotedCount .TicketsVotedMaxDisplay}}
+									<div class="text-center">
+										<span>You have {{.TicketsVotedCount}} voted tickets. Only the most recent {{.TicketsVotedMaxDisplay}} are shown here.</span>
+									</div>
+								{{end}}
+
 								{{ range $i, $data := .TicketsVoted }}
 								<div>
-									<img src="assets/images/symbol-8-1.svg" alt="">
+									<img src="/assets/images/symbol-8-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-									<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<span>Voted height:&nbsp;{{$data.SpentByHeight}}</span>
 								</div>
 								{{else}}
 									<div class="accordion__empty">
@@ -72,16 +116,17 @@
 						<label for="accordion-control-4">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/symbol-9-1.svg" alt="">Missed</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/symbol-9-1.svg" alt="">Missed</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
 								{{ range $i, $data := .TicketsMissed }}
 									<div>
-										<img src="assets/images/symbol-9-1.svg" alt="">
+										<img src="/assets/images/symbol-9-1.svg" alt="">
 										<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-										<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+										<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+										<span>Revoked height:&nbsp;{{$data.SpentByHeight}}</span>
 									</div>
 								{{else}}
 									<div class="accordion__empty">
@@ -96,16 +141,17 @@
 						<label for="accordion-control-5">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/symbol-5-1.svg" alt="">Expired</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/symbol-5-1.svg" alt="">Expired</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
 								{{ range $i, $data := .TicketsExpired }}
 								<div>
-									<img src="assets/images/symbol-5-1.svg" alt="">
+									<img src="/assets/images/symbol-5-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-									<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<span>Revoked height:&nbsp;{{$data.SpentByHeight}}</span>
 								</div>
 								{{else}}
 									<div class="accordion__empty">
@@ -114,22 +160,24 @@
 								{{end}}
 							</div>
 					</div>  
-					
+
+					{{with .TicketsInvalid}}
 					<div class="accordion ticket_accordion">
 						<input id="accordion-control-6" class="accordion-control" type="checkbox" />
 						<label for="accordion-control-6">
 							<div class="accordion__toggle">
 								<div class="d-flex justify-content-between align-items-center">
-									<span><img src="assets/images/symbol-5-1-1.svg" alt="">Invalid</span><div class="arrow-down"></div>
+									<span><img src="/assets/images/symbol-5-1-1.svg" alt="">Invalid</span><div class="arrow-down"></div>
 								</div>
 							</div>
 						</label>
 							<div class="accordion__contents mb-1">
-								{{ range $i, $data := .TicketsInvalid }}
+								{{ range $i, $data := . }}
 								<div>
-									<img src="assets/images/symbol-5-1-1.svg" alt="">
+									<img src="/assets/images/symbol-5-1-1.svg" alt="">
 									<span><pre class="m-0 d-inline">{{printf "%.16s" $data.Ticket}}...</pre></span>
-									<a style="margin-left:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<a style="margin-left:50px; margin-right:50px" href="https://{{$.Network}}.dcrdata.org/tx/{{$data.Ticket}}" rel="noopener noreferrer">Block Explorer</a>
+									<span>Purchase height:&nbsp;{{$data.TicketHeight}}</span>
 								</div>
 								{{else}}
 									<div class="accordion__empty">
@@ -139,109 +187,11 @@
 							</div>
 							
 					</div>
+					{{end}}
+
 				</div>
 			</section>
-
-			<section class="block">
-					<div class="col-12 block__title">
-						<h1 class="d-flex justify-content-between align-items-center"><span>Ticket Information</span> <img class="icon--info" src="assets/images/info-icon.svg" data-toggle="modal" data-target="#connectTicketInfo" alt=""></h1>
-					</div>
-
-				<div class="modal fade" id="connectTicketInfo" tabindex="-1" role="dialog" aria-labelledby="connectTicketInfoTitle" aria-hidden="true">
-					<div class="container container--narrow modal-dialog px-0" role="document">
-						<div class="modal-content px-md-3 py-md-4">
-							<div class="modal-header d-md-flex d-none">
-								<h1 class="modal-title d-flex justify-content-between align-items-center" id="connectSubAddressTitle"><img src="assets/images/info-icon-lg.svg" alt=""><span class="px-3">Buying Tickets with dcrwallet using command-line tools</span></h1>
-								<button type="button" class="modal-close" data-dismiss="modal" aria-label="Close">
-									<span aria-hidden="true"><img src="assets/images/close-cross-icon.svg" alt=""></span>
-								</button>
-							</div>
-							<div class="modal-header modal-header--long-title d-md-none d-block mb-3 p-4">
-								<div class="d-flex justify-content-between align-items-start">
-									<button type="button" class="modal-close" data-dismiss="modal" aria-label="Close">
-										<span aria-hidden="true"><img src="assets/images/arrow-back--blue.svg" alt=""></span>
-									</button>
-									<h1 class="modal-title" id="connectSubAddressTitle"><img src="assets/images/info-icon-sm.svg" alt=""><span class="pl-1">Buying Tickets with dcrwallet using command-line tools</span></h1>
-								</div>
-							</div>
-							<div class="modal-body mx-3 px-sm-5 px-0">
-								<blockquote class="modal-blockquote"><span>Note!</span> <br>
-								For ease of use, it’s recommended to participate in staking by using the <a href="https://decred.org/downloads" rel="noopener noreferrer">Decrediton Wallet &darr;</a><br>
-								For command-line users, in-depth dcrwallet instructions can be founds at <a href="https://docs.decred.org/getting-started/user-guides/dcrwallet-tickets/" rel="noopener noreferrer">docs.decred.org.</a><br>
-								Below is a brief introduction for staking the command line environment.</blockquote>
-
-								<p>Your multisignature script for delegating votes has been generated. Please first import it locally into your wallet using dcrctl for safe keeping, so you can recover your funds and vote in the unlikely event of a VSP failure:</p>
-
-								<p>dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet importscript “script”
-
-								<p>For example:</p>
-
-								<div class="modal-code">
-									<p>
-										$ dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet importscript {{ .User.MultiSigScript }}
-									</p>
-								</div>
-
-								<p>After successfully importing the script into your wallet, you may purchase tickets with voting rights delegated to the VSP in either of two ways:</p>
-
-								<strong>Option A - dcrwallet - Automatic purchasing</strong>
-
-								<p>Stop dcrwallet if it is currently running and add the following to dcrwallet.conf:</p>
-
-								<div class="modal-code">
-									<p>
-										[Application Options] <br>
-										enableticketbuyer=true <br>
-										pooladdress={{ .User.UserFeeAddr }} <br>
-										poolfees={{ .PoolFees }} <br>
-										;; DEPRECATED -- use ticketbuyer.votingaddress instead <br>
-										;; ticketaddress={{ .User.MultiSigAddress }} <br>
-										[Ticket Buyer Options] <br>
-										ticketbuyer.votingaddress={{ .User.MultiSigAddress }} <br>
-										ticketbuyer.maxpriceabsolute=100
-									</p>
-								</div>
-								
-								<p>Unlock dcrwallet and it will automatically purchase stake tickets delegated to the voting service address.</p>
-
-								<strong>Option B - dcrwallet - Manual purchasing</strong>
-
-								<p>Start a wallet with funds available and manually purchase tickets with the following command using dcrctl:</p>
-
-								<p>dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet purchaseticket "fromaccount" spendlimit minconf ticketaddress numtickets poolfeeaddress poolfeeamt</p>
-
-								<div class="modal-code">
-									<p>
-										dcrctl{{ if eq .Network "testnet"}} --testnet{{end}} --wallet purchaseticket "default" 100 1 {{ .User.MultiSigAddress }} 1 {{ .User.UserFeeAddr }} {{ .PoolFees}}
-									</p>
-								</div>
-
-								<p>Will purchase a ticket delegated to the the multisig address which allows either your or the VSP to vote when the ticket is called. This uses funds from the default account only if the current network price for a ticket is less than 100.0 coins.</p>
-
-								<strong>Voting</strong>
-
-								<p>If you wish to cast votes yourself, please review the guides
-								<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#how-to-vote" rel="noopener noreferrer">How To Vote</a>
-								and
-								<a href="https://docs.decred.org/getting-started/user-guides/agenda-voting/#solo-voting" rel="noopener noreferrer">Solo-Voting</a>.
-								The preferences you set on this voting service's <a href="/voting">voting page</a>
-								only affect the stake voting service's voting wallets and not your own.</p>
-							</div>
-						</div>
-					</div>
-				</div>
-
-					<div class="col-12 mb-4 block__key">
-						<h2>P2SH Address</h2>
-						<p>{{ .User.MultiSigAddress }}</p>
-					</div>
-
-					<div class="col-12 mb-5 block__key">
-						<h2>Redeem Script</h2>
-						<p>{{ .User.MultiSigScript }}</p>
-					</div>
-
-				</section>
+			
 			</div>
 		</div>
 </section>

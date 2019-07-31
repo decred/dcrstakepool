@@ -39,7 +39,7 @@ submitState('#Password');
 submitState('#Reset');
 submitState('#ChangeEmail');
 submitState('#ChangePassword');
-submitState('#DeleteAccount');
+submitState('#captcha-form');
 
 //controls tables with selections and checkboxes
 var selectMsg = "Select all";
@@ -114,6 +114,14 @@ $('.form-check-input').change(function () {
 });
 
 $(document).ready(function () {
+  // Display elements with class js-only
+  var els = document.getElementsByClassName("js-only")
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove('d-none')
+  }
+});
+
+$(document).ready(function () {
   // display close buttons on snackbar notifications
   $('.snackbar-close-button-top').removeClass('d-none');
   // add click listener to close buttons
@@ -163,8 +171,8 @@ for (i = 0; i < total; i++) {
 }
 
 
-$('.carousel-nav').prepend('<li class="carousel-nav__previous"><img src="assets/images/arrow-prev.svg"></li>');
-$('.carousel-nav').append('<li class="carousel-nav__next"><img src="assets/images/arrow-next.svg"></li>');
+$('.carousel-nav').prepend('<li class="carousel-nav__previous"><img src="/assets/images/arrow-prev.svg"></li>');
+$('.carousel-nav').append('<li class="carousel-nav__next"><img src="/assets/images/arrow-next.svg"></li>');
 
 var $cellButtons = $cellButtonGroup.find('.carousel-nav__dot');
 

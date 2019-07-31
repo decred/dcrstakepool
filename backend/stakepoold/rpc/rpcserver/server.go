@@ -33,8 +33,8 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "4.0.0"
-	semverMajor        = 4
+	semverString       = "5.0.0"
+	semverMajor        = 5
 	semverMinor        = 0
 	semverPatch        = 0
 )
@@ -147,13 +147,55 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 }
 
 func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScriptRequest) (*pb.ImportScriptResponse, error) {
-	heightImported, err := s.appContext.ImportScript(req.Script)
+	heightImported, err := s.appContext.ImportScript(req.Script, req.Rescan, req.RescanHeight)
 	if err != nil {
 		return nil, err
 	}
 	return &pb.ImportScriptResponse{
 		HeightImported: heightImported,
 	}, nil
+}
+
+func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsRequest) (*pb.ListScriptsResponse, error) {
+	scripts, err := s.appContext.ListScripts()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ListScriptsResponse{Scripts: scripts}, nil
+}
+
+func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.AccountSyncAddressIndexRequest) (*pb.AccountSyncAddressIndexResponse, error) {
+	err := s.appContext.AccountSyncAddressIndex(req.Account, req.Branch, int(req.Index))
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.AccountSyncAddressIndexResponse{}, nil
+}
+
+func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
+	tickets, err := s.appContext.GetTickets(req.IncludeImmature)
+	if err != nil {
+		return nil, err
+	}
+
+	// Serialise for sending back over RPC.
+	// Need to change *chainhash.Hash into []byte.
+	ticketBytes := make([][]byte, len(tickets))
+	for i := 0; i < len(tickets); i++ {
+		ticketBytes[i] = tickets[i][:]
+	}
+
+	return &pb.GetTicketsResponse{Tickets: ticketBytes}, nil
+}
+
+func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMissingTicketRequest) (*pb.AddMissingTicketResponse, error) {
+	err := s.appContext.AddMissingTicket(req.Hash)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.AddMissingTicketResponse{}, nil
 }
 
 func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakePoolUserInfoRequest) (*pb.StakePoolUserInfoResponse, error) {
@@ -176,5 +218,28 @@ func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakeP
 	return &pb.StakePoolUserInfoResponse{
 		Tickets:        tickets,
 		InvalidTickets: response.InvalidTickets,
+	}, nil
+}
+
+func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoRequest) (*pb.WalletInfoResponse, error) {
+	response, err := s.appContext.WalletInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.WalletInfoResponse{
+		VoteVersion: response.VoteVersion,
+	}, nil
+}
+
+func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.ValidateAddressRequest) (*pb.ValidateAddressResponse, error) {
+	response, err := s.appContext.ValidateAddress(req.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ValidateAddressResponse{
+		IsMine:     response.IsMine,
+		PubKeyAddr: response.PubKeyAddr,
 	}, nil
 }

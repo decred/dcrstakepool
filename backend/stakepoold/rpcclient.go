@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/rpcclient/v2"
+	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
 
-var requiredChainServerAPI = semver{major: 5, minor: 1, patch: 0}
-var requiredWalletAPI = semver{major: 6, minor: 0, patch: 0}
+var requiredChainServerAPI = semver{major: 6, minor: 0, patch: 0}
+var requiredWalletAPI = semver{major: 6, minor: 0, patch: 1}
 
 func connectNodeRPC(ctx *rpcserver.AppContext, cfg *config) (*rpcclient.Client, semver, error) {
 	var nodeVer semver
@@ -103,9 +103,10 @@ func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 	walletVer = semver{dcrwVer.Major, dcrwVer.Minor, dcrwVer.Patch}
 
 	if !semverCompatible(requiredWalletAPI, walletVer) {
-		log.Warnf("Node JSON-RPC server %v does not have "+
+		log.Errorf("Node JSON-RPC server %v does not have "+
 			"a compatible API version. Advertizes %v but require %v",
 			cfg.WalletHost, walletVer, requiredWalletAPI)
+		return nil, walletVer, fmt.Errorf("Incompatible dcrwallet RPC version")
 	}
 
 	return dcrwClient, walletVer, nil
@@ -124,7 +125,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 
 	ignoredLowFeeTickets := make(map[chainhash.Hash]string)
 	liveTickets := make(map[chainhash.Hash]string)
-	normalFee := 0
+	var normalFee int
 
 	log.Info("Calling GetTickets...")
 	timenow := time.Now()
@@ -147,7 +148,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 		promises = append(promises, promise{ctx.WalletConnection.GetTransactionAsync(ticket)})
 	}
 
-	counter := 0
+	var counter int
 	for _, p := range promises {
 		counter++
 		log.Debugf("Receiving GetTransaction result for ticket %v/%v", counter, len(tickets))

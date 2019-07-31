@@ -15,7 +15,7 @@ import (
 	"github.com/decred/dcrd/dcrutil"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 
-	"github.com/decred/dcrd/rpcclient/v2"
+	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/v2/txrules"
@@ -277,8 +277,8 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 	return nil
 }
 
-func (ctx *AppContext) ImportScript(script []byte) (int64, error) {
-	err := ctx.WalletConnection.ImportScript(script)
+func (ctx *AppContext) ImportScript(script []byte, rescan bool, rescanHeight int64) (int64, error) {
+	err := ctx.WalletConnection.ImportScriptRescanFrom(script, rescan, int(rescanHeight))
 	if err != nil {
 		log.Errorf("ImportScript: ImportScript rpc failed: %v", err)
 		return -1, err
@@ -292,6 +292,60 @@ func (ctx *AppContext) ImportScript(script []byte) (int64, error) {
 	return block, nil
 }
 
+func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
+	log.Infof("AddMissingTicket: Adding ticket with hash %s", ticketHash)
+
+	hash, err := chainhash.NewHash(ticketHash)
+	if err != nil {
+		log.Errorf("AddMissingTicket: Failed to parse ticket hash: %v", err)
+		return err
+	}
+
+	tx, err := ctx.WalletConnection.GetRawTransaction(hash)
+	if err != nil {
+		log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
+		return err
+	}
+
+	err = ctx.WalletConnection.AddTicket(tx)
+	if err != nil {
+		log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (ctx *AppContext) ListScripts() ([][]byte, error) {
+	scripts, err := ctx.WalletConnection.ListScripts()
+	if err != nil {
+		log.Errorf("ListScripts: ListScripts rpc failed: %v", err)
+		return nil, err
+	}
+
+	return scripts, nil
+}
+
+func (ctx *AppContext) AccountSyncAddressIndex(account string, branch uint32, index int) error {
+	err := ctx.WalletConnection.AccountSyncAddressIndex(account, branch, index)
+	if err != nil {
+		log.Errorf("AccountSyncAddressIndex: AccountSyncAddressIndex rpc failed: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (ctx *AppContext) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
+	tickets, err := ctx.WalletConnection.GetTickets(includeImmature)
+	if err != nil {
+		log.Errorf("GetTickets: GetTickets rpc failed: %v", err)
+		return nil, err
+	}
+
+	return tickets, nil
+}
+
 func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
 	decodedMultisig, err := dcrutil.DecodeAddress(multisigAddress)
 	if err != nil {
@@ -302,6 +356,32 @@ func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.S
 	response, err := ctx.WalletConnection.StakePoolUserInfo(decodedMultisig)
 	if err != nil {
 		log.Errorf("StakePoolUserInfo: StakePoolUserInfo rpc failed: %v", err)
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (ctx *AppContext) WalletInfo() (*wallettypes.WalletInfoResult, error) {
+	response, err := ctx.WalletConnection.WalletInfo()
+	if err != nil {
+		log.Errorf("WalletInfo: WalletInfo rpc failed: %v", err)
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (ctx *AppContext) ValidateAddress(address string) (*wallettypes.ValidateAddressWalletResult, error) {
+	addr, err := dcrutil.DecodeAddress(address)
+	if err != nil {
+		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
+		return nil, err
+	}
+
+	response, err := ctx.WalletConnection.ValidateAddress(addr)
+	if err != nil {
+		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
 		return nil, err
 	}
 
@@ -506,8 +586,8 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 		spenttickets = append(spenttickets, sm.ticket)
 	}
 
-	ticketCountNew := 0
-	ticketCountOld := 0
+	var ticketCountNew int
+	var ticketCountOld int
 
 	log.Debug("processSpentMissedTickets ctx.Lock")
 	ctx.Lock()

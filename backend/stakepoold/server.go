@@ -19,7 +19,7 @@ import (
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
-	"github.com/decred/dcrd/rpcclient/v2"
+	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/v2/txrules"
@@ -445,7 +445,7 @@ func pruneData(ctx *rpcserver.AppContext) error {
 // loadData looks for and attempts to load into memory the most recent save
 // file for a passed data kind.
 func loadData(ctx *rpcserver.AppContext, dataKind string) error {
-	dataVersion := ""
+	var dataVersion string
 	found := false
 	saveFiles := getDataNames()
 
@@ -466,7 +466,7 @@ func loadData(ctx *rpcserver.AppContext, dataKind string) error {
 			return err
 		}
 
-		lastseen := ""
+		var lastseen string
 
 		for i, file := range files {
 			log.Debugf("entry %d => %s", i, file.Name())

@@ -3,18 +3,17 @@
 package controllers
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrjson/v2"
 	"github.com/decred/dcrd/dcrutil"
-	"github.com/decred/dcrd/rpcclient/v2"
+	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrstakepool/models"
+	"github.com/decred/dcrstakepool/stakepooldclient"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 	"github.com/decred/dcrwallet/wallet/v2/udb"
 )
@@ -23,11 +22,9 @@ import (
 type functionName int
 
 const (
-	validateAddressFn functionName = iota
-	createMultisigFn
+	createMultisigFn functionName = iota
 	getStakeInfoFn
 	connectedFn
-	getBestBlockFn
 )
 
 var (
@@ -45,18 +42,6 @@ var (
 	// account as a string.
 	defaultAccountName = "default"
 )
-
-// validateAddressResponse
-type validateAddressResponse struct {
-	addrInfo *wallettypes.ValidateAddressWalletResult
-	err      error
-}
-
-// validateAddressMsg
-type validateAddressMsg struct {
-	address dcrutil.Address
-	reply   chan validateAddressResponse
-}
 
 // createMultisigResponse
 type createMultisigResponse struct {
@@ -93,18 +78,6 @@ type connectedMsg struct {
 	reply chan connectedResponse
 }
 
-// getBestBlockResponse
-type getBestBlockResponse struct {
-	bestBlockHash   *chainhash.Hash
-	bestBlockHeight int64
-	err             error
-}
-
-// getBestBlockMsg
-type getBestBlockMsg struct {
-	reply chan getBestBlockResponse
-}
-
 // connectionError is an error relating to the connection,
 // so that connection failures can be handled without
 // crashing the server.
@@ -117,10 +90,6 @@ out:
 		select {
 		case m := <-w.msgChan:
 			switch msg := m.(type) {
-			case validateAddressMsg:
-				resp := w.executeInSequence(validateAddressFn, msg)
-				respTyped := resp.(*validateAddressResponse)
-				msg.reply <- *respTyped
 			case createMultisigMsg:
 				resp := w.executeInSequence(createMultisigFn, msg)
 				respTyped := resp.(*createMultisigResponse)
@@ -132,10 +101,6 @@ out:
 			case connectedMsg:
 				resp := w.executeInSequence(connectedFn, msg)
 				respTyped := resp.(*connectedResponse)
-				msg.reply <- *respTyped
-			case getBestBlockMsg:
-				resp := w.executeInSequence(getBestBlockFn, msg)
-				respTyped := resp.(*getBestBlockResponse)
 				msg.reply <- *respTyped
 			default:
 				log.Infof("Invalid message type in wallet RPC "+
@@ -154,64 +119,11 @@ out:
 // executeInSequence is the mainhandler of all the incoming client functions.
 func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) interface{} {
 	switch fn {
-	case validateAddressFn:
-		vam := msg.(validateAddressMsg)
-		resp := new(validateAddressResponse)
-		vawrs := make([]*wallettypes.ValidateAddressWalletResult, w.serversLen)
-		connectCount := 0
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				continue
-			}
-			vawr, err := s.ValidateAddress(vam.address)
-			if err != nil && (err != rpcclient.ErrClientDisconnect &&
-				err != rpcclient.ErrClientShutdown) {
-				log.Infof("validateAddressFn failure on server %v: %v", i, err)
-				resp.err = err
-				return resp
-			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
-				err == rpcclient.ErrClientShutdown) {
-				vawrs[i] = nil
-				continue
-			}
-			connectCount++
-			vawrs[i] = vawr
-		}
-
-		if connectCount < w.minServers {
-			log.Errorf("Unable to check any servers for validateAddressFn")
-			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v", connectCount, w.minServers)
-			return resp
-		}
-
-		for i := 0; i < w.serversLen; i++ {
-			if i == w.serversLen-1 {
-				break
-			}
-			if vawrs[i] == nil || vawrs[i+1] == nil {
-				continue
-			}
-			if vawrs[i].PubKey != vawrs[i+1].PubKey {
-				log.Infof("validateAddressFn nonequiv failure on servers "+
-					"%v, %v (%v != %v)", i, i+1, vawrs[i].PubKey, vawrs[i+1].PubKey)
-				resp.err = fmt.Errorf("non equivalent pubkey returned")
-				return resp
-			}
-		}
-
-		for i := range vawrs {
-			if vawrs[i] != nil {
-				resp.addrInfo = vawrs[i]
-				break
-			}
-		}
-		return resp
-
 	case createMultisigFn:
 		cmsm := msg.(createMultisigMsg)
 		resp := new(createMultisigResponse)
 		cmsrs := make([]*wallettypes.CreateMultiSigResult, w.serversLen)
-		connectCount := 0
+		var connectCount int
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
@@ -263,7 +175,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 	case getStakeInfoFn:
 		resp := new(getStakeInfoResponse)
 		gsirs := make([]*wallettypes.GetStakeInfoResult, w.serversLen)
-		connectCount := 0
+		var connectCount int
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
@@ -319,7 +231,7 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		resp.err = nil
 		wirs := make([]*wallettypes.WalletInfoResult, w.serversLen)
 		resp.walletInfo = wirs
-		connectCount := 0
+		var connectCount int
 		for i, s := range w.servers {
 			if w.servers[i] == nil {
 				continue
@@ -369,30 +281,6 @@ func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) i
 		// but err out and disallow if only 1/3 etc
 		return resp
 
-	case getBestBlockFn:
-		resp := new(getBestBlockResponse)
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				continue
-			}
-			hash, height, err := s.GetBestBlock()
-			if err != nil && (err != rpcclient.ErrClientDisconnect &&
-				err != rpcclient.ErrClientShutdown) {
-				log.Infof("getBestBlockFn failure on server %v: %v", i, err)
-				resp.err = err
-				return resp
-			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
-				err == rpcclient.ErrClientShutdown) {
-				continue
-			}
-			resp.bestBlockHeight = height
-			resp.bestBlockHash = hash
-			return resp
-		}
-		log.Errorf("Unable to check any servers for getBestBlockFn")
-		resp.err = fmt.Errorf("unable to get best block")
-		return resp
-
 	}
 
 	return nil
@@ -407,26 +295,6 @@ func (w *walletSvrManager) connected() ([]*wallettypes.WalletInfoResult, error) 
 	}
 	response := <-reply
 	return response.walletInfo, response.err
-}
-
-// ValidateAddress
-//
-// This should return equivalent results from all wallet RPCs. If this
-// encounters a failure, it should be considered fatal.
-func (w *walletSvrManager) ValidateAddress(addr dcrutil.Address) (*wallettypes.ValidateAddressWalletResult, error) {
-	// Assert that all servers are online.
-	_, err := w.connected()
-	if err != nil {
-		return nil, connectionError(err)
-	}
-
-	reply := make(chan validateAddressResponse)
-	w.msgChan <- validateAddressMsg{
-		address: addr,
-		reply:   reply,
-	}
-	response := <-reply
-	return response.addrInfo, response.err
 }
 
 // CreateMultisig
@@ -448,17 +316,6 @@ func (w *walletSvrManager) CreateMultisig(nreq int, addrs []dcrutil.Address) (*w
 	}
 	response := <-reply
 	return response.multisigInfo, response.err
-}
-
-// GetBestBlock gets the current best block according the first wallet asked.
-func (w *walletSvrManager) GetBestBlock() (*chainhash.Hash, int64, error) {
-	reply := make(chan getBestBlockResponse)
-	w.msgChan <- getBestBlockMsg{
-		reply: reply,
-	}
-	response := <-reply
-
-	return response.bestBlockHash, response.bestBlockHeight, response.err
 }
 
 // getStakeInfo returns the cached current stake statistics about the wallet if
@@ -631,15 +488,6 @@ func (w *walletSvrManager) WalletStatus() ([]*wallettypes.WalletInfoResult, erro
 	return w.connected()
 }
 
-func getWalletVoteVersion(client *rpcclient.Client) (uint32, error) {
-	wi, err := client.WalletInfo()
-	if err != nil {
-		return 0, err
-	}
-
-	return wi.VoteVersion, nil
-}
-
 // checkIfWalletConnected checks to see if the passed wallet's client is connected
 // and if the wallet is unlocked.
 func checkIfWalletConnected(client *rpcclient.Client) error {
@@ -657,77 +505,9 @@ func checkIfWalletConnected(client *rpcclient.Client) error {
 	return nil
 }
 
-// fetchTransaction cycles through all servers and attempts to review a
-// transaction. It returns a not found error if the transaction is
-// missing.
-func (w *walletSvrManager) fetchTransaction(txHash *chainhash.Hash) (*dcrutil.Tx,
-	error) {
-	var tx *dcrutil.Tx
-	var err error
-	for i := range w.servers {
-		if w.servers[i] == nil {
-			continue
-		}
-		tx, err = w.servers[i].GetRawTransaction(txHash)
-		if err != nil {
-			continue
-		}
-
-		break
-	}
-
-	if tx == nil {
-		return nil, fmt.Errorf("couldn't find transaction on any server or " +
-			"server failure")
-	}
-
-	return tx, nil
-}
-
-// checkWalletsVoteVersion returns a consistent vote version between all wallets
-// or an error indicating a mismatch
-func checkWalletsVoteVersion(wsm *walletSvrManager) (uint32, error) {
-	defaultVoteVersion := uint32(0)
-	walletVoteVersions := make(map[int]uint32)
-
-	// grab Vote Version from all wallets
-	for i := range wsm.servers {
-		if wsm.servers[i] == nil {
-			continue
-		}
-
-		wvv, err := getWalletVoteVersion(wsm.servers[i])
-		if err != nil {
-			return defaultVoteVersion, err
-		}
-		walletVoteVersions[i] = wvv
-	}
-
-	// ensure Vote Version matches on all wallets
-	lastVersion := uint32(0)
-	lastServer := 0
-	firstrun := true
-	for k, v := range walletVoteVersions {
-		if firstrun {
-			firstrun = false
-			lastVersion = v
-		}
-
-		if v != lastVersion {
-			vErr := fmt.Errorf("wallets %d and %d have mismatched vote versions",
-				k, lastServer)
-			return defaultVoteVersion, vErr
-		}
-
-		lastServer = k
-	}
-
-	return lastVersion, nil
-}
-
 // walletSvrsSync ensures that the wallet servers are all in sync with each
 // other in terms of redeemscripts and address indexes.
-func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error {
+func walletSvrsSync(wsm *walletSvrManager, stakepoold *stakepooldclient.StakepooldManager, multiSigScripts []models.User) error {
 	// Check for connectivity and if unlocked.
 	for i := range wsm.servers {
 		if wsm.servers[i] == nil {
@@ -740,137 +520,27 @@ func walletSvrsSync(wsm *walletSvrManager, multiSigScripts []models.User) error 
 		}
 	}
 
-	type ScriptHeight struct {
-		Script []byte
-		Height int
+	// Set watched address index to maxUsers so all generated ticket
+	// addresses show as 'ismine'.
+	err := stakepoold.SyncWatchedAddresses(defaultAccountName, udb.ExternalBranch, MaxUsers)
+	if err != nil {
+		return err
 	}
 
-	for i := range wsm.servers {
-		if wsm.servers[i] == nil {
-			continue
-		}
-		// Set watched address index to MaxUsers so all generated ticket
-		// addresses show as 'ismine'.
-		err := wsm.servers[i].AccountSyncAddressIndex(defaultAccountName,
-			udb.ExternalBranch, MaxUsers)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Fetch the redeem scripts from each server.
-	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
-		wsm.serversLen)
-	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
-
-	// add all scripts from db
-	for _, v := range multiSigScripts {
-		byteScript, err := hex.DecodeString(v.MultiSigScript)
-		if err != nil {
-			log.Warnf("skipping script %s due to err %v", v.MultiSigScript, err)
-			continue
-		}
-		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
-	}
-	// Go through each server and see who is synced to the most redeemscripts.
-	log.Info("Getting importscript information from wallets")
-	for i := range wsm.servers {
-		if wsm.servers[i] == nil {
-			continue
-		}
-		redeemScripts, err := wsm.servers[i].ListScripts()
-		if err != nil {
-			return err
-		}
-
-		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
-		for j := range redeemScripts {
-			redeemScriptsPerServer[i][chainhash.HashH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
-			_, ok := allRedeemScripts[chainhash.HashH(redeemScripts[j])]
-			if !ok {
-				allRedeemScripts[chainhash.HashH(redeemScripts[j])] = &ScriptHeight{redeemScripts[j], 0}
-			}
-		}
-	}
-
-	// Synchronize the address indexes if needed, then synchronize the
+	// Synchronize the address indexes, then synchronize the
 	// redeemscripts. Ignore the errors when importing scripts and
 	// assume it'll just skip reimportation if it already has it.
-	log.Info("Syncing wallets' redeem scripts")
-	desynced := false
-	for i := range wsm.servers {
-		if wsm.servers[i] == nil {
-			continue
-		}
-
-		// Sync redeemscripts.
-		for k, v := range allRedeemScripts {
-			_, ok := redeemScriptsPerServer[i][k]
-			if !ok {
-				log.Infof("RedeemScript from DB not found on server %v. importscript for %x at height %v", i, v.Script, v.Height)
-				err := wsm.servers[i].ImportScriptRescanFrom(v.Script, true, v.Height)
-				if err != nil {
-					return err
-				}
-				desynced = true
-			}
-		}
+	err = stakepoold.SyncScripts(multiSigScripts)
+	if err != nil {
+		return err
 	}
 
 	// If we had to sync then we might be missing some tickets.
 	// Scan for the tickets now and try to import any that another wallet may
 	// be missing.
-	// TODO we should block until the rescans triggered by importing the scripts
-	// have been completed.
-	if desynced {
-		log.Infof("desynced had been detected, now attempting to " +
-			"resync all tickets acrosss each wallet.")
-		ticketsPerServer := make([]map[chainhash.Hash]struct{},
-			wsm.serversLen)
-		allTickets := make(map[chainhash.Hash]struct{})
-
-		// Get the tickets and popular the maps.
-		for i := range wsm.servers {
-			if wsm.servers[i] == nil {
-				continue
-			}
-			ticketsServer, err := wsm.servers[i].GetTickets(true)
-			if err != nil {
-				return err
-			}
-
-			ticketsPerServer[i] = make(map[chainhash.Hash]struct{})
-			for j := range ticketsServer {
-				ticketHash := ticketsServer[j]
-				ticketsPerServer[i][*ticketHash] = struct{}{}
-				allTickets[*ticketHash] = struct{}{}
-			}
-		}
-
-		// Look up the tickets and insert them into the servers
-		// that are missing them.
-		// TODO Don't look up more than once (cache)
-		for i := range wsm.servers {
-			if wsm.servers[i] == nil {
-				continue
-			}
-			for ticketHash := range allTickets {
-				_, ok := ticketsPerServer[i][ticketHash]
-				if !ok {
-					h := ticketHash
-					log.Infof("wallet %v: is missing ticket %v", i, h)
-					tx, err := wsm.fetchTransaction(&h)
-					if err != nil {
-						return err
-					}
-
-					err = wsm.servers[i].AddTicket(tx)
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
+	err = stakepoold.SyncTickets()
+	if err != nil {
+		return err
 	}
 
 	return nil
