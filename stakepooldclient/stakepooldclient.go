@@ -697,3 +697,68 @@ func (s *StakepooldManager) GetStakeInfo() (*pb.GetStakeInfoResponse, error) {
 	}
 	return nil, errors.New("GetStakeInfo RPC failed on all stakepoold instances")
 }
+
+// comaprePubkeys runs the gRPC command WalletMasterPubKeys on all stakepoold
+// instances, performs fn on all key, value pairs of received maps, and returns
+// whether any are true. Returns an error if any gRPC commands fail.
+func (s *StakepooldManager) comparePubKeys(fn func(string, string) bool) (bool, error) {
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		resp, err := client.WalletMasterPubKeys(context.Background(), &pb.WalletMasterPubKeysRequest{})
+		if err != nil {
+			return false, fmt.Errorf("GetMasterPubkeys gRPC failed on stakepoold instance %d: %v", i, err)
+		}
+		for _, v := range resp.MasterPubKeys {
+			if fn(v.Account, v.PubKey) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// WalletsHavePubKey sends gRPC commands to all stakepoold and returns whether
+// pubkey exists on any wallets. Returns an error if any gRPC commands fail.
+func (s *StakepooldManager) WalletsHavePubKey(pubkey string) (bool, error) {
+	hasPubkeyFn := func(_ string, v string) bool {
+		return v == pubkey
+	}
+	hasPubKey, err := s.comparePubKeys(hasPubkeyFn)
+	if err != nil {
+		return false, err
+	}
+	return hasPubKey, nil
+}
+
+// DefaultAccountPubKey sends gRPC commands to all stakepoold and returns the
+// master extended public key for the wallet's "default" account. Returns an
+// error if pubkeys for the "default" account are not the same accross all
+// stakepoold wallets or any gRPC commands fail.
+func (s *StakepooldManager) DefaultAccountPubKey() (string, error) {
+	var pubkey string
+	keysDontMatchFn := func(k string, v string) bool {
+		log.Debugf("found master extended pubkey %s for account \"%s\"", v, k)
+		// Ignore other accounts.
+		if k != "default" {
+			return false
+		}
+		// The first pass sets pubkey.
+		if pubkey == "" {
+			pubkey = v
+			return false
+		}
+		// All other passes must equal.
+		if pubkey != v {
+			return true
+		}
+		return false
+	}
+	mismatch, err := s.comparePubKeys(keysDontMatchFn)
+	if err != nil {
+		return "", err
+	}
+	if mismatch {
+		return "", errors.New("conflicting extended master public keys were found for the \"default\" account")
+	}
+	return pubkey, nil
+}
