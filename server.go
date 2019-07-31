@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/gorilla/context"
 	"github.com/gorilla/csrf"
 
+	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/email"
@@ -97,6 +99,22 @@ func runMain() error {
 			application.Close()
 			return fmt.Errorf("Failed to initialize the smtp server: %v", err)
 		}
+	}
+
+	// Retrieve the extended public key for the voting wallet's "default" account.
+	voteKey, err := stakepooldConnMan.DefaultAccountPubKey()
+	if err != nil {
+		return fmt.Errorf("failed to get master extended public key for the \"default\" account: %v", err)
+	}
+	if votingWalletVoteKey, err = hdkeychain.NewKeyFromString(voteKey); err != nil {
+		return fmt.Errorf("unable to decode the voting wallet master extended public key: %v", err)
+	}
+	// Check that coldwalletextpub does not belong to the voting wallets.
+	if hasKey, err := stakepooldConnMan.WalletsHavePubKey(cfg.ColdWalletExtPub); err != nil || hasKey {
+		if err != nil {
+			return fmt.Errorf("failed to get master extended public keys: %v", err)
+		}
+		return errors.New("the Cold Wallet Extended Public Key must not belong to the voting wallet")
 	}
 
 	controllerCfg := controllers.Config{
