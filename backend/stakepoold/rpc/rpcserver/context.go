@@ -468,6 +468,28 @@ func (ctx *AppContext) UpdateUserDataFromMySQL() error {
 	return nil
 }
 
+// WalletMasterPubKeys returns a map of extended master public key to
+// account for all accounts visible to dcrwallet.
+func (ctx *AppContext) WalletMasterPubKeys() (map[string]string, error) {
+	acctMap, err := ctx.WalletConnection.RPCClient().ListAccounts()
+	if err != nil {
+		return nil, fmt.Errorf("WalletMasterPubKeys: ListAccounts rpc failed: %v", err)
+	}
+	keyMap := make(map[string]string)
+	for acct := range acctMap {
+		// Skip the imported account.
+		if acct == "imported" {
+			continue
+		}
+		key, err := ctx.WalletConnection.RPCClient().GetMasterPubkey(acct, ctx.Params)
+		if err != nil {
+			return nil, fmt.Errorf("WalletMasterPubKeys: GetMasterPubKey rpc failed: %v", err)
+		}
+		keyMap[acct] = key.String()
+	}
+	return keyMap, nil
+}
+
 // vote Generates a vote and send it off to the network.  This is a go routine!
 func (ctx *AppContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, blockHeight int64, w *ticketMetadata) {
 	start := time.Now()

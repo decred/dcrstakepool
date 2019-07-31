@@ -19,6 +19,7 @@ service StakepooldService {
 	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
 	rpc CreateMultisig (CreateMultisigRequest) returns (CreateMultisigResponse);
 	rpc GetStakeInfo (GetStakeInfoRequest) returns (GetStakeInfoResponse);
+	rpc WalletMasterPubKeys (WalletMasterPubKeysRequest) returns (WalletMasterPubKeysResponse);
 }
 
 service VersionService {
@@ -174,4 +175,14 @@ message GetStakeInfoResponse {
 	uint32 Missed = 14;
 	double ProportionMissed = 15;
 	uint32 Expired = 16;
+}
+
+message WalletMasterPubKeysRequest {}
+
+message WalletMasterPubKeysResponse {
+ message PubKey {
+  string account = 1;
+  string pub_key = 2;
+ }
+repeated PubKey master_pub_keys = 1;
 }

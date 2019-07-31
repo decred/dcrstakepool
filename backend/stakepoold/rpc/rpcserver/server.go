@@ -301,3 +301,20 @@ func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInf
 		Expired:          response.Expired,
 	}, nil
 }
+
+func (s *stakepooldServer) WalletMasterPubKeys(ctx context.Context, req *pb.WalletMasterPubKeysRequest) (*pb.WalletMasterPubKeysResponse, error) {
+	keyMap, err := s.appContext.WalletMasterPubKeys()
+	if err != nil {
+		return nil, err
+	}
+	pubKeys := make([]*pb.WalletMasterPubKeysResponse_PubKey, len(keyMap))
+	var i int
+	for acct, key := range keyMap {
+		pubKey := pb.WalletMasterPubKeysResponse_PubKey{Account: acct, PubKey: key}
+		pubKeys[i] = &pubKey
+		i++
+	}
+	return &pb.WalletMasterPubKeysResponse{
+		MasterPubKeys: pubKeys,
+	}, nil
+}
