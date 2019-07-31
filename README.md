@@ -158,12 +158,9 @@ $ dcrwallet --create
 $ dcrwallet
 ```
 
-- Get the master pubkey from the default account.  This will be used for
-  votingwalletextpub in dcrstakepool.conf.
+- The master extended public key for the "default" account will be retrieved
+  automatically from the stakepoold wallets upon starting dcrstakepool
 
-```bash
-$ dcrctl --wallet getmasterpubkey default
-```
 
 ### MySQL
 
