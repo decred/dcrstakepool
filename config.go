@@ -26,27 +26,28 @@ import (
 )
 
 const (
-	defaultBaseURL         = "http://127.0.0.1:8000"
-	defaultClosePoolMsg    = "The voting service is temporarily closed to new signups."
-	defaultConfigFilename  = "dcrstakepool.conf"
-	defaultLogLevel        = "info"
-	defaultLogDirname      = "logs"
-	defaultLogFilename     = "dcrstakepool.log"
-	defaultCookieSecure    = false
-	defaultDBHost          = "localhost"
-	defaultDBName          = "stakepool"
-	defaultDBPort          = "3306"
-	defaultDBUser          = "stakepool"
-	defaultListen          = ":8000"
-	defaultPoolEmail       = "admin@example.com"
-	defaultPoolFees        = 7.5
-	defaultPoolLink        = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
-	defaultPublicPath      = "public"
-	defaultTemplatePath    = "views"
-	defaultSMTPHost        = ""
-	defaultMaxVotedTickets = 1000
-	defaultDescription     = ""
-	defaultDesignation     = ""
+	defaultBaseURL               = "http://127.0.0.1:8000"
+	defaultClosePoolMsg          = "The voting service is temporarily closed to new signups."
+	defaultConfigFilename        = "dcrstakepool.conf"
+	defaultLogLevel              = "info"
+	defaultLogDirname            = "logs"
+	defaultLogFilename           = "dcrstakepool.log"
+	defaultTicketChallengeMaxAge = 600
+	defaultCookieSecure          = false
+	defaultDBHost                = "localhost"
+	defaultDBName                = "stakepool"
+	defaultDBPort                = "3306"
+	defaultDBUser                = "stakepool"
+	defaultListen                = ":8000"
+	defaultPoolEmail             = "admin@example.com"
+	defaultPoolFees              = 7.5
+	defaultPoolLink              = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
+	defaultPublicPath            = "public"
+	defaultTemplatePath          = "views"
+	defaultSMTPHost              = ""
+	defaultMaxVotedTickets       = 1000
+	defaultDescription           = ""
+	defaultDesignation           = ""
 )
 
 var (
@@ -65,47 +66,48 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	ShowVersion        bool    `short:"V" long:"version" description:"Display version information and exit"`
-	ConfigFile         string  `short:"C" long:"configfile" description:"Path to configuration file"`
-	LogDir             string  `long:"logdir" description:"Directory to log output."`
-	Listen             string  `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
-	TestNet            bool    `long:"testnet" description:"Use the test network"`
-	SimNet             bool    `long:"simnet" description:"Use the simulation test network"`
-	DebugLevel         string  `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	APISecret          string  `long:"apisecret" description:"Secret string used to encrypt API tokens."`
-	BaseURL            string  `long:"baseurl" description:"BaseURL to use when sending links via email"`
-	ColdWalletExtPub   string  `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
-	ClosePool          bool    `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
-	ClosePoolMsg       string  `long:"closepoolmsg" description:"Message to display when closepool is set."`
-	CookieSecret       string  `long:"cookiesecret" description:"Secret string used to encrypt session data."`
-	CookieSecure       bool    `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
-	DBHost             string  `long:"dbhost" description:"Hostname for database connection"`
-	DBUser             string  `long:"dbuser" description:"Username for database connection"`
-	DBPassword         string  `long:"dbpassword" description:"Password for database connection"`
-	DBPort             string  `long:"dbport" description:"Port for database connection"`
-	DBName             string  `long:"dbname" description:"Name of database"`
-	PublicPath         string  `long:"publicpath" description:"Path to the public folder which contains css/fonts/images/javascript."`
-	TemplatePath       string  `long:"templatepath" description:"Path to the views folder which contains html files."`
-	PoolEmail          string  `long:"poolemail" description:"Email address to for support inquiries"`
-	PoolFees           float64 `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
-	PoolLink           string  `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
-	RealIPHeader       string  `long:"realipheader" description:"The name of an HTTP request header containing the actual remote client IP address, typically set by a reverse proxy. An empty string (default) indicates to use net/Request.RemodeAddr."`
-	SMTPFrom           string  `long:"smtpfrom" description:"From address to use on outbound mail"`
-	SMTPHost           string  `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
-	SMTPUsername       string  `long:"smtpusername" description:"SMTP username for authentication if required"`
-	SMTPPassword       string  `long:"smtppassword" description:"SMTP password for authentication if required"`
-	UseSMTPS           bool    `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
-	SMTPSkipVerify     bool    `long:"smtpskipverify" description:"Skip SMTP TLS cert verification. Will only skip if SMTPCert is empty"`
-	SMTPCert           string  `long:"smtpcert" description:"Path for the smtp certificate file"`
-	SystemCerts        *x509.CertPool
-	StakepooldHosts    []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
-	StakepooldCerts    []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
-	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
-	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
-	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
-	MaxVotedTickets    int      `long:"maxvotedtickets" description:"Maximum number of voted tickets to show on tickets page."`
-	Description        string   `long:"description" description:"Operators own description of their VSP"`
-	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
+	ShowVersion           bool    `short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile            string  `short:"C" long:"configfile" description:"Path to configuration file"`
+	LogDir                string  `long:"logdir" description:"Directory to log output."`
+	Listen                string  `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
+	TestNet               bool    `long:"testnet" description:"Use the test network"`
+	SimNet                bool    `long:"simnet" description:"Use the simulation test network"`
+	DebugLevel            string  `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	APISecret             string  `long:"apisecret" description:"Secret string used to encrypt API tokens."`
+	TicketChallengeMaxAge int64   `long:"ticketchallengemaxage" description:"Max age (in seconds) for API v3 ticket authentication timestamps. Max allowed value is 1800 (30 minutes)."`
+	BaseURL               string  `long:"baseurl" description:"BaseURL to use when sending links via email"`
+	ColdWalletExtPub      string  `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
+	ClosePool             bool    `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
+	ClosePoolMsg          string  `long:"closepoolmsg" description:"Message to display when closepool is set."`
+	CookieSecret          string  `long:"cookiesecret" description:"Secret string used to encrypt session data."`
+	CookieSecure          bool    `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
+	DBHost                string  `long:"dbhost" description:"Hostname for database connection"`
+	DBUser                string  `long:"dbuser" description:"Username for database connection"`
+	DBPassword            string  `long:"dbpassword" description:"Password for database connection"`
+	DBPort                string  `long:"dbport" description:"Port for database connection"`
+	DBName                string  `long:"dbname" description:"Name of database"`
+	PublicPath            string  `long:"publicpath" description:"Path to the public folder which contains css/fonts/images/javascript."`
+	TemplatePath          string  `long:"templatepath" description:"Path to the views folder which contains html files."`
+	PoolEmail             string  `long:"poolemail" description:"Email address to for support inquiries"`
+	PoolFees              float64 `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
+	PoolLink              string  `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
+	RealIPHeader          string  `long:"realipheader" description:"The name of an HTTP request header containing the actual remote client IP address, typically set by a reverse proxy. An empty string (default) indicates to use net/Request.RemodeAddr."`
+	SMTPFrom              string  `long:"smtpfrom" description:"From address to use on outbound mail"`
+	SMTPHost              string  `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
+	SMTPUsername          string  `long:"smtpusername" description:"SMTP username for authentication if required"`
+	SMTPPassword          string  `long:"smtppassword" description:"SMTP password for authentication if required"`
+	UseSMTPS              bool    `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
+	SMTPSkipVerify        bool    `long:"smtpskipverify" description:"Skip SMTP TLS cert verification. Will only skip if SMTPCert is empty"`
+	SMTPCert              string  `long:"smtpcert" description:"Path for the smtp certificate file"`
+	SystemCerts           *x509.CertPool
+	StakepooldHosts       []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
+	StakepooldCerts       []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
+	VotingWalletExtPub    string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
+	AdminIPs              []string `long:"adminips" description:"Expected admin host"`
+	AdminUserIDs          []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
+	MaxVotedTickets       int      `long:"maxvotedtickets" description:"Maximum number of voted tickets to show on tickets page."`
+	Description           string   `long:"description" description:"Operators own description of their VSP"`
+	Designation           string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service
@@ -296,27 +298,28 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
-		BaseURL:         defaultBaseURL,
-		ClosePool:       false,
-		ClosePoolMsg:    defaultClosePoolMsg,
-		ConfigFile:      defaultConfigFile,
-		DebugLevel:      defaultLogLevel,
-		LogDir:          defaultLogDir,
-		CookieSecure:    defaultCookieSecure,
-		DBHost:          defaultDBHost,
-		DBName:          defaultDBName,
-		DBPort:          defaultDBPort,
-		DBUser:          defaultDBUser,
-		Listen:          defaultListen,
-		PoolEmail:       defaultPoolEmail,
-		PoolFees:        defaultPoolFees,
-		PoolLink:        defaultPoolLink,
-		PublicPath:      defaultPublicPath,
-		TemplatePath:    defaultTemplatePath,
-		SMTPHost:        defaultSMTPHost,
-		MaxVotedTickets: defaultMaxVotedTickets,
-		Description:     defaultDescription,
-		Designation:     defaultDesignation,
+		BaseURL:               defaultBaseURL,
+		ClosePool:             false,
+		ClosePoolMsg:          defaultClosePoolMsg,
+		ConfigFile:            defaultConfigFile,
+		DebugLevel:            defaultLogLevel,
+		LogDir:                defaultLogDir,
+		TicketChallengeMaxAge: defaultTicketChallengeMaxAge,
+		CookieSecure:          defaultCookieSecure,
+		DBHost:                defaultDBHost,
+		DBName:                defaultDBName,
+		DBPort:                defaultDBPort,
+		DBUser:                defaultDBUser,
+		Listen:                defaultListen,
+		PoolEmail:             defaultPoolEmail,
+		PoolFees:              defaultPoolFees,
+		PoolLink:              defaultPoolLink,
+		PublicPath:            defaultPublicPath,
+		TemplatePath:          defaultTemplatePath,
+		SMTPHost:              defaultSMTPHost,
+		MaxVotedTickets:       defaultMaxVotedTickets,
+		Description:           defaultDescription,
+		Designation:           defaultDesignation,
 	}
 
 	// Service options which are only added on Windows.

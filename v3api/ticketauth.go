@@ -17,7 +17,7 @@ const (
 	customAuthSignatureParam  = "Signature"
 	customAuthTicketHashParam = "TicketHash"
 
-	authTimestampValiditySeconds = 30 * 10000000000
+	MaxTicketChallengeAge = 60 * 30 // 30 minutes
 )
 
 func (v3Api *V3API) validateTicketOwnership(authHeader string) (multiSigAddress string) {
@@ -42,7 +42,7 @@ func (v3Api *V3API) validateTicketOwnership(authHeader string) (multiSigAddress 
 	// todo check if ticket belongs to this vsp
 
 	// check if timestamp is not yet expired
-	if err := validateTimestamp(timestamp); err != nil {
+	if err := validateTimestamp(timestamp, v3Api.ticketChallengeMaxAge); err != nil {
 		log.Warnf("ticket auth timestamp failed validation: %v", err)
 		return
 	}
@@ -97,7 +97,7 @@ func getAuthValueFromParam(paramKeyValue, key string) string {
 	return ""
 }
 
-func validateTimestamp(timestampMessage string) error {
+func validateTimestamp(timestampMessage string, ticketChallengeMaxAge int64) error {
 	authTimestamp, err := strconv.Atoi(timestampMessage)
 	if err != nil {
 		return fmt.Errorf("invalid v3 auth request timestamp %v: %v", timestampMessage, err)
@@ -107,7 +107,7 @@ func validateTimestamp(timestampMessage string) error {
 
 	// Ensure that the auth timestamp is not in the future and is not more than 30 seconds into the past.
 	timestampDelta := time.Now().Unix() - int64(authTimestamp)
-	if timestampDelta < 0 || timestampDelta > authTimestampValiditySeconds {
+	if timestampDelta < 0 || timestampDelta > ticketChallengeMaxAge {
 		return fmt.Errorf("expired v3 auth request timestamp %v compared to %v", timestampMessage, time.Now().Unix())
 	}
 

@@ -187,7 +187,7 @@ func runMain(ctx context.Context) error {
 
 	api.Use(application.ApplyAPI)
 
-	v3Api := v3api.New(stakepooldConnMan)
+	v3Api := v3api.New(stakepooldConnMan, cfg.TicketChallengeMaxAge)
 	api.Use(v3Api.ApplyTicketAuth)
 
 	api.Handle("/api/v1/:command", application.APIHandler(controller.API))
