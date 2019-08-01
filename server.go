@@ -87,7 +87,7 @@ func runMain(ctx context.Context) error {
 	rpcclient.UseLogger(log)
 
 	// Supported API versions are advertised in the API stats result
-	APIVersionsSupported := []int{1, 2}
+	APIVersionsSupported := []int{1, 2, 3}
 
 	stakepooldConnMan, err := stakepooldclient.ConnectStakepooldGRPC(ctx, cfg.StakepooldHosts,
 		cfg.StakepooldCerts)
