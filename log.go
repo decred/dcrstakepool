@@ -14,6 +14,7 @@ import (
 	"github.com/decred/dcrstakepool/signal"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
+	"github.com/decred/dcrstakepool/v3api"
 	"github.com/decred/slog"
 	"github.com/jrick/logrotate/rotator"
 )
@@ -54,6 +55,7 @@ var (
 	modelsLog           = backendLog.Logger("MODL")
 	stakepooldclientLog = backendLog.Logger("GRPC")
 	systemLog           = backendLog.Logger("SYTM")
+	v3APILog            = backendLog.Logger("API3")
 )
 
 // Initialize package-global logger variables.
@@ -63,6 +65,7 @@ func init() {
 	stakepooldclient.UseLogger(stakepooldclientLog)
 	system.UseLogger(systemLog)
 	signal.UseLogger(systemLog)
+	v3api.UseLogger(v3APILog)
 }
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
@@ -72,6 +75,7 @@ var subsystemLoggers = map[string]slog.Logger{
 	"GRPC": stakepooldclientLog,
 	"MODL": modelsLog,
 	"SYTM": systemLog,
+	"API3": v3APILog,
 }
 
 // initLogRotator initializes the logging rotater to write logs to logFile and
