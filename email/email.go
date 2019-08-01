@@ -7,6 +7,7 @@ package email
 import (
 	"crypto/tls"
 	"fmt"
+	"net/url"
 
 	"github.com/dajohi/goemail"
 )
@@ -27,7 +28,7 @@ func NewSender(smtpHost string, smtpUsername string, smtpPassword string,
 	if smtpUsername != "" {
 		smtpURL += smtpUsername
 		if smtpPassword != "" {
-			smtpURL += ":" + smtpPassword
+			smtpURL += ":" + url.QueryEscape(smtpPassword)
 		}
 		smtpURL += "@"
 	}
