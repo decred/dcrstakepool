@@ -41,8 +41,8 @@ func (v3Api *V3API) validateTicketOwnership(authHeader string) (multiSigAddress 
 
 	// todo check if ticket belongs to this vsp
 
-	// check if timestamp is not yet expired
-	if err := validateTimestamp(timestamp, v3Api.ticketChallengeMaxAge); err != nil {
+	// check if timestamp is not yet expired and has not been used previously
+	if err := v3Api.validateTimestamp(timestamp, v3Api.ticketChallengeMaxAge); err != nil {
 		log.Warnf("ticket auth timestamp failed validation: %v", err)
 		return
 	}
@@ -97,19 +97,26 @@ func getAuthValueFromParam(paramKeyValue, key string) string {
 	return ""
 }
 
-func validateTimestamp(timestampMessage string, ticketChallengeMaxAge int64) error {
+func (v3Api *V3API) validateTimestamp(timestampMessage string, ticketChallengeMaxAge int64) error {
 	authTimestamp, err := strconv.Atoi(timestampMessage)
 	if err != nil {
-		return fmt.Errorf("invalid v3 auth request timestamp %v: %v", timestampMessage, err)
+		return fmt.Errorf("invalid timestamp value %v: %v", timestampMessage, err)
 	}
 
-	// todo ensure that timestamp had not been used in a previous authentication attempt
+	// Ensure that timestamp had not been used in a previous authentication attempt.
+	if v3Api.processedTicketChallenges.containsChallenge(timestampMessage) {
+		return fmt.Errorf("disallowed reuse of timestamp value %v", timestampMessage)
+	}
 
 	// Ensure that the auth timestamp is not in the future and is not more than 30 seconds into the past.
 	timestampDelta := time.Now().Unix() - int64(authTimestamp)
 	if timestampDelta < 0 || timestampDelta > ticketChallengeMaxAge {
-		return fmt.Errorf("expired v3 auth request timestamp %v compared to %v", timestampMessage, time.Now().Unix())
+		return fmt.Errorf("expired timestamp value %v", timestampMessage)
 	}
+
+	// Save this timestamp value as used to prevent subsequent reuse.
+	challengeExpiresIn := ticketChallengeMaxAge - timestampDelta
+	v3Api.processedTicketChallenges.addChallenge(timestampMessage, challengeExpiresIn)
 
 	return nil
 }
