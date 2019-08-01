@@ -203,6 +203,19 @@ func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsReq
 	return &pb.GetTicketsResponse{Tickets: ticketBytes}, nil
 }
 
+func (s *stakepooldServer) GetTicketInfo(ctx context.Context, req *pb.GetTicketInfoRequest) (*pb.GetTicketInfoResponse, error) {
+	ticketInfo, err := s.stakepoold.GetTicketInfo(req.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetTicketInfoResponse{
+		OwnerFeeAddress: ticketInfo.OwnerFeeAddress,
+		VspFeeAddress:   ticketInfo.VspFeeAddress,
+		MultiSigAddress: ticketInfo.MultiSigAddress,
+	}, nil
+}
+
 func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMissingTicketRequest) (*pb.AddMissingTicketResponse, error) {
 
 	err := s.stakepoold.AddMissingTicket(req.Hash)

@@ -23,6 +23,8 @@ import (
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 
+	"github.com/decred/dcrstakepool/v3api"
+	"github.com/zenazn/goji/graceful"
 	"github.com/zenazn/goji/web"
 	"github.com/zenazn/goji/web/middleware"
 )
@@ -185,8 +187,12 @@ func runMain(ctx context.Context) error {
 
 	api.Use(application.ApplyAPI)
 
+	v3Api := v3api.New(stakepooldConnMan)
+	api.Use(v3Api.ApplyTicketAuth)
+
 	api.Handle("/api/v1/:command", application.APIHandler(controller.API))
 	api.Handle("/api/v2/:command", application.APIHandler(controller.API))
+	api.Handle("/api/v3/:command", application.APIHandler(controller.API))
 	api.Handle("/api/*", gojify(system.APIInvalidHandler))
 
 	// HTML routes

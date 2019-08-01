@@ -15,6 +15,7 @@ service StakepooldService {
 	rpc ValidateAddress (ValidateAddressRequest) returns (ValidateAddressResponse);
 	rpc AddMissingTicket (AddMissingTicketRequest) returns (AddMissingTicketResponse);
 	rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
+	rpc GetTicketInfo (GetTicketInfoRequest) returns (GetTicketInfoResponse);
 	rpc ListScripts (ListScriptsRequest) returns (ListScriptsResponse);
 	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
 	rpc CreateMultisig (CreateMultisigRequest) returns (CreateMultisigResponse);
@@ -39,6 +40,15 @@ message GetIgnoredLowFeeTicketsResponse {
 message GetLiveTicketsRequest {}
 message GetLiveTicketsResponse {
 	repeated Ticket tickets = 1;
+}
+
+message GetTicketInfoRequest {
+    string Hash = 1;
+}
+message GetTicketInfoResponse {
+	string MultiSigAddress = 1;
+	string VspFeeAddress = 2;
+	string OwnerFeeAddress = 3;
 }
 
 message SetAddedLowFeeTicketsRequest {

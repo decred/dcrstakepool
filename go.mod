@@ -11,13 +11,20 @@ require (
 	github.com/decred/dcrd/chaincfg/chainhash v1.0.2
 	github.com/decred/dcrd/chaincfg/v2 v2.3.0
 	github.com/decred/dcrd/dcrec v1.0.0
+	github.com/decred/dcrd/dcrutil v1.4.0
 	github.com/decred/dcrd/dcrutil/v2 v2.0.1
 	github.com/decred/dcrd/hdkeychain/v2 v2.1.0
 	github.com/decred/dcrd/rpcclient/v4 v4.0.0
+	github.com/decred/dcrd/txscript/v2 v2.1.0
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.4.0
 	github.com/decred/dcrwallet/wallet/v3 v3.2.1
+	github.com/decred/dcrdata/txhelpers/v3 v3.0.5 // indirect
+	github.com/decred/dcrwallet/errors v1.1.0 // indirect
+	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.3.0
+	github.com/decred/dcrwallet/wallet v1.3.0
+	github.com/decred/dcrwallet/wallet/v3 v3.0.0-20191015210243-b6a31b44514d
 	github.com/decred/slog v1.0.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-gorp/gorp v2.2.0+incompatible

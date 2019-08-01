@@ -180,6 +180,16 @@ func GetUserByID(dbMap *gorp.DbMap, id int64) (user *User, err error) {
 	return user, nil
 }
 
+func GetUserByMSA(dbMap *gorp.DbMap, msa string) (user *User, err error) {
+	err = dbMap.SelectOne(&user, "SELECT * FROM Users WHERE MultiSigAddress = ?", msa)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 // GetUserCount gives a count of all users.
 func GetUserCount(dbMap *gorp.DbMap) int64 {
 	userCount, err := dbMap.SelectInt("SELECT COUNT(*) FROM Users")
