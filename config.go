@@ -420,28 +420,22 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	// Multiple networks can't be selected simultaneously.
-	var numNets int
-
-	// Count number of network flags passed; assign active network params
-	// while we're at it
-	activeNetParams = &mainNetParams
-	if cfg.TestNet {
-		numNets++
-		activeNetParams = &testNet3Params
-	}
-	if cfg.SimNet {
-		numNets++
-		// Also disable dns seeding on the simulation test network.
-		activeNetParams = &simNetParams
-	}
-	if numNets > 1 {
+	if cfg.TestNet && cfg.SimNet {
 		str := "%s: The testnet and simnet params can't be " +
-			"used together -- choose one of the three"
+			"used together -- choose either of them"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
+	}
+
+	// assign active network params
+	activeNetParams = &mainNetParams
+	if cfg.TestNet {
+		activeNetParams = &testNet3Params
+	} else if cfg.SimNet {
+		// Also disable dns seeding on the simulation test network.
+		activeNetParams = &simNetParams
 	}
 
 	// Append the network type to the data directory so it is "namespaced"
@@ -509,29 +503,15 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	if len(cfg.ColdWalletExtPub) == 0 {
-		str := "%s: coldwalletextpub is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.AdminIPs) == 0 {
-		str := "%s: adminips is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.AdminUserIDs) == 0 {
-		str := "%s: adminuserids is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
 	if len(cfg.VotingWalletExtPub) == 0 {
 		str := "%s: votingwalletextpub is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.ColdWalletExtPub) == 0 {
+		str := "%s: coldwalletextpub is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err

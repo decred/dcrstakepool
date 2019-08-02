@@ -26,7 +26,6 @@ const (
 	defaultLogLevel       = "info"
 	defaultLogDirname     = "logs"
 	defaultLogFilename    = "stakepoold.log"
-	defaultPoolFees       = 5
 )
 
 var (
@@ -34,7 +33,7 @@ var (
 	defaultConfigFile  = filepath.Join(defaultHomeDir, defaultConfigFilename)
 	defaultDataDir     = filepath.Join(defaultHomeDir, defaultDataDirname)
 	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
-	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
+	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert") // todo need similar default cert file locations for dcrd/dcrwallet
 	defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
 
 	defaultDBName = "stakepool"
@@ -62,7 +61,6 @@ type config struct {
 	MemProfile       string   `long:"memprofile" description:"Write mem profile to the specified file"`
 	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
-	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the voting service with their tickets"`
 	DBHost           string   `long:"dbhost" description:"Hostname for database connection"`
 	DBUser           string   `long:"dbuser" description:"Username for database connection"`
 	DBPassword       string   `long:"dbpassword" description:"Password for database connection"`
@@ -262,7 +260,6 @@ func loadConfig() (*config, []string, error) {
 		DBPort:     defaultDBPort,
 		DBUser:     defaultDBUser,
 		LogDir:     defaultLogDir,
-		PoolFees:   defaultPoolFees,
 		RPCKey:     defaultRPCKeyFile,
 		RPCCert:    defaultRPCCertFile,
 	}
@@ -486,6 +483,7 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	// todo default to localhost
 	if len(cfg.DcrdHost) == 0 {
 		str := "%s: dcrdhost is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -493,6 +491,7 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	// todo default to dcrd appdata dir
 	if len(cfg.DcrdCert) == 0 {
 		str := "%s: dcrdcert is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -514,6 +513,7 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	// todo default to localhost
 	if len(cfg.WalletHost) == 0 {
 		str := "%s: wallethost is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -521,6 +521,7 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	// todo default to dcrwallet appdata dir
 	if len(cfg.WalletCert) == 0 {
 		str := "%s: walletcert is not set in config"
 		err := fmt.Errorf(str, funcName)

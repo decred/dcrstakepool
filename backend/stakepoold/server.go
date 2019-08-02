@@ -193,17 +193,17 @@ func runMain() error {
 		log.Infof("loaded prefs for %d users from MySQL", len(userVotingConfig))
 	}
 
-	if !txrules.ValidPoolFeeRate(cfg.PoolFees) {
-		err = fmt.Errorf("poolfees '%v' is invalid", cfg.PoolFees)
-		log.Error(err)
-		return err
-	}
+	// todo need similar validation when setting pool fees via rpc
+	//if !txrules.ValidPoolFeeRate(cfg.PoolFees) {
+	//	err = fmt.Errorf("poolfees '%v' is invalid", cfg.PoolFees)
+	//	log.Error(err)
+	//	return err
+	//}
 
 	ctx := &rpcserver.AppContext{
 		AddedLowFeeTicketsMSA:  addedLowFeeTicketsMSA,
 		DataPath:               cfg.DataDir,
 		FeeAddrs:               feeAddrs,
-		PoolFees:               cfg.PoolFees,
 		NewTicketsChan:         make(chan rpcserver.NewTicketsForBlock),
 		Params:                 activeNetParams.Params,
 		Quit:                   make(chan struct{}),
