@@ -78,11 +78,13 @@ type config struct {
 	DebugLevel         string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	APISecret          string   `long:"apisecret" description:"Secret string used to encrypt API tokens."`
 	BaseURL            string   `long:"baseurl" description:"BaseURL to use when sending links via email"`
+	// todo: can `ColdWalletExtPub` and `PoolFees` be read from stakepoold via rpc?
 	ColdWalletExtPub   string   `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
 	ClosePool          bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
 	ClosePoolMsg       string   `long:"closepoolmsg" description:"Message to display when closepool is set."`
 	CookieSecret       string   `long:"cookiesecret" description:"Secret string used to encrypt session data."`
 	CookieSecure       bool     `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
+	// todo: possible to use a single db instance on stakepoold and access via rpc?
 	DBHost             string   `long:"dbhost" description:"Hostname for database connection"`
 	DBUser             string   `long:"dbuser" description:"Username for database connection"`
 	DBPassword         string   `long:"dbpassword" description:"Password for database connection"`
@@ -101,10 +103,12 @@ type config struct {
 	UseSMTPS           bool     `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
 	StakepooldHosts    []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
 	StakepooldCerts    []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
+	// todo: should be possible to communicate to backend wallets via stakepoold rpc instead
 	WalletHosts        []string `long:"wallethosts" description:"Hostnames for wallet servers"`
 	WalletUsers        []string `long:"walletusers" description:"Usernames for wallet servers"`
 	WalletPasswords    []string `long:"walletpasswords" description:"Passwords for wallet servers"`
 	WalletCerts        []string `long:"walletcerts" description:"Certificate paths for wallet servers"`
+	// todo: `VotingWalletExtPub` can be read from the vsp backend dcrwallet via stakepoold rpc instead!
 	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
@@ -624,6 +628,9 @@ func loadConfig() (*config, []string, error) {
 
 	// Add default stakepoold port for the active network if there's
 	// no port specified
+	// todo: for mainnet (production) deployment, should check that
+	// - cfg.MinServers is not less than 2 DIFFERENT servers
+	// - no stakepoold host IP resolves to the same machine used for dcrstakepool (localhost)
 	cfg.StakepooldHosts = normalizeAddresses(cfg.StakepooldHosts,
 		activeNetParams.StakepooldRPCServerPort)
 	if len(cfg.StakepooldHosts) < cfg.MinServers {

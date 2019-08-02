@@ -43,8 +43,9 @@ They can be built from a development machine and copied to each server.
 ## Running dcrstakepool
 
 ### Set up a cold wallet for VSP fee collection
-- - Configure `dcrd`, `dcrwallet` and `dcrctl`.
-  The minimum setup required is described [here](https://docs.decred.org/advanced/manual-cli-install/#minimum-configuration).
+- Configure `dcrd`, `dcrwallet` and `dcrctl`.
+The minimum configuration required is described [here](https://docs.decred.org/advanced/manual-cli-install/#minimum-configuration).
+Remember to include `testnet=1` in all 3 config files to use testnet.
 - Run `dcrd` and let it sync fully.
 - Run `dcrwallet --create` to create the fee collection wallet.
 - (Optional) Create a new account in the wallet for use in generating fee addresses:
@@ -57,7 +58,8 @@ Fees from UserId 1 will go to address 1, UserId 2 to address 2, and so on.
 dcrctl --wallet accountsyncaddressindex vspfees 0 10000
 ```
 - Get the master pubkey for the account you wish to use.
-This will be needed to configure dcrwallet and dcrstakepool (`coldwalletextpub`).
+This will be needed to configure the **dcrwallet** and **stakepoold** daemons on each backend server;
+and **dcrstakepool** (`coldwalletextpub`).
 ```bash
 dcrctl --wallet getmasterpubkey vspfees
 ```
@@ -68,16 +70,17 @@ Perform the following steps on each backend server, where voting will occur:
 #### Set up the voting wallet
 - Copy `dcrd`, `dcrwallet` and `dcrctl` to the backend server and configure them.
 The minimum configuration required is described [here](https://docs.decred.org/advanced/manual-cli-install/#minimum-configuration).
-- See [sample-dcrwallet.conf](sample-dcrwallet.conf) for other required `dcrwallet` configuration options.
+Remember to include `testnet=1` in all 3 config files to use testnet.
+- See [sample-dcrwallet.conf](sample-dcrwallet.conf) for other **REQUIRED** `dcrwallet` configuration options.
 - Run `dcrd` and let it sync fully.
 - Run `dcrwallet --create` to create the voting wallet.
 **IMPORTANT: Use the same seed for all voting wallets. Backup the seed for disaster recovery!** 
 - Start the `dcrwallet` daemon and unlock the wallet by providing your wallet's private passphrase: `dcrwallet --promptpass`
-- Get the master pubkey from the default account. This will be used for votingwalletextpub in dcrstakepool.conf:
+- Get the master pubkey from the default account. This will be used for setting `votingwalletextpub` in `dcrstakepool.conf`:
 ```bash
 dcrctl --wallet getmasterpubkey default
 ```
-- Make a copy of your dcrwallet rpc username, password and rpc.cert file.
+- Make a copy of your server IP address, dcrwallet rpc username, password and rpc.cert file.
 These will be required when [setting up the frontend server](#Set-up-the-frontend-server).
 
 #### Set up MySQL
@@ -100,6 +103,7 @@ and copy the contents of [sample-stakepoold.conf](sample-stakepoold.conf) into t
 - Edit the config file as appropriate.
 Following config values must be set:
   - `coldwalletextpub` - gotten from [this setup step](#Set-up-a-cold-wallet-for-VSP-fee-collection)
+  - `poolfees` - should be the same value set in `dcrwallet.conf`
   - `dbpassword` - password set [during MySQL setup](#Set-up-MySQL)
   - `dcrduser`, `dcrdpass`, `walletuser`, `walletpassword` - dcrd/dcrwallet rpc auth values
   configured while [setting up the voting wallet](#Set-up-the-voting-wallet)
@@ -154,6 +158,7 @@ Following config values must be set:
   Each rpc cert file should have been copied [while setting up the voting wallet on the server](#Set-up-the-voting-wallet).
   - `walletusers`, `walletpasswords` - comma separated list of rpc username and password for the dcrwallet daemons on all backend servers.
   These info should have been copied/noted down [while setting up the voting wallet on the server](#Set-up-the-voting-wallet).
+  - `minservers` (optional) - minimum number of stakepoold backend servers required for dcrstakepool to run. Default is 2.
 - If the `dcrstakepool` binary is not in the same directory as the [public](public) and [views](views) folders,
 you will need to change `publicpath` and `templatepath` from their relative paths to an absolute path in `dcrstakepool.conf`.
 - Run `dcrstakepool`.
