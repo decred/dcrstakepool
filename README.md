@@ -26,13 +26,13 @@ Before running dcrstakepool, have the following ready:
 - Frontend server - for hosting and serving the http frontend and Rest API.
 - Backend server(s) - for hosting the voting wallet(s).
 - Decred binaries (dcrd, dcrwallet and dcrctl).
-[Build each binary from its source code](#Building binaries from source) or
+[Build each binary from its source code](#Building-binaries-from-source) or
 [download the latest release from here](https://github.com/decred/decred-binaries/releases), look under the **Assets** section of the latest release for download links.
   - The latest release binaries of dcrd, dcrwallet and dcrctl may not work with the current `dcrstakepool` source code.
 If you encounter rpc version mismatch errors using the latest release decred binaries,
-follow [these steps](#Building binaries from source) to build each binary from source instead of using the release binaries.
+follow [these steps](#Building-binaries-from-source) to build each binary from source instead of using the release binaries.
 - VSP binaries (dcrstakepool and stakepoold).
-No release versions available yet, [build both binaries from source code](#Building binaries from source).
+No release versions available yet, [build both binaries from source code](#Building-binaries-from-source).
 
 _**Important notes:**_
 - For testing purposes, one server may be used for both frontend and backend.
@@ -78,7 +78,7 @@ The minimum configuration required is described [here](https://docs.decred.org/a
 dcrctl --wallet getmasterpubkey default
 ```
 - Make a copy of your dcrwallet rpc username, password and rpc.cert file.
-These will be required when [setting up the frontend server](#Set up the frontend server).
+These will be required when [setting up the frontend server](#Set-up-the-frontend-server).
 
 #### Set up MySQL
 - Install MySQL.
@@ -99,13 +99,13 @@ MySQL> CREATE DATABASE stakepool;
 and copy the contents of [sample-stakepoold.conf](sample-stakepoold.conf) into the new file.
 - Edit the config file as appropriate.
 Following config values must be set:
-  - `coldwalletextpub` - gotten from [this setup step](#Set up a cold wallet for VSP fee collection)
-  - `dbpassword` - password set [during MySQL setup](#Set up MySQL)
+  - `coldwalletextpub` - gotten from [this setup step](#Set-up-a-cold-wallet-for-VSP-fee-collection)
+  - `dbpassword` - password set [during MySQL setup](#Set-up-MySQL)
   - `dcrduser`, `dcrdpass`, `walletuser`, `walletpassword` - dcrd/dcrwallet rpc auth values
-  configured while [setting up the voting wallet](#Set up the voting wallet)
+  configured while [setting up the voting wallet](#Set-up-the-voting-wallet)
 - Run `stakepoold`.
 - Make a copy of your stakepoold rpc.cert file.
-It will be required when [setting up the frontend server](#Set up the frontend server).
+It will be required when [setting up the frontend server](#Set-up-the-frontend-server).
 
 ### Set up the frontend server
 
@@ -136,24 +136,24 @@ Following config values must be set:
   Can use `openssl rand -hex 32` to generate one.
   - `cookiesecret` - Secret string used to encrypt session data.
   Can use `openssl rand -hex 32` to generate one.
-  - `dbpassword` - password set [during MySQL setup](#Set up MySQL)
+  - `dbpassword` - password set [during MySQL setup](#Set-up-MySQL)
   - `votingwalletextpub` - Extended public key used to generate ticketed addresses which are
   combined with a user address for 1-of-2 multisig.
-  Should have been copied [while setting up the voting wallet on the server](#Set up the voting wallet).
+  Should have been copied [while setting up the voting wallet on the server](#Set-up-the-voting-wallet).
   - `coldwalletextpub` - Extended public key used to generate fee payment addresses,
-  gotten from [this setup step](#Set up a cold wallet for VSP fee collection).
+  gotten from [this setup step](#Set-up-a-cold-wallet-for-VSP-fee-collection).
   - `poolfees` - Fees as a percentage. 7.5 = 7.5%.  Precision of 2, 7.99 = 7.99%.
-  Should match dcrwallet's configuration (refer to [the second bullet point here](#Set up the voting wallet)).
+  Should match dcrwallet's configuration (refer to [the second bullet point here](#Set-up-the-voting-wallet)).
   - `stakepooldhosts` - IP address for all backend servers, separated by comma.
   Important to enable access to the stakepoold port on each backend server.
   - `stakepooldcerts` - relative or absolute path to rpc cert files for all backend servers, separated by comma.
-  Each backend rpc cert file should have been copied [while setting up stakepoold on the server](#Set up and run stakepoold).
+  Each backend rpc cert file should have been copied [while setting up stakepoold on the server](#Set-up-and-run-stakepoold).
   - `wallethosts` - IP address for the dcrwallet daemons on all backend servers, separated by comma.
   Important to enable access to the dcrwallet port on each backend server.
   - `walletcerts` - relative or absolute path to rpc cert files for the dcrwallet daemons on all backend servers, separated by comma.
-  Each rpc cert file should have been copied [while setting up the voting wallet on the server](#Set up the voting wallet).
+  Each rpc cert file should have been copied [while setting up the voting wallet on the server](#Set-up-the-voting-wallet).
   - `walletusers`, `walletpasswords` - comma separated list of rpc username and password for the dcrwallet daemons on all backend servers.
-  These info should have been copied/noted down [while setting up the voting wallet on the server](#Set up the voting wallet).
+  These info should have been copied/noted down [while setting up the voting wallet on the server](#Set-up-the-voting-wallet).
 - If the `dcrstakepool` binary is not in the same directory as the [public](public) and [views](views) folders,
 you will need to change `publicpath` and `templatepath` from their relative paths to an absolute path in `dcrstakepool.conf`.
 - Run `dcrstakepool`.
