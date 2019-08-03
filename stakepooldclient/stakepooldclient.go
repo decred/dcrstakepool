@@ -179,7 +179,7 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 // CreateMultisig performs gRPC CreateMultisig on all servers. It stops
 // executing and returns an error if any RPC call fails. It will
 // also return an error if any of the responses are different. This
-// should be considered fatal, as it indicates the a voting wallet is
+// should be considered fatal, as it indicates that a voting wallet is
 // misconfigured
 func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisigResponse, error) {
 
@@ -407,6 +407,8 @@ func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) e
 	return nil
 }
 
+// WalletInfo calls WalletInfo RPC on all stakepoold instances. It stops
+// executing and returns an error if any RPC call fails
 func (s *StakepooldManager) WalletInfo() ([]*pb.WalletInfoResponse, error) {
 	responses := make([]*pb.WalletInfoResponse, len(s.grpcConnections))
 

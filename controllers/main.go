@@ -240,8 +240,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	userPubKeyAddr := r.FormValue("UserPubKeyAddr")
 
-	_, err := validateUserPubKeyAddr(userPubKeyAddr)
-	if err != nil {
+	if _, err := validateUserPubKeyAddr(userPubKeyAddr); err != nil {
 		return nil, codes.InvalidArgument, "address error", err
 	}
 
@@ -265,8 +264,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
-	_, err = dcrutil.DecodeAddress(poolPubKeyAddr)
-	if err != nil {
+	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr); err != nil {
 		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
@@ -748,8 +746,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	log.Infof("Address POST from %v, pubkeyaddr %v", remoteIP, userPubKeyAddr)
 
-	_, err := validateUserPubKeyAddr(userPubKeyAddr)
-	if err != nil {
+	if _, err := validateUserPubKeyAddr(userPubKeyAddr); err != nil {
 		session.AddFlash(err.Error(), "address")
 		return controller.Address(c, r)
 	}
@@ -780,8 +777,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
 	// Get back Address from pool's new pubkey address
-	_, err = dcrutil.DecodeAddress(poolPubKeyAddr)
-	if err != nil {
+	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr); err != nil {
 		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
 		return "/error", http.StatusSeeOther
 	}

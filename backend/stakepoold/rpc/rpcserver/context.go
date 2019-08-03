@@ -326,6 +326,8 @@ func (ctx *AppContext) ListScripts() ([][]byte, error) {
 	return scripts, nil
 }
 
+// CreateMultisig decodes the provided array of addresses, and then
+// passes them to dcrwallet to create a 1-of-N multisig address.
 func (ctx *AppContext) CreateMultisig(addresses []string) (*wallettypes.CreateMultiSigResult, error) {
 	decodedAddresses := make([]dcrutil.Address, len(addresses))
 
