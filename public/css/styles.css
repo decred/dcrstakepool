@@ -8771,3 +8771,50 @@ https://flickity.metafizzy.co
   background-repeat: no-repeat;
   cursor: pointer;
 }
+
+.indicator {
+	display: block;
+	height: 20px;
+	margin-left: 10px;
+	padding-right: 8px;
+	padding-left: 20px;
+	float: right;
+	border: 1px solid #000;
+	border-radius: 2px;
+	color: #000;
+	font-size: 12px;
+	line-height: 17px;
+	text-transform: capitalize;
+}
+
+.indicator.in-progress {
+	border-color: #2971ff;
+	background-image: url('/assets/images/indicator-in-progress.svg');
+	background-position: 0px 50%;
+	background-repeat: no-repeat;
+	color: #2971ff;
+}
+
+.indicator.upcoming {
+	border-color: #596d81;
+	background-image: url('/assets/images/indicator-upcoming.svg');
+	background-position: 0px 50%;
+	background-repeat: no-repeat;
+	color: #596d81;
+}
+
+.indicator.finished {
+	border-color: #2ed6a1;
+	background-image: url('/assets/images/indicator-finished.svg');
+	background-position: 0px 50%;
+	background-repeat: no-repeat;
+	color: #2ed6a1;
+}
+
+.indicator.failed {
+	border-color: #a9b4bf;
+	background-image: url('/assets/images/indicator-failed.svg');
+	background-position: 0px 50%;
+	background-repeat: no-repeat;
+	color: #a9b4bf;
+}
