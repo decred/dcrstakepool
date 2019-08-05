@@ -6,9 +6,11 @@ package controllers
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"sort"
@@ -21,6 +23,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
+	dcrdatatypes "github.com/decred/dcrdata/api/types/v4"
 	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/internal/version"
@@ -180,6 +183,24 @@ func (controller *MainController) getNetworkName() string {
 		return "testnet"
 	}
 	return controller.params.Name
+}
+
+// dcrDataAgendas gets json data for current agendas from url. url is either
+// https://testnet.dcrdata.org/api/agendas or https://mainnet.dcrdata.org/api/agendas
+func dcrDataAgendas(url string) ([]*dcrdatatypes.AgendasInfo, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	a := []*dcrdatatypes.AgendasInfo{}
+	if err = json.Unmarshal(data, &a); err != nil {
+		return nil, err
+	}
+	return a, nil
 }
 
 // API is the main frontend that handles all API requests.
@@ -2021,6 +2042,31 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 
 	t := controller.GetTemplate(c)
 
+	// agenda links an agenda to its status. Possible statuses are upcoming,
+	// in progress, finished, failed, or locked in.
+	type agenda struct {
+		Agenda chaincfg.ConsensusDeployment
+		Status string
+	}
+	url := fmt.Sprintf("https://%s.dcrdata.org/api/agendas", controller.getNetworkName())
+	agendaInfos, err := dcrDataAgendas(url)
+	if err != nil {
+		log.Warnf("unable to retrieve data from %v: %v", url, err)
+	}
+	agendaArray := controller.getAgendas()
+	agendas := make([]agenda, len(agendaArray))
+	// populate agendas
+	for n, agenda := range agendaArray {
+		agendas[n].Agenda = agenda
+		// find status for id
+		for _, info := range agendaInfos {
+			if info.Name == agenda.Vote.Id {
+				agendas[n].Status = info.Status.String()
+				break
+			}
+		}
+	}
+
 	choicesSelected := controller.choicesForAgendas(uint16(user.VoteBits))
 
 	for k, v := range choicesSelected {
@@ -2028,7 +2074,7 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 		c.Env["Agenda"+strk+"Selected"] = v
 	}
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
-	c.Env["Agendas"] = controller.getAgendas()
+	c.Env["Agendas"] = agendas
 	c.Env["FlashError"] = session.Flashes("votingError")
 	c.Env["FlashSuccess"] = session.Flashes("votingSuccess")
 	c.Env["IsVoting"] = true
@@ -2137,7 +2183,6 @@ func (controller *MainController) getAgendas() []chaincfg.ConsensusDeployment {
 	if controller.params.Deployments == nil {
 		return nil
 	}
-
 	return controller.params.Deployments[controller.voteVersion]
 
 }
