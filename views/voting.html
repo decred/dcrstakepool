@@ -43,20 +43,40 @@
 						<label for="accordion-control-{{$i}}">
 							<div class="row accordion__toggle">
 								<div class="col-6">
-									<h2>{{$data.Vote.Id}}</h2>
+									<h2>{{$data.Agenda.Vote.Id}}</h2>
 								</div>
+								{{with $data.Status}}
+								<div class="col-6 text-right">
+									<!-- labels -->
+									{{if eq . "upcoming"}}
+									<div class="indicator upcoming">Upcoming</div>
+									{{end}}
+									{{if eq . "in progress"}}
+									<div class="in-progress indicator">In Progress</div>
+									{{end}}
+									{{if eq . "finished"}}
+									<div class="finished indicator">Finished</div>
+									{{end}}
+									{{if eq . "failed"}}
+									<div class="failed indicator">Failed</div>
+									{{end}}
+									{{if eq . "locked in"}}
+									<div class="finished indicator">Locked In</div>
+									{{end}}
+								</div>
+								{{end}}
 								<div class="col-12 my-3">
-									<p class="description"><span>ID:</span> #{{$data.Vote.Id}}</p>
+									<p class="description"><span>ID:</span> #{{$data.Agenda.Vote.Id}}</p>
 								</div>
 								<div class="col-12">
-									<p class="description">{{$data.Vote.Description}}</p>
+									<p class="description">{{$data.Agenda.Vote.Description}}</p>
 								</div>
 							</div>
 						</label>
 						<div class="row mx-0 accordion__contents">
 							<div class="col-12 position-relative px-0">
 								<select class="form-control" name="agenda{{$i}}" id="agenda{{$i}}">
-								{{ range $j, $choicesdata := $data.Vote.Choices}}
+								{{ range $j, $choicesdata := $data.Agenda.Vote.Choices}}
 									<option value="{{$choicesdata.Bits}}"{{if eq $choicesdata.Bits (index $ (print "Agenda" $i "Selected"))}} selected{{end}}>{{$choicesdata.Description}}</option>
 								{{end}}
 								</select>
