@@ -16,7 +16,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-var requiredStakepooldAPI = semver{major: 5, minor: 0, patch: 0}
+var requiredStakepooldAPI = semver{major: 6, minor: 0, patch: 0}
 
 type StakepooldManager struct {
 	grpcConnections []*grpc.ClientConn
@@ -174,6 +174,40 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 
 	log.Info("SetAddedLowFeeTickets successful on all stakepoold instances")
 	return nil
+}
+
+// CreateMultisig performs gRPC CreateMultisig on all servers. It stops
+// executing and returns an error if any RPC call fails. It will
+// also return an error if any of the responses are different. This
+// should be considered fatal, as it indicates that a voting wallet is
+// misconfigured
+func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisigResponse, error) {
+
+	respPerServer := make([]*pb.CreateMultisigResponse, len(s.grpcConnections))
+
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		request := &pb.CreateMultisigRequest{
+			Address: address,
+		}
+
+		resp, err := client.CreateMultisig(context.Background(), request)
+		if err != nil {
+			log.Errorf("CreateMultisig: CreateMultisig RPC failed on stakepoold instance %d: %v", i, err)
+			return nil, err
+		}
+		respPerServer[i] = resp
+	}
+
+	for i := 0; i < len(s.grpcConnections)-1; i++ {
+		if respPerServer[i].RedeemScript != respPerServer[i+1].RedeemScript {
+			log.Errorf("CreateMultisig: nonequiv failure on servers "+
+				"%v, %v (%v != %v)", i, i+1, respPerServer[i].RedeemScript, respPerServer[i+1].RedeemScript)
+			return nil, fmt.Errorf("non equivalent redeem script returned")
+		}
+	}
+
+	return respPerServer[0], nil
 }
 
 func (s *StakepooldManager) SyncWatchedAddresses(accountName string, branch uint32,
@@ -373,43 +407,23 @@ func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) e
 	return nil
 }
 
-// VoteVersion returns a consistent vote version between all wallets
-// or an error indicating a mismatch
-func (s *StakepooldManager) VoteVersion() (uint32, error) {
-	walletVoteVersions := make(map[int]uint32)
+// WalletInfo calls WalletInfo RPC on all stakepoold instances. It stops
+// executing and returns an error if any RPC call fails
+func (s *StakepooldManager) WalletInfo() ([]*pb.WalletInfoResponse, error) {
+	responses := make([]*pb.WalletInfoResponse, len(s.grpcConnections))
 
-	// Get vote version from all wallets
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
 		req := &pb.WalletInfoRequest{}
-		wvv, err := client.WalletInfo(context.Background(), req)
+		resp, err := client.WalletInfo(context.Background(), req)
 		if err != nil {
 			log.Errorf("WalletInfo RPC failed on stakepoold instance %d: %v", i, err)
-			return 0, err
+			return nil, err
 		}
-		walletVoteVersions[i] = wvv.VoteVersion
+		responses[i] = resp
 	}
 
-	// Ensure vote version matches on all wallets
-	lastVersion := uint32(0)
-	var lastServer int
-	firstrun := true
-	for k, v := range walletVoteVersions {
-		if firstrun {
-			firstrun = false
-			lastVersion = v
-		}
-
-		if v != lastVersion {
-			vErr := fmt.Errorf("wallets %d and %d have mismatched vote versions",
-				k, lastServer)
-			return 0, vErr
-		}
-
-		lastServer = k
-	}
-
-	return lastVersion, nil
+	return responses, nil
 }
 
 // ValidateAddress calls ValidateAddress RPC on all stakepoold servers.

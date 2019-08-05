@@ -6,7 +6,6 @@ service StakepooldService {
 	rpc GetAddedLowFeeTickets (GetAddedLowFeeTicketsRequest) returns (GetAddedLowFeeTicketsResponse);
 	rpc GetIgnoredLowFeeTickets (GetIgnoredLowFeeTicketsRequest) returns (GetIgnoredLowFeeTicketsResponse);
 	rpc GetLiveTickets (GetLiveTicketsRequest) returns (GetLiveTicketsResponse);
-	rpc Ping (PingRequest) returns (PingResponse);
 	rpc SetAddedLowFeeTickets (SetAddedLowFeeTicketsRequest) returns (SetAddedLowFeeTicketsResponse);
 	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
 	rpc ImportScript (ImportScriptRequest) returns (ImportScriptResponse);
@@ -17,6 +16,7 @@ service StakepooldService {
 	rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
 	rpc ListScripts (ListScriptsRequest) returns (ListScriptsResponse);
 	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
+	rpc CreateMultisig (CreateMultisigRequest) returns (CreateMultisigResponse);
 }
 
 service VersionService {
@@ -37,9 +37,6 @@ message GetLiveTicketsRequest {}
 message GetLiveTicketsResponse {
 	repeated Ticket tickets = 1;
 }
-
-message PingRequest {}
-message PingResponse {}
 
 message SetAddedLowFeeTicketsRequest {
 	repeated Ticket tickets = 1;
@@ -101,6 +98,9 @@ message WalletInfoRequest {
 }
 message WalletInfoResponse {
 	uint32 VoteVersion = 1;
+	bool DaemonConnected = 2;
+	bool Unlocked = 3;
+	bool Voting = 4;
 }
 
 message ValidateAddressRequest {
@@ -109,6 +109,14 @@ message ValidateAddressRequest {
 message ValidateAddressResponse {
 	bool IsMine = 1;
 	string PubKeyAddr = 2;
+}
+
+message CreateMultisigRequest {
+	repeated string Address = 1;
+}
+message CreateMultisigResponse {
+	string RedeemScript = 1;
+	string Address = 2;
 }
 
 message StakePoolUserTicket {
