@@ -19,6 +19,189 @@ vote on their behalf when the ticket is selected.
 - The architecture is subject to change in the future to lessen the dependence
   on dcrwallet and MySQL.
 
+## Getting ready to run dcrstakepool
+
+### Requirements
+Before running dcrstakepool, have the following ready:
+- Frontend server - for hosting and serving the http frontend and Rest API.
+- Backend server(s) - for hosting the voting wallet(s).
+- Decred binaries (dcrd, dcrwallet and dcrctl).
+[Build each binary from its source code](#Building-binaries-from-source) or
+[download the latest release from here](https://github.com/decred/decred-binaries/releases), look under the **Assets** section of the latest release for download links.
+  - The latest release binaries of dcrd, dcrwallet and dcrctl may not work with the current `dcrstakepool` source code.
+If you encounter rpc version mismatch errors using the latest release decred binaries,
+follow [these steps](#Building-binaries-from-source) to build each binary from source instead of using the release binaries.
+- VSP binaries (dcrstakepool and stakepoold).
+No release versions available yet, [build both binaries from source code](#Building-binaries-from-source).
+
+_**Important notes:**_
+- For testing purposes, one server may be used for both frontend and backend.
+It is however recommended to use different physical servers for production.
+- The required decred and VSP binaries DO NOT need to be built on the server(s).
+They can be built from a development machine and copied to each server.
+
+## Running dcrstakepool
+
+### Set up a cold wallet for VSP fee collection
+- Configure `dcrd`, `dcrwallet` and `dcrctl`.
+The minimum configuration required is described [here](https://docs.decred.org/advanced/manual-cli-install/#minimum-configuration).
+Remember to include `testnet=1` in all 3 config files to use testnet.
+- Run `dcrd` and let it sync fully.
+- Run `dcrwallet --create` to create the fee collection wallet.
+- (Optional) Create a new account in the wallet for use in generating fee addresses:
+```bash
+dcrctl --wallet createnewaccount vspfees
+```
+- Mark 10000 addresses in use for the account so the wallet will recognize transactions to those addresses.
+Fees from UserId 1 will go to address 1, UserId 2 to address 2, and so on.
+```bash
+dcrctl --wallet accountsyncaddressindex vspfees 0 10000
+```
+- Get the master pubkey for the account you wish to use.
+This will be needed to configure the **dcrwallet** and **stakepoold** daemons on each backend server;
+and **dcrstakepool** (`coldwalletextpub`).
+```bash
+dcrctl --wallet getmasterpubkey vspfees
+```
+
+### Set up the backend server(s)
+Perform the following steps on each backend server, where voting will occur:
+
+#### Set up the voting wallet
+- Copy `dcrd`, `dcrwallet` and `dcrctl` to the backend server and configure them.
+The minimum configuration required is described [here](https://docs.decred.org/advanced/manual-cli-install/#minimum-configuration).
+Remember to include `testnet=1` in all 3 config files to use testnet.
+- See [sample-dcrwallet.conf](sample-dcrwallet.conf) for other **REQUIRED** `dcrwallet` configuration options.
+- Run `dcrd` and let it sync fully.
+- Run `dcrwallet --create` to create the voting wallet.
+**IMPORTANT: Use the same seed for all voting wallets. Backup the seed for disaster recovery!** 
+- Start the `dcrwallet` daemon and unlock the wallet by providing your wallet's private passphrase: `dcrwallet --promptpass`
+- Get the master pubkey from the default account. This will be used for setting `votingwalletextpub` in `dcrstakepool.conf`:
+```bash
+dcrctl --wallet getmasterpubkey default
+```
+- Make a copy of your server IP address, dcrwallet rpc username, password and rpc.cert file.
+These will be required when [setting up the frontend server](#Set-up-the-frontend-server).
+
+#### Set up MySQL
+- Install MySQL.
+- Setup MySQL user credentials and create stakepool database:
+```bash
+$ mysql -u root -p password
+MySQL> CREATE USER 'stakepool'@'localhost' IDENTIFIED BY 'password';
+MySQL> GRANT ALL PRIVILEGES ON *.* TO 'stakepool'@'localhost' WITH GRANT OPTION;
+MySQL> FLUSH PRIVILEGES;
+MySQL> CREATE DATABASE stakepool;
+```
+
+#### Set up and run stakepoold
+- Copy the `stakepoold` binary to the backend server.
+- Run `stakepoold -h` to see the stakepoold config file location on your server.
+- Copy [sample-stakepoold.conf](sample-stakepoold.conf) to the location above.
+- Or create the config file at the config location gotten above
+and copy the contents of [sample-stakepoold.conf](sample-stakepoold.conf) into the new file.
+- Edit the config file as appropriate.
+Following config values must be set:
+  - `coldwalletextpub` - gotten from [this setup step](#Set-up-a-cold-wallet-for-VSP-fee-collection)
+  - `poolfees` - should be the same value set in `dcrwallet.conf`
+  - `dbpassword` - password set [during MySQL setup](#Set-up-MySQL)
+  - `dcrduser`, `dcrdpass`, `walletuser`, `walletpassword` - dcrd/dcrwallet rpc auth values
+  configured while [setting up the voting wallet](#Set-up-the-voting-wallet)
+- Run `stakepoold`.
+- Make a copy of your stakepoold rpc.cert file.
+It will be required when [setting up the frontend server](#Set-up-the-frontend-server).
+
+### Set up the frontend server
+
+#### Set up MySQL
+- Install MySQL.
+- Setup MySQL user credentials and create stakepool database:
+```bash
+$ mysql -u root -p password
+MySQL> CREATE USER 'stakepool'@'localhost' IDENTIFIED BY 'password';
+MySQL> GRANT ALL PRIVILEGES ON *.* TO 'stakepool'@'localhost' WITH GRANT OPTION;
+MySQL> FLUSH PRIVILEGES;
+MySQL> CREATE DATABASE stakepool;
+```
+
+#### Set up and run dcrstakepool
+- Copy the `dcrstakepool` binary to the backend server.
+- Also copy the [public](public) and [views](views) folders to the server,
+preferably the same location as the `dcrstakepool` binary.
+This step is unnecessary if dcrstakepool source code exists on the server,
+even if the binary is in a different location from the source code.
+- Run `dcrstakepool -h` to see the dcrstakepool config file location on your server.
+- Copy [sample-dcrstakepool.conf](sample-dcrstakepool.conf) to the location above.
+- Or create the config file at the config location gotten above
+and copy the contents of [sample-dcrstakepool.conf](sample-dcrstakepool.conf) into the new file.
+- Edit the config file as appropriate.
+Following config values must be set:
+  - `apisecret` - Secret string used to encrypt API and to generate CSRF tokens.
+  Can use `openssl rand -hex 32` to generate one.
+  - `cookiesecret` - Secret string used to encrypt session data.
+  Can use `openssl rand -hex 32` to generate one.
+  - `dbpassword` - password set [during MySQL setup](#Set-up-MySQL)
+  - `votingwalletextpub` - Extended public key used to generate ticketed addresses which are
+  combined with a user address for 1-of-2 multisig.
+  Should have been copied [while setting up the voting wallet on the server](#Set-up-the-voting-wallet).
+  - `coldwalletextpub` - Extended public key used to generate fee payment addresses,
+  gotten from [this setup step](#Set-up-a-cold-wallet-for-VSP-fee-collection).
+  - `poolfees` - Fees as a percentage. 7.5 = 7.5%.  Precision of 2, 7.99 = 7.99%.
+  Should match dcrwallet's configuration (refer to [the second bullet point here](#Set-up-the-voting-wallet)).
+  - `stakepooldhosts` - IP address for all backend servers, separated by comma.
+  Important to enable access to the stakepoold port on each backend server.
+  - `stakepooldcerts` - relative or absolute path to rpc cert files for all backend servers, separated by comma.
+  Each backend rpc cert file should have been copied [while setting up stakepoold on the server](#Set-up-and-run-stakepoold).
+  - `wallethosts` - IP address for the dcrwallet daemons on all backend servers, separated by comma.
+  Important to enable access to the dcrwallet port on each backend server.
+  - `walletcerts` - relative or absolute path to rpc cert files for the dcrwallet daemons on all backend servers, separated by comma.
+  Each rpc cert file should have been copied [while setting up the voting wallet on the server](#Set-up-the-voting-wallet).
+  - `walletusers`, `walletpasswords` - comma separated list of rpc username and password for the dcrwallet daemons on all backend servers.
+  These info should have been copied/noted down [while setting up the voting wallet on the server](#Set-up-the-voting-wallet).
+  - `minservers` (optional) - minimum number of stakepoold backend servers required for dcrstakepool to run. Default is 2.
+- If the `dcrstakepool` binary is not in the same directory as the [public](public) and [views](views) folders,
+you will need to change `publicpath` and `templatepath` from their relative paths to an absolute path in `dcrstakepool.conf`.
+- Run `dcrstakepool`.
+- Rest API and VSP frontend should be ready for use.
+
+## Supplementary info
+
+### Building binaries from source
+_PS: This assumes that you have installed Go 1.11 or later and you have added `$GOPATH/bin` to your `PATH` environment variable.
+Please do so before proceeding if you haven't already.
+You can access the go installation guide [here](http://golang.org/doc/install)._
+
+#### Decred binaries from source
+The following bash code builds the dcrd and dcrctl binaries and places them in `$GOPATH/src/github.com/decred/dcrd`.
+Replace `go build` with `go install` to place the binaries in `$GOPATH/bin`.
+```bash
+git clone https://github.com/decred/dcrd $GOPATH/src/github.com/decred/dcrd
+cd $GOPATH/src/github.com/decred/dcrd
+GO111MODULE=on go build && go build ./cmd/dcrctl
+```
+
+The following bash code builds the dcrwallet binary and places it in `$GOPATH/src/github.com/decred/dcrd`.
+Replace `go build` with `go install` to place the binary in `$GOPATH/bin`.
+```bash
+git clone https://github.com/decred/dcrwallet $GOPATH/src/github.com/decred/dcrwallet
+cd $GOPATH/src/github.com/decred/dcrwallet
+go install
+```
+
+#### dcrstakepool binaries from source
+The following bash code builds the dcrstakepool binary and places it in `$GOPATH/src/github.com/decred/dcrstakepool`.
+Replace `go build` with `go install` to place the binary in `$GOPATH/bin`.
+```bash
+git clone https://github.com/decred/dcrstakepool $GOPATH/src/github.com/decred/dcrstakepool
+cd $GOPATH/src/github.com/decred/dcrstakepool
+GO111MODULE=on go build
+```
+
+### Nginx/web server config
+
+- Adapt sample-nginx.conf or setup a different web server in a proxy
+  configuration.
+
 ## Git Tip Release notes
 
 - The handling of tickets considered invalid because they pay too-low-of-a-fee
@@ -92,210 +275,6 @@ vote on their behalf when the ticket is selected.
 5) Announce maintenance complete after verifying functionality.  If possible,
    also announce that a new voting agenda is available and users must login
    to set their preferences for the new agenda.
-
-## Requirements
-
-- [Go](http://golang.org) 1.10.5 or newer (1.11 is recommended).
-- MySQL
-- Nginx or other web server to proxy to dcrstakepool
-
-## Installation
-
-### Build from Source
-
-Building or updating from source requires only an installation of Go
-([instructions](http://golang.org/doc/install)). It is recommended to add
-`$GOPATH/bin` to your `PATH` at this point.
-
-Clone the dcrstakepool repository into any folder and follow the instructions
-below for your version of Go.
-
-#### Building with Go 1.11
-
-Go 1.11 introduced native support for
-[modules](https://github.com/golang/go/wiki/Modules), a new dependency
-management approach, that obviates the need for third party tooling such as
-`dep`.
-
-Usage is simple, and nothing is required except Go 1.11. If building in a folder
-under `GOPATH`, it is necessary to explicitly build with modules enabled:
-
-    GO111MODULE=on go build
-
-If building outside of `GOPATH`, modules are automatically enabled, and `go
-build` is sufficient.
-
-The `go` tool will process the source code and automatically download
-dependencies. If the dependencies are configured correctly, there will be no
-modifications to the `go.mod` and `go.sum` files.
-
-#### Building with Go 1.10
-
-Module-enabled builds with Go 1.10 require the
-[vgo](https://github.com/golang/vgo) command. Follow the same procedures as if
-you were [using Go 1.11](#building-with-go-111), but replacing `go` with `vgo`.
-
-**NOTE:** The `dep` tool is no longer supported. If you must use Go 1.10,
-install and use `vgo`. If possible, upgrade to Go 1.11.
-
-### Components
-
-The frontend server (dcrstakepool) and the backend daemon (stakepoold) are built
-separately. Since module-enabled builds no longer require building under
-`$GOPATH`, the following instructions use the placeholder
-`{{YOUR_GO_MODULE_PATH}}` to refer to wherever you checkout your Go code.
-
-#### Frontend - dcrstakepool
-
-Build dcrstakepool and copy it to the web server.
-
-```bash
-$ cd {{YOUR_GO_MODULE_PATH}}/github.com/decred/dcrstakepool
-$ go build
-```
-
-#### Backend - stakepoold
-
-Build stakepoold and copy it to each voting wallet node.
-
-```bash
-$ cd {{YOUR_GO_MODULE_PATH}}/src/github.com/decred/dcrstakepool/backend/stakepoold
-$ go build
-```
-
-## Updating
-
-To update an existing source tree, pull the latest changes and install the
-matching dependencies:
-
-```bash
-$ cd $GOPATH/src/github.com/decred/dcrstakepool
-$ git pull
-$ dep ensure
-$ go build
-$ cd $GOPATH/src/github.com/decred/dcrstakepool/backend/stakepoold
-$ go build
-```
-
-## Setup
-
-### Pre-requisites
-
-These instructions assume you are familiar with dcrd/dcrwallet.
-
-- Create basic dcrd/dcrwallet/dcrctl config files with usernames, passwords,
-  rpclisten, and network set appropriately within them or run example commands
-  with additional flags as necessary.
-
-- Build/install dcrd and dcrwallet from latest master.
-
-- Run dcrd instances and let them fully sync.
-
-### Voting service fees/cold wallet
-
-- Setup a new wallet for receiving payment for voting service fees.  **This should
-  be completely separate from the voting service infrastructure.**
-
-```bash
-$ dcrwallet --create
-$ dcrwallet
-```
-
-- Get the master pubkey for the account you wish to use. This will be needed to
-  configure dcrwallet and dcrstakepool.
-
-```bash
-$ dcrctl --wallet createnewaccount teststakepoolfees
-$ dcrctl --wallet getmasterpubkey teststakepoolfees
-```
-
-- Mark 10000 addresses in use for the account so the wallet will recognize
-  transactions to those addresses. Fees from UserId 1 will go to address 1,
-  UserId 2 to address 2, and so on.
-
-```bash
-$ dcrctl --wallet accountsyncaddressindex teststakepoolfees 0 10000
-```
-
-### Voting service voting wallets
-
-- Create the wallets.  All wallets should have the same seed.  **Backup the seed
-  for disaster recovery!**
-
-```bash
-$ dcrwallet --create
-```
-
-- Start a properly configured dcrwallet and unlock it. See
-  sample-dcrwallet.conf.
-
-```bash
-$ dcrwallet
-```
-
-- Get the master pubkey from the default account.  This will be used for
-  votingwalletextpub in dcrstakepool.conf.
-
-```bash
-$ dcrctl --wallet getmasterpubkey default
-```
-
-### MySQL
-
-- Install, configure, and start MySQL
-- Add stakepool user and create the stakepool database
-
-```bash
-$ mysql -uroot -ppassword
-
-MySQL> CREATE USER 'stakepool'@'localhost' IDENTIFIED BY 'password';
-MySQL> GRANT ALL PRIVILEGES ON *.* TO 'stakepool'@'localhost' WITH GRANT OPTION;
-MySQL> FLUSH PRIVILEGES;
-MySQL> CREATE DATABASE stakepool;
-```
-
-### Nginx/web server
-
-- Adapt sample-nginx.conf or setup a different web server in a proxy
-  configuration.
-
-### stakepoold setup
-
-- Adapt sample-stakepoold.conf and run stakepoold.
-
-### dcrstakepool setup
-
-- Create the .dcrstakepool directory and copy dcrwallet certs to it:
-
-```bash
-$ mkdir ~/.dcrstakepool
-$ cd ~/.dcrstakepool
-$ scp walletserver1:~/.dcrwallet/rpc.cert wallet1.cert
-$ scp walletserver2:~/.dcrwallet/rpc.cert wallet2.cert
-$ scp walletserver1:~/.stakepoold/rpc.cert stakepoold1.cert
-$ scp walletserver2:~/.stakepoold/rpc.cert stakepoold2.cert
-```
-
-- Copy sample config and edit appropriately.
-
-```bash
-$ cp -p sample-dcrstakepool.conf dcrstakepool.conf
-```
-
-## Running
-
-The easiest way to run the stakepool code is to run it directly from the root of
-the source tree:
-
-```bash
-$ cd $GOPATH/src/github.com/decred/dcrstakepool
-$ go build
-$ ./dcrstakepool
-```
-
-If you wish to run dcrstakepool from a different directory you will need to
-change **publicpath** and **templatepath** from their relative paths to an
-absolute path.
 
 ## Development
 

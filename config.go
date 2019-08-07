@@ -65,46 +65,50 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	ShowVersion        bool     `short:"V" long:"version" description:"Display version information and exit"`
-	ConfigFile         string   `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir            string   `short:"b" long:"datadir" description:"Directory to store data"`
-	LogDir             string   `long:"logdir" description:"Directory to log output."`
-	Listen             string   `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
-	TestNet            bool     `long:"testnet" description:"Use the test network"`
-	SimNet             bool     `long:"simnet" description:"Use the simulation test network"`
-	Profile            string   `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	CPUProfile         string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	MemProfile         string   `long:"memprofile" description:"Write mem profile to the specified file"`
-	DebugLevel         string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	APISecret          string   `long:"apisecret" description:"Secret string used to encrypt API tokens."`
-	BaseURL            string   `long:"baseurl" description:"BaseURL to use when sending links via email"`
-	ColdWalletExtPub   string   `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
-	ClosePool          bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
-	ClosePoolMsg       string   `long:"closepoolmsg" description:"Message to display when closepool is set."`
-	CookieSecret       string   `long:"cookiesecret" description:"Secret string used to encrypt session data."`
-	CookieSecure       bool     `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
-	DBHost             string   `long:"dbhost" description:"Hostname for database connection"`
-	DBUser             string   `long:"dbuser" description:"Username for database connection"`
-	DBPassword         string   `long:"dbpassword" description:"Password for database connection"`
-	DBPort             string   `long:"dbport" description:"Port for database connection"`
-	DBName             string   `long:"dbname" description:"Name of database"`
-	PublicPath         string   `long:"publicpath" description:"Path to the public folder which contains css/fonts/images/javascript."`
-	TemplatePath       string   `long:"templatepath" description:"Path to the views folder which contains html files."`
-	PoolEmail          string   `long:"poolemail" description:"Email address to for support inquiries"`
-	PoolFees           float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
-	PoolLink           string   `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
-	RealIPHeader       string   `long:"realipheader" description:"The name of an HTTP request header containing the actual remote client IP address, typically set by a reverse proxy. An empty string (default) indicates to use net/Request.RemodeAddr."`
-	SMTPFrom           string   `long:"smtpfrom" description:"From address to use on outbound mail"`
-	SMTPHost           string   `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
-	SMTPUsername       string   `long:"smtpusername" description:"SMTP username for authentication if required"`
-	SMTPPassword       string   `long:"smtppassword" description:"SMTP password for authentication if required"`
-	UseSMTPS           bool     `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
-	StakepooldHosts    []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
-	StakepooldCerts    []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
-	WalletHosts        []string `long:"wallethosts" description:"Hostnames for wallet servers"`
-	WalletUsers        []string `long:"walletusers" description:"Usernames for wallet servers"`
-	WalletPasswords    []string `long:"walletpasswords" description:"Passwords for wallet servers"`
-	WalletCerts        []string `long:"walletcerts" description:"Certificate paths for wallet servers"`
+	ShowVersion bool   `short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile  string `short:"C" long:"configfile" description:"Path to configuration file"`
+	DataDir     string `short:"b" long:"datadir" description:"Directory to store data"`
+	LogDir      string `long:"logdir" description:"Directory to log output."`
+	Listen      string `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
+	TestNet     bool   `long:"testnet" description:"Use the test network"`
+	SimNet      bool   `long:"simnet" description:"Use the simulation test network"`
+	Profile     string `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	CPUProfile  string `long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	MemProfile  string `long:"memprofile" description:"Write mem profile to the specified file"`
+	DebugLevel  string `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	APISecret   string `long:"apisecret" description:"Secret string used to encrypt API tokens."`
+	BaseURL     string `long:"baseurl" description:"BaseURL to use when sending links via email"`
+	// todo: can `ColdWalletExtPub` and `PoolFees` be read from stakepoold via rpc?
+	ColdWalletExtPub string `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
+	ClosePool        bool   `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
+	ClosePoolMsg     string `long:"closepoolmsg" description:"Message to display when closepool is set."`
+	CookieSecret     string `long:"cookiesecret" description:"Secret string used to encrypt session data."`
+	CookieSecure     bool   `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
+	// todo: possible to use a single db instance on stakepoold and access via rpc?
+	DBHost          string   `long:"dbhost" description:"Hostname for database connection"`
+	DBUser          string   `long:"dbuser" description:"Username for database connection"`
+	DBPassword      string   `long:"dbpassword" description:"Password for database connection"`
+	DBPort          string   `long:"dbport" description:"Port for database connection"`
+	DBName          string   `long:"dbname" description:"Name of database"`
+	PublicPath      string   `long:"publicpath" description:"Path to the public folder which contains css/fonts/images/javascript."`
+	TemplatePath    string   `long:"templatepath" description:"Path to the views folder which contains html files."`
+	PoolEmail       string   `long:"poolemail" description:"Email address to for support inquiries"`
+	PoolFees        float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
+	PoolLink        string   `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
+	RealIPHeader    string   `long:"realipheader" description:"The name of an HTTP request header containing the actual remote client IP address, typically set by a reverse proxy. An empty string (default) indicates to use net/Request.RemodeAddr."`
+	SMTPFrom        string   `long:"smtpfrom" description:"From address to use on outbound mail"`
+	SMTPHost        string   `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
+	SMTPUsername    string   `long:"smtpusername" description:"SMTP username for authentication if required"`
+	SMTPPassword    string   `long:"smtppassword" description:"SMTP password for authentication if required"`
+	UseSMTPS        bool     `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
+	StakepooldHosts []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
+	StakepooldCerts []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
+	// todo: should be possible to communicate to backend wallets via stakepoold rpc instead
+	WalletHosts     []string `long:"wallethosts" description:"Hostnames for wallet servers"`
+	WalletUsers     []string `long:"walletusers" description:"Usernames for wallet servers"`
+	WalletPasswords []string `long:"walletpasswords" description:"Passwords for wallet servers"`
+	WalletCerts     []string `long:"walletcerts" description:"Certificate paths for wallet servers"`
+	// todo: `VotingWalletExtPub` can be read from the vsp backend dcrwallet via stakepoold rpc instead!
 	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
@@ -420,28 +424,22 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	// Multiple networks can't be selected simultaneously.
-	var numNets int
-
-	// Count number of network flags passed; assign active network params
-	// while we're at it
-	activeNetParams = &mainNetParams
-	if cfg.TestNet {
-		numNets++
-		activeNetParams = &testNet3Params
-	}
-	if cfg.SimNet {
-		numNets++
-		// Also disable dns seeding on the simulation test network.
-		activeNetParams = &simNetParams
-	}
-	if numNets > 1 {
+	if cfg.TestNet && cfg.SimNet {
 		str := "%s: The testnet and simnet params can't be " +
-			"used together -- choose one of the three"
+			"used together -- choose either of them"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
+	}
+
+	// assign active network params
+	activeNetParams = &mainNetParams
+	if cfg.TestNet {
+		activeNetParams = &testNet3Params
+	} else if cfg.SimNet {
+		// Also disable dns seeding on the simulation test network.
+		activeNetParams = &simNetParams
 	}
 
 	// Append the network type to the data directory so it is "namespaced"
@@ -509,29 +507,15 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	if len(cfg.ColdWalletExtPub) == 0 {
-		str := "%s: coldwalletextpub is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.AdminIPs) == 0 {
-		str := "%s: adminips is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.AdminUserIDs) == 0 {
-		str := "%s: adminuserids is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
 	if len(cfg.VotingWalletExtPub) == 0 {
 		str := "%s: votingwalletextpub is not set in config"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		return nil, nil, err
+	}
+
+	if len(cfg.ColdWalletExtPub) == 0 {
+		str := "%s: coldwalletextpub is not set in config"
 		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
@@ -582,9 +566,9 @@ func loadConfig() (*config, []string, error) {
 	// Add default wallet port for the active network if there's no port specified
 	cfg.WalletHosts = normalizeAddresses(cfg.WalletHosts, activeNetParams.WalletRPCServerPort)
 
-	if len(cfg.WalletHosts) < 2 {
-		str := "%s: you must specify at least 2 wallethosts"
-		err := fmt.Errorf(str, funcName)
+	if len(cfg.WalletHosts) < cfg.MinServers {
+		str := "%s: you must specify at least %d wallethosts"
+		err := fmt.Errorf(str, funcName, cfg.MinServers)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
@@ -644,11 +628,14 @@ func loadConfig() (*config, []string, error) {
 
 	// Add default stakepoold port for the active network if there's
 	// no port specified
+	// todo: for mainnet (production) deployment, should check that
+	// - cfg.MinServers is not less than 2 DIFFERENT servers
+	// - no stakepoold host IP resolves to the same machine used for dcrstakepool (localhost)
 	cfg.StakepooldHosts = normalizeAddresses(cfg.StakepooldHosts,
 		activeNetParams.StakepooldRPCServerPort)
-	if len(cfg.StakepooldHosts) < 2 {
-		str := "%s: you must specify at least 2 stakepooldhosts"
-		err := fmt.Errorf(str, funcName)
+	if len(cfg.StakepooldHosts) < cfg.MinServers {
+		str := "%s: you must specify at least %d stakepooldhosts"
+		err := fmt.Errorf(str, funcName, cfg.MinServers)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}

@@ -27,6 +27,8 @@ const (
 	defaultLogDirname     = "logs"
 	defaultLogFilename    = "stakepoold.log"
 	defaultPoolFees       = 5
+
+	localhost = "localhost"
 )
 
 var (
@@ -36,6 +38,12 @@ var (
 	defaultRPCKeyFile  = filepath.Join(defaultHomeDir, "rpc.key")
 	defaultRPCCertFile = filepath.Join(defaultHomeDir, "rpc.cert")
 	defaultLogDir      = filepath.Join(defaultHomeDir, defaultLogDirname)
+
+	defaultDcrdHomeDir     = dcrutil.AppDataDir("dcrd", false)
+	defaultDcrdRPCCertFile = filepath.Join(defaultDcrdHomeDir, "rpc.cert")
+
+	defaultDcrwalletHomeDir     = dcrutil.AppDataDir("dcrwallet", false)
+	defaultDcrwalletRPCCertFile = filepath.Join(defaultDcrwalletHomeDir, "rpc.cert")
 
 	defaultDBName = "stakepool"
 	defaultDBPort = "3306"
@@ -50,17 +58,19 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	HomeDir          string   `short:"A" long:"appdata" description:"Path to application home directory"`
-	ShowVersion      bool     `short:"V" long:"version" description:"Display version information and exit"`
-	ConfigFile       string   `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir          string   `short:"b" long:"datadir" description:"Directory to store data"`
-	LogDir           string   `long:"logdir" description:"Directory to log output."`
-	TestNet          bool     `long:"testnet" description:"Use the test network"`
-	SimNet           bool     `long:"simnet" description:"Use the simulation test network"`
-	Profile          string   `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	CPUProfile       string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	MemProfile       string   `long:"memprofile" description:"Write mem profile to the specified file"`
-	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	HomeDir     string `short:"A" long:"appdata" description:"Path to application home directory"`
+	ShowVersion bool   `short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile  string `short:"C" long:"configfile" description:"Path to configuration file"`
+	DataDir     string `short:"b" long:"datadir" description:"Directory to store data"`
+	LogDir      string `long:"logdir" description:"Directory to log output."`
+	TestNet     bool   `long:"testnet" description:"Use the test network"`
+	SimNet      bool   `long:"simnet" description:"Use the simulation test network"`
+	Profile     string `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	CPUProfile  string `long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	MemProfile  string `long:"memprofile" description:"Write mem profile to the specified file"`
+	DebugLevel  string `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	// todo can `ColdWalletExtPub` and `PoolFees` be read from the connected dcrwallet instance via dcrwallet rpc instead?
+	// todo alternatively, can have dcrstakepool provide `ColdWalletExtPub` and `PoolFees` via stakepoold rpc
 	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
 	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the voting service with their tickets"`
 	DBHost           string   `long:"dbhost" description:"Hostname for database connection"`
@@ -440,10 +450,10 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	if cfg.DBHost == "" {
-		str := "%s: dbhost is not set in config"
-		err := fmt.Errorf(str, funcName)
+		cfg.DBHost = localhost
+		str := "%s: dbhost is not set in config, defaulting to %s"
+		err := fmt.Errorf(str, funcName, localhost)
 		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
 	}
 
 	if cfg.DBPassword == "" {
@@ -487,17 +497,17 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	if len(cfg.DcrdHost) == 0 {
-		str := "%s: dcrdhost is not set in config"
-		err := fmt.Errorf(str, funcName)
+		cfg.DcrdHost = localhost
+		str := "%s: dcrdhost is not set in config, defaulting to %s"
+		err := fmt.Errorf(str, funcName, localhost)
 		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
 	}
 
 	if len(cfg.DcrdCert) == 0 {
-		str := "%s: dcrdcert is not set in config"
-		err := fmt.Errorf(str, funcName)
+		cfg.DcrdCert = defaultDcrdRPCCertFile
+		str := "%s: dcrdcert is not set in config, defaulting to %s"
+		err := fmt.Errorf(str, funcName, defaultDcrdRPCCertFile)
 		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
 	}
 
 	if len(cfg.DcrdUser) == 0 {
@@ -515,17 +525,17 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	if len(cfg.WalletHost) == 0 {
-		str := "%s: wallethost is not set in config"
-		err := fmt.Errorf(str, funcName)
+		cfg.WalletHost = localhost
+		str := "%s: wallethost is not set in config, defaulting to %s"
+		err := fmt.Errorf(str, funcName, localhost)
 		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
 	}
 
 	if len(cfg.WalletCert) == 0 {
-		str := "%s: walletcert is not set in config"
-		err := fmt.Errorf(str, funcName)
+		cfg.WalletCert = defaultDcrwalletRPCCertFile
+		str := "%s: walletcert is not set in config, defaulting to %s"
+		err := fmt.Errorf(str, funcName, defaultDcrwalletRPCCertFile)
 		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
 	}
 
 	if len(cfg.WalletUser) == 0 {
@@ -543,6 +553,9 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Add default wallet port for the active network if there's no port specified
+	// todo check if dcrdhost and wallethost are both localhost addresses and display warning if not
+	// should have dcrd running on localhost so winning tickets notifications and vote relaying is fast
+	// dcrwallet should be running on localhost so wallet RPCs are fast
 	cfg.DcrdHost = normalizeAddress(cfg.DcrdHost, activeNetParams.DcrdRPCServerPort)
 	cfg.WalletHost = normalizeAddress(cfg.WalletHost, activeNetParams.WalletRPCServerPort)
 
