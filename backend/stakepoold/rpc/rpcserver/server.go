@@ -33,8 +33,8 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "6.0.0"
-	semverMajor        = 6
+	semverString       = "7.0.0"
+	semverMajor        = 7
 	semverMinor        = 0
 	semverPatch        = 0
 )
@@ -252,5 +252,30 @@ func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMul
 	return &pb.CreateMultisigResponse{
 		RedeemScript: response.RedeemScript,
 		Address:      response.Address,
+	}, nil
+}
+
+func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInfoRequest) (*pb.GetStakeInfoResponse, error) {
+	response, err := s.appContext.GetStakeInfo()
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetStakeInfoResponse{
+		BlockHeight:      response.BlockHeight,
+		Difficulty:       response.Difficulty,
+		TotalSubsidy:     response.TotalSubsidy,
+		OwnMempoolTix:    response.OwnMempoolTix,
+		Immature:         response.Immature,
+		Unspent:          response.Unspent,
+		Voted:            response.Voted,
+		Revoked:          response.Revoked,
+		UnspentExpired:   response.UnspentExpired,
+		PoolSize:         response.PoolSize,
+		AllMempoolTix:    response.AllMempoolTix,
+		Live:             response.Live,
+		ProportionLive:   response.ProportionLive,
+		Missed:           response.Missed,
+		ProportionMissed: response.ProportionMissed,
+		Expired:          response.Expired,
 	}, nil
 }

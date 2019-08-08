@@ -17,6 +17,7 @@ service StakepooldService {
 	rpc ListScripts (ListScriptsRequest) returns (ListScriptsResponse);
 	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
 	rpc CreateMultisig (CreateMultisigRequest) returns (CreateMultisigResponse);
+	rpc GetStakeInfo (GetStakeInfoRequest) returns (GetStakeInfoResponse);
 }
 
 service VersionService {
@@ -147,4 +148,24 @@ message VersionResponse {
 	uint32 patch = 4;
 	string prerelease = 5;
 	string build_metadata = 6;
+}
+
+message GetStakeInfoRequest {}
+message GetStakeInfoResponse {
+	int64 BlockHeight = 1;
+	double Difficulty = 2;
+	double TotalSubsidy = 3;
+	uint32 OwnMempoolTix = 4;
+	uint32 Immature = 5;
+	uint32 Unspent = 6;
+	uint32 Voted = 7;
+	uint32 Revoked = 8;
+	uint32 UnspentExpired = 9;
+	uint32 PoolSize = 10;
+	uint32 AllMempoolTix = 11;
+	uint32 Live = 12;
+	double ProportionLive = 13;
+	uint32 Missed = 14;
+	double ProportionMissed = 15;
+	uint32 Expired = 16;
 }

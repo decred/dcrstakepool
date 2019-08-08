@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -16,10 +18,25 @@ import (
 	"golang.org/x/net/context"
 )
 
-var requiredStakepooldAPI = semver{major: 6, minor: 0, patch: 0}
+var (
+	requiredStakepooldAPI = semver{major: 7, minor: 0, patch: 0}
+	// cacheTimerStakeInfo is the duration of time after which to
+	// access the wallet and update the stake information instead
+	// of returning cached stake information.
+	cacheTimerStakeInfo = 5 * time.Minute
+)
 
 type StakepooldManager struct {
 	grpcConnections []*grpc.ClientConn
+	// cachedStakeInfo is cached information about the voting service wallet.
+	// This is required because of the time it takes to compute the stake
+	// information. The included timer is used so that new stake information is
+	// only queried for if 5 minutes or more has passed. The mutex is used to
+	// allow concurrent access to the stake information if less than five
+	// minutes has passed.
+	cachedStakeInfo      *pb.GetStakeInfoResponse
+	cachedStakeInfoTimer time.Time
+	cachedStakeInfoMutex sync.Mutex
 }
 
 func ConnectStakepooldGRPC(stakepooldHosts []string, stakepooldCerts []string) (*StakepooldManager, error) {
@@ -63,7 +80,7 @@ func ConnectStakepooldGRPC(stakepooldHosts []string, stakepooldCerts []string) (
 		conns[serverID] = conn
 	}
 
-	return &StakepooldManager{conns}, nil
+	return &StakepooldManager{grpcConnections: conns}, nil
 }
 
 // GetAddedLowFeeTickets performs gRPC GetAddedLowFeeTickets
@@ -511,4 +528,30 @@ func (s *StakepooldManager) RPCStatus() []string {
 	}
 
 	return stakepooldPageInfo
+}
+
+// GetStakeInfo returns cached stake info if within cachedStakeInfoTimer limit
+// from last cache. Otherwise it calls GetStakeInfo RPC on all stakepoold
+// instances until receiving a response. The response is cached. Returns an
+// error if all RPC calls fail.
+func (s *StakepooldManager) GetStakeInfo() (*pb.GetStakeInfoResponse, error) {
+	defer s.cachedStakeInfoMutex.Unlock()
+	s.cachedStakeInfoMutex.Lock()
+
+	now := time.Now()
+	if s.cachedStakeInfoTimer.After(now) {
+		return s.cachedStakeInfo, nil
+	}
+
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		resp, err := client.GetStakeInfo(context.Background(), &pb.GetStakeInfoRequest{})
+		if err != nil {
+			log.Errorf("GetStakeInfo RPC failed on stakepoold instance %d: %v", i, err)
+		}
+		s.cachedStakeInfo = resp
+		s.cachedStakeInfoTimer = now.Add(cacheTimerStakeInfo)
+		return resp, nil
+	}
+	return nil, errors.New("GetStakeInfo RPC failed on all stakepoold instances")
 }
