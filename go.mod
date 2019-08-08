@@ -13,7 +13,9 @@ require (
 	github.com/decred/dcrd/dcrutil v1.4.0
 	github.com/decred/dcrd/hdkeychain v1.1.1
 	github.com/decred/dcrd/rpcclient/v3 v3.0.0
+	github.com/decred/dcrd/txscript v1.0.3-0.20190613214542-d0a6bf024dfc // indirect
 	github.com/decred/dcrd/wire v1.2.0
+	github.com/decred/dcrdata/api/types/v4 v4.0.2
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.1.0
 	github.com/decred/dcrwallet/wallet/v2 v2.0.0
 	github.com/decred/slog v1.0.0
@@ -29,11 +31,13 @@ require (
 	github.com/jrick/logrotate v1.0.0
 	github.com/lib/pq v1.1.1 // indirect
 	github.com/mattn/go-sqlite3 v1.10.0 // indirect
+	github.com/pkg/errors v0.8.1 // indirect
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/zenazn/goji v0.9.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8
-	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
+	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980
+	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/grpc v1.18.0
 )
