@@ -411,6 +411,17 @@ func (ctx *AppContext) ValidateAddress(address string) (*wallettypes.ValidateAdd
 	return response, nil
 }
 
+// GetStakeInfo performs the rpc command GetStakeInfo.
+func (ctx *AppContext) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
+	response, err := ctx.WalletConnection.GetStakeInfo()
+	if err != nil {
+		log.Errorf("GetStakeInfo: GetStakeInfo rpc failed: %v", err)
+		return nil, err
+	}
+
+	return response, nil
+}
+
 func (ctx *AppContext) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	log.Debug("updateUserData ctx.Lock")
 	ctx.Lock()
