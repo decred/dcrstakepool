@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrstakepool/models"
@@ -25,26 +24,10 @@ const (
 )
 
 var (
-	// cacheTimerStakeInfo is the duration of time after which to
-	// access the wallet and update the stake information instead
-	// of returning cached stake information.
-	cacheTimerStakeInfo = 5 * time.Minute
-
 	// defaultAccountName is the account name for the default wallet
 	// account as a string.
 	defaultAccountName = "default"
 )
-
-// getStakeInfoResponse
-type getStakeInfoResponse struct {
-	stakeInfo *wallettypes.GetStakeInfoResult
-	err       error
-}
-
-// getStakeInfoMsg
-type getStakeInfoMsg struct {
-	reply chan getStakeInfoResponse
-}
 
 // connectedResponse
 type connectedResponse struct {
@@ -69,10 +52,6 @@ out:
 		select {
 		case m := <-w.msgChan:
 			switch msg := m.(type) {
-			case getStakeInfoMsg:
-				resp := w.executeInSequence(getStakeInfoFn, msg)
-				respTyped := resp.(*getStakeInfoResponse)
-				msg.reply <- *respTyped
 			case connectedMsg:
 				resp := w.executeInSequence(connectedFn, msg)
 				respTyped := resp.(*connectedResponse)
@@ -94,58 +73,6 @@ out:
 // executeInSequence is the mainhandler of all the incoming client functions.
 func (w *walletSvrManager) executeInSequence(fn functionName, msg interface{}) interface{} {
 	switch fn {
-	case getStakeInfoFn:
-		resp := new(getStakeInfoResponse)
-		gsirs := make([]*wallettypes.GetStakeInfoResult, w.serversLen)
-		var connectCount int
-		for i, s := range w.servers {
-			if w.servers[i] == nil {
-				continue
-			}
-			gsir, err := s.GetStakeInfo()
-			if err != nil && (err != rpcclient.ErrClientDisconnect &&
-				err != rpcclient.ErrClientShutdown) {
-				log.Infof("getStakeInfoFn failure on server %v: %v", i, err)
-				resp.err = err
-				return resp
-			} else if err != nil && (err == rpcclient.ErrClientDisconnect ||
-				err == rpcclient.ErrClientShutdown) {
-				gsirs[i] = nil
-				continue
-			}
-			connectCount++
-			gsirs[i] = gsir
-		}
-
-		if connectCount < w.minServers {
-			log.Errorf("Unable to check any servers for getStakeInfoFn")
-			resp.err = fmt.Errorf("not processing command; %v servers avail is below min of %v", connectCount, w.minServers)
-			return resp
-		}
-
-		for i := 0; i < w.serversLen; i++ {
-			if i == w.serversLen-1 {
-				break
-			}
-			if gsirs[i] == nil || gsirs[i+1] == nil {
-				continue
-			}
-			if gsirs[i].Live != gsirs[i+1].Live {
-				log.Infof("getStakeInfoFn nonequiv failure on servers "+
-					"%v, %v", i, i+1)
-				resp.err = fmt.Errorf("non equivalent Live returned")
-				return resp
-			}
-		}
-
-		for i := range gsirs {
-			if gsirs[i] != nil {
-				resp.stakeInfo = gsirs[i]
-				break
-			}
-		}
-		return resp
-
 	// connectedFn actually requests walletinfo from the wallet and makes
 	// sure the daemon is connected and the wallet is unlocked.
 	case connectedFn:
@@ -219,50 +146,6 @@ func (w *walletSvrManager) connected() ([]*wallettypes.WalletInfoResult, error) 
 	return response.walletInfo, response.err
 }
 
-// getStakeInfo returns the cached current stake statistics about the wallet if
-// it has been less than five minutes. If it has been longer than five minutes,
-// a new request for stake information is piped through the RPC client handler
-// and then cached for future reuse.
-//
-// This can race depending on what wallet is currently processing, so failures
-// from this function should NOT cause fatal errors on the web server like the
-// other RPC client calls.
-func (w *walletSvrManager) getStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
-	// Less than five minutes has elapsed since the last call. Return
-	// the previously cached stake information.
-	if time.Since(w.cachedStakeInfoTimer) < cacheTimerStakeInfo {
-		return w.cachedStakeInfo, nil
-	}
-
-	// Five minutes or more has passed since the last call, so request new
-	// stake information.
-	reply := make(chan getStakeInfoResponse)
-	w.msgChan <- getStakeInfoMsg{
-		reply: reply,
-	}
-	response := <-reply
-
-	// If there was an error, return the error and do not reset
-	// the timer.
-	if response.err != nil {
-		return nil, response.err
-	}
-
-	// Cache the response for future use and reset the timer.
-	w.cachedStakeInfo = response.stakeInfo
-	w.cachedStakeInfoTimer = time.Now()
-
-	return response.stakeInfo, nil
-}
-
-// GetStakeInfo is the concurrency safe, exported version of getStakeInfo.
-func (w *walletSvrManager) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
-	w.cachedStakeInfoMutex.Lock()
-	defer w.cachedStakeInfoMutex.Unlock()
-
-	return w.getStakeInfo()
-}
-
 // walletSvrManager provides a concurrency safe RPC call manager for handling
 // all incoming wallet server requests.
 type walletSvrManager struct {
@@ -275,16 +158,6 @@ type walletSvrManager struct {
 	walletPasswords []string
 
 	walletsLock sync.Mutex
-
-	// cachedStakeInfo is cached information about the voting service wallet.
-	// This is required because of the time it takes to compute the stake
-	// information. The included timer is used so that new stake information is
-	// only queried for if 5 minutes or more has passed. The mutex is used to
-	// allow concurrent access to the stake information if less than five
-	// minutes has passed.
-	cachedStakeInfo      *wallettypes.GetStakeInfoResult
-	cachedStakeInfoTimer time.Time
-	cachedStakeInfoMutex sync.Mutex
 
 	// minServers is the minimum number of servers required before alerting
 	minServers int
@@ -480,16 +353,15 @@ func newWalletSvrManager(walletHosts []string, walletCerts []string,
 	}
 
 	wsm := walletSvrManager{
-		walletHosts:          walletHosts,
-		walletCerts:          walletCerts,
-		walletUsers:          walletUsers,
-		walletPasswords:      walletPasswords,
-		servers:              localServers,
-		serversLen:           len(localServers),
-		cachedStakeInfoTimer: time.Now().Add(-cacheTimerStakeInfo),
-		msgChan:              make(chan interface{}, 500),
-		quit:                 make(chan struct{}),
-		minServers:           minServers,
+		walletHosts:     walletHosts,
+		walletCerts:     walletCerts,
+		walletUsers:     walletUsers,
+		walletPasswords: walletPasswords,
+		servers:         localServers,
+		serversLen:      len(localServers),
+		msgChan:         make(chan interface{}, 500),
+		quit:            make(chan struct{}),
+		minServers:      minServers,
 	}
 
 	return &wsm, nil
