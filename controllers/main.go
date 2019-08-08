@@ -349,7 +349,7 @@ func (controller *MainController) APIStats(c web.C,
 		return nil, codes.Unavailable, "stats error", errors.New("RPC server stopped")
 	}
 
-	gsi, err := controller.rpcServers.GetStakeInfo()
+	gsi, err := controller.StakepooldServers.GetStakeInfo()
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
 		return nil, codes.Unavailable, "stats error", errors.New("RPC server error")
@@ -1272,7 +1272,7 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	c.Env["CustomDescription"] = controller.description
 	c.Env["PoolLink"] = controller.poolLink
 
-	gsi, err := controller.rpcServers.GetStakeInfo()
+	gsi, err := controller.StakepooldServers.GetStakeInfo()
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
 		return "/error?r=/stats", http.StatusSeeOther
@@ -1796,7 +1796,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
-	gsi, err := controller.rpcServers.GetStakeInfo()
+	gsi, err := controller.StakepooldServers.GetStakeInfo()
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
 		return "/error?r=/stats", http.StatusSeeOther
