@@ -50,19 +50,19 @@ vote on their behalf when the ticket is selected.
 
 ## 1.1.1 Release Notes
 
-- dcrd has a new agenda and the vote version in dcrwallet has been
+- dcrd has a new agenda and the vote version in [dcrwallet](https://github.com/decred/dcrwallet) has been
   incremented to v5 on mainnet.
 - stakepoold
   - The ticket list is now maintained by doing an initial GetTicket RPC call and
     then subtracts/adds tickets by processing SpentAndMissed/New ticket
-    notifications from dcrwallet.  This approach is much faster than the old
+    notifications from [dcrwallet](https://github.com/decred/dcrwallet).  This approach is much faster than the old
     method of calling StakePoolUserInfo for each user.
-  - Bug fixes to the above commit and to accommodate changes in dcrwallet.
+  - Bug fixes to the above commit and to accommodate changes in [dcrwallet](https://github.com/decred/dcrwallet).
 - Status page
   - StatusUnauthorized error is now thrown rather than a generic one when
     accessing the page as a non-admin.
   - Updated to use new design.
-  - Synced dcrwallet walletinfo field list.
+  - Synced [dcrwallet](https://github.com/decred/dcrwallet) walletinfo field list.
 - Tickets page
   - Performance was greatly improved by skipping display of historic tickets.
   - Handles users that have only low fee/invalid tickets properly.
@@ -202,7 +202,7 @@ $ dcrwallet
 ```
 
 - Get the master pubkey for the account you wish to use. This will be needed to
-  configure dcrwallet and dcrstakepool.
+  configure [dcrwallet](https://github.com/decred/dcrwallet) and dcrstakepool.
 
 ```bash
 $ dcrctl --wallet createnewaccount teststakepoolfees
