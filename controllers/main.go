@@ -273,6 +273,10 @@ func (controller *MainController) API(c web.C, r *http.Request) *system.APIRespo
 		}
 	}
 
+	if invalidAuthMessage := c.Env["InvalidTicketAuthMessage"]; invalidAuthMessage != "" && code == codes.Unauthenticated {
+		err = fmt.Errorf("error processing ticket auth data: %s", invalidAuthMessage)
+	}
+
 	if err != nil {
 		status = "error"
 		response = response + " - " + err.Error()

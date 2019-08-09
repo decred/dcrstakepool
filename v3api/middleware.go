@@ -13,8 +13,11 @@ func (v3Api *V3API) ApplyTicketAuth(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api/v3") {
 			authHeader := r.Header.Get("Authorization")
-			msa := v3Api.validateTicketOwnership(authHeader)
-			if msa != "" {
+			msa, invalidAuthResponse := v3Api.validateTicketOwnership(authHeader)
+			if invalidAuthResponse != "" {
+				log.Warnf(invalidAuthResponse)
+				c.Env["InvalidTicketAuthMessage"] = invalidAuthResponse
+			} else if msa != "" {
 				dbMap := c.Env["DbMap"].(*gorp.DbMap)
 
 				user, err := models.GetUserByMSA(dbMap, msa)
