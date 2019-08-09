@@ -421,10 +421,7 @@ func loadConfig() (*config, []string, error) {
 	// Multiple networks can't be selected simultaneously.
 	var numNets int
 
-	// Count number of network flags passed;
-	// assign active network params
-	// and min required backend servers
-	// while we're at it
+	// Assign active network params and min required backend servers
 	var minRequiredBackendServers = 2
 	activeNetParams = &mainNetParams
 	if cfg.TestNet {
@@ -436,6 +433,15 @@ func loadConfig() (*config, []string, error) {
 		numNets++
 		// Also disable dns seeding on the simulation test network.
 		activeNetParams = &simNetParams
+		minRequiredBackendServers = 1
+	}
+	if numNets > 1 {
+		str := "%s: The testnet and simnet params can't be " +
+			"used together -- choose one of the three"
+		err := fmt.Errorf(str, funcName)
+		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, usageMessage)
+		return nil, nil, err
 		minRequiredBackendServers = 1
 	}
 
