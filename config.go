@@ -442,7 +442,6 @@ func loadConfig() (*config, []string, error) {
 		fmt.Fprintln(os.Stderr, err)
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
-		minRequiredBackendServers = 1
 	}
 
 	// Append the network type to the data directory so it is "namespaced"
