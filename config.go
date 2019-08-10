@@ -556,7 +556,9 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Convert comma separated list into a slice
-	cfg.AdminIPs = strings.Split(cfg.AdminIPs[0], ",")
+	if len(cfg.AdminIPs) > 0 {
+		cfg.AdminIPs = strings.Split(cfg.AdminIPs[0], ",")
+	}
 	cfg.AdminUserIDs = strings.Split(cfg.AdminUserIDs[0], ",")
 	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
 	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
