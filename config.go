@@ -556,12 +556,24 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Convert comma separated list into a slice
-	cfg.AdminIPs = strings.Split(cfg.AdminIPs[0], ",")
-	cfg.AdminUserIDs = strings.Split(cfg.AdminUserIDs[0], ",")
-	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
-	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
-	cfg.WalletPasswords = strings.Split(cfg.WalletPasswords[0], ",")
-	cfg.WalletCerts = strings.Split(cfg.WalletCerts[0], ",")
+	if len(cfg.AdminIPs) > 0 {
+		cfg.AdminIPs = strings.Split(cfg.AdminIPs[0], ",")
+	}
+	if len(cfg.AdminUserIDs) > 0 {
+		cfg.AdminUserIDs = strings.Split(cfg.AdminUserIDs[0], ",")
+	}
+	if len(cfg.WalletHosts) > 0 {
+		cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
+	}
+	if len(cfg.WalletUsers) > 0 {
+		cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
+	}
+	if len(cfg.WalletPasswords) > 0 {
+		cfg.WalletPasswords = strings.Split(cfg.WalletPasswords[0], ",")
+	}
+	if len(cfg.WalletCerts) > 0 {
+		cfg.WalletCerts = strings.Split(cfg.WalletCerts[0], ",")
+	}
 
 	// Add default wallet port for the active network if there's no port specified
 	cfg.WalletHosts = normalizeAddresses(cfg.WalletHosts, activeNetParams.WalletRPCServerPort)
