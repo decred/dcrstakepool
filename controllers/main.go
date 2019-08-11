@@ -96,17 +96,38 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 	return getHost(r.Header.Get(realIPHeader))
 }
 
-// NewMainController is the constructor for the entire controller routing.
-func NewMainController(params *chaincfg.Params, adminIPs []string,
-	adminUserIDs []string, APISecret string, APIVersionsSupported []int, baseURL string,
-	closePool bool, closePoolMsg string, feeKey *hdkeychain.ExtendedKey,
-	stakepooldConnMan *stakepooldclient.StakepooldManager, poolFees float64,
-	poolEmail, poolLink string, emailSender email.Sender, walletHosts, walletCerts,
-	walletUsers, walletPasswords []string, minServers int, realIPHeader string,
-	voteKey *hdkeychain.ExtendedKey, maxVotedTickets int, description string,
-	designation string) (*MainController, error) {
+// Config struct to be passed as argument into NewMainController func
+// Reduces the number of marameters passed to NewMainController()
+type MainControllerConfig struct {
 
-	rpcs, err := newWalletSvrManager(walletHosts, walletCerts, walletUsers, walletPasswords, minServers)
+	AdminIPs            []string
+	AdminUserIDs        []string
+	APISecret           string
+	BaseURL             string
+	ClosePool           bool
+	ClosePoolMsg        string
+	PoolEmail           string
+	PoolFees            float64
+	PoolLink            string
+	WalletHosts      	[]string
+	WalletCerts      	[]string
+	WalletUsers			[]string
+	WalletPasswords		[]string
+	MinServers          int
+	RealIPHeader        string
+	MaxVotedTickets     int
+	Description         string
+	Designation         string
+}
+
+// NewMainController is the constructor for the entire controller routing.
+func NewMainController(params *chaincfg.Params, mainControlConfig MainControllerConfig,
+	APIVersionsSupported []int, feeKey *hdkeychain.ExtendedKey,
+	stakepooldConnMan *stakepooldclient.StakepooldManager, emailSender email.Sender,
+	voteKey *hdkeychain.ExtendedKey) (*MainController, error) {
+
+	rpcs, err := newWalletSvrManager(mainControlConfig.WalletHosts, mainControlConfig.WalletCerts,
+		mainControlConfig.WalletUsers, mainControlConfig.WalletPasswords, mainControlConfig.MinServers)
 	if err != nil {
 		return nil, err
 	}
@@ -117,27 +138,27 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	}
 
 	mc := &MainController{
-		adminIPs:             adminIPs,
-		adminUserIDs:         adminUserIDs,
-		APISecret:            APISecret,
+		adminIPs:             mainControlConfig.AdminIPs,
+		adminUserIDs:         mainControlConfig.AdminUserIDs,
+		APISecret:            mainControlConfig.APISecret,
 		APIVersionsSupported: APIVersionsSupported,
-		baseURL:              baseURL,
-		closePool:            closePool,
-		closePoolMsg:         closePoolMsg,
+		baseURL:              mainControlConfig.BaseURL,
+		closePool:            mainControlConfig.ClosePool,
+		closePoolMsg:         mainControlConfig.ClosePoolMsg,
 		feeXpub:              feeKey,
 		StakepooldServers:    stakepooldConnMan,
-		poolEmail:            poolEmail,
-		poolFees:             poolFees,
-		poolLink:             poolLink,
+		poolEmail:            mainControlConfig.PoolEmail,
+		poolFees:             mainControlConfig.PoolFees,
+		poolLink:             mainControlConfig.PoolLink,
 		params:               params,
 		captchaHandler:       ch,
 		rpcServers:           rpcs,
-		realIPHeader:         realIPHeader,
+		realIPHeader:         mainControlConfig.RealIPHeader,
 		emailSender:          emailSender,
 		votingXpub:           voteKey,
-		maxVotedTickets:      maxVotedTickets,
-		description:          description,
-		designation:          designation,
+		maxVotedTickets:      mainControlConfig.MaxVotedTickets,
+		description:          mainControlConfig.Description,
+		designation:          mainControlConfig.Designation,
 	}
 
 	voteVersion, err := stakepooldConnMan.VoteVersion()
@@ -150,7 +171,7 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 
 	mc.voteVersion = voteVersion
 
-	return mc, nil
+	return mc, nil	
 }
 
 // getNetworkName will strip any suffix from a network name starting with
