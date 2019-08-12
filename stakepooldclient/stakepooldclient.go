@@ -505,26 +505,44 @@ func (s *StakepooldManager) ImportScript(script []byte) (heightImported int64, e
 	return heightImported, err
 }
 
-func (s *StakepooldManager) RPCStatus() []string {
-	stakepooldPageInfo := make([]string, len(s.grpcConnections))
+type backendStatus struct {
+	RPCStatus       string
+	DaemonConnected bool
+	VoteVersion     uint32
+	Unlocked        bool
+	Voting          bool
+}
+
+func (s *StakepooldManager) BackendStatus() []backendStatus {
+	stakepooldPageInfo := make([]backendStatus, len(s.grpcConnections))
 
 	for i, conn := range s.grpcConnections {
-		grpcStatus := "Unknown"
+		stakepooldPageInfo[i].RPCStatus = "Unknown"
 		state := conn.GetState()
 		switch state {
 		case connectivity.Idle:
-			grpcStatus = "Idle"
+			stakepooldPageInfo[i].RPCStatus = "Idle"
 		case connectivity.Shutdown:
-			grpcStatus = "Shutdown"
+			stakepooldPageInfo[i].RPCStatus = "Shutdown"
 		case connectivity.Ready:
-			grpcStatus = "Ready"
+			stakepooldPageInfo[i].RPCStatus = "Ready"
 		case connectivity.Connecting:
-			grpcStatus = "Connecting"
+			stakepooldPageInfo[i].RPCStatus = "Connecting"
 		case connectivity.TransientFailure:
-			grpcStatus = "TransientFailure"
+			stakepooldPageInfo[i].RPCStatus = "TransientFailure"
 		}
 
-		stakepooldPageInfo[i] = grpcStatus
+		client := pb.NewStakepooldServiceClient(conn)
+		req := &pb.WalletInfoRequest{}
+		resp, err := client.WalletInfo(context.Background(), req)
+		if err != nil {
+			log.Warnf("BackendStatus: WalletInfo RPC failed on stakepoold instance %d: %v", i, err)
+		} else {
+			stakepooldPageInfo[i].DaemonConnected = resp.DaemonConnected
+			stakepooldPageInfo[i].VoteVersion = resp.VoteVersion
+			stakepooldPageInfo[i].Unlocked = resp.Unlocked
+			stakepooldPageInfo[i].Voting = resp.Voting
+		}
 	}
 
 	return stakepooldPageInfo
