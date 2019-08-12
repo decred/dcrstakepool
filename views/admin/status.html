@@ -7,82 +7,39 @@
 				
 				<div class="col-12 block__title">
 					<h1 class="d-flex justify-content-between align-items-center">
-						<span>Status</span> <div class="status">RPC Status: {{ .RPCStatus }}</div>
+						<span>Back-end Status</span>
 					</h1>
 				</div>
 
 
-				{{if not .StakepooldInfo}}
-					<div class="snackbar snackbar-error">
-						<div class="snackbar-message">
-							<div class="snackbar-close-button-top d-none"></div>
-							<p>Error retrieving stakepoold info</p>
-						</div>
-					</div>
-				{{else}}
-					<div class="col-12 mb-3 px-0">
-						<div class="table-scroll-y table-responsive text-nowrap">
-							<table class="table" cellspacing="0" width="100%">
-								<thead class="thead-light">
-									<tr>
-										<th scope="col" class="text-center">Stakepoold Number</th>
-										<th scope="col" class="text-center">RPC Status</th>
-									</tr>
-								</thead>
-								<tbody>
-									{{ range $i, $data := .StakepooldInfo }}
-									<tr class="table-light">
-										<td class="text-center">{{$i}}</td>
-										<td class="text-center">{{ $data.RPCStatus }}</td>
-									</tr>
-									{{end}}
-								</tbody>
-							</table>
-						</div>
-					</div>
-				{{end}}
-
-				{{if not .WalletInfo}}
-					<div class="snackbar snackbar-error">
-						<div class="snackbar-message">
-							<div class="snackbar-close-button-top d-none"></div>
-							<p>Error retrieving wallet info</p>
-						</div>
-					</div>
-				{{else}}
-
-				<div class="col-12 px-0">
+				<div class="col-12 mb-3 px-0">
 					<div class="table-scroll-y table-responsive text-nowrap">
 						<table class="table" cellspacing="0" width="100%">
 							<thead class="thead-light">
 								<tr>
-									<th scope="col" class="text-center">Wallet Number</th>
-									<th scope="col" class="text-center">Connected</th>
+									<th scope="col" class="text-center">Back-end ID</th>
+									<th scope="col" class="text-center">RPC Status</th>
 									<th scope="col" class="text-center">DaemonConnected</th>
-									<th scope="col" class="text-center">EnableVoting</th>
+									<th scope="col" class="text-center">VoteVersion</th>
+									<th scope="col" class="text-center">Unlocked</th>
+									<th scope="col" class="text-center">Voting</th>
 								</tr>
 							</thead>
 							<tbody>
-								{{ range $i, $data := .WalletInfo }}
+								{{ range $i, $backend := .BackendStatus }}
 								<tr class="table-light">
-									{{ if $data.Connected }}
-										<td class="text-center">{{$i}}</td>
-										<td class="text-center">{{ $data.Connected }}</td>
-										<td class="text-center">{{ $data.DaemonConnected }}</td>
-										<td class="text-center">{{ $data.EnableVoting }}</td> 
-									{{else}}
-										<td class="text-center">{{$i}}</td>
-										<td class="text-center">{{ $data.Connected }}</td>
-										<td class="text-center"></td>
-										<td class="text-center"></td>
-									{{end}}
+									<td class="text-center">{{$i}}</td>
+									<td class="text-center">{{ $backend.RPCStatus       }}</td>
+									<td class="text-center">{{ $backend.DaemonConnected }}</td>
+									<td class="text-center">{{ $backend.VoteVersion     }}</td>
+									<td class="text-center">{{ $backend.Unlocked        }}</td>
+									<td class="text-center">{{ $backend.Voting          }}</td>
 								</tr>
 								{{end}}
 							</tbody>
 						</table>
 					</div>
 				</div>
-				{{end}}
 
 			</section>
 		</div>

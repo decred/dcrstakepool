@@ -857,75 +857,7 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 		return "", http.StatusUnauthorized
 	}
 
-	type stakepooldInfoPage struct {
-		RPCStatus string
-	}
-
-	stakepooldRPCStatus := controller.StakepooldServers.RPCStatus()
-
-	stakepooldPageInfo := make([]stakepooldInfoPage, len(stakepooldRPCStatus))
-
-	for i, grpcStatus := range stakepooldRPCStatus {
-		stakepooldPageInfo[i] = stakepooldInfoPage{
-			RPCStatus: grpcStatus,
-		}
-	}
-
-	// Attempt to query wallet statuses
-	walletInfo, err := controller.StakepooldServers.WalletInfo()
-	if err != nil {
-		log.Errorf("Failed to execute WalletStatus: %v", err)
-		return "/error", http.StatusSeeOther
-	}
-
-	type WalletInfoPage struct {
-		Connected       bool
-		DaemonConnected bool
-		Unlocked        bool
-		EnableVoting    bool
-	}
-	walletPageInfo := make([]WalletInfoPage, len(walletInfo))
-	var connectedWallets int
-	for i, v := range walletInfo {
-		// If something is nil in the slice means it is disconnected.
-		if v == nil {
-			walletPageInfo[i] = WalletInfoPage{
-				Connected: false,
-			}
-			controller.rpcServers.DisconnectWalletRPC(i)
-			err = controller.rpcServers.ReconnectWalletRPC(i)
-			if err != nil {
-				log.Infof("wallet rpc reconnect failed: server %v %v", i, err)
-			}
-			continue
-		}
-		// Wallet has been successfully queried.
-		connectedWallets++
-		walletPageInfo[i] = WalletInfoPage{
-			Connected:       true,
-			DaemonConnected: v.DaemonConnected,
-			EnableVoting:    v.Voting,
-			Unlocked:        v.Unlocked,
-		}
-	}
-
-	// Depending on how many wallets have been detected update RPCStatus.
-	// Admins can then use to monitor this page periodically and check status.
-	var rpcstatus string
-	allWallets := len(walletInfo)
-
-	if connectedWallets == allWallets {
-		rpcstatus = "OK"
-	} else {
-		switch connectedWallets {
-		case 0:
-			rpcstatus = "Emergency"
-		case 1:
-			rpcstatus = "Critical"
-		default:
-			rpcstatus = "Degraded"
-		}
-	}
+	backendStatus := controller.StakepooldServers.BackendStatus()
 
 	t := controller.GetTemplate(c)
 	c.Env["Admin"] = isAdmin
@@ -933,18 +865,12 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 	c.Env["Title"] = "Decred Voting Service - Status (Admin)"
 
 	// Set info to be used by admins on /status page.
-	c.Env["StakepooldInfo"] = stakepooldPageInfo
-	c.Env["WalletInfo"] = walletPageInfo
-	c.Env["RPCStatus"] = rpcstatus
+	c.Env["BackendStatus"] = backendStatus
 
 	widgets := controller.Parse(t, "admin/status", c.Env)
 	c.Env["Designation"] = controller.designation
 
 	c.Env["Content"] = template.HTML(widgets)
-
-	if controller.RPCIsStopped() {
-		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
-	}
 
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
