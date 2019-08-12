@@ -9,10 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/decred/dcrd/rpcclient/v3"
-	"github.com/decred/dcrstakepool/models"
-	"github.com/decred/dcrstakepool/stakepooldclient"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
-	"github.com/decred/dcrwallet/wallet/v2/udb"
 )
 
 // functionName
@@ -21,12 +18,6 @@ type functionName int
 const (
 	getStakeInfoFn functionName = iota
 	connectedFn
-)
-
-var (
-	// defaultAccountName is the account name for the default wallet
-	// account as a string.
-	defaultAccountName = "default"
 )
 
 // connectedResponse
@@ -251,47 +242,6 @@ func checkIfWalletConnected(client *rpcclient.Client) error {
 	}
 	if !wi.Unlocked {
 		return fmt.Errorf("wallet not unlocked")
-	}
-
-	return nil
-}
-
-// walletSvrsSync ensures that the wallet servers are all in sync with each
-// other in terms of redeemscripts and address indexes.
-func walletSvrsSync(wsm *walletSvrManager, stakepoold *stakepooldclient.StakepooldManager, multiSigScripts []models.User) error {
-	// Check for connectivity and if unlocked.
-	for i := range wsm.servers {
-		if wsm.servers[i] == nil {
-			continue
-		}
-		err := checkIfWalletConnected(wsm.servers[i])
-		if err != nil {
-			return fmt.Errorf("failure on startup sync: %s",
-				err.Error())
-		}
-	}
-
-	// Set watched address index to maxUsers so all generated ticket
-	// addresses show as 'ismine'.
-	err := stakepoold.SyncWatchedAddresses(defaultAccountName, udb.ExternalBranch, MaxUsers)
-	if err != nil {
-		return err
-	}
-
-	// Synchronize the address indexes, then synchronize the
-	// redeemscripts. Ignore the errors when importing scripts and
-	// assume it'll just skip reimportation if it already has it.
-	err = stakepoold.SyncScripts(multiSigScripts)
-	if err != nil {
-		return err
-	}
-
-	// If we had to sync then we might be missing some tickets.
-	// Scan for the tickets now and try to import any that another wallet may
-	// be missing.
-	err = stakepoold.SyncTickets()
-	if err != nil {
-		return err
 	}
 
 	return nil

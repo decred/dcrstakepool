@@ -576,7 +576,7 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 		return err
 	}
 
-	err = walletSvrsSync(controller.rpcServers, controller.StakepooldServers, multisigScripts)
+	err = controller.StakepooldServers.SyncAll(multisigScripts, MaxUsers)
 	return err
 }
 

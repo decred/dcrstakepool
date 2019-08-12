@@ -15,15 +15,21 @@ import (
 	"github.com/decred/dcrd/dcrutil"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/models"
+	"github.com/decred/dcrwallet/wallet/v2/udb"
 	"golang.org/x/net/context"
 )
 
 var (
 	requiredStakepooldAPI = semver{major: 7, minor: 0, patch: 0}
+
 	// cacheTimerStakeInfo is the duration of time after which to
 	// access the wallet and update the stake information instead
 	// of returning cached stake information.
 	cacheTimerStakeInfo = 5 * time.Minute
+
+	// defaultAccountName is the account name for the default wallet
+	// account as a string.
+	defaultAccountName = "default"
 )
 
 type StakepooldManager struct {
@@ -257,6 +263,41 @@ func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisig
 	}
 
 	return respPerServer[0], nil
+}
+
+// SyncAll ensures that the wallet servers are all in sync with each
+// other in terms of redeemscripts and address indexes.
+func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int64) error {
+
+	if err := s.connected(); err != nil {
+		log.Errorf("SyncAll: stakepoold failed connectivity check: %v", err)
+		return err
+	}
+
+	// Set watched address index to maxUsers so all generated ticket
+	// addresses show as 'ismine'.
+	err := s.SyncWatchedAddresses(defaultAccountName, udb.ExternalBranch, maxUsers)
+	if err != nil {
+		return err
+	}
+
+	// Synchronize the address indexes, then synchronize the
+	// redeemscripts. Ignore the errors when importing scripts and
+	// assume it'll just skip reimportation if it already has it.
+	err = s.SyncScripts(multiSigScripts)
+	if err != nil {
+		return err
+	}
+
+	// If we had to sync then we might be missing some tickets.
+	// Scan for the tickets now and try to import any that another wallet may
+	// be missing.
+	err = s.SyncTickets()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // SyncWatchedAddresses calls AccountSyncAddressIndex RPC on all stakepoold instances. It stops
