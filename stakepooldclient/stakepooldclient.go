@@ -276,7 +276,7 @@ func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int6
 
 	// Set watched address index to maxUsers so all generated ticket
 	// addresses show as 'ismine'.
-	err := s.SyncWatchedAddresses(defaultAccountName, udb.ExternalBranch, maxUsers)
+	err := s.syncWatchedAddresses(defaultAccountName, udb.ExternalBranch, maxUsers)
 	if err != nil {
 		return err
 	}
@@ -284,7 +284,7 @@ func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int6
 	// Synchronize the address indexes, then synchronize the
 	// redeemscripts. Ignore the errors when importing scripts and
 	// assume it'll just skip reimportation if it already has it.
-	err = s.SyncScripts(multiSigScripts)
+	err = s.syncScripts(multiSigScripts)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int6
 	// If we had to sync then we might be missing some tickets.
 	// Scan for the tickets now and try to import any that another wallet may
 	// be missing.
-	err = s.SyncTickets()
+	err = s.syncTickets()
 	if err != nil {
 		return err
 	}
@@ -300,9 +300,9 @@ func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int6
 	return nil
 }
 
-// SyncWatchedAddresses calls AccountSyncAddressIndex RPC on all stakepoold instances. It stops
+// syncWatchedAddresses calls AccountSyncAddressIndex RPC on all stakepoold instances. It stops
 // executing and returns an error if any RPC call fails
-func (s *StakepooldManager) SyncWatchedAddresses(accountName string, branch uint32, maxUsers int64) error {
+func (s *StakepooldManager) syncWatchedAddresses(accountName string, branch uint32, maxUsers int64) error {
 
 	request := &pb.AccountSyncAddressIndexRequest{
 		Account: accountName,
@@ -315,7 +315,7 @@ func (s *StakepooldManager) SyncWatchedAddresses(accountName string, branch uint
 
 		_, err := client.AccountSyncAddressIndex(context.Background(), request)
 		if err != nil {
-			log.Errorf("SyncWatchedAddresses: AccountSyncAddressIndex RPC failed on stakepoold instance %d: %v", i, err)
+			log.Errorf("syncWatchedAddresses: AccountSyncAddressIndex RPC failed on stakepoold instance %d: %v", i, err)
 			return err
 		}
 	}
@@ -323,18 +323,18 @@ func (s *StakepooldManager) SyncWatchedAddresses(accountName string, branch uint
 	return nil
 }
 
-// SyncScripts collates all known redeem scripts from the database and from
+// syncScripts collates all known redeem scripts from the database and from
 // each stakepoold instance. It then iterates over each stakepoold instance
 // and imports any missing scripts. Returns an error immediately if any RPC
 // call fails.
-func (s *StakepooldManager) SyncScripts(multiSigScripts []models.User) error {
+func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 
 	type ScriptHeight struct {
 		Script []byte
 		Height int
 	}
 
-	log.Info("SyncScripts: Attempting to synchronise redeem scripts across voting wallets")
+	log.Info("syncScripts: Attempting to synchronise redeem scripts across voting wallets")
 
 	// Fetch the redeem scripts from each server.
 	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
@@ -345,7 +345,7 @@ func (s *StakepooldManager) SyncScripts(multiSigScripts []models.User) error {
 	for _, v := range multiSigScripts {
 		byteScript, err := hex.DecodeString(v.MultiSigScript)
 		if err != nil {
-			log.Errorf("SyncScripts: Skipping script %s due to err %v", v.MultiSigScript, err)
+			log.Errorf("syncScripts: Skipping script %s due to err %v", v.MultiSigScript, err)
 			return err
 		}
 		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
@@ -370,7 +370,7 @@ func (s *StakepooldManager) SyncScripts(multiSigScripts []models.User) error {
 			}
 		}
 
-		log.Infof("SyncScripts: stakepoold %d reports %d scripts", i, len(redeemScriptsPerServer[i]))
+		log.Infof("syncScripts: stakepoold %d reports %d scripts", i, len(redeemScriptsPerServer[i]))
 	}
 
 	for i, conn := range s.grpcConnections {
@@ -378,7 +378,7 @@ func (s *StakepooldManager) SyncScripts(multiSigScripts []models.User) error {
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
-				log.Infof("SyncScripts: RedeemScript from DB not found on server %v. ImportScript for %x at height %v", i, v.Script, v.Height)
+				log.Infof("syncScripts: RedeemScript from DB not found on server %v. ImportScript for %x at height %v", i, v.Script, v.Height)
 				client := pb.NewStakepooldServiceClient(conn)
 
 				request := &pb.ImportScriptRequest{
@@ -395,19 +395,19 @@ func (s *StakepooldManager) SyncScripts(multiSigScripts []models.User) error {
 		}
 	}
 
-	log.Infof("SyncScripts: Complete")
+	log.Infof("syncScripts: Complete")
 
 	return nil
 }
 
-// SyncTickets retrieves all owned tickets from each stakepoold instance, and then
+// syncTickets retrieves all owned tickets from each stakepoold instance, and then
 // ensures that any missing tickets are added to the wallets which are missing them.
 // Returns an error immediately if any RPC call fails.
-func (s *StakepooldManager) SyncTickets() error {
+func (s *StakepooldManager) syncTickets() error {
 	ticketsPerServer := make([]map[string]struct{}, len(s.grpcConnections))
 	allTickets := make(map[string]struct{})
 
-	log.Infof("SyncTickets: Attempting to synchronise tickets across voting wallets")
+	log.Infof("syncTickets: Attempting to synchronise tickets across voting wallets")
 
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
@@ -417,7 +417,7 @@ func (s *StakepooldManager) SyncTickets() error {
 
 		resp, err := client.GetTickets(context.Background(), request)
 		if err != nil {
-			log.Errorf("SyncTickets: GetTickets RPC failed on stakepoold instance %d: %v", i, err)
+			log.Errorf("syncTickets: GetTickets RPC failed on stakepoold instance %d: %v", i, err)
 			return err
 		}
 
@@ -427,14 +427,14 @@ func (s *StakepooldManager) SyncTickets() error {
 			allTickets[string(ticketHash)] = struct{}{}
 		}
 
-		log.Infof("SyncTickets: stakepoold %d reports %d tickets", i, len(ticketsPerServer[i]))
+		log.Infof("syncTickets: stakepoold %d reports %d tickets", i, len(ticketsPerServer[i]))
 	}
 
 	for i, conn := range s.grpcConnections {
 		for ticketHash := range allTickets {
 			_, ok := ticketsPerServer[i][ticketHash]
 			if !ok {
-				log.Infof("SyncTickets: stakepoold %v is missing ticket %v", i, ticketHash)
+				log.Infof("syncTickets: stakepoold %v is missing ticket %v", i, ticketHash)
 
 				client := pb.NewStakepooldServiceClient(conn)
 				request := &pb.AddMissingTicketRequest{
@@ -442,14 +442,14 @@ func (s *StakepooldManager) SyncTickets() error {
 				}
 				_, err := client.AddMissingTicket(context.Background(), request)
 				if err != nil {
-					log.Errorf("SyncTickets: AddMissingTicket RPC failed on stakepoold instance %d: %v", i, err)
+					log.Errorf("syncTickets: AddMissingTicket RPC failed on stakepoold instance %d: %v", i, err)
 					return err
 				}
 			}
 		}
 	}
 
-	log.Infof("SyncTickets: Complete")
+	log.Infof("syncTickets: Complete")
 
 	return nil
 }
