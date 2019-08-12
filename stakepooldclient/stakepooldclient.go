@@ -83,6 +83,28 @@ func ConnectStakepooldGRPC(stakepooldHosts []string, stakepooldCerts []string) (
 	return &StakepooldManager{grpcConnections: conns}, nil
 }
 
+// connected uses WalletInfo RPC to check that all stakepoold and
+// dcrwallet instances are currently online and reachable. Also
+// checks that dcrwallet is unlocked and connected to dcrd. This
+// should be performed before any write operations.
+func (s *StakepooldManager) connected() error {
+	responses, err := s.WalletInfo()
+	if err != nil {
+		return err
+	}
+
+	for i, resp := range responses {
+		if !resp.DaemonConnected {
+			return fmt.Errorf("wallet[%d] is not connected to dcrd", i)
+		}
+		if !resp.Unlocked {
+			return fmt.Errorf("wallet[%d] is not unlocked", i)
+		}
+	}
+
+	return nil
+}
+
 // GetAddedLowFeeTickets performs gRPC GetAddedLowFeeTickets
 // requests against all stakepoold instances and returns the first result fetched
 // without errors. Returns an error if all RPC requests fail.
@@ -160,9 +182,14 @@ func processTicketsResponse(tickets []*pb.Ticket) map[chainhash.Hash]string {
 	return processedTickets
 }
 
-// SetAddedLowFeeTickets performs gRPC SetAddedLowFeeTickets. It stops
+// SetAddedLowFeeTickets calls SetAddedLowFeeTickets RPC on all stakepoold instances. It stops
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicket) error {
+	if err := s.connected(); err != nil {
+		log.Errorf("SetAddedLowFeeTickets: stakepoold failed connectivity check: %v", err)
+		return err
+	}
+
 	var tickets []*pb.Ticket
 	for _, ticket := range dbTickets {
 		hash, err := chainhash.NewHashFromStr(ticket.TicketHash)
@@ -200,6 +227,11 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 // misconfigured
 func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisigResponse, error) {
 
+	if err := s.connected(); err != nil {
+		log.Errorf("CreateMultisig: stakepoold failed connectivity check: %v", err)
+		return nil, err
+	}
+
 	respPerServer := make([]*pb.CreateMultisigResponse, len(s.grpcConnections))
 
 	for i, conn := range s.grpcConnections {
@@ -227,16 +259,18 @@ func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisig
 	return respPerServer[0], nil
 }
 
-func (s *StakepooldManager) SyncWatchedAddresses(accountName string, branch uint32,
-	maxUsers int64) error {
+// SyncWatchedAddresses calls AccountSyncAddressIndex RPC on all stakepoold instances. It stops
+// executing and returns an error if any RPC call fails
+func (s *StakepooldManager) SyncWatchedAddresses(accountName string, branch uint32, maxUsers int64) error {
+
+	request := &pb.AccountSyncAddressIndexRequest{
+		Account: accountName,
+		Branch:  branch,
+		Index:   maxUsers,
+	}
 
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		request := &pb.AccountSyncAddressIndexRequest{
-			Account: accountName,
-			Branch:  branch,
-			Index:   maxUsers,
-		}
 
 		_, err := client.AccountSyncAddressIndex(context.Background(), request)
 		if err != nil {
@@ -248,6 +282,10 @@ func (s *StakepooldManager) SyncWatchedAddresses(accountName string, branch uint
 	return nil
 }
 
+// SyncScripts collates all known redeem scripts from the database and from
+// each stakepoold instance. It then iterates over each stakepoold instance
+// and imports any missing scripts. Returns an error immediately if any RPC
+// call fails.
 func (s *StakepooldManager) SyncScripts(multiSigScripts []models.User) error {
 
 	type ScriptHeight struct {
@@ -321,6 +359,9 @@ func (s *StakepooldManager) SyncScripts(multiSigScripts []models.User) error {
 	return nil
 }
 
+// SyncTickets retrieves all owned tickets from each stakepoold instance, and then
+// ensures that any missing tickets are added to the wallets which are missing them.
+// Returns an error immediately if any RPC call fails.
 func (s *StakepooldManager) SyncTickets() error {
 	ticketsPerServer := make([]map[string]struct{}, len(s.grpcConnections))
 	allTickets := make(map[string]struct{})
@@ -397,6 +438,12 @@ func (s *StakepooldManager) StakePoolUserInfo(multiSigAddress string) (*pb.Stake
 // SetUserVotingPrefs performs gRPC SetUserVotingPrefs. It stops
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) error {
+
+	if err := s.connected(); err != nil {
+		log.Errorf("SetUserVotingPrefs: stakepoold failed connectivity check: %v", err)
+		return err
+	}
+
 	var users []*pb.UserVotingConfigEntry
 	for userid, data := range dbUsers {
 		users = append(users, &pb.UserVotingConfigEntry{
@@ -488,6 +535,12 @@ func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateA
 // ImportScript calls ImportScript RPC on all stakepoold instances. It stops
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) ImportScript(script []byte) (heightImported int64, err error) {
+
+	if err := s.connected(); err != nil {
+		log.Errorf("ImportScript: stakepoold failed connectivity check: %v", err)
+		return -1, err
+	}
+
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
 		req := &pb.ImportScriptRequest{
