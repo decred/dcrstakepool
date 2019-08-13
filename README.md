@@ -30,6 +30,10 @@ suitable for use on testnet. To use the harness:
 ./harness.sh
 ```
 
+While the web interface should become available almost immediately, it will take a
+short while for dcrstakepool to become fully functional because the wallets need to
+sync and complete a re-scan before they can be used.
+
 The harness makes a few assumptions
 
 - tmux is installed
