@@ -299,14 +299,14 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	// Serialize the RedeemScript (hex string -> []byte)
+	// Serialize the redeem script (hex string -> []byte)
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	// Import the RedeemScript
+	// Import the redeem script
 	var importedHeight int64
 	importedHeight, err = controller.StakepooldServers.ImportScript(serializedScript)
 	if err != nil {
@@ -576,7 +576,7 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 		return err
 	}
 
-	err = walletSvrsSync(controller.rpcServers, controller.StakepooldServers, multisigScripts)
+	err = controller.StakepooldServers.SyncAll(multisigScripts, MaxUsers)
 	return err
 }
 
@@ -804,7 +804,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return "/error", http.StatusSeeOther
 	}
 
-	// Create the the multisig script. Result includes a P2SH and RedeemScript.
+	// Create the the multisig script. Result includes a P2SH and redeem script.
 	if controller.RPCIsStopped() {
 		return "/error", http.StatusSeeOther
 	}
@@ -814,14 +814,14 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return "/error", http.StatusSeeOther
 	}
 
-	// Serialize the RedeemScript (hex string -> []byte)
+	// Serialize the redeem script (hex string -> []byte)
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
 		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
 		return "/error", http.StatusSeeOther
 	}
 
-	// Import the RedeemScript
+	// Import the redeem script
 	var importedHeight int64
 	importedHeight, err = controller.StakepooldServers.ImportScript(serializedScript)
 	if err != nil {
