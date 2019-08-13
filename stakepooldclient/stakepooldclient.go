@@ -266,7 +266,7 @@ func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisig
 }
 
 // SyncAll ensures that the wallet servers are all in sync with each
-// other in terms of redeemscripts and address indexes.
+// other in terms of tickets, redeem scripts and address indexes.
 func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int64) error {
 
 	if err := s.connected(); err != nil {
@@ -274,24 +274,21 @@ func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int6
 		return err
 	}
 
-	// Set watched address index to maxUsers so all generated ticket
+	// Set watched address indexes to maxUsers so all generated ticket
 	// addresses show as 'ismine'.
 	err := s.syncWatchedAddresses(defaultAccountName, udb.ExternalBranch, maxUsers)
 	if err != nil {
 		return err
 	}
 
-	// Synchronize the address indexes, then synchronize the
-	// redeemscripts. Ignore the errors when importing scripts and
-	// assume it'll just skip reimportation if it already has it.
+	// Synchronize the redeem scripts so all of our voting wallets can
+	// vote on all known tickets.
 	err = s.syncScripts(multiSigScripts)
 	if err != nil {
 		return err
 	}
 
-	// If we had to sync then we might be missing some tickets.
-	// Scan for the tickets now and try to import any that another wallet may
-	// be missing.
+	// Synchronize the tickets so all voting wallets are aware of all tickets.
 	err = s.syncTickets()
 	if err != nil {
 		return err
@@ -351,7 +348,7 @@ func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
 	}
 
-	// Go through each server and see who is synced to the most redeemscripts.
+	// Go through each server and see who is synced to the most redeem scripts.
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
 		request := &pb.ListScriptsRequest{}
@@ -378,7 +375,7 @@ func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
-				log.Infof("syncScripts: RedeemScript from DB not found on server %v. ImportScript for %x at height %v", i, v.Script, v.Height)
+				log.Infof("syncScripts: Redeem script from DB not found on server %v. ImportScript for %x at height %v", i, v.Script, v.Height)
 				client := pb.NewStakepooldServiceClient(conn)
 
 				request := &pb.ImportScriptRequest{
