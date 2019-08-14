@@ -46,7 +46,7 @@ const (
 	// ticket/fee address indexes above 10000.
 	MaxUsers = 10000
 	// agendasCacheLife is the amount of time to keep agenda data in memory.
-	agendasCacheLife = time.Hour * 24
+	agendasCacheLife = time.Hour
 )
 
 // MainController is the wallet RPC controller type.  Its methods include the
@@ -80,7 +80,8 @@ type MainController struct {
 	designation          string
 }
 
-// agendasCache should only be accessed through MainController.agendas().
+// agendasCache holds the current available agendas for agendasCacheLife. Should
+// be accessed through MainController's agendas method.
 var agendasCache agendasMux
 
 // agenda links an agenda to its status. Possible statuses are upcoming,
@@ -90,8 +91,8 @@ type agenda struct {
 	Status string
 }
 
-// agendasMux holds the current available agendas.  Lock must be held for
-// read/writes.
+// agendasMux allows for concurrency safe access to agendasCache. Lock must be
+// held for read/writes.
 type agendasMux struct {
 	sync.Mutex
 	timer   time.Time
@@ -206,20 +207,27 @@ func (controller *MainController) getNetworkName() string {
 	return controller.params.Name
 }
 
-// agendas() returns agendas and their statuses. Fetches agenda status from
+// agendas returns agendas and their statuses. Fetches agenda status from
 // dcrdata.org if past agenda.Timer limit from previous fetch. Caches agenda
 // data for agendasCacheLife. This method is safe for concurrent use.
 func (controller *MainController) agendas() []agenda {
-	defer agendasCache.Unlock()
 	agendasCache.Lock()
+	defer agendasCache.Unlock()
 	now := time.Now()
 	if agendasCache.timer.After(now) {
 		return *agendasCache.agendas
 	}
+	agendasCache.timer = now.Add(agendasCacheLife)
 	url := fmt.Sprintf("https://%s.dcrdata.org/api/agendas", controller.getNetworkName())
 	agendaInfos, err := dcrDataAgendas(url)
 	if err != nil {
+		// Ensure the next call tries to fetch statuses again.
+		agendasCache.timer = time.Time{}
 		log.Warnf("unable to retrieve data from %v: %v", url, err)
+		// If we have initialized agendas, return that.
+		if agendasCache.agendas != nil {
+			return *agendasCache.agendas
+		}
 	}
 	agendaArray := controller.getAgendas()
 	agendasNew := make([]agenda, len(agendaArray))
@@ -235,7 +243,6 @@ func (controller *MainController) agendas() []agenda {
 		}
 	}
 	agendasCache.agendas = &agendasNew
-	agendasCache.timer = now.Add(agendasCacheLife)
 	return *agendasCache.agendas
 }
 
