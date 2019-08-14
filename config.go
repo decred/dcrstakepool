@@ -108,7 +108,7 @@ type config struct {
 	WalletUsers        []string `long:"walletusers" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
 	WalletPasswords    []string `long:"walletpasswords" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
 	WalletCerts        []string `long:"walletcerts" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
-	VotingWalletExtPub string   `long:"votingwalletextpub" description:"Deprecated: Do not use. This will not be an option in a future release of dcrstakepool, and	setting it will cause a startup error."`
+	VotingWalletExtPub string   `long:"votingwalletextpub" description:"Deprecated: Do not use. This will not be an option in a future release of dcrstakepool, and setting it will cause a startup error."`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
 	MinServers         int      `long:"minservers" description:"Deprecated: Do not use. Minimum of 2 servers are required when running on mainnet. Testnet and simnet require minimum 1."`
@@ -645,7 +645,7 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	if cfg.VotingWalletExtPub != "" {
-		str := "%s: Config VotingWalletExtPub is deprecated and has no effect. Please remove from your config file. This will not be an option in a future release of dcrstakepool, and	setting it will cause a startup error."
+		str := "%s: Config VotingWalletExtPub is deprecated and has no effect. Please remove from your config file. This will not be an option in a future release of dcrstakepool, and setting it will cause a startup error."
 		log.Warnf(str, funcName)
 	}
 
