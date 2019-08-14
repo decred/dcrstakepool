@@ -57,6 +57,8 @@ EOF
 echo "Starting dcrd master node"
 tmux send-keys "dcrd -C ${NODES_ROOT}/master/dcrd.conf" C-m 
 
+sleep 3 # Give dcrd time to start
+
 #################################################
 # Setup multiple back-ends.
 #################################################
@@ -100,7 +102,7 @@ EOF
     sleep 2
     tmux send-keys "${VOTING_WALLET_SEED}" C-m C-m
     tmux send-keys "dcrwallet -C ${NODES_ROOT}/voting-wallet-${i}/dcrwallet.conf " C-m
-    sleep 8
+    sleep 12 # Give dcrwallet time to start
 
     #################################################
     # stakepoold
@@ -111,7 +113,7 @@ EOF
     mkdir -p "${NODES_ROOT}/stakepoold-${i}"
     cat > "${NODES_ROOT}/stakepoold-${i}/stakepoold.conf" <<EOF
 dcrdhost=${DCRD_RPC_LISTEN}
-dcrdcert=${WALLET_RPC_CERT}
+dcrdcert=${DCRD_RPC_CERT}
 dcrduser=${RPC_USER}
 dcrdpassword=${RPC_PASS}
 dbhost=${MYSQL_HOST}
@@ -132,7 +134,6 @@ EOF
     echo "Starting stakepoold-${i}"
     tmux new-window -t $SESSION -n "stakepoold-${i}"
     tmux send-keys "stakepoold -C ${NODES_ROOT}/stakepoold-${i}/stakepoold.conf " C-m
-    sleep 2
 done
 
 #################################################
@@ -168,7 +169,7 @@ EOF
 tmux new-window -t $SESSION -n "dcrstakepool"
 
 echo "Starting dcrstakepool"
-sleep 5
+sleep 10 # Give stakepoold time to start
 tmux send-keys "dcrstakepool -C ${NODES_ROOT}/dcrstakepool/dcrstakepool.conf" C-m 
 sleep 2
 
