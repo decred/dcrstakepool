@@ -98,7 +98,8 @@ func runMain() error {
 		}
 	}
 
-	mainControlCfg := controllers.MainControllerConfig{
+
+	mainControlCfg := controllers.MainControllerParams{
 		AdminIPs: 			cfg.AdminIPs,
 		AdminUserIDs: 		cfg.AdminUserIDs,
 		APISecret: 			cfg.APISecret,
