@@ -19,6 +19,35 @@ vote on their behalf when the ticket is selected.
 - The architecture is subject to change in the future to lessen the dependence
   on dcrwallet and MySQL.
 
+## Test Harness
+
+A test harness is provided in `./harness.sh`. The test harness uses tmux to start
+a dcrd node, multiple dcrwallet and stakepoold instances, and finally a dcrstakepool
+instance. It uses hard-coded wallet seeds and pubkeys, and as a result it is only
+suitable for use on testnet. To use the harness:
+
+```bash
+./harness.sh
+```
+
+While the web interface should become available almost immediately, it will take a
+short while for dcrstakepool to become fully functional because the wallets need to
+sync and complete a re-scan before they can be used.
+
+The harness makes a few assumptions
+
+- tmux is installed
+- dcrd, dcrwallet, stakepoold and dcrstakepool are available on $PATH
+- testnet blockchain is already downloaded and sync'd
+- MySQL is configured at 127.0.0.1:3306
+- Database `stakepool` and user `stakepool` with password `password` exist
+- The following files exist:
+  - `${HOME}/.dcrd/rpc.cert`
+  - `${HOME}/.dcrd/rpc.key`
+  - `${HOME}/.dcrwallet/rpc.cert`
+  - `${HOME}/.dcrwallet/rpc.key`
+  - `${HOME}/.stakepoold/rpc.cert`
+
 ## Git Tip Release notes
 
 - The handling of tickets considered invalid because they pay too-low-of-a-fee
