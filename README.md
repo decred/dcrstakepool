@@ -124,7 +124,7 @@ The harness makes a few assumptions
 
 ## Requirements
 
-- [Go](http://golang.org) 1.10.5 or newer (1.11 is recommended).
+- [Go](http://golang.org) 1.11.13 or newer (1.12 is recommended).
 - MySQL
 - Nginx or other web server to proxy to dcrstakepool
 
@@ -139,14 +139,9 @@ Building or updating from source requires only an installation of Go
 Clone the dcrstakepool repository into any folder and follow the instructions
 below for your version of Go.
 
-#### Building with Go 1.11
+#### Building with Go 1.12
 
-Go 1.11 introduced native support for
-[modules](https://github.com/golang/go/wiki/Modules), a new dependency
-management approach, that obviates the need for third party tooling such as
-`dep`.
-
-Usage is simple, and nothing is required except Go 1.11. If building in a folder
+If building in a folder
 under `GOPATH`, it is necessary to explicitly build with modules enabled:
 
     GO111MODULE=on go build
@@ -158,14 +153,6 @@ The `go` tool will process the source code and automatically download
 dependencies. If the dependencies are configured correctly, there will be no
 modifications to the `go.mod` and `go.sum` files.
 
-#### Building with Go 1.10
-
-Module-enabled builds with Go 1.10 require the
-[vgo](https://github.com/golang/vgo) command. Follow the same procedures as if
-you were [using Go 1.11](#building-with-go-111), but replacing `go` with `vgo`.
-
-**NOTE:** The `dep` tool is no longer supported. If you must use Go 1.10,
-install and use `vgo`. If possible, upgrade to Go 1.11.
 
 ### Components
 
