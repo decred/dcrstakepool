@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dchest/captcha"
@@ -44,6 +45,8 @@ const (
 	// This is an artificial limit and can be increased by adjusting the
 	// ticket/fee address indexes above 10000.
 	MaxUsers = 10000
+	// agendasCacheLife is the amount of time to keep agenda data in memory.
+	agendasCacheLife = time.Hour
 )
 
 // MainController is the wallet RPC controller type.  Its methods include the
@@ -75,6 +78,25 @@ type MainController struct {
 	maxVotedTickets      int
 	description          string
 	designation          string
+}
+
+// agendasCache holds the current available agendas for agendasCacheLife. Should
+// be accessed through MainController's agendas method.
+var agendasCache agendasMux
+
+// agenda links an agenda to its status. Possible statuses are upcoming,
+// in progress, finished, failed, or locked in.
+type agenda struct {
+	Agenda chaincfg.ConsensusDeployment
+	Status string
+}
+
+// agendasMux allows for concurrency safe access to agendasCache. Lock must be
+// held for read/writes.
+type agendasMux struct {
+	sync.Mutex
+	timer   time.Time
+	agendas *[]agenda
 }
 
 // Get the client's real IP address using the X-Real-IP header, or if that is
@@ -183,6 +205,45 @@ func (controller *MainController) getNetworkName() string {
 		return "testnet"
 	}
 	return controller.params.Name
+}
+
+// agendas returns agendas and their statuses. Fetches agenda status from
+// dcrdata.org if past agenda.Timer limit from previous fetch. Caches agenda
+// data for agendasCacheLife. This method is safe for concurrent use.
+func (controller *MainController) agendas() []agenda {
+	agendasCache.Lock()
+	defer agendasCache.Unlock()
+	now := time.Now()
+	if agendasCache.timer.After(now) {
+		return *agendasCache.agendas
+	}
+	agendasCache.timer = now.Add(agendasCacheLife)
+	url := fmt.Sprintf("https://%s.dcrdata.org/api/agendas", controller.getNetworkName())
+	agendaInfos, err := dcrDataAgendas(url)
+	if err != nil {
+		// Ensure the next call tries to fetch statuses again.
+		agendasCache.timer = time.Time{}
+		log.Warnf("unable to retrieve data from %v: %v", url, err)
+		// If we have initialized agendas, return that.
+		if agendasCache.agendas != nil {
+			return *agendasCache.agendas
+		}
+	}
+	agendaArray := controller.getAgendas()
+	agendasNew := make([]agenda, len(agendaArray))
+	// populate agendas
+	for n, agenda := range agendaArray {
+		agendasNew[n].Agenda = agenda
+		// find status for id
+		for _, info := range agendaInfos {
+			if info.Name == agenda.Vote.Id {
+				agendasNew[n].Status = info.Status.String()
+				break
+			}
+		}
+	}
+	agendasCache.agendas = &agendasNew
+	return *agendasCache.agendas
 }
 
 // dcrDataAgendas gets json data for current agendas from url. url is either
@@ -1968,31 +2029,6 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 
 	t := controller.GetTemplate(c)
 
-	// agenda links an agenda to its status. Possible statuses are upcoming,
-	// in progress, finished, failed, or locked in.
-	type agenda struct {
-		Agenda chaincfg.ConsensusDeployment
-		Status string
-	}
-	url := fmt.Sprintf("https://%s.dcrdata.org/api/agendas", controller.getNetworkName())
-	agendaInfos, err := dcrDataAgendas(url)
-	if err != nil {
-		log.Warnf("unable to retrieve data from %v: %v", url, err)
-	}
-	agendaArray := controller.getAgendas()
-	agendas := make([]agenda, len(agendaArray))
-	// populate agendas
-	for n, agenda := range agendaArray {
-		agendas[n].Agenda = agenda
-		// find status for id
-		for _, info := range agendaInfos {
-			if info.Name == agenda.Vote.Id {
-				agendas[n].Status = info.Status.String()
-				break
-			}
-		}
-	}
-
 	choicesSelected := controller.choicesForAgendas(uint16(user.VoteBits))
 
 	for k, v := range choicesSelected {
@@ -2000,7 +2036,7 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 		c.Env["Agenda"+strk+"Selected"] = v
 	}
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
-	c.Env["Agendas"] = agendas
+	c.Env["Agendas"] = controller.agendas()
 	c.Env["FlashError"] = session.Flashes("votingError")
 	c.Env["FlashSuccess"] = session.Flashes("votingSuccess")
 	c.Env["IsVoting"] = true
