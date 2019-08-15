@@ -320,6 +320,7 @@ If you are modifying templates, sending the USR1 signal to the dcrstakepool
 process will trigger a template reload.
 
 ### Protoc
+
 In order to regenerate the api.pb.go file, for the gRPC connection with
 stakepoold, the following are required:
 
@@ -333,7 +334,7 @@ stakepoold, the following are required:
 - dcrstakepool will create the stakepool.Users table automatically if it doesn't
   exist.
 
-- dcrstakepool attempts to connect to all of the wallet servers on startup or
+- dcrstakepool attempts to connect to all of the stakepoold servers on startup or
   error out if it cannot do so.
 
 - dcrstakepool takes a user's pubkey, validates it, calls getnewaddress on all

@@ -102,8 +102,7 @@ func runMain() error {
 		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported,
 		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, coldWalletFeeKey,
 		stakepooldConnMan, cfg.PoolFees, cfg.PoolEmail, cfg.PoolLink,
-		sender, cfg.WalletHosts, cfg.WalletCerts, cfg.WalletUsers,
-		cfg.WalletPasswords, cfg.MinServers, cfg.RealIPHeader, votingWalletVoteKey,
+		sender, cfg.RealIPHeader, votingWalletVoteKey,
 		cfg.MaxVotedTickets, cfg.Description, cfg.Designation)
 	if err != nil {
 		application.Close()
@@ -147,8 +146,6 @@ func runMain() error {
 		return fmt.Errorf("Failed to sync the wallets: %v",
 			err)
 	}
-
-	controller.RPCStart()
 
 	// Set up web server routes
 	app := web.New()
@@ -257,7 +254,6 @@ func runMain() error {
 	parent.Handle("/*", app)
 
 	graceful.PostHook(func() {
-		controller.RPCStop()
 		application.Close()
 	})
 	app.Abandon(middleware.Logger)
