@@ -14,8 +14,9 @@ vote on their behalf when the ticket is selected.
 
 ![Voting Service Architecture](https://i.imgur.com/2JDA9dl.png)
 
-- It is highly recommended to use 3 dcrd+dcrwallet+stakepoold nodes for
+- It is highly recommended to use at least 2 dcrd+dcrwallet+stakepoold nodes for
   production use on mainnet.
+  Can use 1 dcrd+dcrwallet+stakepoold node (backend server) on testnet.
 - The architecture is subject to change in the future to lessen the dependence
   on dcrwallet and MySQL.
 

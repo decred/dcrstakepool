@@ -42,7 +42,6 @@ const (
 	defaultPublicPath      = "public"
 	defaultTemplatePath    = "views"
 	defaultSMTPHost        = ""
-	defaultMinServers      = 2
 	defaultMaxVotedTickets = 1000
 	defaultDescription     = ""
 	defaultDesignation     = ""
@@ -329,7 +328,6 @@ func loadConfig() (*config, []string, error) {
 		PublicPath:      defaultPublicPath,
 		TemplatePath:    defaultTemplatePath,
 		SMTPHost:        defaultSMTPHost,
-		MinServers:      defaultMinServers,
 		MaxVotedTickets: defaultMaxVotedTickets,
 		Description:     defaultDescription,
 		Designation:     defaultDesignation,
@@ -423,17 +421,19 @@ func loadConfig() (*config, []string, error) {
 	// Multiple networks can't be selected simultaneously.
 	var numNets int
 
-	// Count number of network flags passed; assign active network params
-	// while we're at it
+	// Assign active network params and min required backend servers
+	var minRequiredBackendServers = 2
 	activeNetParams = &mainNetParams
 	if cfg.TestNet {
 		numNets++
 		activeNetParams = &testNet3Params
+		minRequiredBackendServers = 1
 	}
 	if cfg.SimNet {
 		numNets++
 		// Also disable dns seeding on the simulation test network.
 		activeNetParams = &simNetParams
+		minRequiredBackendServers = 1
 	}
 	if numNets > 1 {
 		str := "%s: The testnet and simnet params can't be " +
@@ -582,9 +582,15 @@ func loadConfig() (*config, []string, error) {
 	// Add default wallet port for the active network if there's no port specified
 	cfg.WalletHosts = normalizeAddresses(cfg.WalletHosts, activeNetParams.WalletRPCServerPort)
 
-	if len(cfg.WalletHosts) < 2 {
-		str := "%s: you must specify at least 2 wallethosts"
-		err := fmt.Errorf(str, funcName)
+	// Check if deprecated minservers config option is set
+	if cfg.MinServers != 0 {
+		str := "%s: Config minservers is deprecated.  Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if len(cfg.WalletHosts) < minRequiredBackendServers {
+		str := "%s: you must specify at least %d wallethosts"
+		err := fmt.Errorf(str, funcName, minRequiredBackendServers)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
@@ -646,9 +652,9 @@ func loadConfig() (*config, []string, error) {
 	// no port specified
 	cfg.StakepooldHosts = normalizeAddresses(cfg.StakepooldHosts,
 		activeNetParams.StakepooldRPCServerPort)
-	if len(cfg.StakepooldHosts) < 2 {
-		str := "%s: you must specify at least 2 stakepooldhosts"
-		err := fmt.Errorf(str, funcName)
+	if len(cfg.StakepooldHosts) < minRequiredBackendServers {
+		str := "%s: you must specify at least %d stakepooldhosts"
+		err := fmt.Errorf(str, funcName, minRequiredBackendServers)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
