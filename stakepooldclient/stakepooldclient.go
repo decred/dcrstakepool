@@ -607,7 +607,12 @@ func (s *StakepooldManager) ImportScript(script []byte) (heightImported int64, e
 
 // BackendStatus provides a summary of a single back-end server
 type BackendStatus struct {
-	RPCStatus       string
+	Host      string
+	RPCStatus string
+	*WalletStatus
+}
+
+type WalletStatus struct {
 	DaemonConnected bool
 	VoteVersion     uint32
 	Unlocked        bool
@@ -621,6 +626,7 @@ func (s *StakepooldManager) BackendStatus() []BackendStatus {
 	stakepooldPageInfo := make([]BackendStatus, len(s.grpcConnections))
 
 	for i, conn := range s.grpcConnections {
+		stakepooldPageInfo[i].Host = conn.Target()
 		stakepooldPageInfo[i].RPCStatus = "Unknown"
 		state := conn.GetState()
 		switch state {
@@ -642,10 +648,12 @@ func (s *StakepooldManager) BackendStatus() []BackendStatus {
 		if err != nil {
 			log.Warnf("BackendStatus: WalletInfo RPC failed on stakepoold instance %s: %v", conn.Target(), err)
 		} else {
-			stakepooldPageInfo[i].DaemonConnected = resp.DaemonConnected
-			stakepooldPageInfo[i].VoteVersion = resp.VoteVersion
-			stakepooldPageInfo[i].Unlocked = resp.Unlocked
-			stakepooldPageInfo[i].Voting = resp.Voting
+			stakepooldPageInfo[i].WalletStatus = &WalletStatus{
+				DaemonConnected: resp.DaemonConnected,
+				VoteVersion:     resp.VoteVersion,
+				Unlocked:        resp.Unlocked,
+				Voting:          resp.Voting,
+			}
 		}
 	}
 
