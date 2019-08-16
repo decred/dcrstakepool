@@ -8818,3 +8818,12 @@ https://flickity.metafizzy.co
 	background-repeat: no-repeat;
 	color: #a9b4bf;
 }
+
+.table-light > td.status-good{
+  background-color: #C4ECCA;
+}
+
+
+.table-light > td.status-bad{
+  background-color: #FEB8A5;
+}

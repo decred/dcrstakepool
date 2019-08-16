@@ -17,23 +17,46 @@
 						<table class="table" cellspacing="0" width="100%">
 							<thead class="thead-light">
 								<tr>
-									<th scope="col" class="text-center">Back-end ID</th>
-									<th scope="col" class="text-center">RPC Status</th>
+									<th scope="col" class="text-center">Host</th>
+									<th scope="col" class="text-center">Stakepoold RPC Status</th>
 									<th scope="col" class="text-center">DaemonConnected</th>
-									<th scope="col" class="text-center">VoteVersion</th>
 									<th scope="col" class="text-center">Unlocked</th>
 									<th scope="col" class="text-center">Voting</th>
+									<th scope="col" class="text-center">VoteVersion</th>
 								</tr>
 							</thead>
 							<tbody>
-								{{ range $i, $backend := .BackendStatus }}
+								{{ range .BackendStatus }}
 								<tr class="table-light">
-									<td class="text-center">{{$i}}</td>
-									<td class="text-center">{{ $backend.RPCStatus       }}</td>
-									<td class="text-center">{{ $backend.DaemonConnected }}</td>
-									<td class="text-center">{{ $backend.VoteVersion     }}</td>
-									<td class="text-center">{{ $backend.Unlocked        }}</td>
-									<td class="text-center">{{ $backend.Voting          }}</td>
+									<td class="text-center">{{ .Host }}</td>
+									
+									<td class="text-center
+										{{ if eq .RPCStatus "Ready" }}status-good{{else}}status-bad{{end}}"
+										>{{ .RPCStatus }}</td>
+
+									{{ with .WalletStatus }}
+									
+										<td class="text-center
+											{{ if eq .DaemonConnected true }}status-good{{else}}status-bad{{end}}"
+											>{{ .DaemonConnected }}</td>
+
+										
+										<td class="text-center
+											{{ if eq .Unlocked true }}status-good{{else}}status-bad{{end}}"
+											>{{ .Unlocked }}</td>
+
+										
+										<td class="text-center
+											{{ if eq .Voting false }}status-good{{else}}status-bad{{end}}"
+											>{{ .Voting }}</td>
+
+										<td class="text-center">{{ .VoteVersion }}</td>
+
+									{{else}}
+									
+										<td class="text-center status-bad" colspan="4">Cannot get wallet stats</td>
+									
+									{{end}}
 								</tr>
 								{{end}}
 							</tbody>
