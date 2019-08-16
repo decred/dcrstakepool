@@ -38,14 +38,14 @@ fi
 tmux new-session -d -s $SESSION
 
 #################################################
-# Setup the master node.
+# Setup the dcrd node.
 #################################################
 
-tmux rename-window -t $SESSION 'master'
+tmux rename-window -t $SESSION 'dcrd'
 
 echo "Writing config for testnet dcrd node"
-mkdir -p "${NODES_ROOT}/master"
-cat > "${NODES_ROOT}/master/dcrd.conf" <<EOF
+mkdir -p "${NODES_ROOT}/dcrd"
+cat > "${NODES_ROOT}/dcrd/dcrd.conf" <<EOF
 rpcuser=${RPC_USER}
 rpcpass=${RPC_PASS}
 rpccert=${DCRD_RPC_CERT}
@@ -55,8 +55,8 @@ testnet=true
 logdir=${NODES_ROOT}/master/log
 EOF
 
-echo "Starting dcrd master node"
-tmux send-keys "dcrd -C ${NODES_ROOT}/master/dcrd.conf" C-m 
+echo "Starting dcrd node"
+tmux send-keys "dcrd -C ${NODES_ROOT}/dcrd/dcrd.conf" C-m 
 
 sleep 3 # Give dcrd time to start
 
@@ -75,15 +75,15 @@ for ((i = 1; i <= $NUMBER_OF_BACKENDS; i++)); do
     # dcrwallet
     #################################################
     echo ""
-    echo "Writing config for voting-wallet-${i}"
-    mkdir -p "${NODES_ROOT}/voting-wallet-${i}"
-    cat > "${NODES_ROOT}/voting-wallet-${i}/dcrwallet.conf" <<EOF
+    echo "Writing config for dcrwallet-${i}"
+    mkdir -p "${NODES_ROOT}/dcrwallet-${i}"
+    cat > "${NODES_ROOT}/dcrwallet-${i}/dcrwallet.conf" <<EOF
 username=${RPC_USER}
 password=${RPC_PASS}
 rpccert=${WALLET_RPC_CERT}
 rpckey=${WALLET_RPC_KEY}
-logdir=${NODES_ROOT}/voting-wallet-${i}/log
-appdata=${NODES_ROOT}/voting-wallet-${i}
+logdir=${NODES_ROOT}/dcrwallet-${i}/log
+appdata=${NODES_ROOT}/dcrwallet-${i}
 testnet=true
 pass=${WALLET_PASS}
 rpcconnect=${DCRD_RPC_LISTEN}
@@ -91,14 +91,14 @@ grpclisten=127.0.0.1:2010${i}
 rpclisten=${WALLET_RPC_LISTEN}
 EOF
 
-    echo "Starting voting-wallet-${i}"
-    tmux new-window -t $SESSION -n "voting-wallet-${i}"
-    tmux send-keys "dcrwallet -C ${NODES_ROOT}/voting-wallet-${i}/dcrwallet.conf --create" C-m
+    echo "Starting dcrwallet-${i}"
+    tmux new-window -t $SESSION -n "dcrwallet-${i}"
+    tmux send-keys "dcrwallet -C ${NODES_ROOT}/dcrwallet-${i}/dcrwallet.conf --create" C-m
     sleep 2
     tmux send-keys "${WALLET_PASS}" C-m "${WALLET_PASS}" C-m "n" C-m "y" C-m
     sleep 2
     tmux send-keys "${VOTING_WALLET_SEED}" C-m C-m
-    tmux send-keys "dcrwallet -C ${NODES_ROOT}/voting-wallet-${i}/dcrwallet.conf " C-m
+    tmux send-keys "dcrwallet -C ${NODES_ROOT}/dcrwallet-${i}/dcrwallet.conf " C-m
     sleep 12 # Give dcrwallet time to start
 
     #################################################
