@@ -301,6 +301,8 @@ func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int6
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) syncWatchedAddresses(accountName string, branch uint32, maxUsers int64) error {
 
+	log.Info("syncWatchedAddresses: Attempting to synchronise watched addresses across voting wallets")
+
 	request := &pb.AccountSyncAddressIndexRequest{
 		Account: accountName,
 		Branch:  branch,
@@ -316,6 +318,8 @@ func (s *StakepooldManager) syncWatchedAddresses(accountName string, branch uint
 			return err
 		}
 	}
+
+	log.Infof("syncWatchedAddresses: Complete")
 
 	return nil
 }

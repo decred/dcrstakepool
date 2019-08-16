@@ -1,30 +1,27 @@
 {{define "error"}}
 <div class="wrapper">
     <div class="row">
-    <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-       <div class="well well-notification  orange-notification">{{if .RateLimited}}
-                        Rate Limited
+        
+        <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
+            <div class="well well-notification  orange-notification">
+                {{if .RateLimited}}
+                    Rate Limited
+                {{else}}
+                    Error
                 {{end}}
-                {{if not .RateLimited}}
-                        {{if eq .RPCStatus "Running"}}Temporary{{end}} Error
-                {{end}}</div>
-    </div>
-    <div class="col-sm-15 col-md-6 text-left center-block">
-    <h1>We could not process your request</h1>
-	{{if .RateLimited}}
-            <p>Your request has been rate limited to lighten the load on the servers.
-            Please re-try your request.</p>
-        {{end}}
-        {{if not .RateLimited}}
-	{{if eq .RPCStatus "Running"}}
-           <p>A temporary error occurred. This can happen due to RPC results being temporarily out of sync.
-         Please re-try your request.</p>
-         {{end}}
-         {{if eq .RPCStatus "Stopped"}}
-            <p>The voting service is currently not processing RPC commands so most functionality of the web interface will not work until connections to the RPC server is restored.  <b>Wallets are still online and voting.</b></p>
-         {{end}}
-         {{end}}
-    </div>
+            </div>
+        </div>
+
+        <div class="col-sm-15 col-md-6 text-left center-block">
+            <h1>We could not process your request</h1>
+            {{if .RateLimited}}
+                <p>Your request has been rate limited to lighten the load on the servers.
+                Please re-try your request.</p>
+            {{else}}
+                <p>An error occurred. Please re-try your request or contact the VSP admin if the error continues. <b>Wallets are still online and voting.</b></p>
+            {{end}}
+        </div>
+        
     </div>
 </div>
 {{end}}

@@ -100,10 +100,10 @@ type config struct {
 	UseSMTPS           bool     `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
 	StakepooldHosts    []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
 	StakepooldCerts    []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
-	WalletHosts        []string `long:"wallethosts" description:"Hostnames for wallet servers"`
-	WalletUsers        []string `long:"walletusers" description:"Usernames for wallet servers"`
-	WalletPasswords    []string `long:"walletpasswords" description:"Passwords for wallet servers"`
-	WalletCerts        []string `long:"walletcerts" description:"Certificate paths for wallet servers"`
+	WalletHosts        []string `long:"wallethosts" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
+	WalletUsers        []string `long:"walletusers" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
+	WalletPasswords    []string `long:"walletpasswords" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
+	WalletCerts        []string `long:"walletcerts" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
 	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
@@ -543,93 +543,9 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	if len(cfg.WalletHosts) == 0 {
-		str := "%s: wallethosts is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.WalletCerts) == 0 {
-		str := "%s: walletcerts is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.WalletUsers) == 0 {
-		str := "%s: walletusers is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.WalletPasswords) == 0 {
-		str := "%s: walletpasswords is not set in config"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
 	// Convert comma separated list into a slice
 	cfg.AdminIPs = strings.Split(cfg.AdminIPs[0], ",")
 	cfg.AdminUserIDs = strings.Split(cfg.AdminUserIDs[0], ",")
-	cfg.WalletHosts = strings.Split(cfg.WalletHosts[0], ",")
-	cfg.WalletUsers = strings.Split(cfg.WalletUsers[0], ",")
-	cfg.WalletPasswords = strings.Split(cfg.WalletPasswords[0], ",")
-	cfg.WalletCerts = strings.Split(cfg.WalletCerts[0], ",")
-
-	// Add default wallet port for the active network if there's no port specified
-	cfg.WalletHosts = normalizeAddresses(cfg.WalletHosts, activeNetParams.WalletRPCServerPort)
-
-	// Check if deprecated minservers config option is set
-	if cfg.MinServers != 0 {
-		str := "%s: Config minservers is deprecated.  Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if len(cfg.WalletHosts) < minRequiredBackendServers {
-		str := "%s: you must specify at least %d wallethosts"
-		err := fmt.Errorf(str, funcName, minRequiredBackendServers)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.WalletHosts) != len(cfg.WalletUsers) {
-		str := "%s: wallet configuration mismatch (walletusers and wallethosts counts differ)"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.WalletHosts) != len(cfg.WalletPasswords) {
-		str := "%s: wallet configuration mismatch (walletpasswords and wallethosts counts differ)"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	if len(cfg.WalletHosts) != len(cfg.WalletCerts) {
-		str := "%s: wallet configuration mismatch (walletcerts and wallethosts counts differ)"
-		err := fmt.Errorf(str, funcName)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	for idx := range cfg.WalletCerts {
-		if !fileExists(cfg.WalletCerts[idx]) {
-			path := filepath.Join(dcrstakepoolHomeDir, cfg.WalletCerts[idx])
-			if !fileExists(path) {
-				str := "%s: walletcert " + cfg.WalletCerts[idx] + " and " +
-					path + " don't exist"
-				err := fmt.Errorf(str, funcName)
-				fmt.Fprintln(os.Stderr, err)
-				return nil, nil, err
-			}
-
-			cfg.WalletCerts[idx] = path
-		}
-	}
 
 	if len(cfg.StakepooldHosts) == 0 {
 		str := "%s: stakepooldhosts is not set in config"
@@ -687,12 +603,37 @@ func loadConfig() (*config, []string, error) {
 
 	// Warn about deprecated config items if they have been set
 	if cfg.EnableStakepoold {
-		str := "%s: Config enablestakepoold is deprecated.  Please remove from your config file"
+		str := "%s: Config enablestakepoold is deprecated. Please remove from your config file"
 		log.Warnf(str, funcName)
 	}
 
 	if cfg.MaxVotedAge != 0 {
 		str := "%s: Config maxVotedAge is deprecated and has no effect. Use maxVotedTickets instead"
+		log.Warnf(str, funcName)
+	}
+
+	if cfg.MinServers != 0 {
+		str := "%s: Config minservers is deprecated. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if len(cfg.WalletHosts) > 0 {
+		str := "%s: Config WalletHosts is deprecated and has no effect. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if len(cfg.WalletCerts) > 0 {
+		str := "%s: Config WalletCerts is deprecated and has no effect. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if len(cfg.WalletUsers) > 0 {
+		str := "%s: Config WalletUsers is deprecated and has no effect. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if len(cfg.WalletPasswords) > 0 {
+		str := "%s: Config WalletPasswords is deprecated and has no effect. Please remove from your config file"
 		log.Warnf(str, funcName)
 	}
 

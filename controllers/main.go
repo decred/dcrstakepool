@@ -69,7 +69,6 @@ type MainController struct {
 	poolFees             float64
 	poolLink             string
 	params               *chaincfg.Params
-	rpcServers           *walletSvrManager
 	realIPHeader         string
 	captchaHandler       *CaptchaHandler
 	emailSender          email.Sender
@@ -125,15 +124,9 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 	adminUserIDs []string, APISecret string, APIVersionsSupported []int, baseURL string,
 	closePool bool, closePoolMsg string, feeKey *hdkeychain.ExtendedKey,
 	stakepooldConnMan *stakepooldclient.StakepooldManager, poolFees float64,
-	poolEmail, poolLink string, emailSender email.Sender, walletHosts, walletCerts,
-	walletUsers, walletPasswords []string, minServers int, realIPHeader string,
+	poolEmail, poolLink string, emailSender email.Sender, realIPHeader string,
 	voteKey *hdkeychain.ExtendedKey, maxVotedTickets int, description string,
 	designation string) (*MainController, error) {
-
-	rpcs, err := newWalletSvrManager(walletHosts, walletCerts, walletUsers, walletPasswords, minServers)
-	if err != nil {
-		return nil, err
-	}
 
 	ch := &CaptchaHandler{
 		ImgHeight: 127,
@@ -155,7 +148,6 @@ func NewMainController(params *chaincfg.Params, adminIPs []string,
 		poolLink:             poolLink,
 		params:               params,
 		captchaHandler:       ch,
-		rpcServers:           rpcs,
 		realIPHeader:         realIPHeader,
 		emailSender:          emailSender,
 		votingXpub:           voteKey,
@@ -347,23 +339,17 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
 	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr); err != nil {
-		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	if controller.RPCIsStopped() {
-		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
-	}
 	createMultiSig, err := controller.StakepooldServers.CreateMultisig([]string{poolPubKeyAddr, userPubKeyAddr})
 	if err != nil {
-		controller.handlePotentialFatalError("CreateMultisig", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
 	// Serialize the redeem script (hex string -> []byte)
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
-		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
@@ -426,10 +412,6 @@ func (controller *MainController) APIStats(c web.C,
 	dbMap := controller.GetDbMap(c)
 	userCount := models.GetUserCount(dbMap)
 	userCountActive := models.GetUserCountActive(dbMap)
-
-	if controller.RPCIsStopped() {
-		return nil, codes.Unavailable, "stats error", errors.New("RPC server stopped")
-	}
 
 	gsi, err := controller.StakepooldServers.GetStakeInfo()
 	if err != nil {
@@ -706,33 +688,6 @@ func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap) (
 	return allUsers, nil
 }
 
-// RPCStart starts the connected rpcServers.
-func (controller *MainController) RPCStart() {
-	controller.rpcServers.Start()
-}
-
-// RPCStop stops the connected rpcServers.
-func (controller *MainController) RPCStop() error {
-	return controller.rpcServers.Stop()
-}
-
-// RPCIsStopped checks to see if w.shutdown is set or not.
-func (controller *MainController) RPCIsStopped() bool {
-	return controller.rpcServers.IsStopped()
-}
-
-// handlePotentialFatalError is a helper function to do log possibly
-// fatal rpc errors and also stops the servers to avoid any potential
-// further damage.
-func (controller *MainController) handlePotentialFatalError(fn string, err error) {
-	cnErr, ok := err.(connectionError)
-	if ok {
-		log.Infof("RPC %s failed on connection error: %v", fn, cnErr)
-	}
-	controller.RPCStop()
-	log.Infof("RPC %s failed: %v", fn, err)
-}
-
 // Address renders the address page.
 func (controller *MainController) Address(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
@@ -843,12 +798,8 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// From new address (pkh), get pubkey address
-	if controller.RPCIsStopped() {
-		return "/error", http.StatusSeeOther
-	}
 	poolValidateAddress, err := controller.StakepooldServers.ValidateAddress(pooladdress)
 	if err != nil {
-		controller.handlePotentialFatalError("ValidateAddress pooladdress", err)
 		return "/error", http.StatusSeeOther
 	}
 	if !poolValidateAddress.IsMine {
@@ -861,24 +812,18 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	// Get back Address from pool's new pubkey address
 	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr); err != nil {
-		controller.handlePotentialFatalError("DecodeAddress poolPubKeyAddr", err)
 		return "/error", http.StatusSeeOther
 	}
 
 	// Create the the multisig script. Result includes a P2SH and redeem script.
-	if controller.RPCIsStopped() {
-		return "/error", http.StatusSeeOther
-	}
 	createMultiSig, err := controller.StakepooldServers.CreateMultisig([]string{poolPubKeyAddr, userPubKeyAddr})
 	if err != nil {
-		controller.handlePotentialFatalError("CreateMultisig", err)
 		return "/error", http.StatusSeeOther
 	}
 
 	// Serialize the redeem script (hex string -> []byte)
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
-		controller.handlePotentialFatalError("CreateMultisig DecodeString", err)
 		return "/error", http.StatusSeeOther
 	}
 
@@ -1248,16 +1193,9 @@ func (controller *MainController) EmailVerify(c web.C, r *http.Request) (string,
 func (controller *MainController) Error(c web.C, r *http.Request) (string, int) {
 	t := controller.GetTemplate(c)
 
-	var rpcstatus = "Running"
-
-	if controller.RPCIsStopped() {
-		rpcstatus = "Stopped"
-	}
-
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsError"] = true
 	c.Env["Title"] = "Decred VSP - Error"
-	c.Env["RPCStatus"] = rpcstatus
 	c.Env["RateLimited"] = r.URL.Query().Get("rl")
 
 	widgets := controller.Parse(t, "error", c.Env)
@@ -1801,9 +1739,6 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	userCount := models.GetUserCount(dbMap)
 	userCountActive := models.GetUserCountActive(dbMap)
 
-	if controller.RPCIsStopped() {
-		return "/error", http.StatusSeeOther
-	}
 	gsi, err := controller.StakepooldServers.GetStakeInfo()
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
@@ -1902,10 +1837,6 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	if user.MultiSigAddress == "" {
 		log.Info("Multisigaddress empty")
 		return "/address", http.StatusSeeOther
-	}
-
-	if controller.RPCIsStopped() {
-		return "/error", http.StatusSeeOther
 	}
 
 	// Get P2SH Address

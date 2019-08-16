@@ -66,10 +66,6 @@ sleep 3 # Give dcrd time to start
 
 for ((i = 1; i <= $NUMBER_OF_BACKENDS; i++)); do
     WALLET_RPC_LISTEN="127.0.0.1:2011${i}"
-    ALL_WALLETS="${ALL_WALLETS:+$ALL_WALLETS,}${WALLET_RPC_LISTEN}"
-    ALL_RPC_USERS="${ALL_RPC_USERS:+$ALL_RPC_USERS,}${RPC_USER}"
-    ALL_RPC_PASSES="${ALL_RPC_PASSES:+$ALL_RPC_PASSES,}${RPC_PASS}"
-    ALL_WALLET_RPC_CERTS="${ALL_WALLET_RPC_CERTS:+$ALL_WALLET_RPC_CERTS,}${WALLET_RPC_CERT}"
     
     STAKEPOOLD_RPC_LISTEN="127.0.0.1:3010$i"
     ALL_STAKEPOOLDS="${ALL_STAKEPOOLDS:+$ALL_STAKEPOOLDS,}${STAKEPOOLD_RPC_LISTEN}"
@@ -123,7 +119,7 @@ dbname=${MYSQL_DB}
 dbuser=${MYSQL_USER}
 dbpassword=${MYSQL_PASS}
 coldwalletextpub=${COLD_WALLET_PUB_KEY}
-wallethost=127.0.0.1:2011${i}
+wallethost=${WALLET_RPC_LISTEN}
 walletcert=${WALLET_RPC_CERT}
 walletuser=${RPC_USER}
 walletpassword=${RPC_PASS}
@@ -161,10 +157,6 @@ adminips=${DCRSTAKEPOOL_ADMIN_IPS}
 adminuserids=${DCRSTAKEPOOL_ADMIN_IDS}
 stakepooldhosts=${ALL_STAKEPOOLDS}
 stakepooldcerts=${ALL_STAKEPOOLD_RPC_CERTS}
-wallethosts=${ALL_WALLETS}
-walletcerts=${ALL_WALLET_RPC_CERTS}
-walletusers=${ALL_RPC_USERS}
-walletpasswords=${ALL_RPC_PASSES}
 EOF
 
 tmux new-window -t $SESSION -n "dcrstakepool"
