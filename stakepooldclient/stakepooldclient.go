@@ -32,6 +32,9 @@ var (
 	defaultAccountName = "default"
 )
 
+// StakepooldManager coordinates the communication between dcrstakepool and
+// multiple instances of stakepoold. All interaction with stakepoold should
+// be through StakepooldManager.
 type StakepooldManager struct {
 	grpcConnections []*grpc.ClientConn
 	// cachedStakeInfo is cached information about the voting service wallet.
@@ -45,8 +48,10 @@ type StakepooldManager struct {
 	cachedStakeInfoMutex sync.Mutex
 }
 
+// ConnectStakepooldGRPC established a gRPC connection with all provided
+// stakepoold hosts. Returns an error if any host cannot be contacted,
+// has the wrong RPC version, or is otherwise mis-configured.
 func ConnectStakepooldGRPC(stakepooldHosts []string, stakepooldCerts []string) (*StakepooldManager, error) {
-
 	conns := make([]*grpc.ClientConn, len(stakepooldHosts))
 
 	for serverID := range stakepooldHosts {
@@ -596,7 +601,8 @@ func (s *StakepooldManager) ImportScript(script []byte) (heightImported int64, e
 	return heightImported, err
 }
 
-type backendStatus struct {
+// BackendStatus provides a summary of a single back-end server
+type BackendStatus struct {
 	RPCStatus       string
 	DaemonConnected bool
 	VoteVersion     uint32
@@ -604,8 +610,11 @@ type backendStatus struct {
 	Voting          bool
 }
 
-func (s *StakepooldManager) BackendStatus() []backendStatus {
-	stakepooldPageInfo := make([]backendStatus, len(s.grpcConnections))
+// BackendStatus uses the state of each RPC connection and the
+// WalletInfo RPC to return a summary of the state of each
+// connected back-end server.
+func (s *StakepooldManager) BackendStatus() []BackendStatus {
+	stakepooldPageInfo := make([]BackendStatus, len(s.grpcConnections))
 
 	for i, conn := range s.grpcConnections {
 		stakepooldPageInfo[i].RPCStatus = "Unknown"
