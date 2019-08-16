@@ -48,7 +48,7 @@ type StakepooldManager struct {
 	cachedStakeInfoMutex sync.Mutex
 }
 
-// ConnectStakepooldGRPC established a gRPC connection with all provided
+// ConnectStakepooldGRPC establishes a gRPC connection with all provided
 // stakepoold hosts. Returns an error if any host cannot be contacted,
 // has the wrong RPC version, or is otherwise mis-configured.
 func ConnectStakepooldGRPC(stakepooldHosts []string, stakepooldCerts []string) (*StakepooldManager, error) {
