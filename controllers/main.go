@@ -1855,9 +1855,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	if err != nil {
 		// Render page with message to try again later
 		log.Infof("RPC StakePoolUserInfo failed: %v", err)
-		session.AddFlash("Unable to retrieve voting service user info", "main")
-		c.Env["Flash"] = session.Flashes("main")
-		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
+		return "/error", http.StatusSeeOther
 	}
 
 	log.Debugf(":: StakePoolUserInfo (msa = %v) execution time: %v",
