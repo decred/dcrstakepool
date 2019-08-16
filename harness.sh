@@ -52,6 +52,7 @@ rpccert=${DCRD_RPC_CERT}
 rpckey=${DCRD_RPC_KEY}
 rpclisten=${DCRD_RPC_LISTEN}
 testnet=true
+logdir=${NODES_ROOT}/master/log
 EOF
 
 echo "Starting dcrd master node"
