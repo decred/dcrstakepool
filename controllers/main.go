@@ -1854,7 +1854,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	spui, err := controller.StakepooldServers.StakePoolUserInfo(multisig.String())
 	if err != nil {
 		// Render page with message to try again later
-		log.Infof("RPC StakePoolUserInfo failed: %v", err)
+		log.Errorf("RPC StakePoolUserInfo failed: %v", err)
 		return "/error", http.StatusSeeOther
 	}
 
