@@ -99,19 +99,19 @@ func runMain() error {
 	}
 
 	mainControlParam := controllers.MainControllerParams{
-		AdminIPs: 			cfg.AdminIPs,
-		AdminUserIDs: 		cfg.AdminUserIDs,
-		APISecret: 			cfg.APISecret,
-		BaseURL: 			cfg.BaseURL,
-		ClosePool: 			cfg.ClosePool,
-		ClosePoolMsg: 		cfg.ClosePoolMsg,
-		PoolEmail: 			cfg.PoolEmail,
-		PoolFees: 			cfg.PoolFees,
-		PoolLink: 			cfg.PoolLink,
-		RealIPHeader: 		cfg.RealIPHeader,
-		MaxVotedTickets: 	cfg.MaxVotedTickets,
-		Description: 		cfg.Description,
-		Designation: 		cfg.Designation,
+		AdminIPs:        cfg.AdminIPs,
+		AdminUserIDs:    cfg.AdminUserIDs,
+		APISecret:       cfg.APISecret,
+		BaseURL:         cfg.BaseURL,
+		ClosePool:       cfg.ClosePool,
+		ClosePoolMsg:    cfg.ClosePoolMsg,
+		PoolEmail:       cfg.PoolEmail,
+		PoolFees:        cfg.PoolFees,
+		PoolLink:        cfg.PoolLink,
+		RealIPHeader:    cfg.RealIPHeader,
+		MaxVotedTickets: cfg.MaxVotedTickets,
+		Description:     cfg.Description,
+		Designation:     cfg.Designation,
 	}
 
 	controller, err := controllers.NewMainController(activeNetParams.Params,

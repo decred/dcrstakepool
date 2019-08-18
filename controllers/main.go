@@ -52,20 +52,19 @@ const (
 // Config struct to be passed as argument into NewMainController func
 // Reduces the number of marameters passed to NewMainController()
 type MainControllerParams struct {
-
-	AdminIPs            []string
-	AdminUserIDs        []string
-	APISecret           string
-	BaseURL             string
-	ClosePool           bool
-	ClosePoolMsg        string
-	PoolEmail           string
-	PoolFees            float64
-	PoolLink            string
-	RealIPHeader        string
-	MaxVotedTickets     int
-	Description         string
-	Designation         string
+	AdminIPs        []string
+	AdminUserIDs    []string
+	APISecret       string
+	BaseURL         string
+	ClosePool       bool
+	ClosePoolMsg    string
+	PoolEmail       string
+	PoolFees        float64
+	PoolLink        string
+	RealIPHeader    string
+	MaxVotedTickets int
+	Description     string
+	Designation     string
 }
 
 // MainController is the wallet RPC controller type.  Its methods include the
@@ -74,17 +73,17 @@ type MainController struct {
 	// embed type for c.Env[""] context and ExecuteTemplate helpers
 	system.Controller
 
-	APIVersionsSupported 	[]int
-	enableStakepoold     	bool
-	feeXpub              	*hdkeychain.ExtendedKey
-	StakepooldServers    	*stakepooldclient.StakepooldManager
-	params               	*chaincfg.Params
-	captchaHandler       	*CaptchaHandler
-	emailSender          	email.Sender
-	voteVersion          	uint32
-	votingXpub           	*hdkeychain.ExtendedKey
+	APIVersionsSupported []int
+	enableStakepoold     bool
+	feeXpub              *hdkeychain.ExtendedKey
+	StakepooldServers    *stakepooldclient.StakepooldManager
+	params               *chaincfg.Params
+	captchaHandler       *CaptchaHandler
+	emailSender          email.Sender
+	voteVersion          uint32
+	votingXpub           *hdkeychain.ExtendedKey
 
-	mainControllerParams	MainControllerParams
+	mainControllerParams MainControllerParams
 }
 
 // agendasCache holds the current available agendas for agendasCacheLife. Should
@@ -139,15 +138,15 @@ func NewMainController(params *chaincfg.Params, mainControllerParams MainControl
 	}
 
 	mc := &MainController{
-		APIVersionsSupported: 	APIVersionsSupported,
-		feeXpub:              	feeKey,
-		StakepooldServers:    	stakepooldConnMan,
-		params:               	params,
-		captchaHandler:       	ch,
-		emailSender:          	emailSender,
-		votingXpub:           	voteKey,
+		APIVersionsSupported: APIVersionsSupported,
+		feeXpub:              feeKey,
+		StakepooldServers:    stakepooldConnMan,
+		params:               params,
+		captchaHandler:       ch,
+		emailSender:          emailSender,
+		votingXpub:           voteKey,
 
-		mainControllerParams:	mainControllerParams,
+		mainControllerParams: mainControllerParams,
 	}
 
 	walletInfo, err := stakepooldConnMan.WalletInfo()
