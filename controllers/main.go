@@ -50,7 +50,6 @@ const (
 )
 
 // Config struct to be passed as argument into NewMainController func
-// Reduces the number of parameters passed to NewMainController()
 type MainControllerParams struct {
 	AdminIPs        []string
 	AdminUserIDs    []string
@@ -71,6 +70,7 @@ type MainControllerParams struct {
 	StakepooldServers    *stakepooldclient.StakepooldManager
 	EmailSender          email.Sender
 	VotingXpub           *hdkeychain.ExtendedKey
+
 }
 
 // MainController is the wallet RPC controller type.  Its methods include the
@@ -84,6 +84,7 @@ type MainController struct {
 	captchaHandler   *CaptchaHandler
 	voteVersion      uint32
 	ControllerParams MainControllerParams
+
 }
 
 // agendasCache holds the current available agendas for agendasCacheLife. Should
@@ -1587,8 +1588,7 @@ func (controller *MainController) LoginPost(c web.C, r *http.Request) (string, i
 
 	log.Infof("Login POST from %v, email %v", remoteIP, user.Email)
 
-	if user.EmailVerified == 0 && controller.getNetworkName() != "testnet" {
-		// if user.EmailVerified == 0 {
+	if user.EmailVerified == 0 {
 		session.AddFlash("You must validate your email address", "loginError")
 		return controller.Login(c, r)
 	}
