@@ -8304,12 +8304,11 @@ input[type="submit"]:disabled {
     border-bottom: 1px solid #c4cbd2; }
 
 .form input:placeholder-shown.err-form-control {
-  border-color: orange }
+  border-color: #ed6d47 }
 
 .err-form-control, 
 .err-message {
-  /* TODO: get better color  */
-  color: orange }
+  color: #ed6d47 }
 
 .form__tabs {
   margin-top: -70px;
