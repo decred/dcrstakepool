@@ -677,7 +677,8 @@ func (s *StakepooldManager) GetStakeInfo() (*pb.GetStakeInfoResponse, error) {
 		client := pb.NewStakepooldServiceClient(conn)
 		resp, err := client.GetStakeInfo(context.Background(), &pb.GetStakeInfoRequest{})
 		if err != nil {
-			log.Errorf("GetStakeInfo RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+			log.Warnf("GetStakeInfo RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+			continue
 		}
 		s.cachedStakeInfo = resp
 		s.cachedStakeInfoTimer = now.Add(cacheTimerStakeInfo)
