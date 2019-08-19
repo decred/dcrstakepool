@@ -62,7 +62,6 @@ type MainController struct {
 	baseURL              string
 	closePool            bool
 	closePoolMsg         string
-	enableStakepoold     bool
 	feeXpub              *hdkeychain.ExtendedKey
 	StakepooldServers    *stakepooldclient.StakepooldManager
 	poolEmail            string
