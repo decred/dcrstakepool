@@ -12,7 +12,7 @@ vote on their behalf when the ticket is selected.
 
 ## Architecture
 
-![Voting Service Architecture](https://i.imgur.com/2JDA9dl.png)
+![Voting Service Architecture](img/architecture.png)
 
 - It is highly recommended to use at least 2 dcrd+dcrwallet+stakepoold nodes for
   production use on mainnet.
