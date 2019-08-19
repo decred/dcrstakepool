@@ -1,27 +1,23 @@
 {{define "error"}}
-<div class="wrapper">
-    <div class="row">
-        
-        <div class="col-xs-15 col-md-8 col-lg-8 notication-col center-block">
-            <div class="well well-notification  orange-notification">
-                {{if .RateLimited}}
-                    Rate Limited
-                {{else}}
-                    Error
-                {{end}}
-            </div>
-        </div>
+<section class="site-content site-content--form-only">
+	<div class="container container--narrow">
 
-        <div class="col-sm-15 col-md-6 text-left center-block">
-            <h1>We could not process your request</h1>
-            {{if .RateLimited}}
-                <p>Your request has been rate limited to lighten the load on the servers.
-                Please re-try your request.</p>
-            {{else}}
-                <p>An error occurred. Please re-try your request or contact the VSP admin if the error continues. <b>Wallets are still online and voting.</b></p>
-            {{end}}
-        </div>
-        
-    </div>
-</div>
+		<div class="row justify-content-center">
+
+            <div class="col-lg-8 col-11 p-sm-5 px-4 py-5 block--shadow">
+                <div class="text-center px-4">
+                    <h1>{{if .RateLimited}}Rate Limited{{else}}Error{{end}}</h1>
+                    <p>
+                        {{if .RateLimited}}
+                            Your request has been rate limited to lighten the load on the servers. Please retry your request.
+                        {{else}}
+                            An error occurred. Please retry your request or contact the VSP admin if the error continues. <b>Wallets are still online and voting.</b>
+                        {{end}}
+                    </p>
+                </div>
+            </div>
+		</div>
+	</div>
+</section>
+
 {{end}}
