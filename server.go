@@ -112,11 +112,15 @@ func runMain() error {
 		MaxVotedTickets: cfg.MaxVotedTickets,
 		Description:     cfg.Description,
 		Designation:     cfg.Designation,
+
+		APIVersionsSupported: APIVersionsSupported,
+		FeeXpub:              coldWalletFeeKey,
+		StakepooldServers:    stakepooldConnMan,
+		EmailSender:          sender,
+		VotingXpub:           votingWalletVoteKey,
 	}
 
-	controller, err := controllers.NewMainController(activeNetParams.Params,
-		mainControlParam, APIVersionsSupported, coldWalletFeeKey,
-		stakepooldConnMan, sender, votingWalletVoteKey)
+	controller, err := controllers.NewMainController(activeNetParams.Params, mainControlParam)
 	if err != nil {
 		application.Close()
 		return fmt.Errorf("Failed to initialize the main controller: %v",
@@ -140,15 +144,15 @@ func runMain() error {
 		return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
 	}
 	// Log the reported count of ignored/added/live tickets from each stakepoold
-	_, err = controller.StakepooldServers.GetIgnoredLowFeeTickets()
+	_, err = controller.ControllerParams.StakepooldServers.GetIgnoredLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetIgnoredLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.StakepooldServers.GetAddedLowFeeTickets()
+	_, err = controller.ControllerParams.StakepooldServers.GetAddedLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetAddedLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.StakepooldServers.GetLiveTickets()
+	_, err = controller.ControllerParams.StakepooldServers.GetLiveTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
 	}
