@@ -50,6 +50,7 @@ const (
 )
 
 // Config struct to be passed as argument into NewMainController func
+// Reduces the number of parameters passed to NewMainController()
 type MainControllerParams struct {
 	AdminIPs        []string
 	AdminUserIDs    []string
@@ -70,7 +71,6 @@ type MainControllerParams struct {
 	StakepooldServers    *stakepooldclient.StakepooldManager
 	EmailSender          email.Sender
 	VotingXpub           *hdkeychain.ExtendedKey
-
 }
 
 // MainController is the wallet RPC controller type.  Its methods include the
@@ -84,7 +84,6 @@ type MainController struct {
 	captchaHandler   *CaptchaHandler
 	voteVersion      uint32
 	ControllerParams MainControllerParams
-
 }
 
 // agendasCache holds the current available agendas for agendasCacheLife. Should
