@@ -10,16 +10,13 @@
         </div>
 
         <h1>Login</h1>
-        {{range .FlashError}}
-          <div class="snackbar snackbar-error">
-            <div class="snackbar-message">
-              <div class="snackbar-close-button-top d-none"></div>
-              <p>{{.}}</p>
-            </div>
-          </div>
-        {{end}}
 
-        <input type="email" name="email" class="form-control mb-4 w-75 mx-auto" placeholder="Email" required autofocus>
+        <div class="mb-4 mx-auto w-75">
+          <input type="email" name="email" class="form-control {{if .IsInvalidLogin}} err-form-control {{end}}" placeholder="Email" required autofocus>
+          {{if .IsInvalidLogin}}
+              <div class="err-message mt-1 ml-1 text-left">Invalid Email or Password</div>
+          {{end}}
+        </div>
         <input type="password" name="password" class="form-control mb-4 w-75 mx-auto" placeholder="Password" required>
         <input class="btn btn-primary" type="submit" value="Login">
         {{ $.csrfField }}

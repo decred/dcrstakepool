@@ -8,9 +8,9 @@ $('#sidebarCollapse').on('click', function () {
 });
 
 //disables the form submit buttons until the inputs are filled in
-function submitState(el) {
+function submitState(elSelector) {
 
-    var $form = $(el),
+    var $form = $(elSelector),
         $requiredInputs = $form.find('input:required'),
         $submit = $form.find('input[type="submit"]');
 

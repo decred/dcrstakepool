@@ -7933,7 +7933,8 @@ input[type="submit"]:disabled {
           transform: rotate(45deg); }
 
 .bg-checked {
-  background-color: #e9f8fe; }
+  background-color: #e9f8fe; 
+}
 
 .circle {
   border-radius: 50%; }
@@ -8298,6 +8299,17 @@ input[type="submit"]:disabled {
 
 .form input:placeholder-shown {
   border-bottom: 1px solid #c4cbd2; }
+
+.form input:placeholder-shown {
+    border-bottom: 1px solid #c4cbd2; }
+
+.form input:placeholder-shown.err-form-control {
+  border-color: orange }
+
+.err-form-control, 
+.err-message {
+  /* TODO: get better color  */
+  color: orange }
 
 .form__tabs {
   margin-top: -70px;

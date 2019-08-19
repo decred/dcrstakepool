@@ -62,6 +62,7 @@ type MainController struct {
 	baseURL              string
 	closePool            bool
 	closePoolMsg         string
+	enableStakepoold     bool
 	feeXpub              *hdkeychain.ExtendedKey
 	StakepooldServers    *stakepooldclient.StakepooldManager
 	poolEmail            string
@@ -1595,13 +1596,14 @@ func (controller *MainController) LoginPost(c web.C, r *http.Request) (string, i
 	user, err := helpers.Login(dbMap, email, password)
 	if err != nil {
 		log.Infof(email+" login failed %v, %v", err, remoteIP)
-		session.AddFlash("Invalid Email or Password", "loginError")
+		c.Env["IsInvalidLogin"] = true
 		return controller.Login(c, r)
 	}
 
 	log.Infof("Login POST from %v, email %v", remoteIP, user.Email)
 
 	if user.EmailVerified == 0 {
+		// TODO: add different check here
 		session.AddFlash("You must validate your email address", "loginError")
 		return controller.Login(c, r)
 	}
@@ -1853,8 +1855,10 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	spui, err := controller.StakepooldServers.StakePoolUserInfo(multisig.String())
 	if err != nil {
 		// Render page with message to try again later
-		log.Errorf("RPC StakePoolUserInfo failed: %v", err)
-		return "/error", http.StatusSeeOther
+		log.Infof("RPC StakePoolUserInfo failed: %v", err)
+		session.AddFlash("Unable to retrieve voting service user info", "main")
+		c.Env["Flash"] = session.Flashes("main")
+		return controller.Parse(t, "main", c.Env), http.StatusInternalServerError
 	}
 
 	log.Debugf(":: StakePoolUserInfo (msa = %v) execution time: %v",
