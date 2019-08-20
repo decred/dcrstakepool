@@ -99,12 +99,31 @@ func runMain() error {
 		}
 	}
 
-	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported,
-		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, coldWalletFeeKey,
-		stakepooldConnMan, cfg.PoolFees, cfg.PoolEmail, cfg.PoolLink,
-		sender, cfg.RealIPHeader, votingWalletVoteKey,
-		cfg.MaxVotedTickets, cfg.Description, cfg.Designation)
+	mainController := controllers.MainController{
+		AdminIPs:        cfg.AdminIPs,
+		AdminUserIDs:    cfg.AdminUserIDs,
+		APISecret:       cfg.APISecret,
+		BaseURL:         cfg.BaseURL,
+		ClosePool:       cfg.ClosePool,
+		ClosePoolMsg:    cfg.ClosePoolMsg,
+		PoolEmail:       cfg.PoolEmail,
+		PoolFees:        cfg.PoolFees,
+		PoolLink:        cfg.PoolLink,
+		RealIPHeader:    cfg.RealIPHeader,
+		MaxVotedTickets: cfg.MaxVotedTickets,
+		Description:     cfg.Description,
+		Designation:     cfg.Designation,
+
+		APIVersionsSupported: APIVersionsSupported,
+		FeeXpub:              coldWalletFeeKey,
+		StakepooldServers:    stakepooldConnMan,
+		EmailSender:          sender,
+		VotingXpub:           votingWalletVoteKey,
+		NetParams:            activeNetParams.Params,
+	}
+
+	controller, err := controllers.NewMainController(mainController)
+
 	if err != nil {
 		application.Close()
 		return fmt.Errorf("Failed to initialize the main controller: %v",
