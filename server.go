@@ -144,15 +144,15 @@ func runMain() error {
 		return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
 	}
 	// Log the reported count of ignored/added/live tickets from each stakepoold
-	_, err = controller.ControllerParams.StakepooldServers.GetIgnoredLowFeeTickets()
+	_, err = controller.Params.StakepooldServers.GetIgnoredLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetIgnoredLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.ControllerParams.StakepooldServers.GetAddedLowFeeTickets()
+	_, err = controller.Params.StakepooldServers.GetAddedLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetAddedLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.ControllerParams.StakepooldServers.GetLiveTickets()
+	_, err = controller.Params.StakepooldServers.GetLiveTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
 	}
