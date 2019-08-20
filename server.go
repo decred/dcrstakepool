@@ -98,7 +98,7 @@ func runMain() error {
 		}
 	}
 
-	mainControlParam := controllers.MainControllerParams{
+	mainController := controllers.MainController{
 		AdminIPs:        cfg.AdminIPs,
 		AdminUserIDs:    cfg.AdminUserIDs,
 		APISecret:       cfg.APISecret,
@@ -118,9 +118,10 @@ func runMain() error {
 		StakepooldServers:    stakepooldConnMan,
 		EmailSender:          sender,
 		VotingXpub:           votingWalletVoteKey,
+		NetParams:            activeNetParams.Params,
 	}
 
-	controller, err := controllers.NewMainController(activeNetParams.Params, mainControlParam)
+	controller, err := controllers.NewMainController(mainController)
 	if err != nil {
 		application.Close()
 		return fmt.Errorf("Failed to initialize the main controller: %v",
@@ -144,15 +145,15 @@ func runMain() error {
 		return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
 	}
 	// Log the reported count of ignored/added/live tickets from each stakepoold
-	_, err = controller.Params.StakepooldServers.GetIgnoredLowFeeTickets()
+	_, err = controller.StakepooldServers.GetIgnoredLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetIgnoredLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.Params.StakepooldServers.GetAddedLowFeeTickets()
+	_, err = controller.StakepooldServers.GetAddedLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetAddedLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.Params.StakepooldServers.GetLiveTickets()
+	_, err = controller.StakepooldServers.GetLiveTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
 	}

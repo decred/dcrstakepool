@@ -49,9 +49,12 @@ const (
 	agendasCacheLife = time.Hour
 )
 
-// Config struct to be passed as argument into NewMainController func
-// Reduces the number of parameters passed to NewMainController()
-type MainControllerParams struct {
+// MainController is the wallet RPC controller type.  Its methods include the
+// route handlers.
+type MainController struct {
+	// embed type for c.Env[""] context and ExecuteTemplate helpers
+	system.Controller
+
 	AdminIPs             []string
 	AdminUserIDs         []string
 	APISecret            string
@@ -70,18 +73,10 @@ type MainControllerParams struct {
 	StakepooldServers    *stakepooldclient.StakepooldManager
 	EmailSender          email.Sender
 	VotingXpub           *hdkeychain.ExtendedKey
-}
 
-// MainController is the wallet RPC controller type.  Its methods include the
-// route handlers.
-type MainController struct {
-	// embed type for c.Env[""] context and ExecuteTemplate helpers
-	system.Controller
-
-	netParams        *chaincfg.Params
-	captchaHandler   *CaptchaHandler
-	voteVersion      uint32
-	Params           MainControllerParams
+	NetParams      *chaincfg.Params
+	captchaHandler *CaptchaHandler
+	voteVersion    uint32
 }
 
 // agendasCache holds the current available agendas for agendasCacheLife. Should
@@ -125,21 +120,18 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 }
 
 // NewMainController is the constructor for the entire controller routing.
-func NewMainController(params *chaincfg.Params, controllerParams MainControllerParams) (*MainController, error) {
+func NewMainController(mainController MainController) (*MainController, error) {
 
 	ch := &CaptchaHandler{
 		ImgHeight: 127,
 		ImgWidth:  257,
 	}
 
-	mc := &MainController{
+	mc := &mainController
 
-		netParams:      params,
-		captchaHandler: ch,
-		Params:         controllerParams,
-	}
+	mc.captchaHandler = ch
 
-	walletInfo, err := controllerParams.StakepooldServers.WalletInfo()
+	walletInfo, err := mainController.StakepooldServers.WalletInfo()
 	if err != nil {
 		cErr := fmt.Errorf("Failed to get wallets' Vote Version: %v", err)
 		return nil, cErr
@@ -176,10 +168,10 @@ func NewMainController(params *chaincfg.Params, controllerParams MainControllerP
 // which generates block explorer links using a value set by the network string,
 // which is a problem since there is no testnet3.dcrdata.org host.
 func (controller *MainController) getNetworkName() string {
-	if strings.HasPrefix(controller.netParams.Name, "testnet") {
+	if strings.HasPrefix(controller.NetParams.Name, "testnet") {
 		return "testnet"
 	}
-	return controller.netParams.Name
+	return controller.NetParams.Name
 }
 
 // agendas returns agendas and their statuses. Fetches agenda status from
@@ -308,7 +300,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	poolValidateAddress, err := controller.Params.StakepooldServers.ValidateAddress(pooladdress)
+	poolValidateAddress, err := controller.StakepooldServers.ValidateAddress(pooladdress)
 	if err != nil {
 		log.Errorf("unable to validate address: %v", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
@@ -325,7 +317,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	createMultiSig, err := controller.Params.StakepooldServers.CreateMultisig([]string{poolPubKeyAddr, userPubKeyAddr})
+	createMultiSig, err := controller.StakepooldServers.CreateMultisig([]string{poolPubKeyAddr, userPubKeyAddr})
 	if err != nil {
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
@@ -338,7 +330,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	// Import the redeem script
 	var importedHeight int64
-	importedHeight, err = controller.Params.StakepooldServers.ImportScript(serializedScript)
+	importedHeight, err = controller.StakepooldServers.ImportScript(serializedScript)
 	if err != nil {
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
@@ -380,7 +372,7 @@ func (controller *MainController) APIPurchaseInfo(c web.C,
 
 	purchaseInfo := &poolapi.PurchaseInfo{
 		PoolAddress:   user.UserFeeAddr,
-		PoolFees:      controller.Params.PoolFees,
+		PoolFees:      controller.PoolFees,
 		Script:        user.MultiSigScript,
 		TicketAddress: user.MultiSigAddress,
 		VoteBits:      uint16(user.VoteBits),
@@ -396,14 +388,14 @@ func (controller *MainController) APIStats(c web.C,
 	userCount := models.GetUserCount(dbMap)
 	userCountActive := models.GetUserCountActive(dbMap)
 
-	gsi, err := controller.Params.StakepooldServers.GetStakeInfo()
+	gsi, err := controller.StakepooldServers.GetStakeInfo()
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
 		return nil, codes.Unavailable, "stats error", errors.New("RPC server error")
 	}
 
 	var poolStatus string
-	if controller.Params.ClosePool {
+	if controller.ClosePool {
 		poolStatus = "Closed"
 	} else {
 		poolStatus = "Open"
@@ -411,7 +403,7 @@ func (controller *MainController) APIStats(c web.C,
 
 	stats := &poolapi.Stats{
 		AllMempoolTix:        gsi.AllMempoolTix,
-		APIVersionsSupported: controller.Params.APIVersionsSupported,
+		APIVersionsSupported: controller.APIVersionsSupported,
 		BlockHeight:          gsi.BlockHeight,
 		Difficulty:           gsi.Difficulty,
 		Expired:              gsi.Expired,
@@ -425,9 +417,9 @@ func (controller *MainController) APIStats(c web.C,
 		Revoked:              gsi.Revoked,
 		TotalSubsidy:         gsi.TotalSubsidy,
 		Voted:                gsi.Voted,
-		Network:              controller.netParams.Name,
-		PoolEmail:            controller.Params.PoolEmail,
-		PoolFees:             controller.Params.PoolFees,
+		Network:              controller.NetParams.Name,
+		PoolEmail:            controller.PoolEmail,
+		PoolFees:             controller.PoolFees,
 		PoolStatus:           poolStatus,
 		UserCount:            userCount,
 		UserCountActive:      userCountActive,
@@ -475,7 +467,7 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 }
 
 func (controller *MainController) isAdmin(c web.C, r *http.Request) (bool, error) {
-	remoteIP := getClientIP(r, controller.Params.RealIPHeader)
+	remoteIP := getClientIP(r, controller.RealIPHeader)
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
 
@@ -486,12 +478,12 @@ func (controller *MainController) isAdmin(c web.C, r *http.Request) (bool, error
 
 	uidstr := strconv.Itoa(int(session.Values["UserId"].(int64)))
 
-	if !stringSliceContains(controller.Params.AdminIPs, remoteIP) {
+	if !stringSliceContains(controller.AdminIPs, remoteIP) {
 		return false, fmt.Errorf("%s request from %s "+
 			"userid %s failed AdminIPs check", r.URL, remoteIP, uidstr)
 	}
 
-	if !stringSliceContains(controller.Params.AdminUserIDs, uidstr) {
+	if !stringSliceContains(controller.AdminUserIDs, uidstr) {
 		return false, fmt.Errorf("%s request from %s "+
 			"userid %s failed adminUserIDs check", r.URL, remoteIP, uidstr)
 	}
@@ -507,7 +499,7 @@ func (controller *MainController) StakepooldUpdateTickets(dbMap *gorp.DbMap) err
 		return err
 	}
 
-	err = controller.Params.StakepooldServers.SetAddedLowFeeTickets(votableLowFeeTickets)
+	err = controller.StakepooldServers.SetAddedLowFeeTickets(votableLowFeeTickets)
 	if err != nil {
 		log.Errorf("error updating tickets on stakepoold: %v", err)
 		return err
@@ -526,7 +518,7 @@ func (controller *MainController) StakepooldUpdateUsers(dbMap *gorp.DbMap) error
 		return err
 	}
 
-	err = controller.Params.StakepooldServers.SetUserVotingPrefs(allUsers)
+	err = controller.StakepooldServers.SetUserVotingPrefs(allUsers)
 	if err != nil {
 		log.Errorf("error updating users on stakepoold: %v", err)
 		return err
@@ -543,7 +535,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 		return nil, fmt.Errorf("bad uid index %v", uid)
 	}
 
-	acctKey := controller.Params.FeeXpub
+	acctKey := controller.FeeXpub
 	index := uint32(uid)
 
 	// Derive the appropriate branch key
@@ -557,7 +549,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 		return nil, err
 	}
 
-	addr, err := key.Address(controller.netParams)
+	addr, err := key.Address(controller.NetParams)
 	if err != nil {
 		return nil, err
 	}
@@ -573,7 +565,7 @@ func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Addre
 		return nil, fmt.Errorf("bad uid index %v", uid)
 	}
 
-	acctKey := controller.Params.VotingXpub
+	acctKey := controller.VotingXpub
 	index := uint32(uid)
 
 	// Derive the appropriate branch key
@@ -587,7 +579,7 @@ func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Addre
 		return nil, err
 	}
 
-	addr, err := key.Address(controller.netParams)
+	addr, err := key.Address(controller.NetParams)
 	if err != nil {
 		return nil, err
 	}
@@ -602,7 +594,7 @@ func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
 		return err
 	}
 
-	err = controller.Params.StakepooldServers.SyncAll(multisigScripts, MaxUsers)
+	err = controller.StakepooldServers.SyncAll(multisigScripts, MaxUsers)
 	return err
 }
 
@@ -684,7 +676,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsAddress"] = true
-	c.Env["PoolFees"] = controller.Params.PoolFees
+	c.Env["PoolFees"] = controller.PoolFees
 	c.Env["Network"] = controller.getNetworkName()
 
 	c.Env["Flash"] = session.Flashes("address")
@@ -693,8 +685,8 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	// Generate an API Token for the user on demand if one does not exist and
 	// refresh the user's data before displaying it.
 	if user.APIToken == "" {
-		token, err := models.SetUserAPIToken(dbMap, controller.Params.APISecret,
-			controller.Params.BaseURL, user.Id)
+		token, err := models.SetUserAPIToken(dbMap, controller.APISecret,
+			controller.BaseURL, user.Id)
 		if err != nil {
 			session.AddFlash("Unable to set API Token", "settingsError")
 			log.Errorf("could not set API Token for UserId %v", user.Id)
@@ -708,7 +700,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	widgets := controller.Parse(t, "address", c.Env)
 
 	c.Env["Title"] = "Decred VSP - Address"
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -748,7 +740,7 @@ func validateUserPubKeyAddr(pubKeyAddr string) (dcrutil.Address, error) {
 func (controller *MainController) AddressPost(c web.C, r *http.Request) (string, int) {
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
-	remoteIP := getClientIP(r, controller.Params.RealIPHeader)
+	remoteIP := getClientIP(r, controller.RealIPHeader)
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
@@ -781,7 +773,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// From new address (pkh), get pubkey address
-	poolValidateAddress, err := controller.Params.StakepooldServers.ValidateAddress(pooladdress)
+	poolValidateAddress, err := controller.StakepooldServers.ValidateAddress(pooladdress)
 	if err != nil {
 		return "/error", http.StatusSeeOther
 	}
@@ -799,7 +791,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// Create the the multisig script. Result includes a P2SH and redeem script.
-	createMultiSig, err := controller.Params.StakepooldServers.CreateMultisig([]string{poolPubKeyAddr, userPubKeyAddr})
+	createMultiSig, err := controller.StakepooldServers.CreateMultisig([]string{poolPubKeyAddr, userPubKeyAddr})
 	if err != nil {
 		return "/error", http.StatusSeeOther
 	}
@@ -812,7 +804,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	// Import the redeem script
 	var importedHeight int64
-	importedHeight, err = controller.Params.StakepooldServers.ImportScript(serializedScript)
+	importedHeight, err = controller.StakepooldServers.ImportScript(serializedScript)
 	if err != nil {
 		return "/error", http.StatusSeeOther
 	}
@@ -846,7 +838,7 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 		return "", http.StatusUnauthorized
 	}
 
-	backendStatus := controller.Params.StakepooldServers.BackendStatus()
+	backendStatus := controller.StakepooldServers.BackendStatus()
 
 	t := controller.GetTemplate(c)
 	c.Env["Admin"] = isAdmin
@@ -857,7 +849,7 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 	c.Env["BackendStatus"] = backendStatus
 
 	widgets := controller.Parse(t, "admin/status", c.Env)
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -888,7 +880,7 @@ func (controller *MainController) AdminTickets(c web.C, r *http.Request) (string
 		}
 	}
 
-	ignoredLowFeeTickets, err := controller.Params.StakepooldServers.GetIgnoredLowFeeTickets()
+	ignoredLowFeeTickets, err := controller.StakepooldServers.GetIgnoredLowFeeTickets()
 	if err != nil {
 		log.Errorf("Could not retrieve ignored low fee tickets from stakepoold: %v", err)
 		session.AddFlash("Could not retrieve ignored low fee tickets from stakepoold", "adminTicketsError")
@@ -907,7 +899,7 @@ func (controller *MainController) AdminTickets(c web.C, r *http.Request) (string
 	widgets := controller.Parse(t, "admin/tickets", c.Env)
 
 	c.Env["Title"] = "Decred Voting Service - Tickets (Admin)"
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -919,7 +911,7 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
 	dbMap := controller.GetDbMap(c)
-	remoteIP := getClientIP(r, controller.Params.RealIPHeader)
+	remoteIP := getClientIP(r, controller.RealIPHeader)
 
 	userID, ok := session.Values["UserId"].(int64)
 	if !ok {
@@ -967,7 +959,7 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 	switch action {
 	case "add":
 		actionVerb = "added"
-		ignoredLowFeeTickets, err := controller.Params.StakepooldServers.GetIgnoredLowFeeTickets()
+		ignoredLowFeeTickets, err := controller.StakepooldServers.GetIgnoredLowFeeTickets()
 		if err != nil {
 			session.AddFlash("GetIgnoredLowFeeTickets error: "+err.Error(),
 				"adminTicketsError")
@@ -1051,7 +1043,7 @@ func (controller *MainController) EmailUpdate(c web.C, r *http.Request) (string,
 		c.Env["FlashSuccess"] = session.Flashes("emailupdateSuccess")
 		c.Env["IsEmailUpdate"] = true
 		widgets := controller.Parse(t, "emailupdate", c.Env)
-		c.Env["Designation"] = controller.Params.Designation
+		c.Env["Designation"] = controller.Designation
 
 		c.Env["Content"] = template.HTML(widgets)
 		return controller.Parse(t, "main", c.Env)
@@ -1128,7 +1120,7 @@ func (controller *MainController) EmailVerify(c web.C, r *http.Request) (string,
 		c.Env["FlashSuccess"] = session.Flashes("emailverifySuccess")
 		c.Env["IsEmailVerify"] = true
 		widgets := controller.Parse(t, "emailverify", c.Env)
-		c.Env["Designation"] = controller.Params.Designation
+		c.Env["Designation"] = controller.Designation
 
 		c.Env["Content"] = template.HTML(widgets)
 		return controller.Parse(t, "main", c.Env)
@@ -1182,7 +1174,7 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 	c.Env["RateLimited"] = r.URL.Query().Get("rl")
 
 	widgets := controller.Parse(t, "error", c.Env)
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -1191,17 +1183,17 @@ func (controller *MainController) Error(c web.C, r *http.Request) (string, int) 
 
 // Index renders the home page.
 func (controller *MainController) Index(c web.C, r *http.Request) (string, int) {
-	if controller.Params.ClosePool {
+	if controller.ClosePool {
 		c.Env["IsClosed"] = true
-		c.Env["ClosePoolMsg"] = controller.Params.ClosePoolMsg
+		c.Env["ClosePoolMsg"] = controller.ClosePoolMsg
 	}
-	c.Env["Network"] = controller.netParams.Name
-	c.Env["PoolEmail"] = controller.Params.PoolEmail
-	c.Env["PoolFees"] = controller.Params.PoolFees
-	c.Env["CustomDescription"] = controller.Params.Description
-	c.Env["PoolLink"] = controller.Params.PoolLink
+	c.Env["Network"] = controller.NetParams.Name
+	c.Env["PoolEmail"] = controller.PoolEmail
+	c.Env["PoolFees"] = controller.PoolFees
+	c.Env["CustomDescription"] = controller.Description
+	c.Env["PoolLink"] = controller.PoolLink
 
-	gsi, err := controller.Params.StakepooldServers.GetStakeInfo()
+	gsi, err := controller.StakepooldServers.GetStakeInfo()
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
 		return "/error?r=/stats", http.StatusSeeOther
@@ -1218,7 +1210,7 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsIndex"] = true
 	c.Env["Title"] = "Decred Voting Service - Welcome"
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -1240,7 +1232,7 @@ func (controller *MainController) PasswordReset(c web.C, r *http.Request) (strin
 
 	t := controller.GetTemplate(c)
 	widgets := controller.Parse(t, "passwordreset", c.Env)
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -1266,7 +1258,7 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 		c.Env["CaptchaDone"] = false
 	}
 
-	remoteIP := getClientIP(r, controller.Params.RealIPHeader)
+	remoteIP := getClientIP(r, controller.RealIPHeader)
 	user, err := helpers.EmailExists(dbMap, email)
 	if err == nil {
 		log.Infof("PasswordReset POST from %v, email %v", remoteIP,
@@ -1289,7 +1281,7 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 			return controller.PasswordReset(c, r)
 		}
 
-		err := controller.Params.EmailSender.PasswordChangeRequest(user.Email, remoteIP, controller.Params.BaseURL, token.String())
+		err := controller.EmailSender.PasswordChangeRequest(user.Email, remoteIP, controller.BaseURL, token.String())
 		if err != nil {
 			session.AddFlash("Unable to send password reset email", "passwordresetError")
 			log.Errorf("error sending password reset email %v", err)
@@ -1323,7 +1315,7 @@ func (controller *MainController) PasswordUpdate(c web.C, r *http.Request) (stri
 		c.Env["FlashSuccess"] = session.Flashes("passwordupdateSuccess")
 		c.Env["IsPasswordUpdate"] = true
 		widgets := controller.Parse(t, "passwordupdate", c.Env)
-		c.Env["Designation"] = controller.Params.Designation
+		c.Env["Designation"] = controller.Designation
 
 		c.Env["Content"] = template.HTML(widgets)
 		return controller.Parse(t, "main", c.Env)
@@ -1346,7 +1338,7 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
 	dbMap := controller.GetDbMap(c)
-	remoteIP := getClientIP(r, controller.Params.RealIPHeader)
+	remoteIP := getClientIP(r, controller.RealIPHeader)
 
 	// Ensure a valid password reset token is provided. If the token is valid,
 	// return the decoded UserToken and PasswordReset data for the token.
@@ -1422,7 +1414,7 @@ func (controller *MainController) Settings(c web.C, r *http.Request) (string, in
 	widgets := controller.Parse(t, "settings", c.Env)
 
 	c.Env["Title"] = "Decred Voting Service - Settings"
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -1433,7 +1425,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
 	dbMap := controller.GetDbMap(c)
-	remoteIP := getClientIP(r, controller.Params.RealIPHeader)
+	remoteIP := getClientIP(r, controller.RealIPHeader)
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
@@ -1490,7 +1482,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 			return controller.Settings(c, r)
 		}
 
-		err = controller.Params.EmailSender.EmailChangeVerification(controller.Params.BaseURL, user.Email, newEmail, remoteIP, token.String())
+		err = controller.EmailSender.EmailChangeVerification(controller.BaseURL, user.Email, newEmail, remoteIP, token.String())
 		if err != nil {
 			session.AddFlash("Unable to send email change token.",
 				"settingsError")
@@ -1501,7 +1493,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 				"settingsSuccess")
 		}
 
-		err = controller.Params.EmailSender.EmailChangeNotification(controller.Params.BaseURL, user.Email, newEmail, remoteIP)
+		err = controller.EmailSender.EmailChangeNotification(controller.BaseURL, user.Email, newEmail, remoteIP)
 		// inform the user.
 		if err != nil {
 			log.Errorf("error sending email change token to old address %v %v",
@@ -1530,7 +1522,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		system.DestroySessionsForUserID(dbMap, user.Id)
 
 		// send a confirmation email.
-		err = controller.Params.EmailSender.PasswordChangeConfirm(user.Email, controller.Params.BaseURL, remoteIP)
+		err = controller.EmailSender.PasswordChangeConfirm(user.Email, controller.BaseURL, remoteIP)
 		if err != nil {
 			log.Errorf("error sending password change confirmation %v %v",
 				user.Email, err)
@@ -1558,7 +1550,7 @@ func (controller *MainController) Login(c web.C, r *http.Request) (string, int) 
 	widgets := controller.Parse(t, "auth/login", c.Env)
 
 	c.Env["Title"] = "Decred VSP - Login"
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -1573,7 +1565,7 @@ func (controller *MainController) LoginPost(c web.C, r *http.Request) (string, i
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
 	dbMap := controller.GetDbMap(c)
-	remoteIP := getClientIP(r, controller.Params.RealIPHeader)
+	remoteIP := getClientIP(r, controller.RealIPHeader)
 
 	// Validate email and password combination.
 	user, err := helpers.Login(dbMap, email, password)
@@ -1607,9 +1599,9 @@ func (controller *MainController) LoginPost(c web.C, r *http.Request) (string, i
 func (controller *MainController) Register(c web.C, r *http.Request) (string, int) {
 	// Tell main.html what route is being rendered
 	c.Env["isRegister"] = true
-	if controller.Params.ClosePool {
+	if controller.ClosePool {
 		c.Env["IsClosed"] = true
-		c.Env["ClosePoolMsg"] = controller.Params.ClosePoolMsg
+		c.Env["ClosePoolMsg"] = controller.ClosePoolMsg
 	}
 
 	session := controller.GetSession(c)
@@ -1624,7 +1616,7 @@ func (controller *MainController) Register(c web.C, r *http.Request) (string, in
 	widgets := controller.Parse(t, "auth/register", c.Env)
 
 	c.Env["Title"] = "Decred VSP - Register"
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 	return controller.Parse(t, "main", c.Env), http.StatusOK
@@ -1633,7 +1625,7 @@ func (controller *MainController) Register(c web.C, r *http.Request) (string, in
 // RegisterPost form submit route. Registers new user or shows Registration route with
 // appropriate messages set in session.
 func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string, int) {
-	if controller.Params.ClosePool {
+	if controller.ClosePool {
 		log.Infof("attempt to register while registration disabled")
 		return "/error?r=/register", http.StatusSeeOther
 	}
@@ -1645,7 +1637,7 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 		return controller.Register(c, r)
 	}
 
-	remoteIP := getClientIP(r, controller.Params.RealIPHeader)
+	remoteIP := getClientIP(r, controller.RealIPHeader)
 
 	email, password, passwordRepeat := r.FormValue("email"),
 		r.FormValue("password"), r.FormValue("passwordrepeat")
@@ -1699,7 +1691,7 @@ func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string
 		return controller.Register(c, r)
 	}
 
-	err = controller.Params.EmailSender.Registration(email, controller.Params.BaseURL, remoteIP, token.String())
+	err = controller.EmailSender.Registration(email, controller.BaseURL, remoteIP, token.String())
 	if err != nil {
 		session.AddFlash("Unable to send verification email", "registrationError")
 		log.Errorf("error sending verification email %v", err)
@@ -1722,22 +1714,22 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	userCount := models.GetUserCount(dbMap)
 	userCountActive := models.GetUserCountActive(dbMap)
 
-	gsi, err := controller.Params.StakepooldServers.GetStakeInfo()
+	gsi, err := controller.StakepooldServers.GetStakeInfo()
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
 		return "/error?r=/stats", http.StatusSeeOther
 	}
 
-	c.Env["Network"] = controller.netParams.Name
+	c.Env["Network"] = controller.NetParams.Name
 
-	c.Env["PoolEmail"] = controller.Params.PoolEmail
-	c.Env["PoolFees"] = controller.Params.PoolFees
+	c.Env["PoolEmail"] = controller.PoolEmail
+	c.Env["PoolFees"] = controller.PoolFees
 	c.Env["StakeInfo"] = gsi
 	c.Env["UserCount"] = userCount
 	c.Env["UserCountActive"] = userCountActive
 
 	widgets := controller.Parse(t, "stats", c.Env)
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -1804,7 +1796,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	t := controller.GetTemplate(c)
 	session := controller.GetSession(c)
 	c.Env[csrf.TemplateTag] = csrf.TemplateField(r)
-	remoteIP := getClientIP(r, controller.Params.RealIPHeader)
+	remoteIP := getClientIP(r, controller.RealIPHeader)
 
 	if session.Values["UserId"] == nil {
 		return "/", http.StatusSeeOther
@@ -1834,7 +1826,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	start := time.Now()
 
-	spui, err := controller.Params.StakepooldServers.StakePoolUserInfo(multisig.String())
+	spui, err := controller.StakepooldServers.StakePoolUserInfo(multisig.String())
 	if err != nil {
 		// Render page with message to try again later
 		log.Errorf("RPC StakePoolUserInfo failed: %v", err)
@@ -1899,8 +1891,8 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	sort.Sort(sort.Reverse(BySpentByHeight(ticketInfoMissed)))
 
 	// Truncate the slice of voted tickets if there are too many
-	if len(ticketInfoVoted) > controller.Params.MaxVotedTickets {
-		ticketInfoVoted = ticketInfoVoted[0:controller.Params.MaxVotedTickets]
+	if len(ticketInfoVoted) > controller.MaxVotedTickets {
+		ticketInfoVoted = ticketInfoVoted[0:controller.MaxVotedTickets]
 	}
 
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
@@ -1910,11 +1902,11 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	c.Env["TicketsExpired"] = ticketInfoExpired
 	c.Env["TicketsMissed"] = ticketInfoMissed
 	c.Env["TicketsVotedCount"] = numVoted
-	c.Env["TicketsVotedMaxDisplay"] = controller.Params.MaxVotedTickets
+	c.Env["TicketsVotedMaxDisplay"] = controller.MaxVotedTickets
 	c.Env["TicketsVoted"] = ticketInfoVoted
 	widgets := controller.Parse(t, "tickets", c.Env)
 
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 	c.Env["Flash"] = session.Flashes("tickets")
@@ -1956,7 +1948,7 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 
 	widgets := controller.Parse(t, "voting", c.Env)
 	c.Env["Title"] = "Decred Voting Service - Voting"
-	c.Env["Designation"] = controller.Params.Designation
+	c.Env["Designation"] = controller.Designation
 
 	c.Env["Content"] = template.HTML(widgets)
 
@@ -2054,10 +2046,10 @@ func (controller *MainController) choicesForAgendas(userVoteBits uint16) map[int
 }
 
 func (controller *MainController) getAgendas() []chaincfg.ConsensusDeployment {
-	if controller.netParams.Deployments == nil {
+	if controller.NetParams.Deployments == nil {
 		return nil
 	}
-	return controller.netParams.Deployments[controller.voteVersion]
+	return controller.NetParams.Deployments[controller.voteVersion]
 
 }
 
@@ -2072,7 +2064,7 @@ func (controller *MainController) CalcEstimatedTicketExpiry() time.Time {
 
 	// Generate an estimated expiry time for this ticket and add 5% for
 	// a margin of safety in case blocks are slower than expected
-	minutesUntilExpiryEstimate := time.Duration(controller.netParams.TicketExpiry) * controller.netParams.TargetTimePerBlock
+	minutesUntilExpiryEstimate := time.Duration(controller.NetParams.TicketExpiry) * controller.NetParams.TargetTimePerBlock
 	expires := t.Add(minutesUntilExpiryEstimate * 105 / 100)
 
 	return expires
