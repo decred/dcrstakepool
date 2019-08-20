@@ -91,7 +91,8 @@ func runMain() error {
 
 	var sender email.Sender
 	if cfg.SMTPHost != "" {
-		sender, err = email.NewSender(cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword, cfg.SMTPFrom, cfg.UseSMTPS)
+		sender, err = email.NewSender(cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
+			cfg.SMTPFrom, cfg.UseSMTPS, cfg.SystemCerts, cfg.SMTPSkipVerify)
 		if err != nil {
 			application.Close()
 			return fmt.Errorf("Failed to initialize the smtp server: %v", err)
