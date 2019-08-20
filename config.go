@@ -274,6 +274,41 @@ func fileExists(name string) bool {
 	return true
 }
 
+// Read coldwalletextpub from stakepoold.conf files
+func readColdWalletExtPub() (string, error) {
+	var stakepooldColdWalletExtPub string
+	file, err := os.Open(defaultStakepooldConfigFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing config "+"defaultStakepooldConfigFile: %v\n", err)
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	for {
+		line, err := reader.ReadString('\n')
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return stakepooldColdWalletExtPub, err
+		}
+		// Ignore if line starts with ;
+		if !strings.ContainsRune(line, ';') {
+			// check if the line has = sign
+			if equal := strings.Index(line, "="); equal >= 0 {
+				if key := strings.TrimSpace(line[:equal]); key == "coldwalletextpub" {
+					if len(line) > equal {
+						stakepooldColdWalletExtPub = strings.TrimSpace(line[equal+1:])
+					}
+					break
+				}
+			}
+
+		}
+	}
+	return stakepooldColdWalletExtPub, nil
+}
+
 // validate pub vote and fee keys as belonging to the network
 func (c *config) parsePubKeys(params *chaincfg.Params) error {
 	// Parse the extended public key and the pool fees.
@@ -397,37 +432,6 @@ func loadConfig() (*config, []string, error) {
 				return nil, nil, err
 			}
 			configFileError = err
-		}
-	}
-
-	file, err := os.Open(defaultStakepooldConfigFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing config "+"defaultStakepooldConfigFile: %v\n", err)
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	var stkpooldColdWalletExtPub string
-	for {
-		line, err := reader.ReadString('\n')
-
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, nil, err
-		}
-		// Ignore if line starts with ;
-		if !strings.ContainsRune(line, ';') {
-			// check if the line has = sign
-			if equal := strings.Index(line, "="); equal >= 0 {
-				if key := strings.TrimSpace(line[:equal]); key == "coldwalletextpub" {
-					if len(line) > equal {
-						stkpooldColdWalletExtPub = strings.TrimSpace(line[equal+1:])
-					}
-					break
-				}
-			}
-
 		}
 	}
 
@@ -585,6 +589,7 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	stkpooldColdWalletExtPub, _ := readColdWalletExtPub()
 	// Check that coldwalletextpub is the same in stakepoold.conf and dcrstakepool.conf files
 	if cfg.ColdWalletExtPub != stkpooldColdWalletExtPub {
 		str := "%s: coldwalletextpub is not the same in stakepoold.conf and dcrstakepool.conf files"
