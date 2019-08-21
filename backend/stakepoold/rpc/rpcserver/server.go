@@ -280,9 +280,9 @@ func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInf
 	}, nil
 }
 
-func (s *stakepooldServer) GetColdWalletExtPub(ctx context.Context, req *pb.GetColdWalletExtPubRequest) *pb.GetColdWalletExtPubResponse {
+func (s *stakepooldServer) GetColdWalletExtPub(ctx context.Context, req *pb.GetColdWalletExtPubRequest) (*pb.GetColdWalletExtPubResponse, error) {
 	response := s.appContext.GetColdWalletExtPub()
 	return &pb.GetColdWalletExtPubResponse{
 		ColdWalletExtPub: response,
-	}
+	}, nil
 }

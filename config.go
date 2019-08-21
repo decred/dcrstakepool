@@ -6,11 +6,9 @@
 package main
 
 import (
-	"bufio"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -24,7 +22,7 @@ import (
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrstakepool/internal/version"
-	flags "github.com/jessevdk/go-flags"
+	"github.com/jessevdk/go-flags"
 )
 
 const (
@@ -272,41 +270,6 @@ func fileExists(name string) bool {
 		}
 	}
 	return true
-}
-
-// Read coldwalletextpub from stakepoold.conf files
-func readColdWalletExtPub() (string, error) {
-	var stakepooldColdWalletExtPub string
-	file, err := os.Open(defaultStakepooldConfigFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing config "+"defaultStakepooldConfigFile: %v\n", err)
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	for {
-		line, err := reader.ReadString('\n')
-
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return stakepooldColdWalletExtPub, err
-		}
-		// Ignore if line starts with ;
-		if !strings.ContainsRune(line, ';') {
-			// check if the line has = sign
-			if equal := strings.Index(line, "="); equal >= 0 {
-				if key := strings.TrimSpace(line[:equal]); key == "coldwalletextpub" {
-					if len(line) > equal {
-						stakepooldColdWalletExtPub = strings.TrimSpace(line[equal+1:])
-					}
-					break
-				}
-			}
-
-		}
-	}
-	return stakepooldColdWalletExtPub, nil
 }
 
 // validate pub vote and fee keys as belonging to the network
@@ -585,15 +548,6 @@ func loadConfig() (*config, []string, error) {
 
 	if err := cfg.parsePubKeys(activeNetParams.Params); err != nil {
 		err := fmt.Errorf("%s: failed to parse extended public keys: %v", funcName, err)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	stkpooldColdWalletExtPub, _ := readColdWalletExtPub()
-	// Check that coldwalletextpub is the same in stakepoold.conf and dcrstakepool.conf files
-	if cfg.ColdWalletExtPub != stkpooldColdWalletExtPub {
-		str := "%s: coldwalletextpub is not the same in stakepoold.conf and dcrstakepool.conf files"
-		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
