@@ -1595,14 +1595,13 @@ func (controller *MainController) LoginPost(c web.C, r *http.Request) (string, i
 	user, err := helpers.Login(dbMap, email, password)
 	if err != nil {
 		log.Infof(email+" login failed %v, %v", err, remoteIP)
-		c.Env["IsInvalidLogin"] = true
+		session.AddFlash("Invalid Email or Password", "loginError")
 		return controller.Login(c, r)
 	}
 
 	log.Infof("Login POST from %v, email %v", remoteIP, user.Email)
 
 	if user.EmailVerified == 0 {
-		// TODO: add different check here
 		session.AddFlash("You must validate your email address", "loginError")
 		return controller.Login(c, r)
 	}
