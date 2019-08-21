@@ -42,7 +42,7 @@ const (
 
 var (
 	// ErrWalletNotConnected is an error to describe the condition where
-	// dcrwallet is not connected through dcrcleint.
+	// dcrwallet is not connected through rpccleint.
 	ErrWalletNotConnected = errors.New("wallet is disconnected")
 )
 
