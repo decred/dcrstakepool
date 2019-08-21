@@ -214,6 +214,7 @@ func runMain() error {
 		WalletConnection:       walletConn,
 		WinningTicketsChan:     make(chan rpcserver.WinningTicketsForBlock),
 		Testing:                false,
+		ColdWalletExtPub:		cfg.ColdWalletExtPub,
 	}
 
 	// Daemon client connection
