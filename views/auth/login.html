@@ -12,9 +12,14 @@
         <h1>Login</h1>
 
         <div class="mb-4 mx-auto w-75">
-          <input type="email" name="email" class="form-control {{if .IsInvalidLogin}} err-form-control {{end}}" placeholder="Email" required autofocus>
+          <div class="row justify-content-center flex-nowrap mx-0">
+            <input type="email" name="email" class="form-control {{if .IsInvalidLogin}} err-form-control {{end}}" placeholder="Email" required autofocus>
+            {{if .IsInvalidLogin}} 
+              <div class="icon-warning"></div>
+            {{end}}
+          </div>
           {{if .IsInvalidLogin}}
-              <div class="err-message mt-1 ml-1 text-left">Invalid Email or Password</div>
+          <div class="err-message mt-1 ml-1 text-left">Invalid Email or Password</div>
           {{end}}
         </div>
         <input type="password" name="password" class="form-control mb-4 w-75 mx-auto" placeholder="Password" required>

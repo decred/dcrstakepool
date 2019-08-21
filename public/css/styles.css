@@ -8782,6 +8782,11 @@ https://flickity.metafizzy.co
   cursor: pointer;
 }
 
+.icon-warning {
+  width: 14px;
+  height: 14px;
+  background-image: url(/assets/images/warning-sign.svg); }
+
 .indicator {
 	display: block;
 	height: 20px;
