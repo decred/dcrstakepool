@@ -120,14 +120,14 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 }
 
 // NewMainController is the constructor for the entire controller routing.
-func NewMainController(mainController MainController) (*MainController, error) {
+func NewMainController(mainController *MainController) (*MainController, error) {
 
 	ch := &CaptchaHandler{
 		ImgHeight: 127,
 		ImgWidth:  257,
 	}
 
-	mc := &mainController
+	mc := mainController
 
 	mc.captchaHandler = ch
 

@@ -122,7 +122,7 @@ func runMain() error {
 		NetParams:            activeNetParams.Params,
 	}
 
-	controller, err := controllers.NewMainController(mainController)
+	controller, err := controllers.NewMainController(&mainController)
 
 	if err != nil {
 		application.Close()
