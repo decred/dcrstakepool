@@ -1,39 +1,46 @@
-package v3api
+package system
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrwallet/wallet"
-	"fmt"
+	"github.com/dgrijalva/jwt-go"
 )
 
-const (
-	customAuthScheme          = "TicketAuth"
-	customAuthTimestampParam  = "SignedTimestamp"
-	customAuthSignatureParam  = "Signature"
-	customAuthTicketHashParam = "TicketHash"
+func (application *Application) validateToken(authHeader string) (int64, string) {
+	apitoken := strings.TrimPrefix(authHeader, "Bearer ")
 
-	MaxTicketChallengeAge = 60 * 30 // 30 minutes
-)
+	JWTtoken, err := jwt.Parse(apitoken, func(token *jwt.Token) (interface{}, error) {
+		// validate signing algorithm
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(application.APISecret), nil
+	})
 
-func (v3Api *V3API) validateTicketOwnership(authHeader string) (multiSigAddress, authValidationFailureReason string) {
-	if !strings.HasPrefix(authHeader, customAuthScheme) {
-		authValidationFailureReason = fmt.Sprintf("invalid API v3 auth header value %s", authHeader)
-		return
+	if err != nil {
+		return -1, fmt.Sprintf("invalid token %v: %v", apitoken, err)
+	} else if claims, ok := JWTtoken.Claims.(jwt.MapClaims); ok && JWTtoken.Valid {
+		return int64(claims["loggedInAs"].(float64)), ""
+	} else {
+		return -1, fmt.Sprintf("invalid token %v", apitoken)
 	}
+}
 
-	timestamp, timestampSignature, ticketHash := extractAuthParams(strings.TrimPrefix(authHeader, customAuthScheme))
+func (application *Application) validateTicketOwnership(authHeader string) (multiSigAddress, authValidationFailureReason string) {
+	timestamp, timestampSignature, ticketHash := extractTicketAuthParams(strings.TrimPrefix(authHeader, "TicketAuth "))
 	if timestamp == "" || timestampSignature == "" || ticketHash == "" {
-		authValidationFailureReason = fmt.Sprintf("invalid API v3 auth header value %s", authHeader)
+		authValidationFailureReason = fmt.Sprintf("invalid ticket auth header value %s", authHeader)
 		return
 	}
 
 	// Ensure that this signature had not been used in a previous authentication attempt.
-	if v3Api.processedTicketChallenges.containsChallenge(timestampSignature) {
+	if application.ProcessedTicketChallenges.ContainsChallenge(timestampSignature) {
 		authValidationFailureReason = fmt.Sprintf("disallowed reuse of ticket auth signature %v", timestampSignature)
 		return
 	}
@@ -46,8 +53,9 @@ func (v3Api *V3API) validateTicketOwnership(authHeader string) (multiSigAddress,
 
 	// Ensure that the auth timestamp is not in the future and is not more than 30 seconds into the past.
 	timestampDelta := time.Now().Unix() - int64(authTimestamp)
-	if timestampDelta < 0 || timestampDelta > v3Api.ticketChallengeMaxAge {
-		authValidationFailureReason = fmt.Sprintf("expired ticket auth timestamp value %v", timestamp)
+	if timestampDelta < 0 || timestampDelta > application.TicketChallengeMaxAge {
+		authValidationFailureReason = fmt.Sprintf("expired ticket auth timestamp value %v, expired by %d second",
+			timestamp, timestampDelta)
 		return
 	}
 
@@ -59,14 +67,14 @@ func (v3Api *V3API) validateTicketOwnership(authHeader string) (multiSigAddress,
 	}
 
 	// Mark this timestamp signature as used to prevent subsequent reuse.
-	challengeExpiresIn := v3Api.ticketChallengeMaxAge - timestampDelta
-	v3Api.processedTicketChallenges.addChallenge(timestampSignature, challengeExpiresIn)
+	challengeExpiresIn := application.TicketChallengeMaxAge - timestampDelta
+	application.ProcessedTicketChallenges.AddChallenge(timestampSignature, challengeExpiresIn)
 
 	// todo check if ticket belongs to this vsp
 
 	// get user wallet address using ticket hash
 	// todo: may be better to maintain a memory map of tickets-userWalletAddresses
-	ticketInfo, err := v3Api.stakepooldConnMan.GetTicketInfo(ticketHash)
+	ticketInfo, err := application.StakepooldConnMan.GetTicketInfo(ticketHash)
 	if err != nil {
 		authValidationFailureReason = fmt.Sprintf("ticket auth, get ticket info failed: %v", err)
 		return
@@ -91,15 +99,15 @@ func (v3Api *V3API) validateTicketOwnership(authHeader string) (multiSigAddress,
 	return
 }
 
-func extractAuthParams(authHeader string) (timestampMessage, timestampSignature, ticketHash string) {
+func extractTicketAuthParams(authHeader string) (timestampMessage, timestampSignature, ticketHash string) {
 	authParams := strings.Split(authHeader, ",")
 	for _, param := range authParams {
 		paramKeyValue := strings.TrimSpace(param)
-		if value := getAuthValueFromParam(paramKeyValue, customAuthTimestampParam); value != "" {
+		if value := getAuthValueFromParam(paramKeyValue, "SignedTimestamp"); value != "" {
 			timestampMessage = strings.TrimSpace(value)
-		} else if value := getAuthValueFromParam(paramKeyValue, customAuthSignatureParam); value != "" {
+		} else if value := getAuthValueFromParam(paramKeyValue, "Signature"); value != "" {
 			timestampSignature = strings.TrimSpace(value)
-		} else if value := getAuthValueFromParam(paramKeyValue, customAuthTicketHashParam); value != "" {
+		} else if value := getAuthValueFromParam(paramKeyValue, "TicketHash"); value != "" {
 			ticketHash = strings.TrimSpace(value)
 		}
 	}

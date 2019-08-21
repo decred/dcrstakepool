@@ -273,8 +273,8 @@ func (controller *MainController) API(c web.C, r *http.Request) *system.APIRespo
 		}
 	}
 
-	if invalidAuthMessage := c.Env["InvalidTicketAuthMessage"]; invalidAuthMessage != "" && code == codes.Unauthenticated {
-		err = fmt.Errorf("error processing ticket auth data: %s", invalidAuthMessage)
+	if invalidAuthMessage := c.Env["AuthErrorMessage"]; invalidAuthMessage != "" && code == codes.Unauthenticated {
+		err = fmt.Errorf("invalid api authorization: %s", invalidAuthMessage)
 	}
 
 	if err != nil {
@@ -1605,10 +1605,10 @@ func (controller *MainController) LoginPost(c web.C, r *http.Request) (string, i
 
 	log.Infof("Login POST from %v, email %v", remoteIP, user.Email)
 
-	//if user.EmailVerified == 0 {
-	//	session.AddFlash("You must validate your email address", "loginError")
-	//	return controller.Login(c, r)
-	//}
+	if user.EmailVerified == 0 {
+		session.AddFlash("You must validate your email address", "loginError")
+		return controller.Login(c, r)
+	}
 
 	session.Values["UserId"] = user.ID
 

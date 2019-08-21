@@ -23,7 +23,6 @@ import (
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 
-	"github.com/decred/dcrstakepool/v3api"
 	"github.com/zenazn/goji/graceful"
 	"github.com/zenazn/goji/web"
 	"github.com/zenazn/goji/web/middleware"
@@ -70,9 +69,8 @@ func runMain(ctx context.Context) error {
 
 	var application = &system.Application{}
 
-	application.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
-		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
-		cfg.DBUser)
+	application.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret, cfg.CookieSecure,
+		cfg.TicketChallengeMaxAge, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort, cfg.DBUser)
 	if application.DbMap == nil {
 		return fmt.Errorf("failed to open database")
 	}
@@ -87,13 +85,15 @@ func runMain(ctx context.Context) error {
 	rpcclient.UseLogger(log)
 
 	// Supported API versions are advertised in the API stats result
-	APIVersionsSupported := []int{1, 2, 3}
+	APIVersionsSupported := []int{1, 2}
 
 	stakepooldConnMan, err := stakepooldclient.ConnectStakepooldGRPC(ctx, cfg.StakepooldHosts,
 		cfg.StakepooldCerts)
 	if err != nil {
 		return fmt.Errorf("failed to connect to stakepoold host: %v", err)
 	}
+
+	application.StakepooldConnMan = stakepooldConnMan
 
 	var sender email.Sender
 	if cfg.SMTPHost != "" {
@@ -187,12 +187,8 @@ func runMain(ctx context.Context) error {
 
 	api.Use(application.ApplyAPI)
 
-	v3Api := v3api.New(stakepooldConnMan, cfg.TicketChallengeMaxAge)
-	api.Use(v3Api.ApplyTicketAuth)
-
 	api.Handle("/api/v1/:command", application.APIHandler(controller.API))
 	api.Handle("/api/v2/:command", application.APIHandler(controller.API))
-	api.Handle("/api/v3/:command", application.APIHandler(controller.API))
 	api.Handle("/api/*", gojify(system.APIInvalidHandler))
 
 	// HTML routes

@@ -1,4 +1,4 @@
-package v3api
+package system
 
 import (
 	"sync"
@@ -30,7 +30,7 @@ func newTicketChallengesCache() *ticketChallengesCache {
 	return cache
 }
 
-func (cache *ticketChallengesCache) addChallenge(signature string, expiresIn int64) {
+func (cache *ticketChallengesCache) AddChallenge(signature string, expiresIn int64) {
 	cache.Lock()
 	if _, ok := cache.usedSignatures[signature]; !ok {
 		cache.usedSignatures[signature] = time.Now().Unix() + expiresIn
@@ -38,7 +38,7 @@ func (cache *ticketChallengesCache) addChallenge(signature string, expiresIn int
 	cache.Unlock()
 }
 
-func (cache *ticketChallengesCache) containsChallenge(signatures string) (exists bool) {
+func (cache *ticketChallengesCache) ContainsChallenge(signatures string) (exists bool) {
 	cache.Lock()
 	_, exists = cache.usedSignatures[signatures]
 	cache.Unlock()

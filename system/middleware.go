@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/decred/dcrstakepool/models"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/go-gorp/gorp"
 	"github.com/gorilla/sessions"
 	"github.com/zenazn/goji/web"
@@ -50,33 +49,36 @@ func (application *Application) ApplyDbMap(c *web.C, h http.Handler) http.Handle
 func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api") {
+			var user *models.User
+			var err error
+			dbMap := c.Env["DbMap"].(*gorp.DbMap)
+
 			authHeader := r.Header.Get("Authorization")
 			if strings.HasPrefix(authHeader, "Bearer ") {
-				apitoken := strings.TrimPrefix(authHeader, "Bearer ")
-
-				JWTtoken, err := jwt.Parse(apitoken, func(token *jwt.Token) (interface{}, error) {
-					// validate signing algorithm
-					if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-						return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-					}
-					return []byte(application.APISecret), nil
-				})
-
-				if err != nil {
-					log.Warnf("invalid token %v: %v", apitoken, err)
-				} else if claims, ok := JWTtoken.Claims.(jwt.MapClaims); ok && JWTtoken.Valid {
-					dbMap := c.Env["DbMap"].(*gorp.DbMap)
-
-					user, err := models.GetUserByID(dbMap, int64(claims["loggedInAs"].(float64)))
-					if err != nil {
-						log.Errorf("unable to map apitoken %v to user id %v", apitoken, claims["loggedInAs"])
-					} else {
-						c.Env["APIUserID"] = user.ID
-						log.Infof("mapped apitoken %v to user id %v", apitoken, user.ID)
-					}
+				userId, authFailureReason := application.validateToken(authHeader)
+				if authFailureReason != "" {
+					err = fmt.Errorf(authFailureReason)
+				} else {
+					user, err = models.GetUserByID(dbMap, userId)
+				}
+			} else if strings.HasPrefix(authHeader, "TicketAuth ") {
+				userMsa, authFailureReason := application.validateTicketOwnership(authHeader)
+				if authFailureReason != "" {
+					err = fmt.Errorf(authFailureReason)
+				} else {
+					user, err = models.GetUserByMSA(dbMap, userMsa)
 				}
 			}
+
+			if err != nil {
+				log.Warnf("api authorization failure: %v", err)
+				c.Env["AuthErrorMessage"] = err.Error()
+			} else {
+				c.Env["APIUserID"] = user.ID
+				log.Infof("mapped api auth header %v to user %v", authHeader, user.ID)
+			}
 		}
+
 		h.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(fn)
