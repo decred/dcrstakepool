@@ -1277,10 +1277,9 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	if !controller.IsCaptchaDone(c) {
 		session.AddFlash("You must complete the captcha.", "passwordresetError")
 		return controller.PasswordReset(c, r)
-	} else {
-		session.Values["CaptchaDone"] = false
-		c.Env["CaptchaDone"] = false
 	}
+	session.Values["CaptchaDone"] = false
+	c.Env["CaptchaDone"] = false
 
 	remoteIP := getClientIP(r, controller.realIPHeader)
 	user, err := helpers.EmailExists(dbMap, email)

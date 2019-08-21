@@ -18,12 +18,10 @@
               <div class="icon-warning"></div>
             {{end}}
           </div>
-          {{if .FlashError}}
-            <div class="err-message mt-1 ml-1 text-left">
-                {{range .FlashError}} 
+          {{range .FlashError}} 
+              <div class="err-message mt-1 ml-1 text-left">
                 {{.}}
-                {{end}}
-            </div>
+              </div>
           {{end}}
         </div>
         <input type="password" name="password" class="form-control mb-4 w-75 mx-auto" placeholder="Password" required>
