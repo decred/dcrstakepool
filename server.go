@@ -99,7 +99,7 @@ func runMain() error {
 		}
 	}
 
-	mainController := controllers.MainController{
+	controllerCfg := controllers.Config{
 		AdminIPs:        cfg.AdminIPs,
 		AdminUserIDs:    cfg.AdminUserIDs,
 		APISecret:       cfg.APISecret,
@@ -122,7 +122,7 @@ func runMain() error {
 		NetParams:            activeNetParams.Params,
 	}
 
-	controller, err := controllers.NewMainController(&mainController)
+	controller, err := controllers.NewMainController(&controllerCfg)
 
 	if err != nil {
 		application.Close()
@@ -147,15 +147,15 @@ func runMain() error {
 		return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
 	}
 	// Log the reported count of ignored/added/live tickets from each stakepoold
-	_, err = controller.StakepooldServers.GetIgnoredLowFeeTickets()
+	_, err = controller.Cfg.StakepooldServers.GetIgnoredLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetIgnoredLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.StakepooldServers.GetAddedLowFeeTickets()
+	_, err = controller.Cfg.StakepooldServers.GetAddedLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetAddedLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.StakepooldServers.GetLiveTickets()
+	_, err = controller.Cfg.StakepooldServers.GetLiveTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
 	}
