@@ -113,7 +113,7 @@ type config struct {
 	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
-	MinServers         int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
+	MinServers         int      `long:"minservers" description:"Deprecated: Do not use. Minimum of 2 servers are required when running on mainnet. Testnet and simnet require minimum 1."`
 	EnableStakepoold   bool     `long:"enablestakepoold" description:"Deprecated: Do not use. Stakepoold is required."`
 	MaxVotedAge        int64    `long:"maxvotedage" description:"Deprecated: Use maxvotedtickets instead"`
 	MaxVotedTickets    int      `long:"maxvotedtickets" description:"Maximum number of voted tickets to show on tickets page."`
