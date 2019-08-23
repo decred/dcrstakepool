@@ -132,10 +132,9 @@ func NewMainController(cfg *Config) (*MainController, error) {
 	}
 
 	mc := &MainController{
-		Cfg: cfg,
+		Cfg:            cfg,
+		captchaHandler: ch,
 	}
-
-	mc.captchaHandler = ch
 
 	walletInfo, err := cfg.StakepooldServers.WalletInfo()
 	if err != nil {
