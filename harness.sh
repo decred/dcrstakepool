@@ -1,4 +1,26 @@
 #!/bin/bash
+
+# To use this test harness simply run `./harness.sh` from the repo root.
+#
+# After writing the config files and starting all of the processes, the web
+# interface should become available almost immediately. It will take a short
+# while for dcrstakepool to become fully functional because the wallets need
+# to sync and complete a re-scan before they can be used.
+#
+# This harness makes a few assumptions
+#
+# - tmux is installed
+# - dcrd, dcrwallet, stakepoold and dcrstakepool are available on $PATH
+# - Decred testnet chain is already downloaded and sync'd
+# - MySQL is configured at 127.0.0.1:3306
+# - Database `stakepool` and user `stakepool` with password `password` exist
+# - The following files exist:
+#   - ${HOME}/.dcrd/rpc.cert
+#   - ${HOME}/.dcrd/rpc.key
+#   - ${HOME}/.dcrwallet/rpc.cert
+#   - ${HOME}/.dcrwallet/rpc.key
+#   - ${HOME}/.stakepoold/rpc.cert
+
 set -e
 
 SESSION="harness"
