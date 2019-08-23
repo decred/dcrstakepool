@@ -10,6 +10,10 @@ so users can purchase [proof-of-stake tickets](https://docs.decred.org/mining/pr
 on the [Decred](https://decred.org/) network and have the pool of wallet servers
 vote on their behalf when the ticket is selected.
 
+**NB:** In late 2018, [a proposal](https://proposals.decred.org/proposals/522652954ea7998f3fca95b9c4ca8907820eb785877dcf7fba92307131818c75)
+was approved by stakeholders to rename "Stakepool" to "Voting Service Provider", a.k.a. "VSP".
+These names are used interchangably in this repository.
+
 ## Architecture
 
 ![Voting Service Architecture](docs/img/architecture.png)
@@ -18,7 +22,7 @@ vote on their behalf when the ticket is selected.
   production use on mainnet.
   Can use 1 dcrd+dcrwallet+stakepoold node (backend server) on testnet.
 - The architecture is subject to change in the future to lessen the dependence
-  on dcrwallet and MySQL.
+  on MySQL.
 
 ## Test Harness
 
@@ -93,10 +97,7 @@ matching dependencies:
 ```bash
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ git pull
-$ dep ensure
-$ go build
-$ cd $GOPATH/src/github.com/decred/dcrstakepool/backend/stakepoold
-$ go build
+$ go build . ./backend/stakepool
 ```
 
 ## Setup
@@ -295,15 +296,12 @@ dcrctl --wallet stakepooluserinfo "MultiSigAddress" | grep -Pzo '(?<="invalid": 
   - Restore the failed wallet(s) from seed
   - Restart the dcrstakepool process to allow automatic syncing to occur.
 
-## IRC
+## Getting help
 
-- irc.freenode.net
-- channel #decred
-
-## Issue Tracker
-
-The [integrated github issue tracker](https://github.com/decred/dcrstakepool/issues)
-is used for this project.
+To get help with `dcrstakepool` please create a
+[GitHub issue](https://github.com/decred/dcrstakepool/issues)
+or the join the [Decred community](https://decred.org/community/)
+using your preferred chat platform.
 
 ## License
 
