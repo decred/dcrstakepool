@@ -15,13 +15,13 @@
         <p>{{ .CaptchaMsg }}</p>
     </div>
 
-    <div class="col-12 p-0 center-block">
+    <div class="col-12 p-0 d-flex justify-content-center">
         <img id=image src="/captchas/{{.CaptchaID}}.png" alt="your captcha image">
     </div>
 
     <form action="/verifyhuman" id="captcha-form" method="post" class="w-100 form form--narrow-inputs" autocomplete="off">
         <div class="col-12 mb-4 text-left center-block">
-            <div class="form-group row mb-0 align-items-center">
+            <div class="form-group row mb-0 justify-content-center">
                 <label class="pr-4" for="captchaSolution">Text&nbsp;in&nbsp;picture:</label>
                 <div>
                     <input name=captchaSolution required type="text" maxlength="6" pattern="\d{6}" class="form-control">
