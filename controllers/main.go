@@ -44,6 +44,7 @@ const (
 	// MaxUsers is the maximum number of users supported by a voting service.
 	// This is an artificial limit and can be increased by adjusting the
 	// ticket/fee address indexes above 10000.
+	// TODO Remove this limitation by deriving fee addresses from an imported xpub.
 	MaxUsers = 10000
 	// agendasCacheLife is the amount of time to keep agenda data in memory.
 	agendasCacheLife = time.Hour
