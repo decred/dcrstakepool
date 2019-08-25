@@ -719,8 +719,8 @@ func (s *StakepooldManager) comparePubKeys(fn func(string, string) bool) (bool, 
 // WalletsHavePubKey sends gRPC commands to all stakepoold and returns whether
 // pubkey exists on any wallets. Returns an error if any gRPC commands fail.
 func (s *StakepooldManager) WalletsHavePubKey(pubkey string) (bool, error) {
-	hasPubkeyFn := func(_ string, v string) bool {
-		return v == pubkey
+	hasPubkeyFn := func(_ string, acctkey string) bool {
+		return acctkey == pubkey
 	}
 	hasPubKey, err := s.comparePubKeys(hasPubkeyFn)
 	if err != nil {
@@ -735,19 +735,19 @@ func (s *StakepooldManager) WalletsHavePubKey(pubkey string) (bool, error) {
 // stakepoold wallets or any gRPC commands fail.
 func (s *StakepooldManager) DefaultAccountPubKey() (string, error) {
 	var pubkey string
-	keysDontMatchFn := func(k string, v string) bool {
-		log.Debugf("found master extended pubkey %s for account \"%s\"", v, k)
+	keysDontMatchFn := func(acct string, acctkey string) bool {
+		log.Debugf("found master extended pubkey %s for account \"%s\"", acctkey, acct)
 		// Ignore other accounts.
-		if k != "default" {
+		if acct != "default" {
 			return false
 		}
 		// The first pass sets pubkey.
 		if pubkey == "" {
-			pubkey = v
+			pubkey = acctkey
 			return false
 		}
 		// All other passes must equal.
-		if pubkey != v {
+		if pubkey != acctkey {
 			return true
 		}
 		return false
