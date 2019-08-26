@@ -18,9 +18,11 @@ These names are used interchangably in this repository.
 
 ![Voting Service Architecture](docs/img/architecture.png)
 
-- It is highly recommended to use at least 2 dcrd+dcrwallet+stakepoold nodes for
-  production use on mainnet.
-  Can use 1 dcrd+dcrwallet+stakepoold node (backend server) on testnet.
+- It is highly recommended to use at least 2 dcrd+dcrwallet+stakepoold
+  nodes (backend servers) for production use on mainnet.
+  One backend server can be used on testnet.
+- Running dcrstakepool on mainnet is documented further at
+  [https://docs.decred.org](https://docs.decred.org/advanced/operating-a-vsp/).
 - The architecture is subject to change in the future to lessen the dependence
   on MySQL.
 
@@ -293,7 +295,7 @@ dcrctl --wallet stakepooluserinfo "MultiSigAddress" | grep -Pzo '(?<="invalid": 
 **Always keep at least one wallet voting while performing maintenance / restoration!**
 
 - In the case of a total failure of a wallet server:
-  - Restore the failed wallet(s) from seed
+  - Restore the failed wallet(s) from seed.
   - Restart the dcrstakepool process to allow automatic syncing to occur.
 
 ## Getting help
