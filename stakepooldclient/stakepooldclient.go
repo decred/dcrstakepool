@@ -68,8 +68,7 @@ func ConnectStakepooldGRPC(stakepooldHosts []string, stakepooldCerts []string) (
 		}
 		c := pb.NewVersionServiceClient(conn)
 
-		versionRequest := &pb.VersionRequest{}
-		versionResponse, err := c.Version(context.Background(), versionRequest)
+		versionResponse, err := c.Version(context.Background(), &pb.VersionRequest{})
 		if err != nil {
 			return nil, err
 		}
@@ -214,11 +213,11 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 		})
 	}
 
+	setAddedTicketsReq := &pb.SetAddedLowFeeTicketsRequest{
+		Tickets: tickets,
+	}
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		setAddedTicketsReq := &pb.SetAddedLowFeeTicketsRequest{
-			Tickets: tickets,
-		}
 		_, err := client.SetAddedLowFeeTickets(context.Background(),
 			setAddedTicketsReq)
 		if err != nil {
@@ -244,12 +243,12 @@ func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisig
 	}
 
 	respPerServer := make([]*pb.CreateMultisigResponse, len(s.grpcConnections))
+	request := &pb.CreateMultisigRequest{
+		Address: address,
+	}
 
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		request := &pb.CreateMultisigRequest{
-			Address: address,
-		}
 
 		resp, err := client.CreateMultisig(context.Background(), request)
 		if err != nil {
@@ -360,9 +359,8 @@ func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 	// Go through each server and see who is synced to the most redeem scripts.
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		request := &pb.ListScriptsRequest{}
 
-		resp, err := client.ListScripts(context.Background(), request)
+		resp, err := client.ListScripts(context.Background(), &pb.ListScriptsRequest{})
 		if err != nil {
 			return err
 		}
@@ -415,11 +413,12 @@ func (s *StakepooldManager) syncTickets() error {
 
 	log.Infof("syncTickets: Attempting to synchronise tickets across voting wallets")
 
+	request := &pb.GetTicketsRequest{
+		IncludeImmature: true,
+	}
+
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		request := &pb.GetTicketsRequest{
-			IncludeImmature: true,
-		}
 
 		resp, err := client.GetTickets(context.Background(), request)
 		if err != nil {
@@ -464,11 +463,12 @@ func (s *StakepooldManager) syncTickets() error {
 // instances of stakepoold and returns the first successful response. Returns
 // an error if RPC to all instances of stakepoold fail
 func (s *StakepooldManager) StakePoolUserInfo(multiSigAddress string) (*pb.StakePoolUserInfoResponse, error) {
+	request := &pb.StakePoolUserInfoRequest{
+		MultiSigAddress: multiSigAddress,
+	}
+
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		request := &pb.StakePoolUserInfoRequest{
-			MultiSigAddress: multiSigAddress,
-		}
 		response, err := client.StakePoolUserInfo(context.Background(), request)
 		if err != nil {
 			log.Warnf("StakePoolUserInfo RPC failed on stakepoold instance %s: %v", conn.Target(), err)
@@ -501,11 +501,12 @@ func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) e
 		})
 	}
 
+	setVotingConfigReq := &pb.SetUserVotingPrefsRequest{
+		UserVotingConfig: users,
+	}
+
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		setVotingConfigReq := &pb.SetUserVotingPrefsRequest{
-			UserVotingConfig: users,
-		}
 		_, err := client.SetUserVotingPrefs(context.Background(),
 			setVotingConfigReq)
 		if err != nil {
@@ -525,8 +526,7 @@ func (s *StakepooldManager) WalletInfo() ([]*pb.WalletInfoResponse, error) {
 
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		req := &pb.WalletInfoRequest{}
-		resp, err := client.WalletInfo(context.Background(), req)
+		resp, err := client.WalletInfo(context.Background(), &pb.WalletInfoRequest{})
 		if err != nil {
 			log.Errorf("WalletInfo RPC failed on stakepoold instance %s: %v", conn.Target(), err)
 			return nil, err
@@ -542,12 +542,13 @@ func (s *StakepooldManager) WalletInfo() ([]*pb.WalletInfoResponse, error) {
 func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateAddressResponse, error) {
 	responses := make(map[int]*pb.ValidateAddressResponse)
 
+	req := &pb.ValidateAddressRequest{
+		Address: addr.EncodeAddress(),
+	}
+
 	// Get ValidateAddress response from all wallets
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		req := &pb.ValidateAddressRequest{
-			Address: addr.EncodeAddress(),
-		}
 		resp, err := client.ValidateAddress(context.Background(), req)
 		if err != nil {
 			log.Errorf("ValidateAddress RPC failed on stakepoold instance %s: %v", conn.Target(), err)
@@ -588,11 +589,12 @@ func (s *StakepooldManager) ImportScript(script []byte) (heightImported int64, e
 		return -1, err
 	}
 
+	req := &pb.ImportScriptRequest{
+		Script: script,
+	}
+
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		req := &pb.ImportScriptRequest{
-			Script: script,
-		}
 		resp, err := client.ImportScript(context.Background(), req)
 		if err != nil {
 			log.Errorf("ImportScript RPC failed on stakepoold instance %s: %v", conn.Target(), err)

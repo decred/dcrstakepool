@@ -10,118 +10,28 @@ so users can purchase [proof-of-stake tickets](https://docs.decred.org/mining/pr
 on the [Decred](https://decred.org/) network and have the pool of wallet servers
 vote on their behalf when the ticket is selected.
 
+**NB:** In late 2018, [a proposal](https://proposals.decred.org/proposals/522652954ea7998f3fca95b9c4ca8907820eb785877dcf7fba92307131818c75)
+was approved by stakeholders to rename "Stakepool" to "Voting Service Provider", a.k.a. "VSP".
+These names are used interchangably in this repository.
+
 ## Architecture
 
-![Voting Service Architecture](img/architecture.png)
+![Voting Service Architecture](docs/img/architecture.png)
 
-- It is highly recommended to use at least 2 dcrd+dcrwallet+stakepoold nodes for
-  production use on mainnet.
-  Can use 1 dcrd+dcrwallet+stakepoold node (backend server) on testnet.
+- It is highly recommended to use at least 2 dcrd+dcrwallet+stakepoold
+  nodes (backend servers) for production use on mainnet.
+  One backend server can be used on testnet.
+- Running dcrstakepool on mainnet is documented further at
+  [https://docs.decred.org](https://docs.decred.org/advanced/operating-a-vsp/).
 - The architecture is subject to change in the future to lessen the dependence
-  on dcrwallet and MySQL.
+  on MySQL.
 
 ## Test Harness
 
 A test harness is provided in `./harness.sh`. The test harness uses tmux to start
 a dcrd node, multiple dcrwallet and stakepoold instances, and finally a dcrstakepool
 instance. It uses hard-coded wallet seeds and pubkeys, and as a result it is only
-suitable for use on testnet. To use the harness:
-
-```bash
-./harness.sh
-```
-
-While the web interface should become available almost immediately, it will take a
-short while for dcrstakepool to become fully functional because the wallets need to
-sync and complete a re-scan before they can be used.
-
-The harness makes a few assumptions
-
-- tmux is installed
-- dcrd, dcrwallet, stakepoold and dcrstakepool are available on $PATH
-- testnet blockchain is already downloaded and sync'd
-- MySQL is configured at 127.0.0.1:3306
-- Database `stakepool` and user `stakepool` with password `password` exist
-- The following files exist:
-  - `${HOME}/.dcrd/rpc.cert`
-  - `${HOME}/.dcrd/rpc.key`
-  - `${HOME}/.dcrwallet/rpc.cert`
-  - `${HOME}/.dcrwallet/rpc.key`
-  - `${HOME}/.stakepoold/rpc.cert`
-
-## Git Tip Release notes
-
-- The handling of tickets considered invalid because they pay too-low-of-a-fee
-  is now integrated directly into dcrstakepool and stakepoold.
-  - Users who pass both the adminIPs and the new adminUserIDs checks will see a
-    new link on the menu to the new administrative add tickets page.
-  - Tickets are added to the MySQL database and then stakepoold is triggered to
-    pull an update from the database and reload its config.
-  - To accommodate changes to the gRPC API, dcrstakepool/stakepoold had their
-    API versions changed to require/advertize 4.0.0. This requires performing
-    the upgrade steps outlined below.
-- **KNOWN ISSUE** Total tickets count reported by stakepoold may not be totally
-  accurate until low fee tickets that have been added to the database can be
-  marked as voted.  This will be resolved by future work.
-  ([#201](https://github.com/decred/dcrstakepool/issues/201)).
-
-## Git Tip Upgrade Guide
-
-1) Announce maintenance and shut down dcrstakepool.
-2) Upgrade Go to the latest stable version if necessary/possible.
-3) Perform an upgrade of each stakepoold instance one at a time.
-   - Stop stakepoold.
-   - Build and restart stakepoold.
-4) Edit dcrstakepool.conf and set adminIPs/adminUserIDs appropriately to include
-   the administrative staff for whom you wish give the ability to add low fee
-   tickets for voting.
-5) Upgrade and start dcrstakepool after setting adminUserIDs.
-6) Announce maintenance complete after verifying functionality.
-
-## 1.1.1 Release Notes
-
-- dcrd has a new agenda and the vote version in dcrwallet has been
-  incremented to v5 on mainnet.
-- stakepoold
-  - The ticket list is now maintained by doing an initial GetTicket RPC call and
-    then subtracts/adds tickets by processing SpentAndMissed/New ticket
-    notifications from dcrwallet.  This approach is much faster than the old
-    method of calling StakePoolUserInfo for each user.
-  - Bug fixes to the above commit and to accommodate changes in dcrwallet.
-- Status page
-  - StatusUnauthorized error is now thrown rather than a generic one when
-    accessing the page as a non-admin.
-  - Updated to use new design.
-  - Synced dcrwallet walletinfo field list.
-- Tickets page
-  - Performance was greatly improved by skipping display of historic tickets.
-  - Handles users that have only low fee/invalid tickets properly.
-  - Expired tickets are now separated from missed.
-- General markup improvements.
-  - Removed mention of creating a voting account as it has been deprecated.
-  - Instructions were further clarified and updated to strongly recommend the
-    use of Decrediton/Paymetheus.
-  - Fragments of invalid markup were fixed.
-
-## 1.1.1 Upgrade Guide
-
-1) Announce maintenance and shut down dcrstakepool.
-2) Perform upgrades on each dcrd+dcrwallet+stakepoold voting cluster one at a
-   time.
-   - Stop stakepoold, dcrwallet, and dcrd.
-   - Upgrade dcrd, dcrwallet to 1.1.0 release binaries or git. If compiling from
-   source, Go 1.9 is recommended to pick up improvements to the Golang runtime.
-   - Restart dcrd, dcrwallet.
-   - Upgrade stakepoold.
-   - Start stakepoold.
-3) Upgrade and start dcrstakepool.  If you are maintaining a fork, note that
-   you need to update the dcrd/chaincfg dependency to a revision that contains
-   the new agenda.
-4) dcrstakepool will reset the votebits for all users to 1 when it detects the
-   new vote version via stakepoold.
-5) Announce maintenance complete after verifying functionality.  If possible,
-   also announce that a new voting agenda is available and users must login
-   to set their preferences for the new agenda.
+suitable for use on testnet. Further documentation can be found in `./harness.sh`.
 
 ## Requirements
 
@@ -145,7 +55,9 @@ below for your version of Go.
 If building in a folder
 under `GOPATH`, it is necessary to explicitly build with modules enabled:
 
+```bash
     GO111MODULE=on go build
+```
 
 If building outside of `GOPATH`, modules are automatically enabled, and `go
 build` is sufficient.
@@ -153,7 +65,6 @@ build` is sufficient.
 The `go` tool will process the source code and automatically download
 dependencies. If the dependencies are configured correctly, there will be no
 modifications to the `go.mod` and `go.sum` files.
-
 
 ### Components
 
@@ -188,10 +99,7 @@ matching dependencies:
 ```bash
 $ cd $GOPATH/src/github.com/decred/dcrstakepool
 $ git pull
-$ dep ensure
-$ go build
-$ cd $GOPATH/src/github.com/decred/dcrstakepool/backend/stakepoold
-$ go build
+$ go build . ./backend/stakepool
 ```
 
 ## Setup
@@ -387,75 +295,17 @@ dcrctl --wallet stakepooluserinfo "MultiSigAddress" | grep -Pzo '(?<="invalid": 
 **Always keep at least one wallet voting while performing maintenance / restoration!**
 
 - In the case of a total failure of a wallet server:
-  - Restore the failed wallet(s) from seed
+  - Restore the failed wallet(s) from seed.
   - Restart the dcrstakepool process to allow automatic syncing to occur.
 
-## IRC
+## Getting help
 
-- irc.freenode.net
-- channel #decred
-
-## Issue Tracker
-
-The [integrated github issue tracker](https://github.com/decred/dcrstakepool/issues)
-is used for this project.
+To get help with `dcrstakepool` please create a
+[GitHub issue](https://github.com/decred/dcrstakepool/issues)
+or the join the [Decred community](https://decred.org/community/)
+using your preferred chat platform.
 
 ## License
 
 dcrstakepool is licensed under the [copyfree](http://copyfree.org) MIT/X11 and
 ISC Licenses.
-
-## Version History
-
-- 1.1.0 - Architecture change.
-  * Per-ticket votebits were removed in favor of per-user voting preferences.
-    A voting page was added and the API upgraded to v2 to support getting and
-    setting user voting preferences.
-  * Addresses from the wallet servers which are needed for generating the 1-of-2
-    multisig ticket address are now derived from the new votingwalletextpub
-    config option. This removes the need to call getnewaddress on each wallet.
-  * An experimental daemon (stakepoold) that votes according to user preference
-    is available for testing on testnet. This daemon is not for use on mainnet
-    at this time.
-- 1.0.0 - Major changes/improvements.
-  * API is now at v1 status.  API Tokens are generated for all users with a
-    verified email address when upgrading.  Tokens are generated for new
-    users on demand when visiting the Settings page which displays their token.
-    Authenticated users may use the API to submit a public key address and to
-    retrieve ticket purchasing information.  The voting service's stats are also
-    available through the API without authentication.
-- 0.0.4 - Major changes/improvements.
-  * config.toml is no longer required as the options in that file have been
-    migrated to dcrstakepool.conf.
-  * Automatic syncing of scripts, tickets, and vote bits is now performed at
-    startup.  Syncing of vote bits is a long process and can be skipped with the
-    SkipVoteBitsSync flag/configuration value.
-  * Temporary wallet connectivity errors are now handled much more gracefully.
-  * A preliminary v0.1 API was added.
-- 0.0.3 - More expected/basic web application functionality added.
-  * SMTPHost now defaults to an empty string so a voting service can be used for
-    development or testing purposes without a configured mail server.  The
-    contents of the emails are sent through the logger so links can still be
-    followed.
-  * Upon sign up, users now have an email sent with a validation link.
-    They will not be able to sign in until they verify.
-  * New settings page that allows users to change their email address/password.
-  * Bug fix to HeightRegistered migration for users who signed up but never
-    submitted an address would not be able to login.
-- 0.0.2 - Minor improvements/feature addition
-  * The importscript RPC is now called with the current block height at the
-    time of user registration. Previously, importscript triggered a rescan
-    for transactions from the genesis block.  Since the user just registered,
-    there won't be any transactions present.  A new HeightRegistered column
-    is automatically added to the Users table.  A default value of 15346 is
-    used for existing users who already had a multisigscript generated.
-    This can be adjusted to a more reasonable value for you pool by running
-    the following MySQL query:
-    ```UPDATE Users SET HeightRegistered = NEWVALUE WHERE HeightRegistered = 15346;```
-  * Users may now reset their password by specifying an email address and
-    clicking a link that they will receive via email.  You will need to
-    add a proper configuration for your mail server for it to work properly.
-    The various SMTP options can be seen in **sample-dcrstakepool.conf**.
-  * User instructions on the address and ticket pages were updated.
-  * SpentBy link added to the voted tickets display.
-- 0.0.1 - Initial release for mainnet operations
