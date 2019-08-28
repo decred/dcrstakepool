@@ -26,40 +26,35 @@ import (
 )
 
 const (
-	defaultBaseURL                  = "http://127.0.0.1:8000"
-	defaultClosePoolMsg             = "The voting service is temporarily closed to new signups."
-	defaultConfigFilename           = "dcrstakepool.conf"
-	defaultStakepooldConfigFilename = "stakepoold.conf"
-	defaultDataDirname              = "data"
-	defaultLogLevel                 = "info"
-	defaultLogDirname               = "logs"
-	defaultLogFilename              = "dcrstakepool.log"
-	defaultCookieSecure             = false
-	defaultDBHost                   = "localhost"
-	defaultDBName                   = "stakepool"
-	defaultDBPort                   = "3306"
-	defaultDBUser                   = "stakepool"
-	defaultListen                   = ":8000"
-	defaultPoolEmail                = "admin@example.com"
-	defaultPoolFees                 = 7.5
-	defaultPoolLink                 = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
-	defaultPublicPath               = "public"
-	defaultTemplatePath             = "views"
-	defaultSMTPHost                 = ""
-	defaultMaxVotedTickets          = 1000
-	defaultDescription              = ""
-	defaultDesignation              = ""
+	defaultBaseURL         = "http://127.0.0.1:8000"
+	defaultClosePoolMsg    = "The voting service is temporarily closed to new signups."
+	defaultConfigFilename  = "dcrstakepool.conf"
+	defaultLogLevel        = "info"
+	defaultLogDirname      = "logs"
+	defaultLogFilename     = "dcrstakepool.log"
+	defaultCookieSecure    = false
+	defaultDBHost          = "localhost"
+	defaultDBName          = "stakepool"
+	defaultDBPort          = "3306"
+	defaultDBUser          = "stakepool"
+	defaultListen          = ":8000"
+	defaultPoolEmail       = "admin@example.com"
+	defaultPoolFees        = 7.5
+	defaultPoolLink        = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
+	defaultPublicPath      = "public"
+	defaultTemplatePath    = "views"
+	defaultSMTPHost        = ""
+	defaultMaxVotedTickets = 1000
+	defaultDescription     = ""
+	defaultDesignation     = ""
 )
 
 var (
-	defaultStakepooldHomeDir    = dcrutil.AppDataDir("stakepoold", false)
-	dcrstakepoolHomeDir         = dcrutil.AppDataDir("dcrstakepool", false)
-	defaultConfigFile           = filepath.Join(dcrstakepoolHomeDir, defaultConfigFilename)
-	defaultDataDir              = filepath.Join(dcrstakepoolHomeDir, defaultDataDirname)
-	defaultLogDir               = filepath.Join(dcrstakepoolHomeDir, defaultLogDirname)
-	defaultStakepooldConfigFile = filepath.Join(defaultStakepooldHomeDir, defaultStakepooldConfigFilename)
-	coldWalletFeeKey            *hdkeychain.ExtendedKey
-	votingWalletVoteKey         *hdkeychain.ExtendedKey
+	dcrstakepoolHomeDir = dcrutil.AppDataDir("dcrstakepool", false)
+	defaultConfigFile   = filepath.Join(dcrstakepoolHomeDir, defaultConfigFilename)
+	defaultLogDir       = filepath.Join(dcrstakepoolHomeDir, defaultLogDirname)
+	coldWalletFeeKey    *hdkeychain.ExtendedKey
+	votingWalletVoteKey *hdkeychain.ExtendedKey
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -72,7 +67,7 @@ var runServiceCommand func(string) error
 type config struct {
 	ShowVersion        bool    `short:"V" long:"version" description:"Display version information and exit"`
 	ConfigFile         string  `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir            string  `short:"b" long:"datadir" description:"Directory to store data"`
+	DataDir            string  `short:"b" long:"datadir" description:"Deprecated. Unused, do not set."`
 	LogDir             string  `long:"logdir" description:"Directory to log output."`
 	Listen             string  `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
 	TestNet            bool    `long:"testnet" description:"Use the test network"`
@@ -323,7 +318,6 @@ func loadConfig() (*config, []string, error) {
 		ClosePoolMsg:    defaultClosePoolMsg,
 		ConfigFile:      defaultConfigFile,
 		DebugLevel:      defaultLogLevel,
-		DataDir:         defaultDataDir,
 		LogDir:          defaultLogDir,
 		CookieSecure:    defaultCookieSecure,
 		DBHost:          defaultDBHost,
@@ -452,15 +446,6 @@ func loadConfig() (*config, []string, error) {
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
-
-	// Append the network type to the data directory so it is "namespaced"
-	// per network.  In addition to the block database, there are other
-	// pieces of data that are saved to disk such as address manager state.
-	// All data is specific to a network, so namespacing the data directory
-	// means each individual piece of serialized data does not have to
-	// worry about changing names per network and such.
-	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
-	cfg.DataDir = filepath.Join(cfg.DataDir, netName(activeNetParams))
 
 	// Append the network type to the log directory so it is "namespaced"
 	// per network in the same fashion as the data directory.
@@ -636,6 +621,11 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Warn about deprecated config items if they have been set
+	if cfg.DataDir != "" {
+		str := "%s: Config datadir is deprecated. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
 	if cfg.EnableStakepoold {
 		str := "%s: Config enablestakepoold is deprecated. Please remove from your config file"
 		log.Warnf(str, funcName)

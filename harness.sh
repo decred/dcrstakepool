@@ -167,7 +167,6 @@ echo ""
 echo "Writing config for dcrstakepool"
 mkdir -p "${NODES_ROOT}/dcrstakepool"
 cat > "${NODES_ROOT}/dcrstakepool/dcrstakepool.conf" <<EOF
-datadir=${NODES_ROOT}/dcrstakepool
 logdir=${NODES_ROOT}/dcrstakepool/log
 votingwalletextpub=${VOTING_WALLET_DEFAULT_ACCT_PUB_KEY}
 apisecret=not_very_secret_at_all
