@@ -11,8 +11,12 @@ import (
 
 func TestGetNetworkName(t *testing.T) {
 	// First test that "testnet3" is translated to "testnet"
+	cfg := Config{
+		NetParams: &chaincfg.TestNet3Params,
+	}
+
 	mc := MainController{
-		params: &chaincfg.TestNet3Params,
+		Cfg: &cfg,
 	}
 
 	netName := mc.getNetworkName()
@@ -22,7 +26,7 @@ func TestGetNetworkName(t *testing.T) {
 	}
 
 	// ensure "mainnet" is unaltered
-	mc.params = &chaincfg.MainNetParams
+	mc.Cfg.NetParams = &chaincfg.MainNetParams
 	netName = mc.getNetworkName()
 	if netName != "mainnet" {
 		t.Errorf("Incorrect network name: expected %s, got %s", "mainnet",
