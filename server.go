@@ -99,12 +99,31 @@ func runMain() error {
 		}
 	}
 
-	controller, err := controllers.NewMainController(activeNetParams.Params,
-		cfg.AdminIPs, cfg.AdminUserIDs, cfg.APISecret, APIVersionsSupported,
-		cfg.BaseURL, cfg.ClosePool, cfg.ClosePoolMsg, coldWalletFeeKey,
-		stakepooldConnMan, cfg.PoolFees, cfg.PoolEmail, cfg.PoolLink,
-		sender, cfg.RealIPHeader, votingWalletVoteKey,
-		cfg.MaxVotedTickets, cfg.Description, cfg.Designation)
+	controllerCfg := controllers.Config{
+		AdminIPs:        cfg.AdminIPs,
+		AdminUserIDs:    cfg.AdminUserIDs,
+		APISecret:       cfg.APISecret,
+		BaseURL:         cfg.BaseURL,
+		ClosePool:       cfg.ClosePool,
+		ClosePoolMsg:    cfg.ClosePoolMsg,
+		PoolEmail:       cfg.PoolEmail,
+		PoolFees:        cfg.PoolFees,
+		PoolLink:        cfg.PoolLink,
+		RealIPHeader:    cfg.RealIPHeader,
+		MaxVotedTickets: cfg.MaxVotedTickets,
+		Description:     cfg.Description,
+		Designation:     cfg.Designation,
+
+		APIVersionsSupported: APIVersionsSupported,
+		FeeXpub:              coldWalletFeeKey,
+		StakepooldServers:    stakepooldConnMan,
+		EmailSender:          sender,
+		VotingXpub:           votingWalletVoteKey,
+		NetParams:            activeNetParams.Params,
+	}
+
+	controller, err := controllers.NewMainController(&controllerCfg)
+
 	if err != nil {
 		application.Close()
 		return fmt.Errorf("Failed to initialize the main controller: %v",
@@ -128,15 +147,15 @@ func runMain() error {
 		return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
 	}
 	// Log the reported count of ignored/added/live tickets from each stakepoold
-	_, err = controller.StakepooldServers.GetIgnoredLowFeeTickets()
+	_, err = controller.Cfg.StakepooldServers.GetIgnoredLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetIgnoredLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.StakepooldServers.GetAddedLowFeeTickets()
+	_, err = controller.Cfg.StakepooldServers.GetAddedLowFeeTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetAddedLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.StakepooldServers.GetLiveTickets()
+	_, err = controller.Cfg.StakepooldServers.GetLiveTickets()
 	if err != nil {
 		return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
 	}
