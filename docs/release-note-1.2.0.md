@@ -82,7 +82,7 @@ granting a significant boost to user security and privacy.
 Various Decred terminology has changed since the last release:
 
 - "Stakepools" are now known as "Voting Service Providers"
-- The name Decred should no longer styled as "deCRED"
+- The name Decred should no longer be styled as "deCRED"
 - "Paymetheus" wallet is no longer supported and has been superseded by "Decrediton"
 
 ## Config Changes
