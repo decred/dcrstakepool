@@ -56,7 +56,7 @@ dcrstakepool will create a new table `Session` in the MySQL database if it is no
 This was done to address several security issues introduced by the default file storage.
 
 - A user who changes their password or email will now be logged out of all sessions on all devices.
-- Cookies stored in a browser can no longer be used obtain information after a user has logged out.
+- Cookies stored in a browser can no longer be used to obtain information after a user has logged out.
 - A session timeout of six hours has also been added.
 
 ### Self-Hosted CAPTCHA
@@ -102,7 +102,7 @@ It is **recommended** to remove these config items from `dcrstakepool.conf`. dcr
 |Config|PR|Reason|
 |------|--|------|
 |`wallethosts`, `walletusers`, `walletpasswords` and `walletcerts`|[#470](https://github.com/decred/dcrstakepool/pull/470)|dcrstakepool no longer contacts dcrwallet directly. All comms are now routed through stakepoold.|
-|`enablestakepoold`|[#398](https://github.com/decred/dcrstakepool/pull/398)|stakepoold is always required. dcrstakepool cannot functin without it.|
+|`enablestakepoold`|[#398](https://github.com/decred/dcrstakepool/pull/398)|stakepoold is always required. dcrstakepool cannot function without it.|
 |`maxvotedage`|[#402](https://github.com/decred/dcrstakepool/pull/402)|The last N voted tickets are now displayed rather than tickets which voted in the last N days.|
 |`minservers`|[#457](https://github.com/decred/dcrstakepool/pull/457)|This value is now hard-coded. Mainnet requires at least two back-end servers, testnet and simnet only need one.|
 |`datadir`|[#507](https://github.com/decred/dcrstakepool/pull/507)|This value was unused. dcrstakepool does not write any data to disk.|
