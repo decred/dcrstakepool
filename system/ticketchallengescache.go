@@ -12,7 +12,7 @@ type ticketChallengesCache struct {
 
 func newTicketChallengesCache() *ticketChallengesCache {
 	cache := &ticketChallengesCache{
-		usedSignatures: make(map[string]int64, 0),
+		usedSignatures: make(map[string]int64),
 	}
 
 	go func() {

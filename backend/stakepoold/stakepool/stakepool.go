@@ -434,7 +434,7 @@ func (spd *Stakepoold) GetTicketInfo(ticketHash string) (ticketInfo *TicketInfo,
 		return
 	}
 
-	// get txout addresses using tx hes
+	// get txout addresses using tx hex
 	msgTx, err := MsgTxFromHex(res.Hex)
 	if err != nil {
 		return nil, fmt.Errorf("GetTicketInfo: MsgTxFromHex failed for %v: %v", res.Hex, err)
