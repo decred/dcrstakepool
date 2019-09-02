@@ -202,6 +202,7 @@ func runMain() error {
 	ctx := &rpcserver.AppContext{
 		AddedLowFeeTicketsMSA:  addedLowFeeTicketsMSA,
 		DataPath:               cfg.DataDir,
+		ColdWalletExtPub:       cfg.ColdWalletExtPub,
 		FeeAddrs:               feeAddrs,
 		PoolFees:               cfg.PoolFees,
 		NewTicketsChan:         make(chan rpcserver.NewTicketsForBlock),
@@ -214,7 +215,6 @@ func runMain() error {
 		WalletConnection:       walletConn,
 		WinningTicketsChan:     make(chan rpcserver.WinningTicketsForBlock),
 		Testing:                false,
-		ColdWalletExtPub:       cfg.ColdWalletExtPub,
 	}
 
 	// Daemon client connection

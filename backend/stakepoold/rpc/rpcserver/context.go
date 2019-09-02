@@ -40,6 +40,7 @@ type AppContext struct {
 
 	// no locking required
 	DataPath               string
+	ColdWalletExtPub       string
 	FeeAddrs               map[string]struct{}
 	PoolFees               float64
 	NewTicketsChan         chan NewTicketsForBlock
@@ -53,7 +54,6 @@ type AppContext struct {
 	WalletConnection       *rpcclient.Client
 	WinningTicketsChan     chan WinningTicketsForBlock
 	Testing                bool // enabled only for testing
-	ColdWalletExtPub       string
 }
 
 type NewTicketsForBlock struct {
@@ -421,12 +421,6 @@ func (ctx *AppContext) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
 	}
 
 	return response, nil
-}
-
-// GetColdWalletExtPub performs the rpc command GetColdWalletExtPub.
-func (ctx *AppContext) GetColdWalletExtPub() string {
-	response := ctx.ColdWalletExtPub
-	return response
 }
 
 func (ctx *AppContext) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {

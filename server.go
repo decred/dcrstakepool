@@ -130,7 +130,7 @@ func runMain() error {
 			err)
 	}
 
-	coldwalletResponse, err := controller.StakepooldServers.GetColdWalletExtPub()
+	coldwalletResponse, err := controller.Cfg.StakepooldServers.GetColdWalletExtPub()
 	if err != nil {
 		log.Infof("RPC GetColdWalletExtPub failed: %v", err)
 		return fmt.Errorf("GetColdWalletExtPub: RPC server error %v", err)

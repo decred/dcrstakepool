@@ -6,11 +6,9 @@
 package main
 
 import (
-	"bufio"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -394,37 +392,6 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
-	file, err := os.Open(defaultStakepooldConfigFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing config "+"defaultStakepooldConfigFile: %v\n", err)
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	var stkpooldColdWalletExtPub string
-	for {
-		line, err := reader.ReadString('\n')
-
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, nil, err
-		}
-		// Ignore if line starts with ;
-		if !strings.ContainsRune(line, ';') {
-			// check if the line has = sign
-			if equal := strings.Index(line, "="); equal >= 0 {
-				if key := strings.TrimSpace(line[:equal]); key == "coldwalletextpub" {
-					if len(line) > equal {
-						stkpooldColdWalletExtPub = strings.TrimSpace(line[equal+1:])
-					}
-					break
-				}
-			}
-
-		}
-	}
-
 	// Parse command line options again to ensure they take precedence.
 	remainingArgs, err := parser.Parse()
 	if err != nil {
@@ -566,14 +533,6 @@ func loadConfig() (*config, []string, error) {
 
 	if err := cfg.parsePubKeys(activeNetParams.Params); err != nil {
 		err := fmt.Errorf("%s: failed to parse extended public keys: %v", funcName, err)
-		fmt.Fprintln(os.Stderr, err)
-		return nil, nil, err
-	}
-
-	// Check that coldwalletextpub is the same in stakepoold.conf and dcrstakepool.conf files
-	if cfg.ColdWalletExtPub != stkpooldColdWalletExtPub {
-		str := "%s: coldwalletextpub is not the same in stakepoold.conf and dcrstakepool.conf files"
-		err := fmt.Errorf(str, funcName)
 		fmt.Fprintln(os.Stderr, err)
 		return nil, nil, err
 	}
