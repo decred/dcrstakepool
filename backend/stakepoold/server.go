@@ -209,6 +209,7 @@ func runMain() error {
 	ctx := &rpcserver.AppContext{
 		AddedLowFeeTicketsMSA:  addedLowFeeTicketsMSA,
 		DataPath:               cfg.DataDir,
+		ColdWalletExtPub:       cfg.ColdWalletExtPub,
 		FeeAddrs:               feeAddrs,
 		PoolFees:               cfg.PoolFees,
 		NewTicketsChan:         make(chan rpcserver.NewTicketsForBlock),

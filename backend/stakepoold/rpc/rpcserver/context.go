@@ -40,6 +40,7 @@ type AppContext struct {
 
 	// no locking required
 	DataPath               string
+	ColdWalletExtPub       string
 	FeeAddrs               map[string]struct{}
 	PoolFees               float64
 	NewTicketsChan         chan NewTicketsForBlock

@@ -704,3 +704,16 @@ func (s *StakepooldManager) GetStakeInfo() (*pb.GetStakeInfoResponse, error) {
 	}
 	return nil, errors.New("GetStakeInfo RPC failed on all stakepoold instances")
 }
+
+func (s *StakepooldManager) GetColdWalletExtPub() (*pb.GetColdWalletExtPubResponse, error) {
+	for _, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		resp, err := client.GetColdWalletExtPub(context.Background(), &pb.GetColdWalletExtPubRequest{})
+		if err != nil {
+			log.Warnf("GetColdWalletExtPub RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+			continue
+		}
+		return resp, nil
+	}
+	return nil, errors.New("GetColdWalletExtPub RPC failed on all stakepoold instances")
+}
