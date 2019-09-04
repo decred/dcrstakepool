@@ -26,30 +26,27 @@ import (
 )
 
 const (
-	defaultBaseURL               = "http://127.0.0.1:8000"
-	defaultClosePoolMsg          = "The voting service is temporarily closed to new signups."
-	defaultConfigFilename        = "dcrstakepool.conf"
-	defaultLogLevel              = "info"
-	defaultLogDirname            = "logs"
-	defaultLogFilename           = "dcrstakepool.log"
-	defaultTicketChallengeMaxAge = 600 // 10 minutes
-	defaultCookieSecure          = false
-	defaultDBHost                = "localhost"
-	defaultDBName                = "stakepool"
-	defaultDBPort                = "3306"
-	defaultDBUser                = "stakepool"
-	defaultListen                = ":8000"
-	defaultPoolEmail             = "admin@example.com"
-	defaultPoolFees              = 7.5
-	defaultPoolLink              = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
-	defaultPublicPath            = "public"
-	defaultTemplatePath          = "views"
-	defaultSMTPHost              = ""
-	defaultMaxVotedTickets       = 1000
-	defaultDescription           = ""
-	defaultDesignation           = ""
-
-	MaxTicketChallengeAge = 60 * 30 // 30 minutes
+	defaultBaseURL         = "http://127.0.0.1:8000"
+	defaultClosePoolMsg    = "The voting service is temporarily closed to new signups."
+	defaultConfigFilename  = "dcrstakepool.conf"
+	defaultLogLevel        = "info"
+	defaultLogDirname      = "logs"
+	defaultLogFilename     = "dcrstakepool.log"
+	defaultCookieSecure    = false
+	defaultDBHost          = "localhost"
+	defaultDBName          = "stakepool"
+	defaultDBPort          = "3306"
+	defaultDBUser          = "stakepool"
+	defaultListen          = ":8000"
+	defaultPoolEmail       = "admin@example.com"
+	defaultPoolFees        = 7.5
+	defaultPoolLink        = "https://forum.decred.org/threads/rfp-6-setup-and-operate-10-stake-pools.1361/"
+	defaultPublicPath      = "public"
+	defaultTemplatePath    = "views"
+	defaultSMTPHost        = ""
+	defaultMaxVotedTickets = 1000
+	defaultDescription     = ""
+	defaultDesignation     = ""
 )
 
 var (
@@ -76,7 +73,6 @@ type config struct {
 	SimNet                bool    `long:"simnet" description:"Use the simulation test network"`
 	DebugLevel            string  `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	APISecret             string  `long:"apisecret" description:"Secret string used to encrypt API tokens."`
-	TicketChallengeMaxAge int64   `long:"ticketchallengemaxage" description:"Max age (in seconds) for API v3 ticket authentication timestamps. Max allowed value is 1800 (30 minutes)."`
 	BaseURL               string  `long:"baseurl" description:"BaseURL to use when sending links via email"`
 	ColdWalletExtPub      string  `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
 	ClosePool             bool    `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
@@ -300,28 +296,27 @@ func newConfigParser(cfg *config, so *serviceOptions, options flags.Options) *fl
 func loadConfig() (*config, []string, error) {
 	// Default config.
 	cfg := config{
-		BaseURL:               defaultBaseURL,
-		ClosePool:             false,
-		ClosePoolMsg:          defaultClosePoolMsg,
-		ConfigFile:            defaultConfigFile,
-		DebugLevel:            defaultLogLevel,
-		LogDir:                defaultLogDir,
-		TicketChallengeMaxAge: defaultTicketChallengeMaxAge,
-		CookieSecure:          defaultCookieSecure,
-		DBHost:                defaultDBHost,
-		DBName:                defaultDBName,
-		DBPort:                defaultDBPort,
-		DBUser:                defaultDBUser,
-		Listen:                defaultListen,
-		PoolEmail:             defaultPoolEmail,
-		PoolFees:              defaultPoolFees,
-		PoolLink:              defaultPoolLink,
-		PublicPath:            defaultPublicPath,
-		TemplatePath:          defaultTemplatePath,
-		SMTPHost:              defaultSMTPHost,
-		MaxVotedTickets:       defaultMaxVotedTickets,
-		Description:           defaultDescription,
-		Designation:           defaultDesignation,
+		BaseURL:         defaultBaseURL,
+		ClosePool:       false,
+		ClosePoolMsg:    defaultClosePoolMsg,
+		ConfigFile:      defaultConfigFile,
+		DebugLevel:      defaultLogLevel,
+		LogDir:          defaultLogDir,
+		CookieSecure:    defaultCookieSecure,
+		DBHost:          defaultDBHost,
+		DBName:          defaultDBName,
+		DBPort:          defaultDBPort,
+		DBUser:          defaultDBUser,
+		Listen:          defaultListen,
+		PoolEmail:       defaultPoolEmail,
+		PoolFees:        defaultPoolFees,
+		PoolLink:        defaultPoolLink,
+		PublicPath:      defaultPublicPath,
+		TemplatePath:    defaultTemplatePath,
+		SMTPHost:        defaultSMTPHost,
+		MaxVotedTickets: defaultMaxVotedTickets,
+		Description:     defaultDescription,
+		Designation:     defaultDesignation,
 	}
 
 	// Service options which are only added on Windows.

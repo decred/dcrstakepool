@@ -3,6 +3,7 @@ package system
 import (
 	"encoding/base64"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +12,10 @@ import (
 	"github.com/decred/dcrwallet/wallet"
 	"github.com/dgrijalva/jwt-go"
 )
+
+// maxTicketChallengeAge is the maximum number of seconds into the past
+// or future required for a ticket auth timestamp value to be considered valid.
+const maxTicketChallengeAge = 60
 
 func (application *Application) validateToken(authHeader string) (int64, string) {
 	apitoken := strings.TrimPrefix(authHeader, "Bearer ")
@@ -51,16 +56,12 @@ func (application *Application) validateTicketOwnership(authHeader string) (mult
 		return
 	}
 
-	// Ensure that the auth timestamp
-	// - is not more than 5 minutes into the future
-	// - is not more than 30 seconds into the past
+	// Ensure that the auth timestamp is not more than
+	// the permitted number of seconds into the past and future.
 	timestampDelta := time.Now().Unix() - int64(authTimestamp)
-	if timestampDelta < -300 {
-		// more than 5 minutes into the future
-		authValidationFailureReason = "invalid (future) timestamp"
-		return
-	} else if timestampDelta > application.TicketChallengeMaxAge {
-		authValidationFailureReason = fmt.Sprintf("expired ticket auth timestamp value %v", timestamp)
+	if math.Abs(float64(timestampDelta)) > maxTicketChallengeAge {
+		authValidationFailureReason = fmt.Sprintf("expired or invalid ticket auth timestamp value %v",
+			timestamp)
 		return
 	}
 
@@ -72,8 +73,7 @@ func (application *Application) validateTicketOwnership(authHeader string) (mult
 	}
 
 	// Mark this timestamp signature as used to prevent subsequent reuse.
-	challengeExpiresIn := application.TicketChallengeMaxAge - timestampDelta
-	application.ProcessedTicketChallenges.AddChallenge(timestampSignature, challengeExpiresIn)
+	application.ProcessedTicketChallenges.AddChallenge(timestampSignature, maxTicketChallengeAge)
 
 	// todo check if ticket belongs to this vsp
 

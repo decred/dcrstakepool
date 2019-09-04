@@ -27,7 +27,6 @@ import (
 // templates and the mysql database.
 type Application struct {
 	APISecret                 string
-	TicketChallengeMaxAge     int64
 	ProcessedTicketChallenges *ticketChallengesCache
 	Template                  *template.Template
 	TemplatesPath             string
@@ -46,8 +45,8 @@ func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
 
 // Init initiates an Application with the passed variables.
 func (application *Application) Init(ctx context.Context, wg *sync.WaitGroup,
-	APISecret, baseURL, cookieSecret string, cookieSecure bool, ticketChallengeMaxAge int64,
-		DBHost, DBName, DBPassword, DBPort, DBUser string) {
+	APISecret, baseURL, cookieSecret string, cookieSecure bool,
+	DBHost, DBName, DBPassword, DBPort, DBUser string) {
 
 	application.DbMap = models.GetDbMap(
 		APISecret,
@@ -70,7 +69,6 @@ func (application *Application) Init(ctx context.Context, wg *sync.WaitGroup,
 	}
 
 	application.APISecret = APISecret
-	application.TicketChallengeMaxAge = ticketChallengeMaxAge
 	application.ProcessedTicketChallenges = newTicketChallengesCache()
 }
 

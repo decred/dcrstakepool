@@ -69,8 +69,9 @@ func runMain(ctx context.Context) error {
 
 	var application = &system.Application{}
 
-	application.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret, cfg.CookieSecure,
-		cfg.TicketChallengeMaxAge, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort, cfg.DBUser)
+	application.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
+		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
+		cfg.DBUser)
 	if application.DbMap == nil {
 		return fmt.Errorf("failed to open database")
 	}
