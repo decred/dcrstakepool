@@ -266,6 +266,8 @@ func (controller *MainController) API(c web.C, r *http.Request) *system.APIRespo
 		switch command {
 		case "address":
 			_, code, response, err = controller.APIAddress(c, r)
+		case "purchaseticket":
+			data, code, response, err = controller.APIPurchaseTicket(c, r)
 		case "voting":
 			_, code, response, err = controller.APIVoting(c, r)
 		default:
@@ -304,7 +306,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 	}
 
 	// Get the ticket address for this user
-	pooladdress, err := controller.TicketAddressForUserID(int(c.Env["APIUserID"].(int64)))
+	pooladdress, err := controller.TicketAddressForUserID(int(user.Id))
 	if err != nil {
 		log.Errorf("unable to derive ticket address: %v", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
@@ -342,6 +344,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 	var importedHeight int64
 	importedHeight, err = controller.Cfg.StakepooldServers.ImportNewScript(r.Context(), serializedScript)
 	if err != nil {
+		log.Warnf("unexpected error importing multisig redeem script: %v", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
@@ -355,7 +358,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.Address(), importedHeight)
 
-	log.Infof("successfully create multisigaddress for user %d", c.Env["APIUserID"])
+	log.Infof("successfully create multisigaddress for user %d", int(user.Id))
 
 	err = controller.StakepooldUpdateUsers(r.Context(), dbMap)
 	if err != nil {
@@ -363,6 +366,120 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 	}
 
 	return nil, codes.OK, "address successfully imported", nil
+}
+
+// APIPurchaseTicket returns relevant vsp information to enable clients purchase tickets that this vsp can vote on
+func (controller *MainController) APIPurchaseTicket(c web.C, r *http.Request) (*poolapi.PurchaseInfo, codes.Code, string, error) {
+	userPubKeyAddr := r.FormValue("UserPubKeyAddr")
+
+	if _, err := validateUserPubKeyAddr(userPubKeyAddr); err != nil {
+		return nil, codes.InvalidArgument, "address error", err
+	}
+
+	dbMap := controller.GetDbMap(c)
+
+	// check if this userPubKeyAddr has been used previously to generate ticket purchase parameters
+	user := models.GetUserByEmail(dbMap, userPubKeyAddr)
+	if user != nil {
+		purchaseInfo := &poolapi.PurchaseInfo{
+			PoolAddress:   user.UserFeeAddr,
+			PoolFees:      controller.Cfg.PoolFees,
+			Script:        user.MultiSigScript,
+			TicketAddress: user.MultiSigAddress,
+			VoteBits:      uint16(user.VoteBits),
+		}
+		return purchaseInfo, codes.OK, "APIPurchaseTicket: purchaseinfo retrieved for existing userPubKeyAddr", nil
+	}
+
+	user = &models.User{
+		Username:        userPubKeyAddr,
+		Email:           userPubKeyAddr,
+		EmailVerified:   0,
+		VoteBits:        1,
+		VoteBitsVersion: int64(controller.voteVersion),
+	}
+
+	remoteIP := getClientIP(r, controller.Cfg.RealIPHeader)
+	log.Infof("APIPurchaseTicket POST from %v, created new user account %v. Inserting.", remoteIP, user.Email)
+
+	err := models.InsertUser(dbMap, user)
+	if err != nil {
+		log.Errorf("Error while creating new user account for ticket purchase: %v", err)
+		return nil, codes.Unavailable, "system error", errors.New("unable to setup db entry for purchase")
+	}
+
+	// load saved user info from db to get the user id
+	user = models.GetUserByEmail(dbMap, userPubKeyAddr)
+	userId := int(user.Id)
+
+	// Get the ticket address for this user
+	pooladdress, err := controller.TicketAddressForUserID(int(user.Id))
+	if err != nil {
+		log.Errorf("unable to derive ticket address: %v", err)
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	}
+
+	poolValidateAddress, err := controller.Cfg.StakepooldServers.ValidateAddress(pooladdress)
+	if err != nil {
+		log.Errorf("unable to validate address: %v", err)
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	}
+	if !poolValidateAddress.IsMine {
+		log.Errorf("unable to validate ismine for pool ticket address: %s",
+			pooladdress.String())
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	}
+
+	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
+
+	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr); err != nil {
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	}
+
+	createMultiSig, err := controller.Cfg.StakepooldServers.CreateMultisig([]string{poolPubKeyAddr, userPubKeyAddr})
+	if err != nil {
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	}
+
+	// Serialize the redeem script (hex string -> []byte)
+	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
+	if err != nil {
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	}
+
+	// Import the redeem script
+	var importedHeight int64
+	importedHeight, err = controller.Cfg.StakepooldServers.ImportScript(serializedScript)
+	if err != nil {
+		log.Warnf("unexpected error importing multisig redeem script: %v", err)
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	}
+
+	userFeeAddr, err := controller.FeeAddressForUserID(int(user.Id))
+	if err != nil {
+		log.Warnf("unexpected error deriving pool addr: %s", err.Error())
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	}
+
+	models.UpdateUserByID(dbMap, user.Id, createMultiSig.Address,
+		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
+		userFeeAddr.EncodeAddress(), importedHeight)
+
+	log.Infof("successfully create multisigaddress for user %d", userId)
+
+	err = controller.StakepooldUpdateUsers(dbMap)
+	if err != nil {
+		log.Warnf("failure to update users: %v", err)
+	}
+
+	purchaseInfo := &poolapi.PurchaseInfo{
+		PoolAddress:   userFeeAddr.EncodeAddress(),
+		PoolFees:      controller.Cfg.PoolFees,
+		Script:        createMultiSig.RedeemScript,
+		TicketAddress: createMultiSig.Address,
+		VoteBits:      uint16(user.VoteBits),
+	}
+	return purchaseInfo, codes.OK, "APIPurchaseTicket: purchaseinfo generated for userPubKeyAddr", nil
 }
 
 // APIPurchaseInfo fetches and returns the user's info or an error
