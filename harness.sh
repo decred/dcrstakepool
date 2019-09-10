@@ -142,6 +142,7 @@ dcrduser=${RPC_USER}
 dcrdpassword=${RPC_PASS}
 dbhost=${MYSQL_HOST}
 dbport=${MYSQL_PORT}
+logdir=${NODES_ROOT}/stakepoold-${i}/log
 dbname=${MYSQL_DB}
 dbuser=${MYSQL_USER}
 dbpassword=${MYSQL_PASS}
