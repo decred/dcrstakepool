@@ -8,7 +8,8 @@ service StakepooldService {
 	rpc GetLiveTickets (GetLiveTicketsRequest) returns (GetLiveTicketsResponse);
 	rpc SetAddedLowFeeTickets (SetAddedLowFeeTicketsRequest) returns (SetAddedLowFeeTicketsResponse);
 	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
-	rpc ImportScript (ImportScriptRequest) returns (ImportScriptResponse);
+	rpc ImportNewScript (ImportNewScriptRequest) returns (ImportNewScriptResponse);
+	rpc ImportMissingScripts (ImportMissingScriptsRequest) returns (ImportMissingScriptsResponse);
 	rpc StakePoolUserInfo (StakePoolUserInfoRequest) returns (StakePoolUserInfoResponse);
 	rpc WalletInfo (WalletInfoRequest) returns (WalletInfoResponse);
 	rpc ValidateAddress (ValidateAddressRequest) returns (ValidateAddressResponse);
@@ -78,12 +79,17 @@ message AccountSyncAddressIndexRequest {
 message AccountSyncAddressIndexResponse {
 }
 
-message ImportScriptRequest {
-	bytes Script = 1;
-	bool Rescan = 2;
-	int64 RescanHeight = 3;
+message ImportMissingScriptsRequest {
+	repeated bytes Scripts = 1;
+	int64 RescanHeight = 2;
 }
-message ImportScriptResponse {
+message ImportMissingScriptsResponse {
+}
+
+message ImportNewScriptRequest {
+	bytes Script = 1;
+}
+message ImportNewScriptResponse {
 	int64 HeightImported = 1;
 }
 

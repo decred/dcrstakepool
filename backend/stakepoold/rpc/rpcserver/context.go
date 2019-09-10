@@ -277,19 +277,46 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 	return nil
 }
 
-func (ctx *AppContext) ImportScript(script []byte, rescan bool, rescanHeight int64) (int64, error) {
-	err := ctx.WalletConnection.ImportScriptRescanFrom(script, rescan, int(rescanHeight))
+func (ctx *AppContext) ImportNewScript(script []byte) (int64, error) {
+	// We don't need to rescan here because we are importing a brand new script.
+	// It shouldn't have any associated history.
+	err := ctx.WalletConnection.ImportScriptRescanFrom(script, false, 0)
 	if err != nil {
-		log.Errorf("ImportScript: ImportScript rpc failed: %v", err)
+		log.Errorf("ImportNewScript: ImportScriptRescanFrom rpc failed: %v", err)
 		return -1, err
 	}
 
 	_, block, err := ctx.WalletConnection.GetBestBlock()
 	if err != nil {
-		log.Errorf("ImportScript: getBetBlock rpc failed: %v", err)
+		log.Errorf("ImportNewScript: GetBestBlock rpc failed: %v", err)
 		return -1, err
 	}
 	return block, nil
+}
+
+func (ctx *AppContext) ImportMissingScripts(scripts [][]byte, rescanHeight int) error {
+
+	// Import n-1 scripts without a rescan.
+	allButOne := scripts[:len(scripts)-1]
+	for _, script := range allButOne {
+		err := ctx.WalletConnection.ImportScriptRescanFrom(script, false, 0)
+		if err != nil {
+			log.Errorf("ImportMissingScripts: ImportScript rpc failed: %v", err)
+			return err
+		}
+	}
+
+	// Import the last script and trigger a rescan
+	lastOne := scripts[len(scripts)-1]
+	err := ctx.WalletConnection.ImportScriptRescanFrom(lastOne, true, rescanHeight)
+	if err != nil {
+		log.Errorf("ImportMissingScripts: ImportScriptRescanFrom rpc failed: %v", err)
+		return err
+	}
+
+	log.Infof("ImportMissingScripts: Imported %d scripts and triggered a rescan from height %d", len(scripts), rescanHeight)
+
+	return nil
 }
 
 func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
