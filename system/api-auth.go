@@ -100,6 +100,9 @@ func (application *Application) validateTicketOwnership(authHeader string) (mult
 
 	if valid {
 		multiSigAddress = ticketInfo.MultiSigAddress
+	} else {
+		authValidationFailureReason = "invalid timestamp signature, timestamp was not signed using " +
+			"the ticket owner's reward address"
 	}
 	return
 }
