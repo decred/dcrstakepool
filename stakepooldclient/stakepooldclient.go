@@ -347,7 +347,7 @@ func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 	for _, v := range multiSigScripts {
 		byteScript, err := hex.DecodeString(v.MultiSigScript)
 		if err != nil {
-			log.Errorf("syncScripts: Skipping script %s due to err %v", v.MultiSigScript, err)
+			log.Errorf("syncScripts: Failed to decode script %s due to err: %v", v.MultiSigScript, err)
 			return err
 		}
 		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}

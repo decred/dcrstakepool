@@ -277,23 +277,30 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 	return nil
 }
 
+// ImportNewScript will import a redeem script into dcrwallet. No rescan is
+// performed because we are importing a brand new script, it shouldn't have any
+// associated history. Current block height is returned to indicate which height
+// the new user has registered.
 func (ctx *AppContext) ImportNewScript(script []byte) (int64, error) {
-	// We don't need to rescan here because we are importing a brand new script.
-	// It shouldn't have any associated history.
+
 	err := ctx.WalletConnection.ImportScriptRescanFrom(script, false, 0)
 	if err != nil {
 		log.Errorf("ImportNewScript: ImportScriptRescanFrom rpc failed: %v", err)
 		return -1, err
 	}
 
-	_, block, err := ctx.WalletConnection.GetBestBlock()
+	_, bestBlockHeight, err := ctx.WalletConnection.GetBestBlock()
 	if err != nil {
 		log.Errorf("ImportNewScript: GetBestBlock rpc failed: %v", err)
 		return -1, err
 	}
-	return block, nil
+	return bestBlockHeight, nil
 }
 
+// ImportMissingScripts accepts a list of redeem scripts and a rescan height. It
+// will import all but one of the scripts without triggering a wallet rescan,
+// and finally trigger a rescan from the provided height after importing the
+// last one.
 func (ctx *AppContext) ImportMissingScripts(scripts [][]byte, rescanHeight int) error {
 
 	// Import n-1 scripts without a rescan.
