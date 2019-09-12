@@ -50,7 +50,7 @@ type AppContext struct {
 	SpentmissedTicketsChan chan SpentMissedTicketsForBlock
 	UserData               *userdata.UserData
 	VotingConfig           *VotingConfig
-	WalletConnection       *rpcclient.Client
+	WalletConnection       *Client
 	WinningTicketsChan     chan WinningTicketsForBlock
 	Testing                bool // enabled only for testing
 }
@@ -197,7 +197,7 @@ func (ctx *AppContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 	// Ask wallet to look up vote transaction to see if it belongs to us
 	log.Debugf("calling GetTransaction for %v ticket %v",
 		strings.ToLower(nt.ticketType), nt.ticket)
-	res, err := ctx.WalletConnection.GetTransaction(nt.ticket)
+	res, err := ctx.WalletConnection.RPCClient().GetTransaction(nt.ticket)
 	nt.getDuration = time.Since(start)
 	if err != nil {
 		// suppress "No information for transaction ..." errors
@@ -283,13 +283,13 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 // the new user has registered.
 func (ctx *AppContext) ImportNewScript(script []byte) (int64, error) {
 
-	err := ctx.WalletConnection.ImportScriptRescanFrom(script, false, 0)
+	err := ctx.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
 	if err != nil {
 		log.Errorf("ImportNewScript: ImportScriptRescanFrom rpc failed: %v", err)
 		return -1, err
 	}
 
-	_, bestBlockHeight, err := ctx.WalletConnection.GetBestBlock()
+	_, bestBlockHeight, err := ctx.WalletConnection.RPCClient().GetBestBlock()
 	if err != nil {
 		log.Errorf("ImportNewScript: GetBestBlock rpc failed: %v", err)
 		return -1, err
@@ -306,7 +306,7 @@ func (ctx *AppContext) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 	// Import n-1 scripts without a rescan.
 	allButOne := scripts[:len(scripts)-1]
 	for _, script := range allButOne {
-		err := ctx.WalletConnection.ImportScriptRescanFrom(script, false, 0)
+		err := ctx.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
 		if err != nil {
 			log.Errorf("ImportMissingScripts: ImportScript rpc failed: %v", err)
 			return err
@@ -315,7 +315,7 @@ func (ctx *AppContext) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 
 	// Import the last script and trigger a rescan
 	lastOne := scripts[len(scripts)-1]
-	err := ctx.WalletConnection.ImportScriptRescanFrom(lastOne, true, rescanHeight)
+	err := ctx.WalletConnection.RPCClient().ImportScriptRescanFrom(lastOne, true, rescanHeight)
 	if err != nil {
 		log.Errorf("ImportMissingScripts: ImportScriptRescanFrom rpc failed: %v", err)
 		return err
@@ -335,13 +335,13 @@ func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
 		return err
 	}
 
-	tx, err := ctx.WalletConnection.GetRawTransaction(hash)
+	tx, err := ctx.WalletConnection.RPCClient().GetRawTransaction(hash)
 	if err != nil {
 		log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
 		return err
 	}
 
-	err = ctx.WalletConnection.AddTicket(tx)
+	err = ctx.WalletConnection.RPCClient().AddTicket(tx)
 	if err != nil {
 		log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
 		return err
@@ -351,7 +351,7 @@ func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
 }
 
 func (ctx *AppContext) ListScripts() ([][]byte, error) {
-	scripts, err := ctx.WalletConnection.ListScripts()
+	scripts, err := ctx.WalletConnection.RPCClient().ListScripts()
 	if err != nil {
 		log.Errorf("ListScripts: ListScripts rpc failed: %v", err)
 		return nil, err
@@ -374,7 +374,7 @@ func (ctx *AppContext) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 		decodedAddresses[i] = decodedAddress
 	}
 
-	result, err := ctx.WalletConnection.CreateMultisig(1, decodedAddresses)
+	result, err := ctx.WalletConnection.RPCClient().CreateMultisig(1, decodedAddresses)
 	if err != nil {
 		log.Errorf("CreateMultisig: CreateMultisig rpc failed: %v", err)
 		return nil, err
@@ -384,7 +384,7 @@ func (ctx *AppContext) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 }
 
 func (ctx *AppContext) AccountSyncAddressIndex(account string, branch uint32, index int) error {
-	err := ctx.WalletConnection.AccountSyncAddressIndex(account, branch, index)
+	err := ctx.WalletConnection.RPCClient().AccountSyncAddressIndex(account, branch, index)
 	if err != nil {
 		log.Errorf("AccountSyncAddressIndex: AccountSyncAddressIndex rpc failed: %v", err)
 		return err
@@ -394,7 +394,7 @@ func (ctx *AppContext) AccountSyncAddressIndex(account string, branch uint32, in
 }
 
 func (ctx *AppContext) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
-	tickets, err := ctx.WalletConnection.GetTickets(includeImmature)
+	tickets, err := ctx.WalletConnection.RPCClient().GetTickets(includeImmature)
 	if err != nil {
 		log.Errorf("GetTickets: GetTickets rpc failed: %v", err)
 		return nil, err
@@ -410,7 +410,7 @@ func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.S
 		return nil, err
 	}
 
-	response, err := ctx.WalletConnection.StakePoolUserInfo(decodedMultisig)
+	response, err := ctx.WalletConnection.RPCClient().StakePoolUserInfo(decodedMultisig)
 	if err != nil {
 		log.Errorf("StakePoolUserInfo: StakePoolUserInfo rpc failed: %v", err)
 		return nil, err
@@ -420,7 +420,7 @@ func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.S
 }
 
 func (ctx *AppContext) WalletInfo() (*wallettypes.WalletInfoResult, error) {
-	response, err := ctx.WalletConnection.WalletInfo()
+	response, err := ctx.WalletConnection.RPCClient().WalletInfo()
 	if err != nil {
 		log.Errorf("WalletInfo: WalletInfo rpc failed: %v", err)
 		return nil, err
@@ -436,7 +436,7 @@ func (ctx *AppContext) ValidateAddress(address string) (*wallettypes.ValidateAdd
 		return nil, err
 	}
 
-	response, err := ctx.WalletConnection.ValidateAddress(addr)
+	response, err := ctx.WalletConnection.RPCClient().ValidateAddress(addr)
 	if err != nil {
 		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
 		return nil, err
@@ -447,7 +447,7 @@ func (ctx *AppContext) ValidateAddress(address string) (*wallettypes.ValidateAdd
 
 // GetStakeInfo performs the rpc command GetStakeInfo.
 func (ctx *AppContext) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
-	response, err := ctx.WalletConnection.GetStakeInfo()
+	response, err := ctx.WalletConnection.RPCClient().GetStakeInfo()
 	if err != nil {
 		log.Errorf("GetStakeInfo: GetStakeInfo rpc failed: %v", err)
 		return nil, err
@@ -487,7 +487,7 @@ func (ctx *AppContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 	// Ask wallet to generate vote result.
 	var res *wallettypes.GenerateVoteResult
-	res, w.err = ctx.WalletConnection.GenerateVote(blockHash, blockHeight,
+	res, w.err = ctx.WalletConnection.RPCClient().GenerateVote(blockHash, blockHeight,
 		w.ticket, w.config.VoteBits, ctx.VotingConfig.VoteBitsExtended)
 	if w.err != nil || res.Hex == "" {
 		return

@@ -30,6 +30,8 @@ func getNodeNtfnHandlers(ctx *rpcserver.AppContext) *rpcclient.NotificationHandl
 				BlockHeight: blockHeight,
 				SmTickets:   ticketsFixed,
 			}
+			// Wait for a wallet connection if not connected.
+			<-ctx.WalletConnection.Connected()
 			ctx.SpentmissedTicketsChan <- smt
 		},
 		OnWinningTickets: func(blockHash *chainhash.Hash, blockHeight int64, winningTickets []*chainhash.Hash) {
