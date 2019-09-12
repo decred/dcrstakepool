@@ -168,6 +168,13 @@ func runMain() error {
 		return err
 	}
 
+	// stakepoold must handle voting.
+	if walletInfoRes.Voting {
+		err := errors.New("dcrwallet config: voting is enabled")
+		log.Error(err)
+		return err
+	}
+
 	votingConfig := rpcserver.VotingConfig{
 		VoteBits:         walletInfoRes.VoteBits,
 		VoteBitsExtended: walletInfoRes.VoteBitsExtended,
