@@ -484,8 +484,13 @@ func (ctx *AppContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 	w.sendDuration = time.Since(startSend)
 }
 
+// processNewTickets is invoked every time a new block is created. Any tickets
+// which matured in this block will be included in the parameter.
 func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 	start := time.Now()
+
+	log.Debugf("processNewTickets: Block %d contains %d newly matured tickets",
+		nt.BlockHeight, len(nt.NewTickets))
 
 	// We use pointer because it is the fastest accessor.
 	newtickets := make([]*ticketMetadata, 0, len(nt.NewTickets))
@@ -521,21 +526,22 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 
 		msgTx, err := MsgTxFromHex(n.hex)
 		if err != nil {
-			log.Warnf("MsgTxFromHex failed for %v: %v", n.hex, err)
+			log.Warnf("processNewTickets: MsgTxFromHex failed for %v: %v", n.hex, err)
 			continue
 		}
 
 		ticketFeesValid, err := ctx.EvaluateStakePoolTicket(msgTx, int32(nt.BlockHeight))
-		if err != nil {
+
+		if ticketFeesValid {
+			newLiveTickets[*n.ticket] = n.msa
+		} else {
+			newIgnoredLowFeeTickets[*n.ticket] = n.msa
 			log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
 				n.ticket, n.msa, ticketFeesValid, err)
-			newIgnoredLowFeeTickets[*n.ticket] = n.msa
 		}
-
-		newLiveTickets[*n.ticket] = n.msa
 	}
 
-	log.Debug("processNewTickets ctx.Lock")
+	log.Debug("processNewTickets: ctx.Lock")
 	ctx.Lock()
 	// update ignored low fee tickets
 	for ticket, msa := range newIgnoredLowFeeTickets {
@@ -552,16 +558,16 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 	ignoredLowFeeTicketsCount := len(ctx.IgnoredLowFeeTicketsMSA)
 	liveTicketsCount := len(ctx.LiveTicketsMSA)
 	ctx.Unlock()
-	log.Debug("processNewTickets ctx.Unlock")
+	log.Debug("processNewTickets: ctx.Unlock")
 
 	// Log ticket information outside of the handler.
 	go func() {
 		for ticket, msa := range newLiveTickets {
-			log.Infof("added new live ticket %v msa %v", ticket, msa)
+			log.Infof("processNewTickets: added new live ticket %v msa %v", ticket, msa)
 		}
 
 		for ticket, msa := range newIgnoredLowFeeTickets {
-			log.Infof("added new ignored ticket %v msa %v", ticket, msa)
+			log.Infof("processNewTickets: added new ignored ticket %v msa %v", ticket, msa)
 		}
 
 		log.Infof("processNewTickets: height %v block %v duration %v "+
@@ -569,13 +575,16 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 			nt.BlockHash, time.Since(start), len(newIgnoredLowFeeTickets),
 			len(newLiveTickets),
 			len(nt.NewTickets)-len(newIgnoredLowFeeTickets)-len(newLiveTickets))
-		log.Infof("tickets loaded -- addedLowFee %v ignoredLowFee %v live %v "+
+		log.Infof("processNewTickets: tickets loaded -- addedLowFee %v ignoredLowFee %v live %v "+
 			"total %v", addedLowFeeTicketsCount, ignoredLowFeeTicketsCount,
 			liveTicketsCount,
 			addedLowFeeTicketsCount+ignoredLowFeeTicketsCount+liveTicketsCount)
 	}()
 }
 
+// processSpentMissedTickets is invoked every time a new block is created. Any
+// tickets which are either spent or missed in this block will be included in
+// the parameter.
 func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock) {
 	start := time.Now()
 
@@ -623,7 +632,7 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 	var ticketCountNew int
 	var ticketCountOld int
 
-	log.Debug("processSpentMissedTickets ctx.Lock")
+	log.Debug("processSpentMissedTickets: ctx.Lock")
 	ctx.Lock()
 	ticketCountOld = len(ctx.LiveTicketsMSA)
 	for _, ticket := range missedtickets {
@@ -636,15 +645,15 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 	}
 	ticketCountNew = len(ctx.LiveTicketsMSA)
 	ctx.Unlock()
-	log.Debug("processSpentMissedTickets ctx.Unlock")
+	log.Debug("processSpentMissedTickets: ctx.Unlock")
 
 	// Log ticket information outside of the handler.
 	go func() {
 		for _, ticket := range missedtickets {
-			log.Infof("removed missed ticket %v", ticket)
+			log.Infof("processSpentMissedTickets: removed missed ticket %v", ticket)
 		}
 		for _, ticket := range spenttickets {
-			log.Infof("removed spent ticket %v", ticket)
+			log.Infof("processSpentMissedTickets: removed spent ticket %v", ticket)
 		}
 
 		log.Infof("processSpentMissedTickets: height %v block %v "+
@@ -662,6 +671,8 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 	start := time.Now()
 
+	log.Debugf("ProcessWinningTickets: Block %d contains %d winning tickets", wt.BlockHeight, len(wt.WinningTickets))
+
 	// We use pointer because it is the fastest accessor.
 	winners := make([]*ticketMetadata, 0, len(wt.WinningTickets))
 
@@ -672,7 +683,7 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 		// Look up multi sig address.
 		msa, ok := ctx.LiveTicketsMSA[*ticket]
 		if !ok {
-			log.Debugf("unmanaged winning ticket: %v", ticket)
+			log.Debugf("ProcessWinningTickets: unmanaged winning ticket: %v", ticket)
 			if ctx.Testing {
 				panic("boom")
 			}
@@ -682,7 +693,7 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 		voteCfg, ok := ctx.UserVotingConfig[msa]
 		if !ok {
 			// Use defaults if not found.
-			log.Warnf("vote config not found for %v using defaults",
+			log.Warnf("ProcessWinningTickets: vote config not found for %v using defaults",
 				msa)
 			voteCfg = userdata.UserVotingConfig{
 				Userid:          0,
@@ -696,7 +707,7 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 			// plucked from dcrwallet walletinfo then just use the
 			// default votebits.
 			voteCfg.VoteBits = ctx.VotingConfig.VoteBits
-			log.Infof("userid %v multisigaddress %v vote "+
+			log.Infof("ProcessWinningTickets: userid %v multisigaddress %v vote "+
 				"version mismatch user %v stakepoold "+
 				"%v using votebits %d",
 				voteCfg.Userid, voteCfg.MultiSigAddress,
@@ -718,7 +729,7 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 		}
 
 		wg.Add(1)
-		log.Debugf("calling GenerateVote with blockHash %v blockHeight %v "+
+		log.Debugf("ProcessWinningTickets: calling GenerateVote with blockHash %v blockHeight %v "+
 			"ticket %v VoteBits %v VoteBitsExtended %v ",
 			wt.BlockHash, wt.BlockHeight, w.ticket, w.config.VoteBits,
 			ctx.VotingConfig.VoteBitsExtended)
@@ -748,7 +759,7 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 					errorCount++
 				}
 			}
-			log.Infof("voted ticket %v (hash: %v bits: %v) msa %v duration %v "+
+			log.Infof("ProcessWinningTickets: voted ticket %v (hash: %v bits: %v) msa %v duration %v "+
 				"(%v + %v): %v", w.ticket, w.txid, w.config.VoteBits, w.msa,
 				w.duration, w.signDuration, w.sendDuration, w.err)
 		}
