@@ -130,18 +130,19 @@ func runMain() error {
 			err)
 	}
 
-	coldwalletResponse, err := controller.Cfg.StakepooldServers.GetColdWalletExtPub()
+	stakepooldColdWalletResponses, err := controller.Cfg.StakepooldServers.GetAllColdWalletExtPub()
 	if err != nil {
 		log.Infof("RPC GetColdWalletExtPub failed: %v", err)
 		return fmt.Errorf("GetColdWalletExtPub: RPC server error %v", err)
 	}
 
-	// Check that coldwalletextpub is the same in stakepoold.conf and dcrstakepool.conf files
-	if cfg.ColdWalletExtPub != coldwalletResponse.ColdWalletExtPub {
-		str := "%s: coldwalletextpub is not the same in stakepoold.conf and dcrstakepool.conf files"
-		err := fmt.Errorf(str, "GetColdWalletExtPub")
-		fmt.Fprintln(os.Stderr, err)
-		return err
+	// Check that coldwalletextpub is the same in dcrstakepool.conf and all stakepoold.conf files
+	for _, stakepooldColdWalletResponse := range stakepooldColdWalletResponses {
+		if cfg.ColdWalletExtPub != stakepooldColdWalletResponse.ColdWalletExtPub {
+			err := fmt.Errorf("coldwalletextpub is not the same in dcrstakepool.conf and stakepoold.conf files")
+			fmt.Fprintln(os.Stderr, err)
+			return err
+		}
 	}
 
 	// reset votebits if Vote Version changed or stored VoteBits are invalid

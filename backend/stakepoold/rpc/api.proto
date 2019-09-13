@@ -19,7 +19,7 @@ service StakepooldService {
 	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
 	rpc CreateMultisig (CreateMultisigRequest) returns (CreateMultisigResponse);
 	rpc GetStakeInfo (GetStakeInfoRequest) returns (GetStakeInfoResponse);
-    rpc GetColdWalletExtPub (GetColdWalletExtPubRequest) returns (GetColdWalletExtPubResponse);
+	rpc GetColdWalletExtPub (GetColdWalletExtPubRequest) returns (GetColdWalletExtPubResponse);
 }
 
 service VersionService {
