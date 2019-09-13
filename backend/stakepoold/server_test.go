@@ -91,7 +91,6 @@ var (
 )
 
 func init() {
-
 	c = &rpcserver.AppContext{
 		LiveTicketsMSA: make(map[chainhash.Hash]string),
 		VotingConfig: &rpcserver.VotingConfig{

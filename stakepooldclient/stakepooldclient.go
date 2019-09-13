@@ -200,7 +200,7 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 		return err
 	}
 
-	var tickets []*pb.Ticket
+	tickets := make([]*pb.Ticket, 0, len(dbTickets))
 	for _, ticket := range dbTickets {
 		hash, err := chainhash.NewHashFromStr(ticket.TicketHash)
 		if err != nil {
@@ -236,7 +236,6 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 // should be considered fatal, as it indicates that a voting wallet is
 // misconfigured
 func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisigResponse, error) {
-
 	if err := s.connected(); err != nil {
 		log.Errorf("CreateMultisig: stakepoold failed connectivity check: %v", err)
 		return nil, err
@@ -272,7 +271,6 @@ func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisig
 // SyncAll ensures that the wallet servers are all in sync with each
 // other in terms of tickets, redeem scripts and address indexes.
 func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int64) error {
-
 	if err := s.connected(); err != nil {
 		log.Errorf("SyncAll: stakepoold failed connectivity check: %v", err)
 		return err
@@ -304,7 +302,6 @@ func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int6
 // syncWatchedAddresses calls AccountSyncAddressIndex RPC on all stakepoold instances. It stops
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) syncWatchedAddresses(accountName string, branch uint32, maxUsers int64) error {
-
 	log.Info("syncWatchedAddresses: Attempting to synchronise watched addresses across voting wallets")
 
 	request := &pb.AccountSyncAddressIndexRequest{
@@ -333,7 +330,6 @@ func (s *StakepooldManager) syncWatchedAddresses(accountName string, branch uint
 // and imports any missing scripts. Returns an error immediately if any RPC
 // call fails.
 func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
-
 	type ScriptHeight struct {
 		Script []byte
 		Height int
@@ -381,7 +377,6 @@ func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 
 	// Check each server has every script
 	for i, conn := range s.grpcConnections {
-
 		// Because we are adding historic scripts, we need to perform a rescan.
 		// Need to find the earliest imported script height so we know where scan from.
 		missingScripts := make([][]byte, 0)
@@ -500,13 +495,12 @@ func (s *StakepooldManager) StakePoolUserInfo(multiSigAddress string) (*pb.Stake
 // SetUserVotingPrefs performs gRPC SetUserVotingPrefs. It stops
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) error {
-
 	if err := s.connected(); err != nil {
 		log.Errorf("SetUserVotingPrefs: stakepoold failed connectivity check: %v", err)
 		return err
 	}
 
-	var users []*pb.UserVotingConfigEntry
+	users := make([]*pb.UserVotingConfigEntry, 0, len(dbUsers))
 	for userid, data := range dbUsers {
 		users = append(users, &pb.UserVotingConfigEntry{
 			UserId:          userid,
@@ -599,7 +593,6 @@ func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateA
 // executing and returns an error if any RPC call fails.
 // Because this is a new script, no rescan is necessary.
 func (s *StakepooldManager) ImportNewScript(script []byte) (heightImported int64, err error) {
-
 	if err := s.connected(); err != nil {
 		log.Errorf("ImportNewScript: stakepoold failed connectivity check: %v", err)
 		return -1, err

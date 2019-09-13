@@ -82,5 +82,4 @@ func TestParsePubKeys(t *testing.T) {
 			t.Error("for", test.keysIn, "expected", strFromHd(test.keysOut.coldFeeWallet), strFromHd(test.keysOut.voteWallet), "and is error=", test.isError, "got", strFromHd(coldWalletFeeKey), strFromHd(votingWalletVoteKey), "and is error=", err != nil)
 		}
 	}
-
 }

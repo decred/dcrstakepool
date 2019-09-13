@@ -220,7 +220,6 @@ func (ctx *AppContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 
 				// save for fee checking
 				nt.hex = res.Hex
-
 			}
 			break
 		}
@@ -260,7 +259,6 @@ func (ctx *AppContext) UpdateTicketData(newAddedLowFeeTicketsMSA map[chainhash.H
 			"total %v", addedLowFeeTicketsCount, ignoredLowFeeTicketsCount,
 			liveTicketsCount,
 			addedLowFeeTicketsCount+ignoredLowFeeTicketsCount+liveTicketsCount)
-
 	}()
 }
 
@@ -280,7 +278,6 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 // associated history. Current block height is returned to indicate which height
 // the new user has registered.
 func (ctx *AppContext) ImportNewScript(script []byte) (int64, error) {
-
 	err := ctx.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
 	if err != nil {
 		log.Errorf("ImportNewScript: ImportScriptRescanFrom rpc failed: %v", err)
@@ -300,7 +297,6 @@ func (ctx *AppContext) ImportNewScript(script []byte) (int64, error) {
 // and finally trigger a rescan from the provided height after importing the
 // last one.
 func (ctx *AppContext) ImportMissingScripts(scripts [][]byte, rescanHeight int) error {
-
 	// Import n-1 scripts without a rescan.
 	allButOne := scripts[:len(scripts)-1]
 	for _, script := range allButOne {

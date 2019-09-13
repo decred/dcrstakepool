@@ -276,7 +276,11 @@ func runMain() error {
 	graceful.PostHook(func() {
 		application.Close()
 	})
-	app.Abandon(middleware.Logger)
+	err = app.Abandon(middleware.Logger)
+	if err != nil {
+		return fmt.Errorf("could not Abandon logger: %v", err)
+	}
+
 	app.Compile()
 
 	server := &http.Server{Handler: parent}

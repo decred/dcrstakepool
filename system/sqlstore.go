@@ -143,10 +143,8 @@ func (s *SQLStore) save(session *sessions.Session) error {
 		if err := s.dbMap.Insert(&dbSession); err != nil {
 			return fmt.Errorf("Could not insert session: %v", err)
 		}
-	} else {
-		if _, err := s.dbMap.Update(&dbSession); err != nil {
-			return fmt.Errorf("Could not update session: %v", err)
-		}
+	} else if _, err := s.dbMap.Update(&dbSession); err != nil {
+		return fmt.Errorf("Could not update session: %v", err)
 	}
 	return nil
 }

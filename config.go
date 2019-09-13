@@ -377,9 +377,7 @@ func loadConfig() (*config, []string, error) {
 	// Load additional config from file.
 	var configFileError error
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
-	if !(preCfg.SimNet) || preCfg.ConfigFile !=
-		defaultConfigFile {
-
+	if !(preCfg.SimNet) || preCfg.ConfigFile != defaultConfigFile {
 		err := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
 		if err != nil {
 			if _, ok := err.(*os.PathError); !ok {

@@ -182,7 +182,6 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 			if isAdded {
 				liveTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 			} else {
-
 				msgTx, err := rpcserver.MsgTxFromHex(gt.Hex)
 				if err != nil {
 					log.Warnf("MsgTxFromHex failed for %v: %v", gt.Hex, err)
