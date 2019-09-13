@@ -34,8 +34,8 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "7.0.0"
-	semverMajor        = 7
+	semverString       = "8.0.0"
+	semverMajor        = 8
 	semverMinor        = 0
 	semverPatch        = 0
 )
@@ -184,18 +184,30 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 	return &pb.SetUserVotingPrefsResponse{}, nil
 }
 
-func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScriptRequest) (*pb.ImportScriptResponse, error) {
+func (s *stakepooldServer) ImportNewScript(ctx context.Context, req *pb.ImportNewScriptRequest) (*pb.ImportNewScriptResponse, error) {
 	if !s.walletConnected() {
 		return nil, ErrWalletNotConnected
 	}
 
-	heightImported, err := s.appContext.ImportScript(req.Script, req.Rescan, req.RescanHeight)
+	heightImported, err := s.appContext.ImportNewScript(req.Script)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.ImportScriptResponse{
+	return &pb.ImportNewScriptResponse{
 		HeightImported: heightImported,
 	}, nil
+}
+
+func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.ImportMissingScriptsRequest) (*pb.ImportMissingScriptsResponse, error) {
+	if !s.walletConnected() {
+		return nil, ErrWalletNotConnected
+	}
+
+	err := s.appContext.ImportMissingScripts(req.Scripts, int(req.RescanHeight))
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ImportMissingScriptsResponse{}, nil
 }
 
 func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsRequest) (*pb.ListScriptsResponse, error) {

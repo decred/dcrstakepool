@@ -277,19 +277,53 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 	return nil
 }
 
-func (ctx *AppContext) ImportScript(script []byte, rescan bool, rescanHeight int64) (int64, error) {
-	err := ctx.WalletConnection.ImportScriptRescanFrom(script, rescan, int(rescanHeight))
+// ImportNewScript will import a redeem script into dcrwallet. No rescan is
+// performed because we are importing a brand new script, it shouldn't have any
+// associated history. Current block height is returned to indicate which height
+// the new user has registered.
+func (ctx *AppContext) ImportNewScript(script []byte) (int64, error) {
+
+	err := ctx.WalletConnection.ImportScriptRescanFrom(script, false, 0)
 	if err != nil {
-		log.Errorf("ImportScript: ImportScript rpc failed: %v", err)
+		log.Errorf("ImportNewScript: ImportScriptRescanFrom rpc failed: %v", err)
 		return -1, err
 	}
 
-	_, block, err := ctx.WalletConnection.GetBestBlock()
+	_, bestBlockHeight, err := ctx.WalletConnection.GetBestBlock()
 	if err != nil {
-		log.Errorf("ImportScript: getBetBlock rpc failed: %v", err)
+		log.Errorf("ImportNewScript: GetBestBlock rpc failed: %v", err)
 		return -1, err
 	}
-	return block, nil
+	return bestBlockHeight, nil
+}
+
+// ImportMissingScripts accepts a list of redeem scripts and a rescan height. It
+// will import all but one of the scripts without triggering a wallet rescan,
+// and finally trigger a rescan from the provided height after importing the
+// last one.
+func (ctx *AppContext) ImportMissingScripts(scripts [][]byte, rescanHeight int) error {
+
+	// Import n-1 scripts without a rescan.
+	allButOne := scripts[:len(scripts)-1]
+	for _, script := range allButOne {
+		err := ctx.WalletConnection.ImportScriptRescanFrom(script, false, 0)
+		if err != nil {
+			log.Errorf("ImportMissingScripts: ImportScript rpc failed: %v", err)
+			return err
+		}
+	}
+
+	// Import the last script and trigger a rescan
+	lastOne := scripts[len(scripts)-1]
+	err := ctx.WalletConnection.ImportScriptRescanFrom(lastOne, true, rescanHeight)
+	if err != nil {
+		log.Errorf("ImportMissingScripts: ImportScriptRescanFrom rpc failed: %v", err)
+		return err
+	}
+
+	log.Infof("ImportMissingScripts: Imported %d scripts and triggered a rescan from height %d", len(scripts), rescanHeight)
+
+	return nil
 }
 
 func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {

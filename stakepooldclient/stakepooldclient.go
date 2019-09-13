@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	requiredStakepooldAPI = semver{major: 7, minor: 0, patch: 0}
+	requiredStakepooldAPI = semver{major: 8, minor: 0, patch: 0}
 
 	// cacheTimerStakeInfo is the duration of time after which to
 	// access the wallet and update the stake information instead
@@ -341,22 +341,24 @@ func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 
 	log.Info("syncScripts: Attempting to synchronise redeem scripts across voting wallets")
 
-	// Fetch the redeem scripts from each server.
-	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
-		len(s.grpcConnections))
+	// Get all scripts from db
 	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
 
-	// add all scripts from db
 	for _, v := range multiSigScripts {
 		byteScript, err := hex.DecodeString(v.MultiSigScript)
 		if err != nil {
-			log.Errorf("syncScripts: Skipping script %s due to err %v", v.MultiSigScript, err)
+			log.Errorf("syncScripts: Failed to decode script %s due to err: %v", v.MultiSigScript, err)
 			return err
 		}
 		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
 	}
 
-	// Go through each server and see who is synced to the most redeem scripts.
+	log.Infof("syncScripts: %d scripts found in the db", len(allRedeemScripts))
+
+	// Fetch the scripts from each server.
+	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
+		len(s.grpcConnections))
+
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
 
@@ -377,24 +379,37 @@ func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 		log.Infof("syncScripts: stakepoold %s reports %d scripts", conn.Target(), len(redeemScriptsPerServer[i]))
 	}
 
+	// Check each server has every script
 	for i, conn := range s.grpcConnections {
 
+		// Because we are adding historic scripts, we need to perform a rescan.
+		// Need to find the earliest imported script height so we know where scan from.
+		missingScripts := make([][]byte, 0)
+		earliestHeight := -1
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
-				log.Infof("syncScripts: Redeem script from DB not found on stakepoold %s. ImportScript for %x at height %v", conn.Target(), v.Script, v.Height)
-				client := pb.NewStakepooldServiceClient(conn)
-
-				request := &pb.ImportScriptRequest{
-					Script:       v.Script,
-					Rescan:       true,
-					RescanHeight: int64(v.Height),
+				// Script is missing from server
+				missingScripts = append(missingScripts, v.Script)
+				if earliestHeight == -1 || earliestHeight > v.Height {
+					earliestHeight = v.Height
 				}
+			}
+		}
 
-				_, err := client.ImportScript(context.Background(), request)
-				if err != nil {
-					return err
-				}
+		// Add missing scripts to the server if there are any
+		if len(missingScripts) > 0 {
+			log.Infof("syncScripts: stakepoold %s was missing %d redeem scripts. Importing now...", conn.Target(), len(missingScripts))
+			client := pb.NewStakepooldServiceClient(conn)
+
+			request := &pb.ImportMissingScriptsRequest{
+				Scripts:      missingScripts,
+				RescanHeight: int64(earliestHeight),
+			}
+
+			_, err := client.ImportMissingScripts(context.Background(), request)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -580,30 +595,31 @@ func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateA
 	return lastResponse, nil
 }
 
-// ImportScript calls ImportScript RPC on all stakepoold instances. It stops
-// executing and returns an error if any RPC call fails
-func (s *StakepooldManager) ImportScript(script []byte) (heightImported int64, err error) {
+// ImportNewScript calls ImportNewScript RPC on all stakepoold instances. It stops
+// executing and returns an error if any RPC call fails.
+// Because this is a new script, no rescan is necessary.
+func (s *StakepooldManager) ImportNewScript(script []byte) (heightImported int64, err error) {
 
 	if err := s.connected(); err != nil {
-		log.Errorf("ImportScript: stakepoold failed connectivity check: %v", err)
+		log.Errorf("ImportNewScript: stakepoold failed connectivity check: %v", err)
 		return -1, err
 	}
 
-	req := &pb.ImportScriptRequest{
+	req := &pb.ImportNewScriptRequest{
 		Script: script,
 	}
 
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		resp, err := client.ImportScript(context.Background(), req)
+		resp, err := client.ImportNewScript(context.Background(), req)
 		if err != nil {
-			log.Errorf("ImportScript RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+			log.Errorf("ImportNewScript RPC failed on stakepoold instance %s: %v", conn.Target(), err)
 			return -1, err
 		}
 		heightImported = resp.HeightImported
 	}
 
-	log.Info("ImportScript successful on all stakepoold instances")
+	log.Info("ImportNewScript successful on all stakepoold instances")
 	return heightImported, err
 }
 

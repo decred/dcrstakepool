@@ -335,7 +335,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	// Import the redeem script
 	var importedHeight int64
-	importedHeight, err = controller.Cfg.StakepooldServers.ImportScript(serializedScript)
+	importedHeight, err = controller.Cfg.StakepooldServers.ImportNewScript(serializedScript)
 	if err != nil {
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
@@ -809,7 +809,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	// Import the redeem script
 	var importedHeight int64
-	importedHeight, err = controller.Cfg.StakepooldServers.ImportScript(serializedScript)
+	importedHeight, err = controller.Cfg.StakepooldServers.ImportNewScript(serializedScript)
 	if err != nil {
 		return "/error", http.StatusSeeOther
 	}
