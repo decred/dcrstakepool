@@ -1,6 +1,7 @@
 package rpcserver
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -30,7 +31,6 @@ type Client struct {
 
 	cfg          *rpcclient.ConnConfig
 	ntfnHandlers *rpcclient.NotificationHandlers
-	wg           sync.WaitGroup
 	stop         chan struct{}
 
 	connected    chan struct{}
@@ -74,7 +74,7 @@ func (c *Client) RPCClient() *rpcclient.Client {
 
 // New creates a new Client and starts the automatic reconnection handler.
 // Returns an error if unable to construct a new rpcclient.
-func NewClient(cfg *rpcclient.ConnConfig, ntfnHandlers *rpcclient.NotificationHandlers) (*Client, error) {
+func NewClient(ctx context.Context, wg *sync.WaitGroup, cfg *rpcclient.ConnConfig, ntfnHandlers *rpcclient.NotificationHandlers) (*Client, error) {
 	client, err := rpcclient.New(cfg, ntfnHandlers)
 	if err != nil {
 		return nil, err
@@ -83,36 +83,25 @@ func NewClient(cfg *rpcclient.ConnConfig, ntfnHandlers *rpcclient.NotificationHa
 		client:       client,
 		cfg:          cfg,
 		ntfnHandlers: ntfnHandlers,
-		stop:         make(chan struct{}),
 		connected:    make(chan struct{}),
 	}
 	// A closed connected channel indcates successfully connected.
 	close(c.connected)
-	c.wg.Add(1)
-	go c.autoReconnect()
+	wg.Add(1)
+	go c.autoReconnect(ctx, wg)
 	return c, nil
-}
-
-// Stop stops automatic reconnections.
-func (c *Client) Stop() {
-	c.stop <- struct{}{}
-	// Wait for autoReconnect to stop.
-	c.wg.Wait()
-	// Stop blocking on connected if blocking, as we will never reconnect again.
-	if !c.IsConnected() {
-		close(c.connected)
-	}
 }
 
 // autoReconnect waits for a disconnect or stop. On disconnect it attempts to
 // reconnect to the client every connectionRetryInterval.
 //
 // This function must be run as a goroutine.
-func (c *Client) autoReconnect() {
+func (c *Client) autoReconnect(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
 out:
 	for {
 		select {
-		case <-c.stop:
+		case <-ctx.Done():
 			break out
 		case <-time.After(disconnectCheckInterval):
 			if c.IsConnected() {
@@ -124,7 +113,7 @@ out:
 	reconnect:
 		for {
 			select {
-			case <-c.stop:
+			case <-ctx.Done():
 				break out
 			default:
 			}
@@ -162,6 +151,9 @@ out:
 			break
 		}
 	}
-	c.wg.Done()
+	// Stop blocking on connected if blocking, as we will never reconnect again.
+	if !c.IsConnected() {
+		close(c.connected)
+	}
 	log.Tracef("RPC client reconnect handler done for %s", c.cfg.Host)
 }
