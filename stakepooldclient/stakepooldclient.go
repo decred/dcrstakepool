@@ -705,16 +705,17 @@ func (s *StakepooldManager) GetStakeInfo() (*pb.GetStakeInfoResponse, error) {
 	return nil, errors.New("GetStakeInfo RPC failed on all stakepoold instances")
 }
 
-func (s *StakepooldManager) GetAllColdWalletExtPub() ([]*pb.GetColdWalletExtPubResponse, error) {
-	responses := make([]*pb.GetColdWalletExtPubResponse, len(s.grpcConnections))
-	for i, conn := range s.grpcConnections {
+func (s *StakepooldManager) ColdWalletExtPubMatches(dcrstakepoolColdWalletExtPub string) bool {
+	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		resp, err := client.GetColdWalletExtPub(context.Background(), &pb.GetColdWalletExtPubRequest{})
+		stakepooldResp, err := client.GetColdWalletExtPub(context.Background(), &pb.GetColdWalletExtPubRequest{})
 		if err != nil {
-			log.Warnf("GetColdWalletExtPub RPC failed on stakepoold instance %s: %v", conn.Target(), err)
-			return nil, err
+			log.Errorf("GetColdWalletExtPub RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+			return false
 		}
-		responses[i] = resp
+		if stakepooldResp.ColdWalletExtPub != dcrstakepoolColdWalletExtPub {
+			return false
+		}
 	}
-	return responses, nil
+	return true
 }
