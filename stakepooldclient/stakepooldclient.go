@@ -705,6 +705,11 @@ func (s *StakepooldManager) GetStakeInfo() (*pb.GetStakeInfoResponse, error) {
 	return nil, errors.New("GetStakeInfo RPC failed on all stakepoold instances")
 }
 
+// ColdWalletExtPubMatches calls GetColdWalletExtPub RPC on all stakepoold
+// instances and compares the returned `coldwalletextpub` value against the
+// value set in dcrstakepool's config.
+// Returns false if an RPC call to any of the backend clients errors or
+// if any returned `coldwalletextpub` value is not the same as dcrstakepool's.
 func (s *StakepooldManager) ColdWalletExtPubMatches(dcrstakepoolColdWalletExtPub string) bool {
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)

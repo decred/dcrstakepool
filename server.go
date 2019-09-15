@@ -132,18 +132,16 @@ func runMain() error {
 	// Check that dcrstakepool config and all stakepoold configs
 	// have the same value set for `coldwalletextpub`.
 	if !controller.Cfg.StakepooldServers.ColdWalletExtPubMatches(cfg.ColdWalletExtPub) {
-		err := fmt.Errorf("coldwalletextpub is not the same in " +
+		application.Close()
+		return fmt.Errorf("coldwalletextpub is not the same in " +
 			"dcrstakepool.conf and stakepoold.conf files")
-		fmt.Fprintln(os.Stderr, err)
-		return err
 	}
 
 	// reset votebits if Vote Version changed or stored VoteBits are invalid
 	_, err = controller.CheckAndResetUserVoteBits(application.DbMap)
 	if err != nil {
 		application.Close()
-		return fmt.Errorf("failed to check and reset user vote bits: %v",
-			err)
+		return fmt.Errorf("failed to check and reset user vote bits: %v", err)
 	}
 
 	err = controller.StakepooldUpdateUsers(application.DbMap)
