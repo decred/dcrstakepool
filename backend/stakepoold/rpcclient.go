@@ -212,13 +212,18 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 				}
 
 				ticketFeesValid, err := ctx.EvaluateStakePoolTicket(msgTx, ticketBlockHeight)
-				if ticketFeesValid {
+
+				if err != nil {
+					log.Warnf("ignoring ticket %v for multisig %v due to error: %v",
+						*hash, ctx.UserVotingConfig[addr].MultiSigAddress, err)
+					ignoredLowFeeTickets[*hash] = userVotingConfig[addr].MultiSigAddress
+				} else if ticketFeesValid {
 					normalFee++
 					liveTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 				} else {
+					log.Warnf("ignoring ticket %v for multisig %v due to invalid fee",
+						*hash, ctx.UserVotingConfig[addr].MultiSigAddress)
 					ignoredLowFeeTickets[*hash] = userVotingConfig[addr].MultiSigAddress
-					log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
-						*hash, ctx.UserVotingConfig[addr].MultiSigAddress, ticketFeesValid, err)
 				}
 			}
 			break
