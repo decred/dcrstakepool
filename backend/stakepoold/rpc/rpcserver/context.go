@@ -230,7 +230,6 @@ func (ctx *AppContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 }
 
 func (ctx *AppContext) UpdateTicketData(newAddedLowFeeTicketsMSA map[chainhash.Hash]string) {
-	log.Debug("UpdateTicketData ctx.Lock")
 	ctx.Lock()
 
 	// apply unconditional updates
@@ -255,7 +254,6 @@ func (ctx *AppContext) UpdateTicketData(newAddedLowFeeTicketsMSA map[chainhash.H
 	ignoredLowFeeTicketsCount := len(ctx.IgnoredLowFeeTicketsMSA)
 	liveTicketsCount := len(ctx.LiveTicketsMSA)
 	ctx.Unlock()
-	log.Debug("updateTicketData ctx.Unlock")
 	// Log ticket information outside of the handler.
 	go func() {
 		log.Infof("tickets loaded -- addedLowFee %v ignoredLowFee %v live %v "+
@@ -423,11 +421,9 @@ func (ctx *AppContext) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
 }
 
 func (ctx *AppContext) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
-	log.Debug("updateUserData ctx.Lock")
 	ctx.Lock()
 	ctx.UserVotingConfig = newUserVotingConfig
 	ctx.Unlock()
-	log.Debug("updateUserData ctx.Unlock")
 }
 
 func (ctx *AppContext) UpdateUserDataFromMySQL() error {
@@ -532,16 +528,17 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 
 		ticketFeesValid, err := ctx.EvaluateStakePoolTicket(msgTx, int32(nt.BlockHeight))
 
-		if ticketFeesValid {
+		if err != nil {
+			log.Warnf("ignoring ticket %v for multisig %v due to error: %v", n.ticket, n.msa, err)
+			newIgnoredLowFeeTickets[*n.ticket] = n.msa
+		} else if ticketFeesValid {
 			newLiveTickets[*n.ticket] = n.msa
 		} else {
+			log.Warnf("ignoring ticket %v for multisig %v due to invalid fee", n.ticket, n.msa)
 			newIgnoredLowFeeTickets[*n.ticket] = n.msa
-			log.Warnf("ignoring ticket %v for msa %v ticketFeesValid %v err %v",
-				n.ticket, n.msa, ticketFeesValid, err)
 		}
 	}
 
-	log.Debug("processNewTickets: ctx.Lock")
 	ctx.Lock()
 	// update ignored low fee tickets
 	for ticket, msa := range newIgnoredLowFeeTickets {
@@ -558,16 +555,15 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 	ignoredLowFeeTicketsCount := len(ctx.IgnoredLowFeeTicketsMSA)
 	liveTicketsCount := len(ctx.LiveTicketsMSA)
 	ctx.Unlock()
-	log.Debug("processNewTickets: ctx.Unlock")
 
 	// Log ticket information outside of the handler.
 	go func() {
 		for ticket, msa := range newLiveTickets {
-			log.Infof("processNewTickets: added new live ticket %v msa %v", ticket, msa)
+			log.Infof("processNewTickets: added new live ticket %v multisig %v", ticket, msa)
 		}
 
 		for ticket, msa := range newIgnoredLowFeeTickets {
-			log.Infof("processNewTickets: added new ignored ticket %v msa %v", ticket, msa)
+			log.Infof("processNewTickets: added new ignored ticket %v multisig %v", ticket, msa)
 		}
 
 		log.Infof("processNewTickets: height %v block %v duration %v "+
@@ -632,7 +628,6 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 	var ticketCountNew int
 	var ticketCountOld int
 
-	log.Debug("processSpentMissedTickets: ctx.Lock")
 	ctx.Lock()
 	ticketCountOld = len(ctx.LiveTicketsMSA)
 	for _, ticket := range missedtickets {
@@ -645,7 +640,6 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 	}
 	ticketCountNew = len(ctx.LiveTicketsMSA)
 	ctx.Unlock()
-	log.Debug("processSpentMissedTickets: ctx.Unlock")
 
 	// Log ticket information outside of the handler.
 	go func() {
@@ -759,7 +753,7 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 					errorCount++
 				}
 			}
-			log.Infof("ProcessWinningTickets: voted ticket %v (hash: %v bits: %v) msa %v duration %v "+
+			log.Infof("ProcessWinningTickets: voted ticket %v (hash: %v bits: %v) multisig %v duration %v "+
 				"(%v + %v): %v", w.ticket, w.txid, w.config.VoteBits, w.msa,
 				w.duration, w.signDuration, w.sendDuration, w.err)
 		}
