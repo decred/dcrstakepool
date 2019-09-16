@@ -1204,8 +1204,8 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 
 	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo()
 	if err != nil {
-		log.Infof("RPC GetStakeInfo failed: %v", err)
-		return "/error?r=/stats", http.StatusSeeOther
+		log.Errorf("RPC GetStakeInfo failed: %v", err)
+		return "/error", http.StatusSeeOther
 	}
 
 	c.Env["StakeInfo"] = gsi
@@ -1216,8 +1216,8 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	// execute the named template with data in c.Env
 	widgets, err := helpers.Parse(t, "home", c.Env)
 	if err != nil {
-		log.Infof("helpers.Parse: home failed: %v", err)
-		return "/error?r=/stats", http.StatusSeeOther
+		log.Errorf("helpers.Parse: home failed: %v", err)
+		return "/error", http.StatusSeeOther
 	}
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsIndex"] = true
@@ -1228,8 +1228,8 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 
 	doc, err := helpers.Parse(t, "main", c.Env)
 	if err != nil {
-		log.Infof("helpers.Parse: main failed: %v", err)
-		return "/error?r=/stats", http.StatusSeeOther
+		log.Errorf("helpers.Parse: main failed: %v", err)
+		return "/error", http.StatusSeeOther
 	}
 	return doc, http.StatusOK
 }
@@ -1646,7 +1646,7 @@ func (controller *MainController) Register(c web.C, r *http.Request) (string, in
 func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string, int) {
 	if controller.Cfg.ClosePool {
 		log.Infof("attempt to register while registration disabled")
-		return "/error?r=/register", http.StatusSeeOther
+		return "/error", http.StatusSeeOther
 	}
 
 	session := controller.GetSession(c)
@@ -1735,8 +1735,8 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 
 	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo()
 	if err != nil {
-		log.Infof("RPC GetStakeInfo failed: %v", err)
-		return "/error?r=/stats", http.StatusSeeOther
+		log.Errorf("RPC GetStakeInfo failed: %v", err)
+		return "/error", http.StatusSeeOther
 	}
 
 	c.Env["Network"] = controller.Cfg.NetParams.Name
