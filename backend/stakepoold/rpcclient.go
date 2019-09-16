@@ -62,7 +62,7 @@ func connectNodeRPC(ctx *rpcserver.AppContext, cfg *config) (*rpcclient.Client, 
 	return dcrdClient, nodeVer, nil
 }
 
-func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
+func connectWalletRPC(cfg *config) (*rpcserver.Client, semver, error) {
 	var walletVer semver
 
 	dcrwCert, err := ioutil.ReadFile(cfg.WalletCert)
@@ -77,15 +77,18 @@ func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 		cfg.WalletHost, cfg.WalletUser, cfg.WalletCert)
 
 	connCfgWallet := &rpcclient.ConnConfig{
-		Host:         cfg.WalletHost,
-		Endpoint:     "ws",
-		User:         cfg.WalletUser,
-		Pass:         cfg.WalletPassword,
-		Certificates: dcrwCert,
+		Host:                 cfg.WalletHost,
+		Endpoint:             "ws",
+		User:                 cfg.WalletUser,
+		Pass:                 cfg.WalletPassword,
+		Certificates:         dcrwCert,
+		DisableAutoReconnect: true,
 	}
 
 	ntfnHandlers := getWalletNtfnHandlers()
-	dcrwClient, err := rpcclient.New(connCfgWallet, ntfnHandlers)
+
+	// New also starts an autoreconnect function.
+	dcrwClient, err := rpcserver.NewClient(connCfgWallet, ntfnHandlers)
 	if err != nil {
 		log.Errorf("Verify that username and password is correct and that "+
 			"rpc.cert is for your wallet: %v", cfg.WalletCert)
@@ -93,7 +96,7 @@ func connectWalletRPC(cfg *config) (*rpcclient.Client, semver, error) {
 	}
 
 	// Ensure the wallet RPC server has a compatible API version.
-	ver, err := dcrwClient.Version()
+	ver, err := dcrwClient.RPCClient().Version()
 	if err != nil {
 		log.Error("Unable to get RPC version: ", err)
 		return nil, walletVer, fmt.Errorf("Unable to get node RPC version")
@@ -129,7 +132,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 
 	log.Info("Calling GetTickets...")
 	timenow := time.Now()
-	tickets, err := ctx.WalletConnection.GetTickets(false)
+	tickets, err := ctx.WalletConnection.RPCClient().GetTickets(false)
 	log.Infof("GetTickets: took %v", time.Since(timenow))
 
 	if err != nil {
@@ -145,7 +148,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 	log.Debugf("setting up GetTransactionAsync for %v tickets", len(tickets))
 	for _, ticket := range tickets {
 		// lookup ownership of each ticket
-		promises = append(promises, promise{ctx.WalletConnection.GetTransactionAsync(ticket)})
+		promises = append(promises, promise{ctx.WalletConnection.RPCClient().GetTransactionAsync(ticket)})
 	}
 
 	var counter int

@@ -162,7 +162,7 @@ func runMain() error {
 	}
 	log.Infof("Connected to dcrwallet (JSON-RPC API v%s)",
 		walletVer.String())
-	walletInfoRes, err := walletConn.WalletInfo()
+	walletInfoRes, err := walletConn.RPCClient().WalletInfo()
 	if err != nil || walletInfoRes == nil {
 		log.Errorf("Unable to retrieve walletinfo results")
 		return err
@@ -348,6 +348,9 @@ func runMain() error {
 		signal.Stop(c)
 		// Close the channel so multiple goroutines can get the message
 		log.Info("CTRL+C hit.  Closing goroutines.")
+		// Stop autoreconnect.
+		ctx.WalletConnection.Stop()
+
 		saveData(ctx)
 		close(ctx.Quit)
 	}()

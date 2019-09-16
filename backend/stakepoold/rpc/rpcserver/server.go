@@ -13,7 +13,6 @@
 package rpcserver
 
 import (
-	"errors"
 	"time"
 
 	"golang.org/x/net/context"
@@ -38,12 +37,6 @@ const (
 	semverMajor        = 8
 	semverMinor        = 0
 	semverPatch        = 0
-)
-
-var (
-	// ErrWalletNotConnected is an error to describe the condition where
-	// dcrwallet is not connected through rpccleint.
-	ErrWalletNotConnected = errors.New("wallet is disconnected")
 )
 
 // versionServer provides RPC clients with the ability to query the RPC server
@@ -80,21 +73,6 @@ func StartStakepooldService(appContext *AppContext, server *grpc.Server) {
 	})
 }
 
-// walletConnected logs an error and returns false if the connection to
-// dcrwallet is broken.
-//
-// It should be noted that this is a temporary fix. Ideally rpcclient would
-// return an error when it is trying to reconnect to dcrwallet. The permanent
-// answer is to change that behavior.
-// TODO Remove this.
-func (s *stakepooldServer) walletConnected() bool {
-	if s.appContext.WalletConnection.Disconnected() {
-		log.Error(ErrWalletNotConnected)
-		return false
-	}
-	return true
-}
-
 func processTickets(ticketsMSA map[chainhash.Hash]string) []*pb.Ticket {
 	tickets := make([]*pb.Ticket, 0)
 	for tickethash, msa := range ticketsMSA {
@@ -107,9 +85,6 @@ func processTickets(ticketsMSA map[chainhash.Hash]string) []*pb.Ticket {
 }
 
 func (s *stakepooldServer) GetAddedLowFeeTickets(c context.Context, req *pb.GetAddedLowFeeTicketsRequest) (*pb.GetAddedLowFeeTicketsResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	s.appContext.RLock()
 	ticketsMSA := s.appContext.AddedLowFeeTicketsMSA
@@ -120,9 +95,6 @@ func (s *stakepooldServer) GetAddedLowFeeTickets(c context.Context, req *pb.GetA
 }
 
 func (s *stakepooldServer) GetIgnoredLowFeeTickets(c context.Context, req *pb.GetIgnoredLowFeeTicketsRequest) (*pb.GetIgnoredLowFeeTicketsResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	s.appContext.RLock()
 	ticketsMSA := s.appContext.IgnoredLowFeeTicketsMSA
@@ -133,9 +105,6 @@ func (s *stakepooldServer) GetIgnoredLowFeeTickets(c context.Context, req *pb.Ge
 }
 
 func (s *stakepooldServer) GetLiveTickets(c context.Context, req *pb.GetLiveTicketsRequest) (*pb.GetLiveTicketsResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	s.appContext.RLock()
 	ticketsMSA := s.appContext.LiveTicketsMSA
@@ -146,9 +115,6 @@ func (s *stakepooldServer) GetLiveTickets(c context.Context, req *pb.GetLiveTick
 }
 
 func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.SetAddedLowFeeTicketsRequest) (*pb.SetAddedLowFeeTicketsResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	addedLowFeeTickets := make(map[chainhash.Hash]string)
 
@@ -166,9 +132,6 @@ func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.Se
 }
 
 func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUserVotingPrefsRequest) (*pb.SetUserVotingPrefsResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	userVotingPrefs := make(map[string]userdata.UserVotingConfig)
 	for _, data := range req.UserVotingConfig {
@@ -185,10 +148,6 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 }
 
 func (s *stakepooldServer) ImportNewScript(ctx context.Context, req *pb.ImportNewScriptRequest) (*pb.ImportNewScriptResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
-
 	heightImported, err := s.appContext.ImportNewScript(req.Script)
 	if err != nil {
 		return nil, err
@@ -199,10 +158,6 @@ func (s *stakepooldServer) ImportNewScript(ctx context.Context, req *pb.ImportNe
 }
 
 func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.ImportMissingScriptsRequest) (*pb.ImportMissingScriptsResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
-
 	err := s.appContext.ImportMissingScripts(req.Scripts, int(req.RescanHeight))
 	if err != nil {
 		return nil, err
@@ -211,9 +166,6 @@ func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.Imp
 }
 
 func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsRequest) (*pb.ListScriptsResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	scripts, err := s.appContext.ListScripts()
 	if err != nil {
@@ -224,9 +176,6 @@ func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsR
 }
 
 func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.AccountSyncAddressIndexRequest) (*pb.AccountSyncAddressIndexResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	err := s.appContext.AccountSyncAddressIndex(req.Account, req.Branch, int(req.Index))
 	if err != nil {
@@ -237,9 +186,6 @@ func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.
 }
 
 func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	tickets, err := s.appContext.GetTickets(req.IncludeImmature)
 	if err != nil {
@@ -257,9 +203,6 @@ func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsReq
 }
 
 func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMissingTicketRequest) (*pb.AddMissingTicketResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	err := s.appContext.AddMissingTicket(req.Hash)
 	if err != nil {
@@ -269,9 +212,6 @@ func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMiss
 }
 
 func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakePoolUserInfoRequest) (*pb.StakePoolUserInfoResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	response, err := s.appContext.StakePoolUserInfo(req.MultiSigAddress)
 	if err != nil {
@@ -296,9 +236,6 @@ func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakeP
 }
 
 func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoRequest) (*pb.WalletInfoResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	response, err := s.appContext.WalletInfo()
 	if err != nil {
@@ -314,9 +251,6 @@ func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoReq
 }
 
 func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.ValidateAddressRequest) (*pb.ValidateAddressResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	response, err := s.appContext.ValidateAddress(req.Address)
 	if err != nil {
@@ -330,9 +264,6 @@ func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.Validate
 }
 
 func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMultisigRequest) (*pb.CreateMultisigResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	response, err := s.appContext.CreateMultisig(req.Address)
 	if err != nil {
@@ -346,9 +277,6 @@ func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMul
 }
 
 func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInfoRequest) (*pb.GetStakeInfoResponse, error) {
-	if !s.walletConnected() {
-		return nil, ErrWalletNotConnected
-	}
 
 	response, err := s.appContext.GetStakeInfo()
 	if err != nil {
