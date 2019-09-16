@@ -172,11 +172,8 @@ func runMain() error {
 
 	// Middlewares used by app are applied to all routes (HTML and API)
 	app.Use(middleware.RequestID)
-	app.Use(middleware.Logger) // TODO: reimplement to use our logger
 	app.Use(middleware.Recoverer)
-
 	app.Use(application.ApplyDbMap)
-
 	app.Use(context.ClearHandler)
 
 	// API routes
@@ -276,10 +273,6 @@ func runMain() error {
 	graceful.PostHook(func() {
 		application.Close()
 	})
-	err = app.Abandon(middleware.Logger)
-	if err != nil {
-		return fmt.Errorf("could not Abandon logger: %v", err)
-	}
 
 	app.Compile()
 
