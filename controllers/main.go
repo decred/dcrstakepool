@@ -125,7 +125,6 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 
 // NewMainController is the constructor for the entire controller routing.
 func NewMainController(cfg *Config) (*MainController, error) {
-
 	ch := &CaptchaHandler{
 		ImgHeight: 127,
 		ImgWidth:  257,
@@ -226,6 +225,7 @@ func dcrDataAgendas(url string) ([]*dcrdatatypes.AgendasInfo, error) {
 		return nil, err
 	}
 	data, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -462,7 +462,9 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 	}
 
 	if uint16(oldVoteBits) != userVoteBits {
-		controller.StakepooldUpdateUsers(dbMap)
+		if err := controller.StakepooldUpdateUsers(dbMap); err != nil {
+			log.Warnf("APIVoting: StakepooldUpdateUsers failed: %v", err)
+		}
 	}
 
 	log.Infof("updated voteBits for user %d from %d to %d",
@@ -1098,13 +1100,15 @@ func (controller *MainController) EmailUpdate(c web.C, r *http.Request) (string,
 	if err != nil {
 		session.AddFlash("Error occurred while changing email address",
 			"emailupdateError")
-		log.Errorf("EmailChangeComplete failed %v", err)
+		log.Errorf("EmailUpdate: EmailChangeComplete failed %v", err)
 	} else {
-
 		// destroy session data and force re-login
 		userID, _ := session.Values["UserId"].(int64)
 		session.Options.MaxAge = -1
-		system.DestroySessionsForUserID(dbMap, userID)
+		if err := system.DestroySessionsForUserID(dbMap, userID); err != nil {
+			log.Warnf("EmailUpdate: DestroySessionsForUserID '%v' failed: %v",
+				userID, err)
+		}
 
 		session.AddFlash("Email successfully updated",
 			"emailupdateSuccess")
@@ -1200,8 +1204,8 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 
 	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo()
 	if err != nil {
-		log.Infof("RPC GetStakeInfo failed: %v", err)
-		return "/error?r=/stats", http.StatusSeeOther
+		log.Errorf("RPC GetStakeInfo failed: %v", err)
+		return "/error", http.StatusSeeOther
 	}
 
 	c.Env["StakeInfo"] = gsi
@@ -1210,8 +1214,11 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	t := controller.GetTemplate(c)
 
 	// execute the named template with data in c.Env
-	widgets := helpers.Parse(t, "home", c.Env)
-
+	widgets, err := helpers.Parse(t, "home", c.Env)
+	if err != nil {
+		log.Errorf("helpers.Parse: home failed: %v", err)
+		return "/error", http.StatusSeeOther
+	}
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
 	c.Env["IsIndex"] = true
 	c.Env["Title"] = "Decred Voting Service - Welcome"
@@ -1219,7 +1226,12 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 
 	c.Env["Content"] = template.HTML(widgets)
 
-	return helpers.Parse(t, "main", c.Env), http.StatusOK
+	doc, err := helpers.Parse(t, "main", c.Env)
+	if err != nil {
+		log.Errorf("helpers.Parse: main failed: %v", err)
+		return "/error", http.StatusSeeOther
+	}
+	return doc, http.StatusOK
 }
 
 // PasswordReset renders the password reset page. This shows the form where the
@@ -1258,10 +1270,9 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 	if !controller.IsCaptchaDone(c) {
 		session.AddFlash("You must complete the captcha.", "passwordresetError")
 		return controller.PasswordReset(c, r)
-	} else {
-		session.Values["CaptchaDone"] = false
-		c.Env["CaptchaDone"] = false
 	}
+	session.Values["CaptchaDone"] = false
+	c.Env["CaptchaDone"] = false
 
 	remoteIP := getClientIP(r, controller.Cfg.RealIPHeader)
 	user, err := helpers.EmailExists(dbMap, email)
@@ -1392,8 +1403,10 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 	}
 
 	// destroy session data
-	system.DestroySessionsForUserID(dbMap, user.Id)
-
+	if err := system.DestroySessionsForUserID(dbMap, user.Id); err != nil {
+		log.Warnf("PasswordUpdatePost: DestroySessionsForUserID '%v' failed: %v",
+			user.Id, err)
+	}
 	session.AddFlash("Password successfully updated", "passwordupdateSuccess")
 	return controller.PasswordUpdate(c, r)
 }
@@ -1443,10 +1456,9 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		if !controller.IsCaptchaDone(c) {
 			session.AddFlash("You must complete the captcha.", "settingsError")
 			return controller.Settings(c, r)
-		} else {
-			session.Values["CaptchaDone"] = false
-			c.Env["CaptchaDone"] = false
 		}
+		session.Values["CaptchaDone"] = false
+		c.Env["CaptchaDone"] = false
 	}
 
 	// Changes to email or password require the current password.
@@ -1459,7 +1471,6 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	log.Infof("Settings POST from %v, email %v", remoteIP, user.Email)
 
 	if updateEmail == "true" {
-
 		newEmail := r.FormValue("email")
 		log.Infof("user requested email change from %v to %v", user.Email, newEmail)
 
@@ -1524,7 +1535,10 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		}
 
 		// destroy session data
-		system.DestroySessionsForUserID(dbMap, user.Id)
+		err := system.DestroySessionsForUserID(dbMap, user.Id)
+		if err != nil {
+			log.Warnf("SettingsPost: DestroySessionsForUserId '%v' failed: %v", user.Id, err)
+		}
 
 		// send a confirmation email.
 		err = controller.Cfg.EmailSender.PasswordChangeConfirm(user.Email, controller.Cfg.BaseURL, remoteIP)
@@ -1632,7 +1646,7 @@ func (controller *MainController) Register(c web.C, r *http.Request) (string, in
 func (controller *MainController) RegisterPost(c web.C, r *http.Request) (string, int) {
 	if controller.Cfg.ClosePool {
 		log.Infof("attempt to register while registration disabled")
-		return "/error?r=/register", http.StatusSeeOther
+		return "/error", http.StatusSeeOther
 	}
 
 	session := controller.GetSession(c)
@@ -1721,8 +1735,8 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 
 	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo()
 	if err != nil {
-		log.Infof("RPC GetStakeInfo failed: %v", err)
-		return "/error?r=/stats", http.StatusSeeOther
+		log.Errorf("RPC GetStakeInfo failed: %v", err)
+		return "/error", http.StatusSeeOther
 	}
 
 	c.Env["Network"] = controller.Cfg.NetParams.Name
@@ -1792,7 +1806,6 @@ type TicketInfo struct {
 
 // Tickets renders the tickets page.
 func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int) {
-
 	var ticketInfoInvalid []TicketInfoInvalid
 	var ticketInfoLive, ticketInfoImmature []TicketInfo
 	var ticketInfoVoted, ticketInfoExpired, ticketInfoMissed []TicketInfoHistoric
@@ -2055,7 +2068,6 @@ func (controller *MainController) getAgendas() []chaincfg.ConsensusDeployment {
 		return nil
 	}
 	return controller.Cfg.NetParams.Deployments[controller.voteVersion]
-
 }
 
 // CalcEstimatedTicketExpiry returns a time.Time reflecting the estimated time

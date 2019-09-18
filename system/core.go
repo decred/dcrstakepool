@@ -36,10 +36,8 @@ func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
 	}
 }
 
-func (application *Application) Init(APISecret string, baseURL string,
-	cookieSecret string, cookieSecure bool, DBHost string, DBName string,
-	DBPassword string,
-	DBPort string, DBUser string) {
+func (application *Application) Init(APISecret, baseURL, cookieSecret string,
+	cookieSecure bool, DBHost, DBName, DBPassword, DBPort, DBUser string) {
 
 	application.DbMap = models.GetDbMap(
 		APISecret,
