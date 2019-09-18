@@ -2,7 +2,7 @@
 
 dcrstakepool release 1.2.0 contains all development work completed since
 [v1.1.1](https://github.com/decred/dcrstakepool/releases/tag/v1.1.1) (September 2017).
-Since then, 20 contributors have produced and merged 153 pull requests.
+Since then, 20 contributors have produced and merged 160 pull requests.
 Changes include a proper interface for handling tickets purchased with insufficient fees,
 an overhauled front-end design, security enhancements, updated terminology, reduced
 dependencies on third parties, and various bug-fixes.
@@ -164,6 +164,10 @@ These are new config items added to `dcrstakepool.conf`.
 ([#464](https://github.com/decred/dcrstakepool/pull/464))
 - Check wallets are all connected before performing write operations
 ([#463](https://github.com/decred/dcrstakepool/pull/463))
+- Autoreconnect
+([#510](https://github.com/decred/dcrstakepool/pull/510))
+- Prevent unnecessary wallet rescans.
+([#519](https://github.com/decred/dcrstakepool/pull/519))
 
 ### SQL session storage
 
@@ -273,11 +277,15 @@ These are new config items added to `dcrstakepool.conf`.
 ([#480](https://github.com/decred/dcrstakepool/pull/480))
 - Minor harness improvements.
 ([#497](https://github.com/decred/dcrstakepool/pull/497))
+- harness: Write stakepoold logs to file.
+([#513](https://github.com/decred/dcrstakepool/pull/513))
 
 ### Low Fee Tickets
 
 - multi: improve handling of low fee tickets
 ([#219](https://github.com/decred/dcrstakepool/pull/219))
+- Ensure low fee tickets are detected upon maturation.
+([#524](https://github.com/decred/dcrstakepool/pull/524))
 
 ### Support SMTPS
 
@@ -384,6 +392,10 @@ These are new config items added to `dcrstakepool.conf`.
 ([#506](https://github.com/decred/dcrstakepool/pull/506))
 - deprecate unused dcrstakepool datadir config option
 ([#507](https://github.com/decred/dcrstakepool/pull/507))
+- enablevoting=0 in dcrwallet conf
+([#520](https://github.com/decred/dcrstakepool/pull/520))
+- stakepoold: Stop if wallet voting is enabled
+([#523](https://github.com/decred/dcrstakepool/pull/523))
 
 ### Tech Debt & Refactoring
 
@@ -425,6 +437,8 @@ These are new config items added to `dcrstakepool.conf`.
 ([#481](https://github.com/decred/dcrstakepool/pull/481))
 - change NewMainController signature to accept few argument(s)
 ([#492](https://github.com/decred/dcrstakepool/pull/492))
+- multi: cleanup
+([#527](https://github.com/decred/dcrstakepool/pull/527))
 
 ### Developer-related changes (eg. versioning, travis, dependencies)
 
