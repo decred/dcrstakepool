@@ -20,7 +20,8 @@ import (
 )
 
 var (
-	requiredStakepooldAPI = semver{major: 8, minor: 0, patch: 0}
+	requiredStakepooldAPI = semver{major: 9, minor: 0, patch: 0}
+
 	// cacheTimerStakeInfo is the duration of time after which to
 	// access the wallet and update the stake information instead
 	// of returning cached stake information.
