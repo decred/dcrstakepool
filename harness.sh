@@ -154,6 +154,7 @@ walletpassword=${RPC_PASS}
 testnet=true
 appdata=${NODES_ROOT}/stakepoold-${i}
 rpclisten=${STAKEPOOLD_RPC_LISTEN}
+debuglevel=debug
 EOF
 
     echo "Starting stakepoold-${i}"
@@ -185,6 +186,7 @@ adminips=${DCRSTAKEPOOL_ADMIN_IPS}
 adminuserids=${DCRSTAKEPOOL_ADMIN_IDS}
 stakepooldhosts=${ALL_STAKEPOOLDS}
 stakepooldcerts=${ALL_STAKEPOOLD_RPC_CERTS}
+debuglevel=debug
 EOF
 
 tmux new-window -t $SESSION -n "dcrstakepool"
