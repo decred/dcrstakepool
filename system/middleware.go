@@ -122,7 +122,7 @@ func Logger(RealIPHeader string) func(c *web.C, h http.Handler) http.Handler {
 			reqID := gojimw.GetReqID(*c)
 
 			log.Infof("[%s] Started %s %q, from %s", reqID, r.Method,
-				r.URL.String(), GetClientIP(r, RealIPHeader))
+				r.URL.String(), ClientIP(r, RealIPHeader))
 
 			lw := mutil.WrapWriter(w)
 
@@ -139,4 +139,3 @@ func Logger(RealIPHeader string) func(c *web.C, h http.Handler) http.Handler {
 		return http.HandlerFunc(fn)
 	}
 }
-
