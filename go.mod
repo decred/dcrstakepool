@@ -1,5 +1,7 @@
 module github.com/decred/dcrstakepool
 
+go 1.12
+
 require (
 	github.com/DATA-DOG/go-sqlmock v1.3.3
 	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
