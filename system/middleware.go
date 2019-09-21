@@ -1,7 +1,6 @@
 package system
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -55,17 +54,15 @@ func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler 
 
 			authHeader := r.Header.Get("Authorization")
 			if strings.HasPrefix(authHeader, "Bearer ") {
-				userId, authFailureReason := application.validateToken(authHeader)
-				if authFailureReason != "" {
-					err = fmt.Errorf(authFailureReason)
-				} else {
+				var userId int64
+				userId, err = application.validateToken(authHeader)
+				if err == nil {
 					user, err = models.GetUserByID(dbMap, userId)
 				}
 			} else if strings.HasPrefix(authHeader, "TicketAuth ") {
-				userMsa, authFailureReason := application.validateTicketOwnership(authHeader)
-				if authFailureReason != "" {
-					err = fmt.Errorf(authFailureReason)
-				} else {
+				var userMsa string
+				userMsa, err = application.validateTicketOwnership(authHeader)
+				if err == nil {
 					user, err = models.GetUserByMSA(dbMap, userMsa)
 				}
 			}

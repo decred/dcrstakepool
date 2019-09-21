@@ -116,9 +116,9 @@ type ticketMetadata struct {
 }
 
 type TicketInfo struct {
-	MultiSigAddress string
-	VspFeeAddress   string
-	OwnerFeeAddress string
+	MultiSigAddress    string
+	VspRewardAddress   string
+	OwnerRewardAddress string
 }
 
 // EvaluateStakePoolTicket evaluates a voting service ticket to see if it's
@@ -426,47 +426,55 @@ func (spd *Stakepoold) GetTickets(includeImmature bool) ([]*chainhash.Hash, erro
 	return tickets, nil
 }
 
-func (spd *Stakepoold) GetTicketInfo(ticketHash string) (ticketInfo *TicketInfo, err error) {
+// GetTicketInfo pulls the transaction information for a ticket from dcrwallet,
+// returning the voting address and reward addresses for the ticket.
+func (spd *Stakepoold) GetTicketInfo(ticketHash string) (*TicketInfo, error) {
 	hash, err := chainhash.NewHashFromStr(ticketHash)
 	if err != nil {
 		log.Errorf("GetTicketInfo: Failed to parse ticket hash: %v", err)
-		return
+		return nil, err
 	}
 
 	res, err := spd.WalletConnection.RPCClient().GetTransaction(hash)
 	if err != nil {
 		log.Errorf("GetTicketInfo: GetTransaction rpc failed: %v", err)
-		return
+		return nil, err
 	}
 
 	// get txout addresses using tx hex
 	msgTx, err := MsgTxFromHex(res.Hex)
 	if err != nil {
-		return nil, fmt.Errorf("GetTicketInfo: MsgTxFromHex failed for %v: %v", res.Hex, err)
+		log.Errorf("GetTicketInfo: MsgTxFromHex failed for %v: %v", res.Hex, err)
+		return nil, err
 	}
 
 	p2shOut := msgTx.TxOut[0]
-	_, addrs, _, _ := txscript.ExtractPkScriptAddrs(p2shOut.Version, p2shOut.PkScript, spd.Params)
-	multiSigAddress := addrs[0]
+	_, p2shOutAddresses, _, err := txscript.ExtractPkScriptAddrs(p2shOut.Version, p2shOut.PkScript, spd.Params)
+	if err != nil {
+		log.Errorf("GetTicketInfo: Failed to parse p2sh out addr: %s", err.Error())
+		return nil, err
+	}
+	multiSigAddress := p2shOutAddresses[0]
 
 	vspCommitmentOut := msgTx.TxOut[1]
 	vspCommitAddr, err := stake.AddrFromSStxPkScrCommitment(vspCommitmentOut.PkScript, spd.Params)
 	if err != nil {
-		return nil, fmt.Errorf("GetTicketInfo: Failed to parse commit out addr: %s", err.Error())
+		log.Errorf("GetTicketInfo: Failed to parse commit out addr: %s", err.Error())
+		return nil, err
 	}
 
 	ownerCommitmentOut := msgTx.TxOut[3]
 	ownerCommitAddr, err := stake.AddrFromSStxPkScrCommitment(ownerCommitmentOut.PkScript, spd.Params)
 	if err != nil {
-		return nil, fmt.Errorf("GetTicketInfo: Failed to parse commit out addr: %s", err.Error())
+		log.Errorf("GetTicketInfo: Failed to parse commit out addr: %s", err.Error())
+		return nil, err
 	}
 
-	ticketInfo = &TicketInfo{
-		MultiSigAddress: multiSigAddress.Address(),
-		VspFeeAddress:   vspCommitAddr.Address(),
-		OwnerFeeAddress: ownerCommitAddr.Address(),
-	}
-	return
+	return &TicketInfo{
+		MultiSigAddress:    multiSigAddress.Address(),
+		VspRewardAddress:   vspCommitAddr.Address(),
+		OwnerRewardAddress: ownerCommitAddr.Address(),
+	}, nil
 }
 
 // StakePoolUserInfo performs the rpc command stakepooluserinfo on dcrwallet and

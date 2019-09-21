@@ -180,6 +180,7 @@ func GetUserByID(dbMap *gorp.DbMap, id int64) (user *User, err error) {
 	return user, nil
 }
 
+// GetUserByMSA returns user info from db for user with the provided multisig address.
 func GetUserByMSA(dbMap *gorp.DbMap, msa string) (user *User, err error) {
 	err = dbMap.SelectOne(&user, "SELECT * FROM Users WHERE MultiSigAddress = ?", msa)
 

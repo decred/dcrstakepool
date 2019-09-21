@@ -17,7 +17,7 @@ import (
 // or future required for a ticket auth timestamp value to be considered valid.
 const maxTicketChallengeAge = 60
 
-func (application *Application) validateToken(authHeader string) (int64, string) {
+func (application *Application) validateToken(authHeader string) (int64, error) {
 	apitoken := strings.TrimPrefix(authHeader, "Bearer ")
 
 	JWTtoken, err := jwt.Parse(apitoken, func(token *jwt.Token) (interface{}, error) {
@@ -29,47 +29,41 @@ func (application *Application) validateToken(authHeader string) (int64, string)
 	})
 
 	if err != nil {
-		return -1, fmt.Sprintf("invalid token %v: %v", apitoken, err)
+		return -1, fmt.Errorf("invalid token %v: %v", apitoken, err)
 	} else if claims, ok := JWTtoken.Claims.(jwt.MapClaims); ok && JWTtoken.Valid {
-		return int64(claims["loggedInAs"].(float64)), ""
+		return int64(claims["loggedInAs"].(float64)), nil
 	} else {
-		return -1, fmt.Sprintf("invalid token %v", apitoken)
+		return -1, fmt.Errorf("invalid token %v", apitoken)
 	}
 }
 
-func (application *Application) validateTicketOwnership(authHeader string) (multiSigAddress, authValidationFailureReason string) {
+func (application *Application) validateTicketOwnership(authHeader string) (string, error) {
 	timestamp, timestampSignature, ticketHash := extractTicketAuthParams(strings.TrimPrefix(authHeader, "TicketAuth "))
 	if timestamp == "" || timestampSignature == "" || ticketHash == "" {
-		authValidationFailureReason = fmt.Sprintf("invalid ticket auth header value %s", authHeader)
-		return
+		return "", fmt.Errorf("invalid ticket auth header value %s", authHeader)
 	}
 
 	// Ensure that this signature had not been used in a previous authentication attempt.
 	if application.ProcessedTicketChallenges.ContainsChallenge(timestampSignature) {
-		authValidationFailureReason = fmt.Sprintf("disallowed reuse of ticket auth signature %v", timestampSignature)
-		return
+		return "", fmt.Errorf("disallowed reuse of ticket auth signature %v", timestampSignature)
 	}
 
 	authTimestamp, err := strconv.Atoi(timestamp)
 	if err != nil {
-		authValidationFailureReason = fmt.Sprintf("invalid ticket auth timestamp value %v", timestamp)
-		return
+		return "", fmt.Errorf("invalid ticket auth timestamp value %v", timestamp)
 	}
 
 	// Ensure that the auth timestamp is not more than
 	// the permitted number of seconds into the past and future.
 	timestampDelta := time.Now().Unix() - int64(authTimestamp)
 	if math.Abs(float64(timestampDelta)) > maxTicketChallengeAge {
-		authValidationFailureReason = fmt.Sprintf("expired or invalid ticket auth timestamp value %v",
-			timestamp)
-		return
+		return "", fmt.Errorf("expired or invalid ticket auth timestamp value %v", timestamp)
 	}
 
 	// confirm that the timestamp signature is a valid base64 string
 	decodedSignature, err := base64.StdEncoding.DecodeString(timestampSignature)
 	if err != nil {
-		authValidationFailureReason = fmt.Sprintf("invalid ticket auth signature %s", timestampSignature)
-		return
+		return "", fmt.Errorf("invalid ticket auth signature %s", timestampSignature)
 	}
 
 	// Mark this timestamp signature as used to prevent subsequent reuse.
@@ -81,30 +75,26 @@ func (application *Application) validateTicketOwnership(authHeader string) (mult
 	// todo: may be better to maintain a memory map of tickets-userWalletAddresses
 	ticketInfo, err := application.StakepooldConnMan.GetTicketInfo(ticketHash)
 	if err != nil {
-		authValidationFailureReason = fmt.Sprintf("ticket auth, get ticket info failed: %v", err)
-		return
+		return "", fmt.Errorf("ticket auth, get ticket info failed: %v", err)
 	}
 
 	// check if timestamp signature checks out against address
-	addr, err := dcrutil.DecodeAddress(ticketInfo.OwnerFeeAddress)
+	addr, err := dcrutil.DecodeAddress(ticketInfo.OwnerRewardAddress)
 	if err != nil {
-		authValidationFailureReason = fmt.Sprintf("ticket auth, unexpected decode address error: %v", err)
-		return
+		return "", fmt.Errorf("ticket auth, unexpected decode address error: %v", err)
 	}
 
 	valid, err := wallet.VerifyMessage(timestamp, addr, decodedSignature)
 	if err != nil {
-		authValidationFailureReason = fmt.Sprintf("error validating timestamp signature for ticket auth %v", err)
-		return
+		return "", fmt.Errorf("error validating timestamp signature for ticket auth %v", err)
 	}
 
 	if valid {
-		multiSigAddress = ticketInfo.MultiSigAddress
+		return ticketInfo.MultiSigAddress, nil
 	} else {
-		authValidationFailureReason = "invalid timestamp signature, timestamp was not signed using " +
-			"the ticket owner's reward address"
+		return "", fmt.Errorf("invalid timestamp signature, timestamp was not signed using " +
+			"the ticket owner's reward address")
 	}
-	return
 }
 
 func extractTicketAuthParams(authHeader string) (timestampMessage, timestampSignature, ticketHash string) {
