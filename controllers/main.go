@@ -305,7 +305,8 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.InvalidArgument, "address error", err
 	}
 
-	if purchaseInfo := controller.generateTicketPurchaseInfo(r.Context(), dbMap, user, userPubKeyAddr); purchaseInfo == nil {
+	if _, err := controller.generateTicketPurchaseInfo(r.Context(), dbMap, user, userPubKeyAddr); err != nil {
+		log.Errorf("generateTicketPurchaseInfo: %v", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
@@ -355,11 +356,13 @@ func (controller *MainController) APIPurchaseTicket(c web.C, r *http.Request) (*
 	// load saved user info from db to get the user id
 	user = models.GetUserByEmail(dbMap, userPubKeyAddr)
 
-	if purchaseInfo := controller.generateTicketPurchaseInfo(r.Context(), dbMap, user, userPubKeyAddr); purchaseInfo != nil {
-		return purchaseInfo, codes.OK, "APIPurchaseTicket: purchaseinfo generated for userPubKeyAddr", nil
+	purchaseInfo, err := controller.generateTicketPurchaseInfo(r.Context(), dbMap, user, userPubKeyAddr)
+	if err != nil {
+		log.Errorf("generateTicketPurchaseInfo: %v", err)
+		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
+	return purchaseInfo, codes.OK, "APIPurchaseTicket: purchaseinfo generated for userPubKeyAddr", nil
 }
 
 // APIPurchaseInfo fetches and returns the user's info or an error
@@ -746,59 +749,54 @@ func validateUserPubKeyAddr(pubKeyAddr string, params *chaincfg.Params) (dcrutil
 }
 
 func (controller *MainController) generateTicketPurchaseInfo(ctx context.Context, dbMap *gorp.DbMap,
-	user *models.User, userPubKeyAddr string) *poolapi.PurchaseInfo {
+	user *models.User, userPubKeyAddr string) (*poolapi.PurchaseInfo, error) {
 
 	// Get the ticket address for this user
 	pooladdress, err := controller.TicketAddressForUserID(int(user.ID))
 	if err != nil {
-		log.Errorf("unable to derive ticket address: %v", err)
-		return nil
+		return nil, fmt.Errorf("unable to derive ticket address: %v", err)
 	}
 
 	// From new address (pkh), get pubkey address
 	poolValidateAddress, err := controller.Cfg.StakepooldServers.ValidateAddress(ctx, pooladdress)
 	if err != nil {
-		log.Errorf("unable to validate address: %v", err)
-		return nil
+		return nil, fmt.Errorf("unable to validate address: %v", err)
 	}
 	if !poolValidateAddress.IsMine {
-		log.Errorf("unable to validate ismine for pool ticket address: %s",
+		return nil, fmt.Errorf("unable to validate ismine for pool ticket address: %s",
 			pooladdress.String())
-		return nil
 	}
 
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
 	// Get back Address from pool's new pubkey address
 	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr, controller.Cfg.NetParams); err != nil {
-		return nil
+		return nil, fmt.Errorf("unable to decode pool address: %v", err)
 	}
 
 	// Create the the multisig script. Result includes a P2SH and redeem script.
 	createMultiSig, err := controller.Cfg.StakepooldServers.CreateMultisig(ctx, []string{poolPubKeyAddr, userPubKeyAddr})
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("create multisig error: %v", err)
 	}
 
 	// Serialize the redeem script (hex string -> []byte)
 	serializedScript, err := hex.DecodeString(createMultiSig.RedeemScript)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("unable to serialize redeem script hex: %v", err)
 	}
 
 	// Import the redeem script
 	var importedHeight int64
 	importedHeight, err = controller.Cfg.StakepooldServers.ImportNewScript(ctx, serializedScript)
 	if err != nil {
-		log.Warnf("unexpected error importing multisig redeem script: %v", err)
-		return nil
+		return nil, fmt.Errorf("unexpected error importing multisig redeem script: %v", err)
 	}
 
 	// Get the pool fees address for this user
 	userFeeAddr, err := controller.FeeAddressForUserID(int(user.ID))
 	if err != nil {
-		log.Errorf("unexpected error deriving fee addr: %s", err.Error())
-		return nil
+		return nil, fmt.Errorf("unexpected error deriving fee addr: %s", err.Error())
 	}
 
 	// Update the user's DB entry with multisig, user and pool pubkey
@@ -819,7 +817,7 @@ func (controller *MainController) generateTicketPurchaseInfo(ctx context.Context
 		Script:        createMultiSig.RedeemScript,
 		TicketAddress: createMultiSig.Address,
 		VoteBits:      uint16(user.VoteBits),
-	}
+	}, nil
 }
 
 // AddressPost is address form submit route.
@@ -850,7 +848,8 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		return controller.Address(c, r)
 	}
 
-	if purchaseInfo := controller.generateTicketPurchaseInfo(r.Context(), dbMap, user, userPubKeyAddr); purchaseInfo == nil {
+	if _, err := controller.generateTicketPurchaseInfo(r.Context(), dbMap, user, userPubKeyAddr); err != nil {
+		log.Errorf("generateTicketPurchaseInfo: %v", err)
 		return "/error", http.StatusSeeOther
 	}
 
