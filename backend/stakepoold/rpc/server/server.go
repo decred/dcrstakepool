@@ -210,9 +210,9 @@ func (s *stakepooldServer) GetTicketInfo(ctx context.Context, req *pb.GetTicketI
 	}
 
 	return &pb.GetTicketInfoResponse{
-		MultiSigAddress:    ticketInfo.MultiSigAddress,
-		OwnerRewardAddress: ticketInfo.OwnerRewardAddress,
-		VspRewardAddress:   ticketInfo.VspRewardAddress,
+		MultiSigAddress:   ticketInfo.MultiSigAddress,
+		VspRewardAddress:  ticketInfo.VspRewardAddress,
+		UserRewardAddress: ticketInfo.UserRewardAddress,
 	}, nil
 }
 

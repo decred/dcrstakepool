@@ -48,7 +48,7 @@ message GetTicketInfoRequest {
 message GetTicketInfoResponse {
 	string MultiSigAddress = 1;
 	string VspRewardAddress = 2;
-	string OwnerRewardAddress = 3;
+	string UserRewardAddress = 3;
 }
 
 message SetAddedLowFeeTicketsRequest {

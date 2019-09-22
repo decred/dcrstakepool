@@ -116,9 +116,9 @@ type ticketMetadata struct {
 }
 
 type TicketInfo struct {
-	MultiSigAddress    string
-	VspRewardAddress   string
-	OwnerRewardAddress string
+	MultiSigAddress   string
+	VspRewardAddress  string
+	UserRewardAddress string
 }
 
 // EvaluateStakePoolTicket evaluates a voting service ticket to see if it's
@@ -473,7 +473,7 @@ func (spd *Stakepoold) GetTicketInfo(ticketHash string) (*TicketInfo, error) {
 	return &TicketInfo{
 		MultiSigAddress:    multiSigAddress.Address(),
 		VspRewardAddress:   vspCommitAddr.Address(),
-		OwnerRewardAddress: ownerCommitAddr.Address(),
+		UserRewardAddress: ownerCommitAddr.Address(),
 	}, nil
 }
 

@@ -78,8 +78,8 @@ func (application *Application) validateTicketOwnership(authHeader string) (stri
 		return "", fmt.Errorf("ticket auth, get ticket info failed: %v", err)
 	}
 
-	// check if timestamp signature checks out against address
-	addr, err := dcrutil.DecodeAddress(ticketInfo.OwnerRewardAddress)
+	// Check if timestamp signature checks out against user's reward address.
+	addr, err := dcrutil.DecodeAddress(ticketInfo.UserRewardAddress)
 	if err != nil {
 		return "", fmt.Errorf("ticket auth, unexpected decode address error: %v", err)
 	}
