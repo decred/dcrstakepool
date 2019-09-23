@@ -8829,7 +8829,6 @@ https://flickity.metafizzy.co
 }
 
 .stats-chart > svg {
-  margin-right: -144px;
   position: relative;
   left: 50%;
   -webkit-transform: translateX(-50%);
