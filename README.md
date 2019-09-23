@@ -182,7 +182,8 @@ MySQL> CREATE DATABASE stakepool;
 ### Nginx/web server
 
 - Adapt sample-nginx.conf or setup a different web server in a proxy
-  configuration.
+  configuration. To prepare pre-zipped files to save the reverse proxy the
+  trouble of compressing data on-the-fly, see the zipassets.sh script.
 
 ### stakepoold setup
 

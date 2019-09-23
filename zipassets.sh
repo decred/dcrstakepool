@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# This script helps prepare pre-zipped static assets for use with reverse proxy
+# features like nginx's gzip_static.
 
 echo "Gzipping assets for use with gzip_static..."
 find ./public -type f -name "*.gz" -execdir rm {} \;
