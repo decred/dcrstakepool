@@ -121,7 +121,7 @@ func Logger(RealIPHeader string) func(c *web.C, h http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			reqID := gojimw.GetReqID(*c)
 
-			log.Infof("[%s] Started %s %q, from %s", reqID, r.Method,
+			log.Tracef("[%s] Started %s %q, from %s", reqID, r.Method,
 				r.URL.String(), ClientIP(r, RealIPHeader))
 
 			lw := mutil.WrapWriter(w)
@@ -134,7 +134,7 @@ func Logger(RealIPHeader string) func(c *web.C, h http.Handler) http.Handler {
 			}
 			t2 := time.Now()
 
-			log.Infof("[%s] Returning %03d in %s", reqID, lw.Status(), t2.Sub(t1))
+			log.Tracef("[%s] Returning %03d in %s", reqID, lw.Status(), t2.Sub(t1))
 		}
 		return http.HandlerFunc(fn)
 	}
