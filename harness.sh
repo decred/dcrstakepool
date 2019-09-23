@@ -116,6 +116,7 @@ pass=${WALLET_PASS}
 rpcconnect=${DCRD_RPC_LISTEN}
 grpclisten=127.0.0.1:2010${i}
 rpclisten=${WALLET_RPC_LISTEN}
+stakepoolcoldextkey=${COLD_WALLET_PUB_KEY}:10000
 EOF
 
     echo "Starting dcrwallet-${i}"
