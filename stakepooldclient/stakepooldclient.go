@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	requiredStakepooldAPI = semver{major: 8, minor: 0, patch: 0}
+	requiredStakepooldAPI = semver{major: 9, minor: 0, patch: 0}
 
 	// cacheTimerStakeInfo is the duration of time after which to
 	// access the wallet and update the stake information instead
@@ -696,4 +696,23 @@ func (s *StakepooldManager) GetStakeInfo() (*pb.GetStakeInfoResponse, error) {
 		return resp, nil
 	}
 	return nil, errors.New("GetStakeInfo RPC failed on all stakepoold instances")
+}
+
+// CrossCheckColdWalletExtPubs calls GetColdWalletExtPub RPC on all stakepoold
+// instances and compares the returned `coldwalletextpub` value against the
+// value set in dcrstakepool's config.
+// Returns an error if an RPC call to any of the backend clients errors or
+// if any returned `coldwalletextpub` value is not the same as dcrstakepool's.
+func (s *StakepooldManager) CrossCheckColdWalletExtPubs(dcrstakepoolColdWalletExtPub string) error {
+	for _, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		stakepooldResp, err := client.GetColdWalletExtPub(context.Background(), &pb.GetColdWalletExtPubRequest{})
+		if err != nil {
+			return fmt.Errorf("GetColdWalletExtPub RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+		}
+		if stakepooldResp.ColdWalletExtPub != dcrstakepoolColdWalletExtPub {
+			return fmt.Errorf("coldwalletextpub incorrectly configured on stakepoold instance %s", conn.Target())
+		}
+	}
+	return nil
 }

@@ -33,8 +33,8 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "8.0.0"
-	semverMajor        = 8
+	semverString       = "9.0.0"
+	semverMajor        = 9
 	semverMinor        = 0
 	semverPatch        = 0
 )
@@ -299,5 +299,11 @@ func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInf
 		Missed:           response.Missed,
 		ProportionMissed: response.ProportionMissed,
 		Expired:          response.Expired,
+	}, nil
+}
+
+func (s *stakepooldServer) GetColdWalletExtPub(ctx context.Context, req *pb.GetColdWalletExtPubRequest) (*pb.GetColdWalletExtPubResponse, error) {
+	return &pb.GetColdWalletExtPubResponse{
+		ColdWalletExtPub: s.appContext.ColdWalletExtPub,
 	}, nil
 }

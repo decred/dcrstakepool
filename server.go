@@ -126,16 +126,21 @@ func runMain() error {
 
 	if err != nil {
 		application.Close()
-		return fmt.Errorf("Failed to initialize the main controller: %v",
-			err)
+		return fmt.Errorf("Failed to initialize the main controller: %v", err)
+	}
+
+	// Check that dcrstakepool config and all stakepoold configs
+	// have the same value set for `coldwalletextpub`.
+	if err = controller.Cfg.StakepooldServers.CrossCheckColdWalletExtPubs(cfg.ColdWalletExtPub); err != nil {
+		application.Close()
+		return err
 	}
 
 	// reset votebits if Vote Version changed or stored VoteBits are invalid
 	_, err = controller.CheckAndResetUserVoteBits(application.DbMap)
 	if err != nil {
 		application.Close()
-		return fmt.Errorf("failed to check and reset user vote bits: %v",
-			err)
+		return fmt.Errorf("failed to check and reset user vote bits: %v", err)
 	}
 
 	err = controller.StakepooldUpdateUsers(application.DbMap)
