@@ -1,7 +1,7 @@
 # dcrstakepool
 
 [![GoDoc](https://godoc.org/github.com/decred/dcrstakepool?status.svg)](https://godoc.org/github.com/decred/dcrstakepool)
-[![Build Status](https://travis-ci.org/decred/dcrstakepool.svg?branch=master)](https://travis-ci.org/decred/dcrstakepool)
+[![Build Status](https://github.com/decred/dcrstakepool/workflows/Build%20and%20Test/badge.svg)](https://github.com/decred/dcrstakepool/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/decred/dcrstakepool)](https://goreportcard.com/report/github.com/decred/dcrstakepool)
 
 dcrstakepool is a web application which coordinates generating 1-of-2 multisig
@@ -35,7 +35,7 @@ suitable for use on testnet. Further documentation can be found in `./harness.sh
 
 ## Requirements
 
-- [Go](http://golang.org) 1.11.13 or newer (1.12 is recommended).
+- [Go](https://golang.org) 1.11.13 or newer (1.12 is recommended).
 - MySQL
 - Nginx or other web server to proxy to dcrstakepool
 
@@ -44,7 +44,7 @@ suitable for use on testnet. Further documentation can be found in `./harness.sh
 ### Build from Source
 
 Building or updating from source requires only an installation of Go
-([instructions](http://golang.org/doc/install)). It is recommended to add
+([instructions](https://golang.org/doc/install)). It is recommended to add
 `$GOPATH/bin` to your `PATH` at this point.
 
 Clone the dcrstakepool repository into any folder and follow the instructions

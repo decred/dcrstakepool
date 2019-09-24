@@ -1,9 +1,9 @@
 version
 =======
 
-[![Build Status](http://img.shields.io/travis/decred/dcrstakepool.svg)](https://travis-ci.org/decred/dcrstakepool)
-[![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](http://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/decred/dcrstakepool/internal/version)
+[![Build Status](https://github.com/decred/dcrstakepool/workflows/Build%20and%20Test/badge.svg)](https://github.com/decred/dcrstakepool/actions)
+[![ISC License](https://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/decred/dcrstakepool/internal/version)
 
 Package version provides a single location to house the version information for
 dcrstakepool and other utilities provided in the same repository.
