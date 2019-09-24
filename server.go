@@ -172,6 +172,7 @@ func runMain() error {
 
 	// Middlewares used by app are applied to all routes (HTML and API)
 	app.Use(middleware.RequestID)
+	app.Use(system.Logger(cfg.RealIPHeader))
 	app.Use(middleware.Recoverer)
 	app.Use(application.ApplyDbMap)
 	app.Use(context.ClearHandler)
