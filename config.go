@@ -66,7 +66,6 @@ var runServiceCommand func(string) error
 type config struct {
 	ShowVersion        bool    `short:"V" long:"version" description:"Display version information and exit"`
 	ConfigFile         string  `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir            string  `short:"b" long:"datadir" description:"Deprecated. Unused, do not set."`
 	LogDir             string  `long:"logdir" description:"Directory to log output."`
 	Listen             string  `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
 	TestNet            bool    `long:"testnet" description:"Use the test network"`
@@ -103,16 +102,9 @@ type config struct {
 	SystemCerts        *x509.CertPool
 	StakepooldHosts    []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
 	StakepooldCerts    []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
-	WalletHosts        []string `long:"wallethosts" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
-	WalletUsers        []string `long:"walletusers" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
-	WalletPasswords    []string `long:"walletpasswords" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
-	WalletCerts        []string `long:"walletcerts" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
 	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
-	MinServers         int      `long:"minservers" description:"Deprecated: Do not use. Minimum of 2 servers are required when running on mainnet. Testnet and simnet require minimum 1."`
-	EnableStakepoold   bool     `long:"enablestakepoold" description:"Deprecated: Do not use. Stakepoold is required."`
-	MaxVotedAge        int64    `long:"maxvotedage" description:"Deprecated: Use maxvotedtickets instead"`
 	MaxVotedTickets    int      `long:"maxvotedtickets" description:"Maximum number of voted tickets to show on tickets page."`
 	Description        string   `long:"description" description:"Operators own description of their VSP"`
 	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
@@ -606,45 +598,6 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Warn about deprecated config items if they have been set
-	if cfg.DataDir != "" {
-		str := "%s: Config datadir is deprecated. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if cfg.EnableStakepoold {
-		str := "%s: Config enablestakepoold is deprecated. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if cfg.MaxVotedAge != 0 {
-		str := "%s: Config maxVotedAge is deprecated and has no effect. Use maxVotedTickets instead"
-		log.Warnf(str, funcName)
-	}
-
-	if cfg.MinServers != 0 {
-		str := "%s: Config minservers is deprecated. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if len(cfg.WalletHosts) > 0 {
-		str := "%s: Config WalletHosts is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if len(cfg.WalletCerts) > 0 {
-		str := "%s: Config WalletCerts is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if len(cfg.WalletUsers) > 0 {
-		str := "%s: Config WalletUsers is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if len(cfg.WalletPasswords) > 0 {
-		str := "%s: Config WalletPasswords is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
 
 	if cfg.Profile != "" {
 		str := "%s: Config Profile is deprecated and has no effect. Please remove from your config file"
