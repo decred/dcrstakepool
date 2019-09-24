@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/decred/dcrd/chaincfg"
@@ -72,9 +71,9 @@ type config struct {
 	Listen             string  `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
 	TestNet            bool    `long:"testnet" description:"Use the test network"`
 	SimNet             bool    `long:"simnet" description:"Use the simulation test network"`
-	Profile            string  `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	CPUProfile         string  `long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	MemProfile         string  `long:"memprofile" description:"Write mem profile to the specified file"`
+	Profile            string  `long:"profile" description:"Deprecated: This config has no effect"`
+	CPUProfile         string  `long:"cpuprofile" description:"Deprecated: This config has no effect"`
+	MemProfile         string  `long:"memprofile" description:"Deprecated: This config has no effect"`
 	DebugLevel         string  `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	APISecret          string  `long:"apisecret" description:"Secret string used to encrypt API tokens."`
 	BaseURL            string  `long:"baseurl" description:"BaseURL to use when sending links via email"`
@@ -468,18 +467,6 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	// Validate profile port number
-	if cfg.Profile != "" {
-		profilePort, err := strconv.Atoi(cfg.Profile)
-		if err != nil || profilePort < 1024 || profilePort > 65535 {
-			str := "%s: The profile port must be between 1024 and 65535"
-			err := fmt.Errorf(str, funcName)
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
-		}
-	}
-
 	if cfg.APISecret == "" {
 		str := "%s: APIsecret is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -656,6 +643,21 @@ func loadConfig() (*config, []string, error) {
 
 	if len(cfg.WalletPasswords) > 0 {
 		str := "%s: Config WalletPasswords is deprecated and has no effect. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if cfg.Profile != "" {
+		str := "%s: Config Profile is deprecated and has no effect. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if cfg.CPUProfile != "" {
+		str := "%s: Config CPUProfile is deprecated and has no effect. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
+	if cfg.MemProfile != "" {
+		str := "%s: Config MemProfile is deprecated and has no effect. Please remove from your config file"
 		log.Warnf(str, funcName)
 	}
 
