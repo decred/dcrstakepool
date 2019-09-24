@@ -705,22 +705,21 @@ func (s *StakepooldManager) GetStakeInfo() (*pb.GetStakeInfoResponse, error) {
 	return nil, errors.New("GetStakeInfo RPC failed on all stakepoold instances")
 }
 
-// ColdWalletExtPubMatches calls GetColdWalletExtPub RPC on all stakepoold
+// CrossCheckColdWalletExtPubs calls GetColdWalletExtPub RPC on all stakepoold
 // instances and compares the returned `coldwalletextpub` value against the
 // value set in dcrstakepool's config.
-// Returns false if an RPC call to any of the backend clients errors or
+// Returns an error if an RPC call to any of the backend clients errors or
 // if any returned `coldwalletextpub` value is not the same as dcrstakepool's.
-func (s *StakepooldManager) ColdWalletExtPubMatches(dcrstakepoolColdWalletExtPub string) bool {
+func (s *StakepooldManager) CrossCheckColdWalletExtPubs(dcrstakepoolColdWalletExtPub string) error {
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
 		stakepooldResp, err := client.GetColdWalletExtPub(context.Background(), &pb.GetColdWalletExtPubRequest{})
 		if err != nil {
-			log.Errorf("GetColdWalletExtPub RPC failed on stakepoold instance %s: %v", conn.Target(), err)
-			return false
+			return fmt.Errorf("GetColdWalletExtPub RPC failed on stakepoold instance %s: %v", conn.Target(), err)
 		}
 		if stakepooldResp.ColdWalletExtPub != dcrstakepoolColdWalletExtPub {
-			return false
+			return fmt.Errorf("coldwalletextpub incorrectly configured on stakepoold instance %s", conn.Target())
 		}
 	}
-	return true
+	return nil
 }

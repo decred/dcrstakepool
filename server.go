@@ -131,10 +131,9 @@ func runMain() error {
 
 	// Check that dcrstakepool config and all stakepoold configs
 	// have the same value set for `coldwalletextpub`.
-	if !controller.Cfg.StakepooldServers.ColdWalletExtPubMatches(cfg.ColdWalletExtPub) {
+	if err = controller.Cfg.StakepooldServers.CrossCheckColdWalletExtPubs(cfg.ColdWalletExtPub); err != nil {
 		application.Close()
-		return fmt.Errorf("coldwalletextpub is not the same in " +
-			"dcrstakepool.conf and stakepoold.conf files")
+		return err
 	}
 
 	// reset votebits if Vote Version changed or stored VoteBits are invalid
