@@ -6,7 +6,10 @@
 package main
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -26,7 +29,6 @@ const (
 	defaultBaseURL         = "http://127.0.0.1:8000"
 	defaultClosePoolMsg    = "The voting service is temporarily closed to new signups."
 	defaultConfigFilename  = "dcrstakepool.conf"
-	defaultDataDirname     = "data"
 	defaultLogLevel        = "info"
 	defaultLogDirname      = "logs"
 	defaultLogFilename     = "dcrstakepool.log"
@@ -50,7 +52,6 @@ const (
 var (
 	dcrstakepoolHomeDir = dcrutil.AppDataDir("dcrstakepool", false)
 	defaultConfigFile   = filepath.Join(dcrstakepoolHomeDir, defaultConfigFilename)
-	defaultDataDir      = filepath.Join(dcrstakepoolHomeDir, defaultDataDirname)
 	defaultLogDir       = filepath.Join(dcrstakepoolHomeDir, defaultLogDirname)
 	coldWalletFeeKey    *hdkeychain.ExtendedKey
 	votingWalletVoteKey *hdkeychain.ExtendedKey
@@ -64,40 +65,43 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	ShowVersion        bool     `short:"V" long:"version" description:"Display version information and exit"`
-	ConfigFile         string   `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir            string   `short:"b" long:"datadir" description:"Directory to store data"`
-	LogDir             string   `long:"logdir" description:"Directory to log output."`
-	Listen             string   `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
-	TestNet            bool     `long:"testnet" description:"Use the test network"`
-	SimNet             bool     `long:"simnet" description:"Use the simulation test network"`
-	Profile            string   `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	CPUProfile         string   `long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	MemProfile         string   `long:"memprofile" description:"Write mem profile to the specified file"`
-	DebugLevel         string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	APISecret          string   `long:"apisecret" description:"Secret string used to encrypt API tokens."`
-	BaseURL            string   `long:"baseurl" description:"BaseURL to use when sending links via email"`
-	ColdWalletExtPub   string   `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
-	ClosePool          bool     `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
-	ClosePoolMsg       string   `long:"closepoolmsg" description:"Message to display when closepool is set."`
-	CookieSecret       string   `long:"cookiesecret" description:"Secret string used to encrypt session data."`
-	CookieSecure       bool     `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
-	DBHost             string   `long:"dbhost" description:"Hostname for database connection"`
-	DBUser             string   `long:"dbuser" description:"Username for database connection"`
-	DBPassword         string   `long:"dbpassword" description:"Password for database connection"`
-	DBPort             string   `long:"dbport" description:"Port for database connection"`
-	DBName             string   `long:"dbname" description:"Name of database"`
-	PublicPath         string   `long:"publicpath" description:"Path to the public folder which contains css/fonts/images/javascript."`
-	TemplatePath       string   `long:"templatepath" description:"Path to the views folder which contains html files."`
-	PoolEmail          string   `long:"poolemail" description:"Email address to for support inquiries"`
-	PoolFees           float64  `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
-	PoolLink           string   `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
-	RealIPHeader       string   `long:"realipheader" description:"The name of an HTTP request header containing the actual remote client IP address, typically set by a reverse proxy. An empty string (default) indicates to use net/Request.RemodeAddr."`
-	SMTPFrom           string   `long:"smtpfrom" description:"From address to use on outbound mail"`
-	SMTPHost           string   `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
-	SMTPUsername       string   `long:"smtpusername" description:"SMTP username for authentication if required"`
-	SMTPPassword       string   `long:"smtppassword" description:"SMTP password for authentication if required"`
-	UseSMTPS           bool     `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
+	ShowVersion        bool    `short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile         string  `short:"C" long:"configfile" description:"Path to configuration file"`
+	DataDir            string  `short:"b" long:"datadir" description:"Deprecated. Unused, do not set."`
+	LogDir             string  `long:"logdir" description:"Directory to log output."`
+	Listen             string  `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
+	TestNet            bool    `long:"testnet" description:"Use the test network"`
+	SimNet             bool    `long:"simnet" description:"Use the simulation test network"`
+	Profile            string  `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
+	CPUProfile         string  `long:"cpuprofile" description:"Write CPU profile to the specified file"`
+	MemProfile         string  `long:"memprofile" description:"Write mem profile to the specified file"`
+	DebugLevel         string  `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	APISecret          string  `long:"apisecret" description:"Secret string used to encrypt API tokens."`
+	BaseURL            string  `long:"baseurl" description:"BaseURL to use when sending links via email"`
+	ColdWalletExtPub   string  `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
+	ClosePool          bool    `long:"closepool" description:"Disable user registration actions (sign-ups and submitting addresses)"`
+	ClosePoolMsg       string  `long:"closepoolmsg" description:"Message to display when closepool is set."`
+	CookieSecret       string  `long:"cookiesecret" description:"Secret string used to encrypt session data."`
+	CookieSecure       bool    `long:"cookiesecure" description:"Set whether cookies can be sent in clear text or not."`
+	DBHost             string  `long:"dbhost" description:"Hostname for database connection"`
+	DBUser             string  `long:"dbuser" description:"Username for database connection"`
+	DBPassword         string  `long:"dbpassword" description:"Password for database connection"`
+	DBPort             string  `long:"dbport" description:"Port for database connection"`
+	DBName             string  `long:"dbname" description:"Name of database"`
+	PublicPath         string  `long:"publicpath" description:"Path to the public folder which contains css/fonts/images/javascript."`
+	TemplatePath       string  `long:"templatepath" description:"Path to the views folder which contains html files."`
+	PoolEmail          string  `long:"poolemail" description:"Email address to for support inquiries"`
+	PoolFees           float64 `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
+	PoolLink           string  `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
+	RealIPHeader       string  `long:"realipheader" description:"The name of an HTTP request header containing the actual remote client IP address, typically set by a reverse proxy. An empty string (default) indicates to use net/Request.RemodeAddr."`
+	SMTPFrom           string  `long:"smtpfrom" description:"From address to use on outbound mail"`
+	SMTPHost           string  `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
+	SMTPUsername       string  `long:"smtpusername" description:"SMTP username for authentication if required"`
+	SMTPPassword       string  `long:"smtppassword" description:"SMTP password for authentication if required"`
+	UseSMTPS           bool    `long:"usesmtps" description:"Connect to the SMTP server using smtps."`
+	SMTPSkipVerify     bool    `long:"smtpskipverify" description:"Skip SMTP TLS cert verification. Will only skip if SMTPCert is empty"`
+	SMTPCert           string  `long:"smtpcert" description:"Path for the smtp certificate file"`
+	SystemCerts        *x509.CertPool
 	StakepooldHosts    []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
 	StakepooldCerts    []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
 	WalletHosts        []string `long:"wallethosts" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
@@ -107,7 +111,7 @@ type config struct {
 	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
-	MinServers         int      `long:"minservers" description:"Minimum number of wallets connected needed to avoid errors"`
+	MinServers         int      `long:"minservers" description:"Deprecated: Do not use. Minimum of 2 servers are required when running on mainnet. Testnet and simnet require minimum 1."`
 	EnableStakepoold   bool     `long:"enablestakepoold" description:"Deprecated: Do not use. Stakepoold is required."`
 	MaxVotedAge        int64    `long:"maxvotedage" description:"Deprecated: Use maxvotedtickets instead"`
 	MaxVotedTickets    int      `long:"maxvotedtickets" description:"Maximum number of voted tickets to show on tickets page."`
@@ -314,7 +318,6 @@ func loadConfig() (*config, []string, error) {
 		ClosePoolMsg:    defaultClosePoolMsg,
 		ConfigFile:      defaultConfigFile,
 		DebugLevel:      defaultLogLevel,
-		DataDir:         defaultDataDir,
 		LogDir:          defaultLogDir,
 		CookieSecure:    defaultCookieSecure,
 		DBHost:          defaultDBHost,
@@ -374,9 +377,7 @@ func loadConfig() (*config, []string, error) {
 	// Load additional config from file.
 	var configFileError error
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
-	if !(preCfg.SimNet) || preCfg.ConfigFile !=
-		defaultConfigFile {
-
+	if !(preCfg.SimNet) || preCfg.ConfigFile != defaultConfigFile {
 		err := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
 		if err != nil {
 			if _, ok := err.(*os.PathError); !ok {
@@ -443,15 +444,6 @@ func loadConfig() (*config, []string, error) {
 		fmt.Fprintln(os.Stderr, usageMessage)
 		return nil, nil, err
 	}
-
-	// Append the network type to the data directory so it is "namespaced"
-	// per network.  In addition to the block database, there are other
-	// pieces of data that are saved to disk such as address manager state.
-	// All data is specific to a network, so namespacing the data directory
-	// means each individual piece of serialized data does not have to
-	// worry about changing names per network and such.
-	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
-	cfg.DataDir = filepath.Join(cfg.DataDir, netName(activeNetParams))
 
 	// Append the network type to the log directory so it is "namespaced"
 	// per network in the same fashion as the data directory.
@@ -601,7 +593,37 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
+	// Validate smtp root cert.
+	if cfg.SMTPCert != "" {
+		cfg.SMTPCert = cleanAndExpandPath(cfg.SMTPCert)
+
+		b, err := ioutil.ReadFile(cfg.SMTPCert)
+		if err != nil {
+			return nil, nil, fmt.Errorf("read smtpcert: %v", err)
+		}
+		block, _ := pem.Decode(b)
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, nil, fmt.Errorf("parse smtpcert: %v", err)
+		}
+		systemCerts, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, nil, fmt.Errorf("getting systemcertpool: %v", err)
+		}
+		systemCerts.AddCert(cert)
+		cfg.SystemCerts = systemCerts
+
+		if cfg.SMTPSkipVerify {
+			log.Warnf("SMTPCert has been set so SMTPSkipVerify is being disregarded.")
+		}
+	}
+
 	// Warn about deprecated config items if they have been set
+	if cfg.DataDir != "" {
+		str := "%s: Config datadir is deprecated. Please remove from your config file"
+		log.Warnf(str, funcName)
+	}
+
 	if cfg.EnableStakepoold {
 		str := "%s: Config enablestakepoold is deprecated. Please remove from your config file"
 		log.Warnf(str, funcName)

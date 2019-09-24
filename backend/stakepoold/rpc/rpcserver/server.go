@@ -33,8 +33,8 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "7.0.0"
-	semverMajor        = 7
+	semverString       = "8.0.0"
+	semverMajor        = 8
 	semverMinor        = 0
 	semverPatch        = 0
 )
@@ -85,6 +85,7 @@ func processTickets(ticketsMSA map[chainhash.Hash]string) []*pb.Ticket {
 }
 
 func (s *stakepooldServer) GetAddedLowFeeTickets(c context.Context, req *pb.GetAddedLowFeeTicketsRequest) (*pb.GetAddedLowFeeTicketsResponse, error) {
+
 	s.appContext.RLock()
 	ticketsMSA := s.appContext.AddedLowFeeTicketsMSA
 	s.appContext.RUnlock()
@@ -94,6 +95,7 @@ func (s *stakepooldServer) GetAddedLowFeeTickets(c context.Context, req *pb.GetA
 }
 
 func (s *stakepooldServer) GetIgnoredLowFeeTickets(c context.Context, req *pb.GetIgnoredLowFeeTicketsRequest) (*pb.GetIgnoredLowFeeTicketsResponse, error) {
+
 	s.appContext.RLock()
 	ticketsMSA := s.appContext.IgnoredLowFeeTicketsMSA
 	s.appContext.RUnlock()
@@ -103,6 +105,7 @@ func (s *stakepooldServer) GetIgnoredLowFeeTickets(c context.Context, req *pb.Ge
 }
 
 func (s *stakepooldServer) GetLiveTickets(c context.Context, req *pb.GetLiveTicketsRequest) (*pb.GetLiveTicketsResponse, error) {
+
 	s.appContext.RLock()
 	ticketsMSA := s.appContext.LiveTicketsMSA
 	s.appContext.RUnlock()
@@ -112,6 +115,7 @@ func (s *stakepooldServer) GetLiveTickets(c context.Context, req *pb.GetLiveTick
 }
 
 func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.SetAddedLowFeeTicketsRequest) (*pb.SetAddedLowFeeTicketsResponse, error) {
+
 	addedLowFeeTickets := make(map[chainhash.Hash]string)
 
 	for _, ticket := range req.Tickets {
@@ -128,6 +132,7 @@ func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.Se
 }
 
 func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUserVotingPrefsRequest) (*pb.SetUserVotingPrefsResponse, error) {
+
 	userVotingPrefs := make(map[string]userdata.UserVotingConfig)
 	for _, data := range req.UserVotingConfig {
 		userVotingPrefs[data.MultiSigAddress] = userdata.UserVotingConfig{
@@ -142,17 +147,26 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 	return &pb.SetUserVotingPrefsResponse{}, nil
 }
 
-func (s *stakepooldServer) ImportScript(ctx context.Context, req *pb.ImportScriptRequest) (*pb.ImportScriptResponse, error) {
-	heightImported, err := s.appContext.ImportScript(req.Script, req.Rescan, req.RescanHeight)
+func (s *stakepooldServer) ImportNewScript(ctx context.Context, req *pb.ImportNewScriptRequest) (*pb.ImportNewScriptResponse, error) {
+	heightImported, err := s.appContext.ImportNewScript(req.Script)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.ImportScriptResponse{
+	return &pb.ImportNewScriptResponse{
 		HeightImported: heightImported,
 	}, nil
 }
 
+func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.ImportMissingScriptsRequest) (*pb.ImportMissingScriptsResponse, error) {
+	err := s.appContext.ImportMissingScripts(req.Scripts, int(req.RescanHeight))
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ImportMissingScriptsResponse{}, nil
+}
+
 func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsRequest) (*pb.ListScriptsResponse, error) {
+
 	scripts, err := s.appContext.ListScripts()
 	if err != nil {
 		return nil, err
@@ -162,6 +176,7 @@ func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsR
 }
 
 func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.AccountSyncAddressIndexRequest) (*pb.AccountSyncAddressIndexResponse, error) {
+
 	err := s.appContext.AccountSyncAddressIndex(req.Account, req.Branch, int(req.Index))
 	if err != nil {
 		return nil, err
@@ -171,6 +186,7 @@ func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.
 }
 
 func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
+
 	tickets, err := s.appContext.GetTickets(req.IncludeImmature)
 	if err != nil {
 		return nil, err
@@ -187,6 +203,7 @@ func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsReq
 }
 
 func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMissingTicketRequest) (*pb.AddMissingTicketResponse, error) {
+
 	err := s.appContext.AddMissingTicket(req.Hash)
 	if err != nil {
 		return nil, err
@@ -195,6 +212,7 @@ func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMiss
 }
 
 func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakePoolUserInfoRequest) (*pb.StakePoolUserInfoResponse, error) {
+
 	response, err := s.appContext.StakePoolUserInfo(req.MultiSigAddress)
 	if err != nil {
 		return nil, err
@@ -218,6 +236,7 @@ func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakeP
 }
 
 func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoRequest) (*pb.WalletInfoResponse, error) {
+
 	response, err := s.appContext.WalletInfo()
 	if err != nil {
 		return nil, err
@@ -232,6 +251,7 @@ func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoReq
 }
 
 func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.ValidateAddressRequest) (*pb.ValidateAddressResponse, error) {
+
 	response, err := s.appContext.ValidateAddress(req.Address)
 	if err != nil {
 		return nil, err
@@ -244,6 +264,7 @@ func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.Validate
 }
 
 func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMultisigRequest) (*pb.CreateMultisigResponse, error) {
+
 	response, err := s.appContext.CreateMultisig(req.Address)
 	if err != nil {
 		return nil, err
@@ -256,6 +277,7 @@ func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMul
 }
 
 func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInfoRequest) (*pb.GetStakeInfoResponse, error) {
+
 	response, err := s.appContext.GetStakeInfo()
 	if err != nil {
 		return nil, err

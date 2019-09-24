@@ -24,7 +24,7 @@ type HashList []string
 // DecodeHashList attempts to decode each hash string in the given HashList,
 // returning a non-nil error if any string in the list is not a valid hashes.
 func DecodeHashList(hashList HashList) ([]chainhash.Hash, error) {
-	var hashes []chainhash.Hash
+	hashes := make([]chainhash.Hash, 0, len(hashList))
 	for i := range hashList {
 		h, err := chainhash.NewHashFromStr(hashList[i])
 		if err != nil {

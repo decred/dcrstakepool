@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	requiredStakepooldAPI = semver{major: 7, minor: 0, patch: 0}
+	requiredStakepooldAPI = semver{major: 8, minor: 0, patch: 0}
 
 	// cacheTimerStakeInfo is the duration of time after which to
 	// access the wallet and update the stake information instead
@@ -68,8 +68,7 @@ func ConnectStakepooldGRPC(stakepooldHosts []string, stakepooldCerts []string) (
 		}
 		c := pb.NewVersionServiceClient(conn)
 
-		versionRequest := &pb.VersionRequest{}
-		versionResponse, err := c.Version(context.Background(), versionRequest)
+		versionResponse, err := c.Version(context.Background(), &pb.VersionRequest{})
 		if err != nil {
 			return nil, err
 		}
@@ -201,7 +200,7 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 		return err
 	}
 
-	var tickets []*pb.Ticket
+	tickets := make([]*pb.Ticket, 0, len(dbTickets))
 	for _, ticket := range dbTickets {
 		hash, err := chainhash.NewHashFromStr(ticket.TicketHash)
 		if err != nil {
@@ -214,11 +213,11 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 		})
 	}
 
+	setAddedTicketsReq := &pb.SetAddedLowFeeTicketsRequest{
+		Tickets: tickets,
+	}
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		setAddedTicketsReq := &pb.SetAddedLowFeeTicketsRequest{
-			Tickets: tickets,
-		}
 		_, err := client.SetAddedLowFeeTickets(context.Background(),
 			setAddedTicketsReq)
 		if err != nil {
@@ -237,19 +236,18 @@ func (s *StakepooldManager) SetAddedLowFeeTickets(dbTickets []models.LowFeeTicke
 // should be considered fatal, as it indicates that a voting wallet is
 // misconfigured
 func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisigResponse, error) {
-
 	if err := s.connected(); err != nil {
 		log.Errorf("CreateMultisig: stakepoold failed connectivity check: %v", err)
 		return nil, err
 	}
 
 	respPerServer := make([]*pb.CreateMultisigResponse, len(s.grpcConnections))
+	request := &pb.CreateMultisigRequest{
+		Address: address,
+	}
 
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		request := &pb.CreateMultisigRequest{
-			Address: address,
-		}
 
 		resp, err := client.CreateMultisig(context.Background(), request)
 		if err != nil {
@@ -273,7 +271,6 @@ func (s *StakepooldManager) CreateMultisig(address []string) (*pb.CreateMultisig
 // SyncAll ensures that the wallet servers are all in sync with each
 // other in terms of tickets, redeem scripts and address indexes.
 func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int64) error {
-
 	if err := s.connected(); err != nil {
 		log.Errorf("SyncAll: stakepoold failed connectivity check: %v", err)
 		return err
@@ -305,7 +302,6 @@ func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int6
 // syncWatchedAddresses calls AccountSyncAddressIndex RPC on all stakepoold instances. It stops
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) syncWatchedAddresses(accountName string, branch uint32, maxUsers int64) error {
-
 	log.Info("syncWatchedAddresses: Attempting to synchronise watched addresses across voting wallets")
 
 	request := &pb.AccountSyncAddressIndexRequest{
@@ -334,7 +330,6 @@ func (s *StakepooldManager) syncWatchedAddresses(accountName string, branch uint
 // and imports any missing scripts. Returns an error immediately if any RPC
 // call fails.
 func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
-
 	type ScriptHeight struct {
 		Script []byte
 		Height int
@@ -342,27 +337,28 @@ func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 
 	log.Info("syncScripts: Attempting to synchronise redeem scripts across voting wallets")
 
-	// Fetch the redeem scripts from each server.
-	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
-		len(s.grpcConnections))
+	// Get all scripts from db
 	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
 
-	// add all scripts from db
 	for _, v := range multiSigScripts {
 		byteScript, err := hex.DecodeString(v.MultiSigScript)
 		if err != nil {
-			log.Errorf("syncScripts: Skipping script %s due to err %v", v.MultiSigScript, err)
+			log.Errorf("syncScripts: Failed to decode script %s due to err: %v", v.MultiSigScript, err)
 			return err
 		}
 		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
 	}
 
-	// Go through each server and see who is synced to the most redeem scripts.
+	log.Infof("syncScripts: %d scripts found in the db", len(allRedeemScripts))
+
+	// Fetch the scripts from each server.
+	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
+		len(s.grpcConnections))
+
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		request := &pb.ListScriptsRequest{}
 
-		resp, err := client.ListScripts(context.Background(), request)
+		resp, err := client.ListScripts(context.Background(), &pb.ListScriptsRequest{})
 		if err != nil {
 			return err
 		}
@@ -379,24 +375,36 @@ func (s *StakepooldManager) syncScripts(multiSigScripts []models.User) error {
 		log.Infof("syncScripts: stakepoold %s reports %d scripts", conn.Target(), len(redeemScriptsPerServer[i]))
 	}
 
+	// Check each server has every script
 	for i, conn := range s.grpcConnections {
-
+		// Because we are adding historic scripts, we need to perform a rescan.
+		// Need to find the earliest imported script height so we know where scan from.
+		missingScripts := make([][]byte, 0)
+		earliestHeight := -1
 		for k, v := range allRedeemScripts {
 			_, ok := redeemScriptsPerServer[i][k]
 			if !ok {
-				log.Infof("syncScripts: Redeem script from DB not found on stakepoold %s. ImportScript for %x at height %v", conn.Target(), v.Script, v.Height)
-				client := pb.NewStakepooldServiceClient(conn)
-
-				request := &pb.ImportScriptRequest{
-					Script:       v.Script,
-					Rescan:       true,
-					RescanHeight: int64(v.Height),
+				// Script is missing from server
+				missingScripts = append(missingScripts, v.Script)
+				if earliestHeight == -1 || earliestHeight > v.Height {
+					earliestHeight = v.Height
 				}
+			}
+		}
 
-				_, err := client.ImportScript(context.Background(), request)
-				if err != nil {
-					return err
-				}
+		// Add missing scripts to the server if there are any
+		if len(missingScripts) > 0 {
+			log.Infof("syncScripts: stakepoold %s was missing %d redeem scripts. Importing now...", conn.Target(), len(missingScripts))
+			client := pb.NewStakepooldServiceClient(conn)
+
+			request := &pb.ImportMissingScriptsRequest{
+				Scripts:      missingScripts,
+				RescanHeight: int64(earliestHeight),
+			}
+
+			_, err := client.ImportMissingScripts(context.Background(), request)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -415,11 +423,12 @@ func (s *StakepooldManager) syncTickets() error {
 
 	log.Infof("syncTickets: Attempting to synchronise tickets across voting wallets")
 
+	request := &pb.GetTicketsRequest{
+		IncludeImmature: true,
+	}
+
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		request := &pb.GetTicketsRequest{
-			IncludeImmature: true,
-		}
 
 		resp, err := client.GetTickets(context.Background(), request)
 		if err != nil {
@@ -464,11 +473,12 @@ func (s *StakepooldManager) syncTickets() error {
 // instances of stakepoold and returns the first successful response. Returns
 // an error if RPC to all instances of stakepoold fail
 func (s *StakepooldManager) StakePoolUserInfo(multiSigAddress string) (*pb.StakePoolUserInfoResponse, error) {
+	request := &pb.StakePoolUserInfoRequest{
+		MultiSigAddress: multiSigAddress,
+	}
+
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		request := &pb.StakePoolUserInfoRequest{
-			MultiSigAddress: multiSigAddress,
-		}
 		response, err := client.StakePoolUserInfo(context.Background(), request)
 		if err != nil {
 			log.Warnf("StakePoolUserInfo RPC failed on stakepoold instance %s: %v", conn.Target(), err)
@@ -485,13 +495,12 @@ func (s *StakepooldManager) StakePoolUserInfo(multiSigAddress string) (*pb.Stake
 // SetUserVotingPrefs performs gRPC SetUserVotingPrefs. It stops
 // executing and returns an error if any RPC call fails
 func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) error {
-
 	if err := s.connected(); err != nil {
 		log.Errorf("SetUserVotingPrefs: stakepoold failed connectivity check: %v", err)
 		return err
 	}
 
-	var users []*pb.UserVotingConfigEntry
+	users := make([]*pb.UserVotingConfigEntry, 0, len(dbUsers))
 	for userid, data := range dbUsers {
 		users = append(users, &pb.UserVotingConfigEntry{
 			UserId:          userid,
@@ -501,11 +510,12 @@ func (s *StakepooldManager) SetUserVotingPrefs(dbUsers map[int64]*models.User) e
 		})
 	}
 
+	setVotingConfigReq := &pb.SetUserVotingPrefsRequest{
+		UserVotingConfig: users,
+	}
+
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		setVotingConfigReq := &pb.SetUserVotingPrefsRequest{
-			UserVotingConfig: users,
-		}
 		_, err := client.SetUserVotingPrefs(context.Background(),
 			setVotingConfigReq)
 		if err != nil {
@@ -525,8 +535,7 @@ func (s *StakepooldManager) WalletInfo() ([]*pb.WalletInfoResponse, error) {
 
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		req := &pb.WalletInfoRequest{}
-		resp, err := client.WalletInfo(context.Background(), req)
+		resp, err := client.WalletInfo(context.Background(), &pb.WalletInfoRequest{})
 		if err != nil {
 			log.Errorf("WalletInfo RPC failed on stakepoold instance %s: %v", conn.Target(), err)
 			return nil, err
@@ -542,12 +551,13 @@ func (s *StakepooldManager) WalletInfo() ([]*pb.WalletInfoResponse, error) {
 func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateAddressResponse, error) {
 	responses := make(map[int]*pb.ValidateAddressResponse)
 
+	req := &pb.ValidateAddressRequest{
+		Address: addr.EncodeAddress(),
+	}
+
 	// Get ValidateAddress response from all wallets
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		req := &pb.ValidateAddressRequest{
-			Address: addr.EncodeAddress(),
-		}
 		resp, err := client.ValidateAddress(context.Background(), req)
 		if err != nil {
 			log.Errorf("ValidateAddress RPC failed on stakepoold instance %s: %v", conn.Target(), err)
@@ -579,29 +589,30 @@ func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateA
 	return lastResponse, nil
 }
 
-// ImportScript calls ImportScript RPC on all stakepoold instances. It stops
-// executing and returns an error if any RPC call fails
-func (s *StakepooldManager) ImportScript(script []byte) (heightImported int64, err error) {
-
+// ImportNewScript calls ImportNewScript RPC on all stakepoold instances. It stops
+// executing and returns an error if any RPC call fails.
+// Because this is a new script, no rescan is necessary.
+func (s *StakepooldManager) ImportNewScript(script []byte) (heightImported int64, err error) {
 	if err := s.connected(); err != nil {
-		log.Errorf("ImportScript: stakepoold failed connectivity check: %v", err)
+		log.Errorf("ImportNewScript: stakepoold failed connectivity check: %v", err)
 		return -1, err
+	}
+
+	req := &pb.ImportNewScriptRequest{
+		Script: script,
 	}
 
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		req := &pb.ImportScriptRequest{
-			Script: script,
-		}
-		resp, err := client.ImportScript(context.Background(), req)
+		resp, err := client.ImportNewScript(context.Background(), req)
 		if err != nil {
-			log.Errorf("ImportScript RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+			log.Errorf("ImportNewScript RPC failed on stakepoold instance %s: %v", conn.Target(), err)
 			return -1, err
 		}
 		heightImported = resp.HeightImported
 	}
 
-	log.Info("ImportScript successful on all stakepoold instances")
+	log.Info("ImportNewScript successful on all stakepoold instances")
 	return heightImported, err
 }
 

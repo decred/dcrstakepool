@@ -7,3 +7,4 @@ controllers/config.go*
 testing/
 *.orig
 debug
+public/**/*.gz

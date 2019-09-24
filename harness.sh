@@ -1,4 +1,26 @@
 #!/bin/bash
+
+# To use this test harness simply run `./harness.sh` from the repo root.
+#
+# After writing the config files and starting all of the processes, the web
+# interface should become available almost immediately. It will take a short
+# while for dcrstakepool to become fully functional because the wallets need
+# to sync and complete a re-scan before they can be used.
+#
+# This harness makes a few assumptions
+#
+# - tmux is installed
+# - dcrd, dcrwallet, stakepoold and dcrstakepool are available on $PATH
+# - Decred testnet chain is already downloaded and sync'd
+# - MySQL is configured at 127.0.0.1:3306
+# - Database `stakepool` and user `stakepool` with password `password` exist
+# - The following files exist:
+#   - ${HOME}/.dcrd/rpc.cert
+#   - ${HOME}/.dcrd/rpc.key
+#   - ${HOME}/.dcrwallet/rpc.cert
+#   - ${HOME}/.dcrwallet/rpc.key
+#   - ${HOME}/.stakepoold/rpc.cert
+
 set -e
 
 SESSION="harness"
@@ -25,7 +47,8 @@ MYSQL_PASS="password"
 
 DCRSTAKEPOOL_ADMIN_IPS="127.0.0.1,::1"
 DCRSTAKEPOOL_ADMIN_IDS="1,6,46"
-DCRSTAKEPOOL_FROM_EMAIL="admin@vsp.com"
+DCRSTAKEPOOL_SMTP_FROM="admin@vsp.com"
+DCRSTAKEPOOL_SMTP_HOST="localhost:2500"
 
 VOTING_WALLET_SEED="c539a410d13ce16dced00ed54d2644aa79302e9853bb2cd6c7d9520bf0546da27"
 VOTING_WALLET_DEFAULT_ACCT_PUB_KEY="tpubVpa7jQBLn1RH1dtbNTQoWaxnzmqedpQX8ZxUoUfjMbNw3CYapSZMikw9ktFvhmb5Xwjpz2Uiin9Zncaw14cHq6oZH69Uws4yCZkZdKip9vZ"
@@ -45,11 +68,13 @@ tmux rename-window -t $SESSION 'dcrd'
 
 echo "Writing config for testnet dcrd node"
 mkdir -p "${NODES_ROOT}/dcrd"
+cp "${DCRD_RPC_CERT}" "${NODES_ROOT}/dcrd/rpc.cert"
+cp "${DCRD_RPC_KEY}"  "${NODES_ROOT}/dcrd/rpc.key"
 cat > "${NODES_ROOT}/dcrd/dcrd.conf" <<EOF
 rpcuser=${RPC_USER}
 rpcpass=${RPC_PASS}
-rpccert=${DCRD_RPC_CERT}
-rpckey=${DCRD_RPC_KEY}
+rpccert=${NODES_ROOT}/dcrd/rpc.cert
+rpckey=${NODES_ROOT}/dcrd/rpc.key
 rpclisten=${DCRD_RPC_LISTEN}
 testnet=true
 logdir=${NODES_ROOT}/master/log
@@ -77,11 +102,13 @@ for ((i = 1; i <= $NUMBER_OF_BACKENDS; i++)); do
     echo ""
     echo "Writing config for dcrwallet-${i}"
     mkdir -p "${NODES_ROOT}/dcrwallet-${i}"
+    cp "${WALLET_RPC_CERT}" "${NODES_ROOT}/dcrwallet-${i}/rpc.cert"
+    cp "${WALLET_RPC_KEY}"  "${NODES_ROOT}/dcrwallet-${i}/rpc.key"
     cat > "${NODES_ROOT}/dcrwallet-${i}/dcrwallet.conf" <<EOF
 username=${RPC_USER}
 password=${RPC_PASS}
-rpccert=${WALLET_RPC_CERT}
-rpckey=${WALLET_RPC_KEY}
+rpccert=${NODES_ROOT}/dcrwallet-${i}/rpc.cert
+rpckey=${NODES_ROOT}/dcrwallet-${i}/rpc.key
 logdir=${NODES_ROOT}/dcrwallet-${i}/log
 appdata=${NODES_ROOT}/dcrwallet-${i}
 testnet=true
@@ -89,6 +116,7 @@ pass=${WALLET_PASS}
 rpcconnect=${DCRD_RPC_LISTEN}
 grpclisten=127.0.0.1:2010${i}
 rpclisten=${WALLET_RPC_LISTEN}
+stakepoolcoldextkey=${COLD_WALLET_PUB_KEY}:10000
 EOF
 
     echo "Starting dcrwallet-${i}"
@@ -115,6 +143,7 @@ dcrduser=${RPC_USER}
 dcrdpassword=${RPC_PASS}
 dbhost=${MYSQL_HOST}
 dbport=${MYSQL_PORT}
+logdir=${NODES_ROOT}/stakepoold-${i}/log
 dbname=${MYSQL_DB}
 dbuser=${MYSQL_USER}
 dbpassword=${MYSQL_PASS}
@@ -140,7 +169,6 @@ echo ""
 echo "Writing config for dcrstakepool"
 mkdir -p "${NODES_ROOT}/dcrstakepool"
 cat > "${NODES_ROOT}/dcrstakepool/dcrstakepool.conf" <<EOF
-datadir=${NODES_ROOT}/dcrstakepool
 logdir=${NODES_ROOT}/dcrstakepool/log
 votingwalletextpub=${VOTING_WALLET_DEFAULT_ACCT_PUB_KEY}
 apisecret=not_very_secret_at_all
@@ -152,7 +180,8 @@ dbuser=${MYSQL_USER}
 dbpassword=${MYSQL_PASS}
 coldwalletextpub=${COLD_WALLET_PUB_KEY}
 testnet=true
-smtpfrom=${DCRSTAKEPOOL_FROM_EMAIL}
+smtphost=${DCRSTAKEPOOL_SMTP_HOST}
+smtpfrom=${DCRSTAKEPOOL_SMTP_FROM}
 adminips=${DCRSTAKEPOOL_ADMIN_IPS}
 adminuserids=${DCRSTAKEPOOL_ADMIN_IDS}
 stakepooldhosts=${ALL_STAKEPOOLDS}
