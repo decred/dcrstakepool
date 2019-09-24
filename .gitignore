@@ -1,6 +1,5 @@
 config.toml
 dcrstakepool
-vendor/
 .vscode/
 .idea/
 controllers/config.go*

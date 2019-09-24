@@ -8827,3 +8827,11 @@ https://flickity.metafizzy.co
 .table-light > td.status-bad{
   background-color: #FEB8A5;
 }
+
+.stats-chart > svg {
+  position: relative;
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+  -ms-transform: translateX(-50%);
+  transform: translateX(-50%);
+}
