@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	// TODO: sync with controllers/main.go MaxUsers
+	// TODO: Remove this.
 	numServicePaymentFeeAddresses uint32 = 10000
 )
 
