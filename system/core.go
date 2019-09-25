@@ -67,13 +67,6 @@ var funcMap = template.FuncMap{
 	"times": func(a, b float64) float64 {
 		return a * b
 	},
-	"netname": func(network string) string {
-		net := strings.ToLower(network)
-		if strings.HasPrefix(net, "testnet") {
-			return "testnet"
-		}
-		return net
-	},
 }
 
 func (application *Application) LoadTemplates(templatePath string) error {

@@ -62,7 +62,7 @@
 					<div class="row">
 						<div class="col text-center bg-white py-2">
 							<p class="font-weight-bold text--size-13 mb-0">Ticket Price</p>
-							<p class="mb-0 text--size-13"><a href="https://{{netname $.Network}}.dcrdata.org/charts?chart=ticket-price&zoom=month" target="_blank" rel="noopener noreferrer">{{printf "%0.2f" .StakeInfo.Difficulty}}&nbsp;DCR</a></p>
+							<p class="mb-0 text--size-13"><a href="{{ $.DCRDataURL }}/charts?chart=ticket-price&zoom=month" target="_blank" rel="noopener noreferrer">{{printf "%0.2f" .StakeInfo.Difficulty}}&nbsp;DCR</a></p>
 						</div>
 						<div class="col text-center bg-white py-2">
 							<p class="font-weight-bold text--size-13 mb-0">Pool Size</p>
@@ -70,7 +70,7 @@
 						</div>
 						<div class="col text-center bg-white mb-3 py-2">
 							<p class="font-weight-bold text--size-13 mb-0">Tickets in Mempool</p>
-							<p class="mb-0 text--size-13"><a href="https://{{netname $.Network}}.dcrdata.org/mempool" target="_blank" rel="noopener noreferrer">{{ .StakeInfo.AllMempoolTix }}</a></p>
+							<p class="mb-0 text--size-13"><a href="{{ $.DCRDataURL }}/mempool" target="_blank" rel="noopener noreferrer">{{ .StakeInfo.AllMempoolTix }}</a></p>
 						</div>
 						<div class="col text-center bg-white mb-3 py-2">
 							<p class="font-weight-bold text--size-13 mb-0">Block Height</p>

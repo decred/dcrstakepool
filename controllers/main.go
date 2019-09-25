@@ -82,6 +82,7 @@ type MainController struct {
 	Cfg            *Config
 	captchaHandler *CaptchaHandler
 	voteVersion    uint32
+	DCRDataURL     string
 }
 
 // agendasCache holds the current available agendas for agendasCacheLife. Should
@@ -165,6 +166,8 @@ func NewMainController(cfg *Config) (*MainController, error) {
 
 	mc.voteVersion = lastVersion
 
+	mc.DCRDataURL = fmt.Sprintf("https://%s.dcrdata.org", mc.getNetworkName())
+
 	return mc, nil
 }
 
@@ -190,7 +193,7 @@ func (controller *MainController) agendas() []agenda {
 		return *agendasCache.agendas
 	}
 	agendasCache.timer = now.Add(agendasCacheLife)
-	url := fmt.Sprintf("https://%s.dcrdata.org/api/agendas", controller.getNetworkName())
+	url := fmt.Sprintf("%s/api/agendas", controller.DCRDataURL)
 	agendaInfos, err := dcrDataAgendas(url)
 	if err != nil {
 		// Ensure the next call tries to fetch statuses again.
@@ -896,7 +899,7 @@ func (controller *MainController) AdminTickets(c web.C, r *http.Request) (string
 
 	c.Env["Admin"] = isAdmin
 	c.Env["IsAdminTickets"] = true
-	c.Env["Network"] = controller.getNetworkName()
+	c.Env["DCRDataURL"] = controller.DCRDataURL
 
 	c.Env["FlashError"] = session.Flashes("adminTicketsError")
 	c.Env["FlashSuccess"] = session.Flashes("adminTicketsSuccess")
@@ -1740,7 +1743,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 		return "/error", http.StatusSeeOther
 	}
 
-	c.Env["Network"] = controller.Cfg.NetParams.Name
+	c.Env["DCRDataURL"] = controller.DCRDataURL
 
 	c.Env["PoolEmail"] = controller.Cfg.PoolEmail
 	c.Env["PoolFees"] = controller.Cfg.PoolFees
@@ -1822,7 +1825,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	}
 
 	c.Env["IsTickets"] = true
-	c.Env["Network"] = controller.getNetworkName()
+	c.Env["DCRDataURL"] = controller.DCRDataURL
 	c.Env["Title"] = "Decred VSP - Tickets"
 
 	dbMap := controller.GetDbMap(c)
