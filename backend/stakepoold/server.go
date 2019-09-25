@@ -5,15 +5,16 @@
 package main
 
 import (
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/decred/dcrd/chaincfg"
@@ -117,7 +118,10 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 	return addresses, nil
 }
 
-func runMain() error {
+func runMain(shutdownContext context.Context) error {
+	// WaitGroup to pass around and wait, after shutdown signal is received,
+	// for goroutines to safely stop.
+	wg := new(sync.WaitGroup)
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	loadedCfg, _, err := loadConfig()
@@ -155,7 +159,7 @@ func runMain() error {
 	rpcclient.UseLogger(clientLog)
 
 	var walletVer semver
-	walletConn, walletVer, err := connectWalletRPC(cfg)
+	walletConn, walletVer, err := connectWalletRPC(shutdownContext, wg, cfg)
 	if err != nil || walletConn == nil {
 		log.Infof("Connection to dcrwallet failed: %v", err)
 		return err
@@ -214,7 +218,6 @@ func runMain() error {
 		PoolFees:               cfg.PoolFees,
 		NewTicketsChan:         make(chan rpcserver.NewTicketsForBlock),
 		Params:                 activeNetParams.Params,
-		Quit:                   make(chan struct{}),
 		SpentmissedTicketsChan: make(chan rpcserver.SpentMissedTicketsForBlock),
 		UserData:               userData,
 		UserVotingConfig:       userVotingConfig,
@@ -339,27 +342,9 @@ func runMain() error {
 		}
 	}
 
-	// Only accept a single CTRL+C
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
-	// Start waiting for the interrupt signal
-	go func() {
-		<-c
-		signal.Stop(c)
-		// Close the channel so multiple goroutines can get the message
-		log.Info("CTRL+C hit.  Closing goroutines.")
-		// Stop autoreconnect.
-		ctx.WalletConnection.Stop()
-
-		saveData(ctx)
-		close(ctx.Quit)
-	}()
-
-	ctx.Wg.Add(3)
-	go ctx.NewTicketHandler()
-	go ctx.SpentmissedTicketHandler()
-	go ctx.WinningTicketHandler()
+	go ctx.NewTicketHandler(shutdownContext, wg)
+	go ctx.SpentmissedTicketHandler(shutdownContext, wg)
+	go ctx.WinningTicketHandler(shutdownContext, wg)
 
 	if cfg.NoRPCListen {
 		// Start reloading when a ticker fires
@@ -378,18 +363,22 @@ func runMain() error {
 		}()
 	}
 
-	// Wait for CTRL+C to signal goroutines to terminate via quit channel.
-	ctx.Wg.Wait()
+	// Wait for CTRL+C to signal goroutines to terminate
+	wg.Wait()
+	saveData(ctx)
 
 	return nil
 }
 
 func main() {
-	if err := runMain(); err != nil {
+	// Create a context that is cancelled when a shutdown request is received
+	// through an interrupt signal
+	shutdownContext := withShutdownCancel(context.Background())
+	go shutdownListener()
+	if err := runMain(shutdownContext); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	os.Exit(0)
 }
 
 func getDataNames() map[string]string {

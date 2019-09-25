@@ -2,6 +2,7 @@ package rpcserver
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -46,8 +47,6 @@ type AppContext struct {
 	NewTicketsChan         chan NewTicketsForBlock
 	NodeConnection         *rpcclient.Client
 	Params                 *chaincfg.Params
-	Wg                     sync.WaitGroup // wait group for go routine exits
-	Quit                   chan struct{}
 	SpentmissedTicketsChan chan SpentMissedTicketsForBlock
 	UserData               *userdata.UserData
 	VotingConfig           *VotingConfig
@@ -795,40 +794,43 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 	}()
 }
 
-func (ctx *AppContext) NewTicketHandler() {
-	defer ctx.Wg.Done()
+func (ctx *AppContext) NewTicketHandler(shutdownContext context.Context, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
 
 	for {
 		select {
 		case nt := <-ctx.NewTicketsChan:
 			go ctx.processNewTickets(nt)
-		case <-ctx.Quit:
+		case <-shutdownContext.Done():
 			return
 		}
 	}
 }
 
-func (ctx *AppContext) SpentmissedTicketHandler() {
-	defer ctx.Wg.Done()
+func (ctx *AppContext) SpentmissedTicketHandler(shutdownContext context.Context, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
 
 	for {
 		select {
 		case smt := <-ctx.SpentmissedTicketsChan:
 			go ctx.processSpentMissedTickets(smt)
-		case <-ctx.Quit:
+		case <-shutdownContext.Done():
 			return
 		}
 	}
 }
 
-func (ctx *AppContext) WinningTicketHandler() {
-	defer ctx.Wg.Done()
+func (ctx *AppContext) WinningTicketHandler(shutdownContext context.Context, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
 
 	for {
 		select {
 		case wt := <-ctx.WinningTicketsChan:
 			go ctx.ProcessWinningTickets(wt)
-		case <-ctx.Quit:
+		case <-shutdownContext.Done():
 			return
 		}
 	}
