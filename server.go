@@ -18,6 +18,7 @@ import (
 	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/email"
+	"github.com/decred/dcrstakepool/signal"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 
@@ -295,6 +296,7 @@ func runMain(ctx context.Context) error {
 	// Cleanly shutdown server on interrupt signal.
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		// Wait for shutdown.
 		<-ctx.Done()
 
@@ -304,7 +306,6 @@ func runMain(ctx context.Context) error {
 			err = fmt.Errorf("HTTP server Shutdown: %v", err)
 			fmt.Fprintln(os.Stderr, err)
 		}
-		wg.Done()
 	}()
 
 	log.Infof("listening on %v", listener.Addr())
@@ -322,8 +323,8 @@ func runMain(ctx context.Context) error {
 func main() {
 	// Create a context that is cancelled when a shutdown request is received
 	// through an interrupt signal
-	ctx := withShutdownCancel(context.Background())
-	go shutdownListener()
+	ctx := signal.WithShutdownCancel(context.Background())
+	go signal.ShutdownListener()
 	if err := runMain(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/models"
+	"github.com/decred/dcrstakepool/signal"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 	"github.com/decred/slog"
@@ -58,6 +59,7 @@ func init() {
 	models.UseLogger(modelsLog)
 	stakepooldclient.UseLogger(stakepooldclientLog)
 	system.UseLogger(systemLog)
+	signal.UseLogger(systemLog)
 }
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
