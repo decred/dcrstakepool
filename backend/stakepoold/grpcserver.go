@@ -22,6 +22,7 @@ import (
 
 	"github.com/decred/dcrd/certgen"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
+	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -188,7 +189,7 @@ func openRPCKeyPair() (tls.Certificate, error) {
 	return tls.LoadX509KeyPair(cfg.RPCCert, cfg.RPCKey)
 }
 
-func startGRPCServers(appContext *rpcserver.AppContext) (*grpc.Server, error) {
+func startGRPCServers(stakepoold *stakepool.Stakepoold) (*grpc.Server, error) {
 	var (
 		server  *grpc.Server
 		keyPair tls.Certificate
@@ -208,7 +209,7 @@ func startGRPCServers(appContext *rpcserver.AppContext) (*grpc.Server, error) {
 	creds := credentials.NewServerTLSFromCert(&keyPair)
 	server = grpc.NewServer(grpc.Creds(creds), grpc.UnaryInterceptor(interceptUnary))
 	rpcserver.StartVersionService(server)
-	rpcserver.StartStakepooldService(appContext, server)
+	rpcserver.StartStakepooldService(stakepoold, server)
 	for _, lis := range listeners {
 		lis := lis
 		go func() {
