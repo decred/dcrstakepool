@@ -34,6 +34,7 @@ func NewSQLStore(ctx context.Context, wg *sync.WaitGroup, dbMap *gorp.DbMap, key
 	// clean db of expired sessions once a day
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 	out:
 		for {
 			select {
@@ -45,7 +46,6 @@ func NewSQLStore(ctx context.Context, wg *sync.WaitGroup, dbMap *gorp.DbMap, key
 				}
 			}
 		}
-		wg.Done()
 	}()
 	return s
 }
