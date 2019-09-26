@@ -798,7 +798,7 @@ func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
 	}()
 }
 
-func (spd *Stakepoold) NewTicketHandler(shutdownContext context.Context, wg *sync.WaitGroup) {
+func (spd *Stakepoold) NewTicketHandler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
 
@@ -806,13 +806,13 @@ func (spd *Stakepoold) NewTicketHandler(shutdownContext context.Context, wg *syn
 		select {
 		case nt := <-spd.NewTicketsChan:
 			go spd.processNewTickets(nt)
-		case <-shutdownContext.Done():
+		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (spd *Stakepoold) SpentmissedTicketHandler(shutdownContext context.Context, wg *sync.WaitGroup) {
+func (spd *Stakepoold) SpentmissedTicketHandler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
 
@@ -820,13 +820,13 @@ func (spd *Stakepoold) SpentmissedTicketHandler(shutdownContext context.Context,
 		select {
 		case smt := <-spd.SpentmissedTicketsChan:
 			go spd.processSpentMissedTickets(smt)
-		case <-shutdownContext.Done():
+		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (spd *Stakepoold) WinningTicketHandler(shutdownContext context.Context, wg *sync.WaitGroup) {
+func (spd *Stakepoold) WinningTicketHandler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
 
@@ -834,7 +834,7 @@ func (spd *Stakepoold) WinningTicketHandler(shutdownContext context.Context, wg 
 		select {
 		case wt := <-spd.WinningTicketsChan:
 			go spd.ProcessWinningTickets(wt)
-		case <-shutdownContext.Done():
+		case <-ctx.Done():
 			return
 		}
 	}

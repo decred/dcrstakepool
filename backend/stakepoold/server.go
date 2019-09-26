@@ -118,7 +118,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 	return addresses, nil
 }
 
-func runMain(shutdownContext context.Context) error {
+func runMain(ctx context.Context) error {
 	// WaitGroup to pass around and wait, after shutdown signal is received,
 	// for goroutines to safely stop.
 	wg := new(sync.WaitGroup)
@@ -159,7 +159,7 @@ func runMain(shutdownContext context.Context) error {
 	rpcclient.UseLogger(clientLog)
 
 	var walletVer semver
-	walletConn, walletVer, err := connectWalletRPC(shutdownContext, wg, cfg)
+	walletConn, walletVer, err := connectWalletRPC(ctx, wg, cfg)
 	if err != nil || walletConn == nil {
 		log.Infof("Connection to dcrwallet failed: %v", err)
 		return err
@@ -342,9 +342,9 @@ func runMain(shutdownContext context.Context) error {
 		}
 	}
 
-	go spd.NewTicketHandler(shutdownContext, wg)
-	go spd.SpentmissedTicketHandler(shutdownContext, wg)
-	go spd.WinningTicketHandler(shutdownContext, wg)
+	go spd.NewTicketHandler(ctx, wg)
+	go spd.SpentmissedTicketHandler(ctx, wg)
+	go spd.WinningTicketHandler(ctx, wg)
 
 	if cfg.NoRPCListen {
 		// Start reloading when a ticker fires
@@ -373,9 +373,9 @@ func runMain(shutdownContext context.Context) error {
 func main() {
 	// Create a context that is cancelled when a shutdown request is received
 	// through an interrupt signal
-	shutdownContext := withShutdownCancel(context.Background())
+	ctx := withShutdownCancel(context.Background())
 	go shutdownListener()
-	if err := runMain(shutdownContext); err != nil {
+	if err := runMain(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
