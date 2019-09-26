@@ -19,13 +19,13 @@ var shutdownSignaled = make(chan struct{})
 // withShutdownCancel creates a copy of a context that is cancelled whenever
 // shutdown is invoked through an interrupt signal or from an JSON-RPC stop
 // request.
-func withShutdownCancel(ctx context.Context) context.Context {
-	ctx, cancel := context.WithCancel(ctx)
+func withShutdownCancel(spd context.Context) context.Context {
+	spd, cancel := context.WithCancel(spd)
 	go func() {
 		<-shutdownSignaled
 		cancel()
 	}()
-	return ctx
+	return spd
 }
 
 // shutdownListener listens for shutdown requests and cancels all contexts

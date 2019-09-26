@@ -13,7 +13,7 @@ import (
 
 	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
+	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
 
@@ -86,14 +86,14 @@ func randString(n int) string {
 }
 
 var (
-	c  *rpcserver.AppContext
-	wt rpcserver.WinningTicketsForBlock
+	c  *stakepool.Stakepoold
+	wt stakepool.WinningTicketsForBlock
 )
 
 func init() {
-	c = &rpcserver.AppContext{
+	c = &stakepool.Stakepoold{
 		LiveTicketsMSA: make(map[chainhash.Hash]string),
-		VotingConfig: &rpcserver.VotingConfig{
+		VotingConfig: &stakepool.VotingConfig{
 			VoteBits:         1,
 			VoteBitsExtended: "05000000",
 			VoteVersion:      5,

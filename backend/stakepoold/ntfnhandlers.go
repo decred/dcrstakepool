@@ -5,19 +5,19 @@ import (
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/rpcclient/v3"
-	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
+	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 )
 
 // Define notification handlers
-func getNodeNtfnHandlers(ctx *rpcserver.AppContext) *rpcclient.NotificationHandlers {
+func getNodeNtfnHandlers(spd *stakepool.Stakepoold) *rpcclient.NotificationHandlers {
 	return &rpcclient.NotificationHandlers{
 		OnNewTickets: func(blockHash *chainhash.Hash, blockHeight int64, _ int64, tickets []*chainhash.Hash) {
-			nt := rpcserver.NewTicketsForBlock{
+			nt := stakepool.NewTicketsForBlock{
 				BlockHash:   blockHash,
 				BlockHeight: blockHeight,
 				NewTickets:  tickets,
 			}
-			ctx.NewTicketsChan <- nt
+			spd.NewTicketsChan <- nt
 		},
 		OnSpentAndMissedTickets: func(blockHash *chainhash.Hash, blockHeight int64, _ int64, tickets map[chainhash.Hash]bool) {
 			ticketsFixed := make(map[*chainhash.Hash]bool)
@@ -25,22 +25,22 @@ func getNodeNtfnHandlers(ctx *rpcserver.AppContext) *rpcclient.NotificationHandl
 				ticketHash := ticketHash
 				ticketsFixed[&ticketHash] = spent
 			}
-			smt := rpcserver.SpentMissedTicketsForBlock{
+			smt := stakepool.SpentMissedTicketsForBlock{
 				BlockHash:   blockHash,
 				BlockHeight: blockHeight,
 				SmTickets:   ticketsFixed,
 			}
 			// Wait for a wallet connection if not connected.
-			<-ctx.WalletConnection.Connected()
-			ctx.SpentmissedTicketsChan <- smt
+			<-spd.WalletConnection.Connected()
+			spd.SpentmissedTicketsChan <- smt
 		},
 		OnWinningTickets: func(blockHash *chainhash.Hash, blockHeight int64, winningTickets []*chainhash.Hash) {
-			wt := rpcserver.WinningTicketsForBlock{
+			wt := stakepool.WinningTicketsForBlock{
 				BlockHash:      blockHash,
 				BlockHeight:    blockHeight,
 				WinningTickets: winningTickets,
 			}
-			ctx.WinningTicketsChan <- wt
+			spd.WinningTicketsChan <- wt
 		},
 	}
 }
