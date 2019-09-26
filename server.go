@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gorilla/context"
 	"github.com/gorilla/csrf"
 
 	"github.com/decred/dcrd/rpcclient/v3"
@@ -180,7 +179,6 @@ func runMain() error {
 	app.Use(system.Logger(cfg.RealIPHeader))
 	app.Use(middleware.Recoverer)
 	app.Use(application.ApplyDbMap)
-	app.Use(context.ClearHandler)
 
 	// API routes
 	api := web.New()
