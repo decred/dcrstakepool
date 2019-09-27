@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/server"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/slog"
@@ -62,7 +62,7 @@ var subsystemLoggers = map[string]slog.Logger{
 // Initialize package-global logger variables.
 func init() {
 	userdata.UseLogger(dbLog)
-	rpcserver.UseLogger(grpcLog)
+	server.UseLogger(grpcLog)
 	stakepool.UseLogger(stakepoolLog)
 }
 
