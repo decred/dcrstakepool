@@ -6,6 +6,7 @@ import (
 	"errors"
 	"html/template"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -62,6 +63,12 @@ func (application *Application) Init(APISecret, baseURL, cookieSecret string,
 	application.APISecret = APISecret
 }
 
+var funcMap = template.FuncMap{
+	"times": func(a, b float64) float64 {
+		return a * b
+	},
+}
+
 func (application *Application) LoadTemplates(templatePath string) error {
 	var templates []string
 
@@ -82,17 +89,9 @@ func (application *Application) LoadTemplates(templatePath string) error {
 		return err
 	}
 
-	// Since template.Must panics with non-nil error, it is much more
-	// informative to pass the error to the caller (runMain) to log it and exit
-	// gracefully.
-	httpTemplates, err := template.ParseFiles(templates...)
-	if err != nil {
-		return err
-	}
-
-	application.Template = template.Must(httpTemplates, nil)
 	application.TemplatesPath = templatePath
-	return nil
+	application.Template, err = template.New("vsp").Funcs(funcMap).ParseFiles(templates...)
+	return err
 }
 
 func (application *Application) Close() {
@@ -192,4 +191,25 @@ type APIResponse struct {
 // NewAPIResponse is a constructor for APIResponse.
 func NewAPIResponse(status string, code codes.Code, message string, data interface{}) *APIResponse {
 	return &APIResponse{status, code, message, data}
+}
+
+// ClientIP gets the client's real IP address using the X-Real-IP header, or
+// if that is empty, http.Request.RemoteAddr. See the sample nginx.conf for
+// using the real_ip module to correctly set the X-Real-IP header.
+func ClientIP(r *http.Request, realIPHeader string) string {
+	// getHost returns the host portion of a string containing either a
+	// host:port formatted name or just a host.
+	getHost := func(hostPort string) string {
+		ip, _, err := net.SplitHostPort(hostPort)
+		if err != nil {
+			return hostPort
+		}
+		return ip
+	}
+
+	// If header not set, return RemoteAddr. Invalid hosts are replaced with "".
+	if realIPHeader == "" {
+		return getHost(r.RemoteAddr)
+	}
+	return getHost(r.Header.Get(realIPHeader))
 }

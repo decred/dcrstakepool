@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gorilla/context"
 	"github.com/gorilla/csrf"
 
 	"github.com/decred/dcrd/rpcclient/v3"
@@ -126,16 +125,21 @@ func runMain() error {
 
 	if err != nil {
 		application.Close()
-		return fmt.Errorf("Failed to initialize the main controller: %v",
-			err)
+		return fmt.Errorf("Failed to initialize the main controller: %v", err)
+	}
+
+	// Check that dcrstakepool config and all stakepoold configs
+	// have the same value set for `coldwalletextpub`.
+	if err = controller.Cfg.StakepooldServers.CrossCheckColdWalletExtPubs(cfg.ColdWalletExtPub); err != nil {
+		application.Close()
+		return err
 	}
 
 	// reset votebits if Vote Version changed or stored VoteBits are invalid
 	_, err = controller.CheckAndResetUserVoteBits(application.DbMap)
 	if err != nil {
 		application.Close()
-		return fmt.Errorf("failed to check and reset user vote bits: %v",
-			err)
+		return fmt.Errorf("failed to check and reset user vote bits: %v", err)
 	}
 
 	err = controller.StakepooldUpdateUsers(application.DbMap)
@@ -172,9 +176,9 @@ func runMain() error {
 
 	// Middlewares used by app are applied to all routes (HTML and API)
 	app.Use(middleware.RequestID)
+	app.Use(system.Logger(cfg.RealIPHeader))
 	app.Use(middleware.Recoverer)
 	app.Use(application.ApplyDbMap)
-	app.Use(context.ClearHandler)
 
 	// API routes
 	api := web.New()

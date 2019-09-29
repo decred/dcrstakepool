@@ -25,229 +25,44 @@
 	<script src="/assets/js/vendor/jquery.dataTables.min.js"></script>
 	<script src="/assets/js/vendor/dataTables.bootstrap4.min.js"></script>
 	
-	{{/* Stats page charts */}}
-	<script src="/assets/js/vendor/d3.min.js" charset="utf-8"></script>
-	<script src="/assets/js/vendor/d3pie.min.js"></script>
-
 	{{/* dcrstakepool custom js */}}
 	<script src="/assets/js/global.js"></script>
 	
+	{{if .IsStats }}
+    <!-- The order of these d3 files is important
+         because some of them depend on eachother -->
+    <script src="/assets/js/vendor/d3-selection.v1.min.js"></script>
+    <script src="/assets/js/vendor/d3-array.v1.min.js"></script>
+    <script src="/assets/js/vendor/d3-collection.v1.min.js"></script>
+    <script src="/assets/js/vendor/d3-color.v1.min.js"></script>
+    <script src="/assets/js/vendor/d3-format.v1.min.js"></script>
+    <script src="/assets/js/vendor/d3-interpolate.v1.min.js"></script>
+    <script src="/assets/js/vendor/d3-scale.v2.min.js"></script>
+    <script src="/assets/js/vendor/d3-path.v1.min.js"></script>
+    <script src="/assets/js/vendor/d3-shape.v1.min.js"></script>
 
-{{if .IsStats }}
-
+		<script src="/assets/js/stats.js"></script>
     <script>
-var pie = new d3pie("chart1", {
-	"size": {
-		"canvasWidth": 288,
-		"canvasHeight": 288,
-		"pieOuterRadius": "100%"
-	},
-	"data": {
-		"sortOrder": "value-asc",
-		"content": [
-			{
-				"label": "Missed",
-				"value": {{ .StakeInfo.Missed }},
-				"color": "#fd714b"
-			},
-			{
-				"label": "Votes",
-				"value": {{ .StakeInfo.Voted }},
-				"color": "#41bf53"
-			}
-	
-		]
-	},
-	"labels": {
-		"outer": {
-			"pieDistance": 32
-		},
-		"mainLabel": {
-			"fontSize": 0
-		},
-
-		"lines": {
-			"enabled": false
-		},
-		"truncation": {
-			"enabled": true
-		}
-	},
-	"effects": {
-		"pullOutSegmentOnClick": {
-			"effect": "linear",
-			"speed": 400,
-			"size": 8
-		},
-		"highlightSegmentOnMouseover": false,
-		"highlightLuminosity": 0.99
-	},
-	"misc": {
-		"colors": {
-			"background": "",
-			"segmentStroke": ""
-		},
-		"canvasPadding": {
-			"top": 0,
-			"right": 0,
-			"bottom": 0,
-			"left": 0
-		}
-	},
-	"tooltips": {
-		"enabled": true,
-		"type": "placeholder",
-		"string": "{label} {percentage}%",
-		"styles": {
-			"fadeInSpeed": 300,
-			"backgroundColor": "#ffffff",
-			"backgroundOpacity": 1,
-			"color": "#000000",
-			"padding": 10
-		}
-	},
-});
-var pie = new d3pie("chart2", {
-	"size": {
-		"canvasWidth": 288,
-		"canvasHeight": 288,
-		"pieOuterRadius": "100%"
-	},
-	"data": {
-		"sortOrder": "value-asc",
-		"content": [
-			{
-				"label": "Immature",
-				"value": {{ .StakeInfo.Immature }},
-				"color": "#44d6a5"
-			},
-			{
-				"label": "Live",
-				"value": {{ .StakeInfo.Live }},
-				"color": "#3478f7"
-			}
-		]
-	},
-	"labels": {
-		"outer": {
-			"pieDistance": 32
-		},
-		"mainLabel": {
-			"fontSize": 0
-		},
-		"lines": {
-			"enabled": false
-		},
-		"truncation": {
-			"enabled": true
-		}
-	},
-	"effects": {
-		"pullOutSegmentOnClick": {
-			"effect": "linear",
-			"speed": 400,
-			"size": 8
-		},
-		"highlightSegmentOnMouseover": false,
-		"highlightLuminosity": 0.99
-	},
-	"misc": {
-		"colors": {
-			"background": "",
-			"segmentStroke": ""
-		},
-		"canvasPadding": {
-			"top": 0,
-			"right": 0,
-			"bottom": 0,
-			"left": 0
-		}
-	},
-	"tooltips": {
-		"enabled": true,
-		"type": "placeholder",
-		"string": "{label} {percentage}%",
-		"styles": {
-			"fadeInSpeed": 300,
-			"backgroundColor": "#ffffff",
-			"backgroundOpacity": 1,
-			"color": "#000000",
-			"padding": 10
-		}
-	},
-});
-var pie = new d3pie("chart3", {
-	"size": {
-		"canvasWidth": 288,
-		"canvasHeight": 288,
-		"pieOuterRadius": "100%"
-	},
-	"data": {
-		"sortOrder": "value-asc",
-		"content": [
-			{
-				"label": "This Voting Service Ticket Pool",
-				"value": {{ .StakeInfo.Live }},
-				"color": "#73d5f3"
-			},
-			{
-				"label": "Network Ticket Pool",
-				"value": {{ .StakeInfo.PoolSize }},
-				"color": "#effafe"
-			}
-		]
-	},
-	"labels": {
-		"outer": {
-			"pieDistance": 32
-		},
-		"mainLabel": {
-			"fontSize": 0
-		},
-
-		"lines": {
-			"enabled": false
-		},
-		"truncation": {
-			"enabled": true
-		}
-	},
-	"effects": {
-		"pullOutSegmentOnClick": {
-			"effect": "linear",
-			"speed": 400,
-			"size": 8
-		},
-		"highlightSegmentOnMouseover": false,
-		"highlightLuminosity": 0.99
-	},
-	"misc": {
-		"colors": {
-			"background": "",
-			"segmentStroke": ""
-		},
-		"canvasPadding": {
-			"top": 0,
-			"right": 0,
-			"bottom": 0,
-			"left": 0
-		}
-	},
-	"tooltips": {
-		"enabled": true,
-		"type": "placeholder",
-		"string": "{label} {percentage}%",
-		"styles": {
-			"fadeInSpeed": 300,
-			"backgroundColor": "#ffffff",
-			"backgroundOpacity": 1,
-			"color": "#000000",
-			"padding": 10
-		}
-	}
-});
-</script>
-{{end}}
+      drawChart(
+        "#chart1",
+        ["Missed", "Voted"],
+        ["#fd714b", "#41bf53"],
+        { a: {{ .StakeInfo.Missed }}, b: {{ .StakeInfo.Voted }} }
+      );
+      drawChart(
+        "#chart2",
+        ["Immature", "Live"],
+        ["#44d6a5", "#3478f7"],
+        { a: {{ .StakeInfo.Immature }}, b: {{ .StakeInfo.Live }} }
+      );
+      drawChart(
+        "#chart3",
+        ["VSP Ticket Pool", "Network Ticket Pool"],
+        ["#ffc84e", "#73d5f3"],
+        { a: {{ .StakeInfo.Live }}, b: {{ .StakeInfo.PoolSize }} }
+      );
+    </script>
+	{{end}}
 
 {{ if .IsIndex }}
 <script>

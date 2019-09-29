@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/decred/dcrd/chaincfg"
@@ -67,14 +66,13 @@ var runServiceCommand func(string) error
 type config struct {
 	ShowVersion        bool    `short:"V" long:"version" description:"Display version information and exit"`
 	ConfigFile         string  `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir            string  `short:"b" long:"datadir" description:"Deprecated. Unused, do not set."`
 	LogDir             string  `long:"logdir" description:"Directory to log output."`
 	Listen             string  `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
 	TestNet            bool    `long:"testnet" description:"Use the test network"`
 	SimNet             bool    `long:"simnet" description:"Use the simulation test network"`
-	Profile            string  `long:"profile" description:"Enable HTTP profiling on given port -- NOTE port must be between 1024 and 65536"`
-	CPUProfile         string  `long:"cpuprofile" description:"Write CPU profile to the specified file"`
-	MemProfile         string  `long:"memprofile" description:"Write mem profile to the specified file"`
+	Profile            string  `long:"profile" description:"Deprecated: This config has no effect"`
+	CPUProfile         string  `long:"cpuprofile" description:"Deprecated: This config has no effect"`
+	MemProfile         string  `long:"memprofile" description:"Deprecated: This config has no effect"`
 	DebugLevel         string  `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	APISecret          string  `long:"apisecret" description:"Secret string used to encrypt API tokens."`
 	BaseURL            string  `long:"baseurl" description:"BaseURL to use when sending links via email"`
@@ -104,16 +102,9 @@ type config struct {
 	SystemCerts        *x509.CertPool
 	StakepooldHosts    []string `long:"stakepooldhosts" description:"Hostnames for stakepoold servers"`
 	StakepooldCerts    []string `long:"stakepooldcerts" description:"Certificate paths for stakepoold servers"`
-	WalletHosts        []string `long:"wallethosts" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
-	WalletUsers        []string `long:"walletusers" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
-	WalletPasswords    []string `long:"walletpasswords" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
-	WalletCerts        []string `long:"walletcerts" description:"Deprecated: dcrstakepool no longer connects to dcrwallet"`
 	VotingWalletExtPub string   `long:"votingwalletextpub" description:"The extended public key of the default account of the voting wallet"`
 	AdminIPs           []string `long:"adminips" description:"Expected admin host"`
 	AdminUserIDs       []string `long:"adminuserids" description:"User IDs of users who are allowed to access administrative functions."`
-	MinServers         int      `long:"minservers" description:"Deprecated: Do not use. Minimum of 2 servers are required when running on mainnet. Testnet and simnet require minimum 1."`
-	EnableStakepoold   bool     `long:"enablestakepoold" description:"Deprecated: Do not use. Stakepoold is required."`
-	MaxVotedAge        int64    `long:"maxvotedage" description:"Deprecated: Use maxvotedtickets instead"`
 	MaxVotedTickets    int      `long:"maxvotedtickets" description:"Maximum number of voted tickets to show on tickets page."`
 	Description        string   `long:"description" description:"Operators own description of their VSP"`
 	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
@@ -468,18 +459,6 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
-	// Validate profile port number
-	if cfg.Profile != "" {
-		profilePort, err := strconv.Atoi(cfg.Profile)
-		if err != nil || profilePort < 1024 || profilePort > 65535 {
-			str := "%s: The profile port must be between 1024 and 65535"
-			err := fmt.Errorf(str, funcName)
-			fmt.Fprintln(os.Stderr, err)
-			fmt.Fprintln(os.Stderr, usageMessage)
-			return nil, nil, err
-		}
-	}
-
 	if cfg.APISecret == "" {
 		str := "%s: APIsecret is not set in config"
 		err := fmt.Errorf(str, funcName)
@@ -619,43 +598,19 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Warn about deprecated config items if they have been set
-	if cfg.DataDir != "" {
-		str := "%s: Config datadir is deprecated. Please remove from your config file"
+
+	if cfg.Profile != "" {
+		str := "%s: Config Profile is deprecated and has no effect. Please remove from your config file"
 		log.Warnf(str, funcName)
 	}
 
-	if cfg.EnableStakepoold {
-		str := "%s: Config enablestakepoold is deprecated. Please remove from your config file"
+	if cfg.CPUProfile != "" {
+		str := "%s: Config CPUProfile is deprecated and has no effect. Please remove from your config file"
 		log.Warnf(str, funcName)
 	}
 
-	if cfg.MaxVotedAge != 0 {
-		str := "%s: Config maxVotedAge is deprecated and has no effect. Use maxVotedTickets instead"
-		log.Warnf(str, funcName)
-	}
-
-	if cfg.MinServers != 0 {
-		str := "%s: Config minservers is deprecated. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if len(cfg.WalletHosts) > 0 {
-		str := "%s: Config WalletHosts is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if len(cfg.WalletCerts) > 0 {
-		str := "%s: Config WalletCerts is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if len(cfg.WalletUsers) > 0 {
-		str := "%s: Config WalletUsers is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if len(cfg.WalletPasswords) > 0 {
-		str := "%s: Config WalletPasswords is deprecated and has no effect. Please remove from your config file"
+	if cfg.MemProfile != "" {
+		str := "%s: Config MemProfile is deprecated and has no effect. Please remove from your config file"
 		log.Warnf(str, funcName)
 	}
 

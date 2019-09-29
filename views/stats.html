@@ -33,11 +33,11 @@
 							<p class="mb-0 text--size-13">{{ .StakeInfo.ProportionMissed }}</p>
 						</div>
 						<div class="col text-center bg-white py-2">
-							<p class="font-weight-bold text--size-13 mb-0">Revoked Ticket</p>
+							<p class="font-weight-bold text--size-13 mb-0">Revoked Tickets</p>
 							<p class="mb-0 text--size-13">{{ .StakeInfo.Revoked }}</p>
 						</div>
 						<div class="col text-center bg-white py-2">
-							<p class="font-weight-bold text--size-13 mb-0">Pool Fees</p>
+							<p class="font-weight-bold text--size-13 mb-0">VSP Fees</p>
 							<p class="mb-0 text--size-13">{{ .PoolFees }}%</p>
 						</div>
 						<div class="col text-center bg-white py-2">
@@ -62,15 +62,15 @@
 					<div class="row">
 						<div class="col text-center bg-white py-2">
 							<p class="font-weight-bold text--size-13 mb-0">Ticket Price</p>
-							<p class="mb-0 text--size-13">{{printf "%0.2f" .StakeInfo.Difficulty}}&nbsp;DCR</p>
+							<p class="mb-0 text--size-13"><a href="{{ $.DCRDataURL }}/charts?chart=ticket-price&zoom=month" target="_blank" rel="noopener noreferrer">{{printf "%0.2f" .StakeInfo.Difficulty}}&nbsp;DCR</a></p>
 						</div>
 						<div class="col text-center bg-white py-2">
 							<p class="font-weight-bold text--size-13 mb-0">Pool Size</p>
 							<p class="mb-0 text--size-13">{{ .StakeInfo.PoolSize }}</p>
 						</div>
 						<div class="col text-center bg-white mb-3 py-2">
-							<p class="font-weight-bold text--size-13 mb-0">AllMempoolTix</p>
-							<p class="mb-0 text--size-13">{{ .StakeInfo.AllMempoolTix }}</p>
+							<p class="font-weight-bold text--size-13 mb-0">Tickets in Mempool</p>
+							<p class="mb-0 text--size-13"><a href="{{ $.DCRDataURL }}/mempool" target="_blank" rel="noopener noreferrer">{{ .StakeInfo.AllMempoolTix }}</a></p>
 						</div>
 						<div class="col text-center bg-white mb-3 py-2">
 							<p class="font-weight-bold text--size-13 mb-0">Block Height</p>
@@ -86,15 +86,7 @@
 								<h1>VSP Votes</h1>	
 							</div>
 							<div class="col-12 mb-5">
-								<div class="bg-white p-5">
-									<div class="d-flex justify-content-start">
-										<div class="circle circle--sm color1 mr-3"></div>
-										<p class="text--size-13">Votes</p>
-									</div>
-									<div class="d-flex justify-content-start">
-										<div class="circle circle--sm color2 mr-3"></div>
-										<p class="text--size-13">Missed</p>
-									</div>
+								<div class="bg-white pt-4">
 									<div id="chart1" class="stats-chart"></div>
 								</div>
 							</div>
@@ -102,15 +94,7 @@
 								<h1>VSP vs Network Proportion</h1>	
 							</div>
 							<div class="col-12 mb-3">
-								<div class="bg-white p-5">
-									<div class="d-flex justify-content-start">
-										<div class="circle circle--sm color3 mr-3"></div>
-										<p class="text--size-13">VSP Ticket Pool</p>
-									</div>
-									<div class="d-flex justify-content-start">
-										<div class="circle circle--sm color4 mr-3"></div>
-										<p class="text--size-13">Network Ticket Pool</p>
-									</div>
+								<div class="bg-white pt-4">
 									<div id="chart3" class="stats-chart"></div>
 								</div>
 							</div>
@@ -122,39 +106,20 @@
 								<h1>VSP Tickets</h1>
 							</div>
 							<div class="col-12 mb-5">
-								<div class="bg-white p-5">
-									<div class="d-flex justify-content-start">
-										<div class="circle circle--sm color5 mr-3"></div>
-										<p class="text--size-13">Live</p>
-									</div>
-									<div class="d-flex justify-content-start">
-										<div class="circle circle--sm color6 mr-3"></div>
-										<p class="text--size-13">Immature</p>
-									</div>
+								<div class="bg-white pt-4">
 									<div id="chart2" class="stats-chart"></div>
 								</div>
 							</div>
 						</div>
 					</div>
 				</div>
-
-				<style>
-					.stats-chart > svg {
-						margin-right: -144px;
-						position: relative;
-						left: 50%;
-						-webkit-transform: translateX(-50%);
-						-ms-transform: translateX(-50%);
-						transform: translateX(-50%);
-					}
-				</style>
 				
 				<noscript>
 					<div class="row col-12 block__description">
 						<p>Enable Javascript to view charts</p>
 					</div>
 				</noscript>
-
+			
 			</section>
 		</div>
 	</div>
