@@ -64,7 +64,7 @@ func connectNodeRPC(spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, 
 	return dcrdClient, nodeVer, nil
 }
 
-func connectWalletRPC(spd context.Context, wg *sync.WaitGroup, cfg *config) (*stakepool.Client, semver, error) {
+func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*stakepool.Client, semver, error) {
 	var walletVer semver
 
 	dcrwCert, err := ioutil.ReadFile(cfg.WalletCert)
@@ -90,7 +90,7 @@ func connectWalletRPC(spd context.Context, wg *sync.WaitGroup, cfg *config) (*st
 	ntfnHandlers := getWalletNtfnHandlers()
 
 	// New also starts an autoreconnect function.
-	dcrwClient, err := stakepool.NewClient(spd, wg, connCfgWallet, ntfnHandlers)
+	dcrwClient, err := stakepool.NewClient(ctx, wg, connCfgWallet, ntfnHandlers)
 	if err != nil {
 		log.Errorf("Verify that username and password is correct and that "+
 			"rpc.cert is for your wallet: %v", cfg.WalletCert)
