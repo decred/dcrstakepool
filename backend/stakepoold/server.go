@@ -21,6 +21,7 @@ import (
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrd/rpcclient/v3"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/v2/txrules"
@@ -210,6 +211,13 @@ func runMain(ctx context.Context) error {
 		return err
 	}
 
+	gRPCHost := normalizeAddressReplacePort(cfg.WalletHost, activeNetParams.WalletGRPCServerPort)
+	dcrwalletGRPC, err := dcrwallet.New(ctx, wg, cfg.WalletCert, gRPCHost)
+	if err != nil {
+		err = fmt.Errorf("unable to connect to wallet grpc: %v", err)
+		return err
+	}
+
 	spd := &stakepool.Stakepoold{
 		AddedLowFeeTicketsMSA:  addedLowFeeTicketsMSA,
 		DataPath:               cfg.DataDir,
@@ -223,6 +231,7 @@ func runMain(ctx context.Context) error {
 		UserVotingConfig:       userVotingConfig,
 		VotingConfig:           &votingConfig,
 		WalletConnection:       walletConn,
+		WalletGRPC:             dcrwalletGRPC,
 		WinningTicketsChan:     make(chan stakepool.WinningTicketsForBlock),
 		Testing:                false,
 	}

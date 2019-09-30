@@ -83,6 +83,7 @@ github.com/decred/dcrd/dcrec/secp256k1 v1.0.0/go.mod h1:JPMFscGlgXTV684jxQNDijae
 github.com/decred/dcrd/dcrec/secp256k1 v1.0.1/go.mod h1:lhu4eZFSfTJWUnR3CFRcpD+Vta0KUAqnhTsTksHXgy0=
 github.com/decred/dcrd/dcrec/secp256k1 v1.0.2 h1:awk7sYJ4pGWmtkiGHFfctztJjHMKGLV8jctGQhAbKe0=
 github.com/decred/dcrd/dcrec/secp256k1 v1.0.2/go.mod h1:CHTUIVfmDDd0KFVFpNX1pFVCBUegxW387nN0IGwNKR0=
+github.com/decred/dcrd/dcrjson v1.0.0 h1:50DnA0XeV2JrQXoHh43TCKmH+kz2gHjZ1Mj/Pdk7Oz0=
 github.com/decred/dcrd/dcrjson v1.0.0/go.mod h1:ozddIaeF+EAvZZvFuB3zpfxhyxBGfvbt22crQh+PYuI=
 github.com/decred/dcrd/dcrjson/v2 v2.0.0/go.mod h1:FYueNy8BREAFq04YNEwcTsmGFcNqY+ehUUO81w2igi4=
 github.com/decred/dcrd/dcrjson/v3 v3.0.0 h1:yDrNFvyn2l/557iZHB236jTqQjAmhZnVaFgMb2vm0UM=
@@ -130,6 +131,7 @@ github.com/decred/dcrdata/semver v1.0.0/go.mod h1:z+nQqiAd9fYkHhBLbejysZ2FPHtgkr
 github.com/decred/dcrdata/txhelpers/v3 v3.0.4/go.mod h1:tKEDhoO+TbYrFrx+5qKZDxcla8ELQFYs4f5+8gL4cuY=
 github.com/decred/dcrdata/txhelpers/v3 v3.0.5 h1:UhzuJgw9cPIC8h2HUnFXQhIZVWlseumFnoiKYbvZxKE=
 github.com/decred/dcrdata/txhelpers/v3 v3.0.5/go.mod h1:tKEDhoO+TbYrFrx+5qKZDxcla8ELQFYs4f5+8gL4cuY=
+github.com/decred/dcrwallet v1.2.2 h1:NdI13wxP+OsWKXPqjWQQ9VSGAl4VoSLBfAunzFreeJg=
 github.com/decred/dcrwallet/deployments v1.1.0/go.mod h1:8Sasryu8SX23Jvqr6maZ7MoS7wFIGXupWzbsVtcZsUg=
 github.com/decred/dcrwallet/errors v1.0.1/go.mod h1:XUm95dWmm9XmQGvneBXJkkIaFeRsQVBB6ni/KTy1hrY=
 github.com/decred/dcrwallet/errors v1.1.0 h1:xDzE4l8AGLcL1CGigPR9vYHP/rBmMm34ZatolleOS9A=
@@ -142,6 +144,8 @@ github.com/decred/dcrwallet/rpc/jsonrpc/types v1.0.0/go.mod h1:k+IOPnUY0YqlwhSDh
 github.com/decred/dcrwallet/rpc/jsonrpc/types v1.1.0/go.mod h1:xUT7XXATLOzE0pwwmvgfRWtZdrB+PsWFilo+jkH5/Ig=
 github.com/decred/dcrwallet/rpc/jsonrpc/types v1.2.0 h1:k17F1rYmYRqX3iO8nQBrSacbB8A50qNU+HT3gfNo4dw=
 github.com/decred/dcrwallet/rpc/jsonrpc/types v1.2.0/go.mod h1:xUT7XXATLOzE0pwwmvgfRWtZdrB+PsWFilo+jkH5/Ig=
+github.com/decred/dcrwallet/rpc/walletrpc v0.2.0 h1:Sm0jkFx/M2YTKVhxoWdgM1i3dBHzkjQJtmJqstpPHlk=
+github.com/decred/dcrwallet/rpc/walletrpc v0.2.0/go.mod h1:uhjgcju9lSb/+42Ms4VY1zpBOxstCLM5wVlL3mq/SYc=
 github.com/decred/dcrwallet/validate v1.0.2/go.mod h1:1ur2sRZkQ23ECalUKdwgx6rdIiP8rIiaSQAz1Y9LQsI=
 github.com/decred/dcrwallet/wallet/v2 v2.1.1 h1:c8zR3LJKglGDr+jST44xzLGACUCQ30XPxQHNMlWiVGk=
 github.com/decred/dcrwallet/wallet/v2 v2.1.1/go.mod h1:k4dPFhvoucYlY2NVblPAFzJL/TnuUCIoBRb00pZJv/I=
@@ -182,6 +186,7 @@ github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJS
 github.com/jrick/bitset v1.0.0/go.mod h1:ZOYB5Uvkla7wIEY4FEssPVi3IQXa02arznRaYaAEPe4=
 github.com/jrick/logrotate v1.0.0 h1:lQ1bL/n9mBNeIXoTUoYRlK4dHuNJVofX9oWqBtPnSzI=
 github.com/jrick/logrotate v1.0.0/go.mod h1:LNinyqDIJnpAur+b8yyulnQw/wDuN1+BYKlTRt3OuAQ=
+github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
@@ -235,6 +240,7 @@ golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73r
 golang.org/x/net v0.0.0-20180808004115-f9ce57c11b24/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180906233101-161cd47e91fd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+golang.org/x/net v0.0.0-20181207154023-610586996380/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190125091013-d26f9f9a57f3/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190213061140-3a22650c66bd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190311183353-d8887717615a/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
@@ -263,6 +269,7 @@ golang.org/x/sys v0.0.0-20190924154521-2837fb4f24fe/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.2 h1:tW2bmiBqwgJj/UpqtC8EpXEZVYOwU0yG4iWbprSVAcs=
 golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=
+golang.org/x/tools v0.0.0-20180828015842-6cd1fcedba52/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190114222345-bf090417da8b/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190226205152-f727befe758c/go.mod h1:9Yl7xja0Znq3iFh3HoIrodX9oNMXvdceNzlUR8zjMvY=
@@ -276,6 +283,7 @@ google.golang.org/appengine v1.6.3/go.mod h1:i06prIuMbXzDqacNJfV5OdTW448YApPu5ww
 google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
 google.golang.org/genproto v0.0.0-20190925194540-b8fbc687dcfb h1:KyQ8P4ITs8M0jBWofeXBAlng8kJVbXKyliNX5w2w/ng=
 google.golang.org/genproto v0.0.0-20190925194540-b8fbc687dcfb/go.mod h1:IbNlFCBrqXvoKpeg0TB2l7cyZUmoaFKYIwrEpbDKLA8=
+google.golang.org/grpc v1.17.0/go.mod h1:6QZJwpn2B+Zp71q/5VxRsJ6NXXVCE5NRUHRo+f3cWCs=
 google.golang.org/grpc v1.19.0/go.mod h1:mqu4LbDTu4XGKhr4mRzUsmM4RtVoemTSY81AxZiDr8c=
 google.golang.org/grpc v1.24.0 h1:vb/1TCsVn3DcJlQ0Gs1yB1pKI6Do2/QNwxdKqmc/b0s=
 google.golang.org/grpc v1.24.0/go.mod h1:XDChyiUovWa60DnaeDeZmSW86xtLtjtZbwvSiRnRtcA=
@@ -290,5 +298,6 @@ gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWD
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=

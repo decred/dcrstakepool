@@ -20,6 +20,7 @@ require (
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
 	github.com/decred/dcrdata/txhelpers/v3 v3.0.5 // indirect
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.2.0
+	github.com/decred/dcrwallet/rpc/walletrpc v0.2.0
 	github.com/decred/dcrwallet/wallet/v2 v2.1.1
 	github.com/decred/slog v1.0.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -32,7 +33,6 @@ require (
 	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.2.0 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
 	github.com/onsi/ginkgo v1.10.1 // indirect

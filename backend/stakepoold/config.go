@@ -209,6 +209,15 @@ func normalizeAddress(addr, defaultPort string) string {
 	return addr
 }
 
+// normalizeAddressReplacePort returns addr with the passed port
+func normalizeAddressReplacePort(addr, port string) string {
+	a, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr
+	}
+	return net.JoinHostPort(a, port)
+}
+
 // normalizeAddresses returns a new slice with all the passed peer addresses
 // normalized with the given default port, and all duplicates removed.
 func normalizeAddresses(addrs []string, defaultPort string) []string {

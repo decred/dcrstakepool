@@ -22,6 +22,7 @@ import (
 
 	"github.com/decred/dcrd/rpcclient/v3"
 	"github.com/decred/dcrd/wire"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/v2/txrules"
 )
@@ -55,6 +56,7 @@ type Stakepoold struct {
 	UserData               *userdata.UserData
 	VotingConfig           *VotingConfig
 	WalletConnection       *Client
+	WalletGRPC             *dcrwallet.Client
 	WinningTicketsChan     chan WinningTicketsForBlock
 	Testing                bool // enabled only for testing
 }

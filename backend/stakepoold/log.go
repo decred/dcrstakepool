@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/server"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
@@ -48,6 +49,7 @@ var (
 	grpcLog      = backendLog.Logger("GRPC")
 	log          = backendLog.Logger("STPK")
 	stakepoolLog = backendLog.Logger("CORE")
+	dcrwalletLog = backendLog.Logger("WLLT")
 )
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
@@ -57,6 +59,7 @@ var subsystemLoggers = map[string]slog.Logger{
 	"GRPC": grpcLog,
 	"STPK": log,
 	"CORE": stakepoolLog,
+	"WLLT": dcrwalletLog,
 }
 
 // Initialize package-global logger variables.
@@ -64,6 +67,7 @@ func init() {
 	userdata.UseLogger(dbLog)
 	server.UseLogger(grpcLog)
 	stakepool.UseLogger(stakepoolLog)
+	dcrwallet.UseLogger(dcrwalletLog)
 }
 
 // initLogRotator initializes the logging rotater to write logs to logFile and
