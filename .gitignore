@@ -7,3 +7,4 @@ testing/
 *.orig
 debug
 public/**/*.gz
+vendor
