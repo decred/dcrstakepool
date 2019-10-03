@@ -86,12 +86,12 @@ func randString(n int) string {
 }
 
 var (
-	c  *stakepool.Stakepoold
-	wt stakepool.WinningTicketsForBlock
+	spd *stakepool.Stakepoold
+	wt  stakepool.WinningTicketsForBlock
 )
 
 func init() {
-	c = &stakepool.Stakepoold{
+	spd = &stakepool.Stakepoold{
 		LiveTicketsMSA: make(map[chainhash.Hash]string),
 		VotingConfig: &stakepool.VotingConfig{
 			VoteBits:         1,
@@ -107,11 +107,11 @@ func init() {
 	// leave out last 5, as they will be inserted when tickets are generated
 	for i := 0; i < userCount-5; i++ {
 		msa := "Tc" + randString(33)
-		c.UserVotingConfig[msa] = userdata.UserVotingConfig{
+		spd.UserVotingConfig[msa] = userdata.UserVotingConfig{
 			Userid:          int64(i),
 			MultiSigAddress: msa,
-			VoteBits:        c.VotingConfig.VoteBits,
-			VoteBitsVersion: c.VotingConfig.VoteVersion,
+			VoteBits:        spd.VotingConfig.VoteBits,
+			VoteBitsVersion: spd.VotingConfig.VoteVersion,
 		}
 	}
 
@@ -124,18 +124,18 @@ func init() {
 		ticket := &chainhash.Hash{b[0], b[1], b[2], b[3]}
 
 		// use ticket as the key
-		c.LiveTicketsMSA[*ticket] = msa
+		spd.LiveTicketsMSA[*ticket] = msa
 
 		// last 5 tickets win
 		if i > ticketCount-6 {
 			wt.WinningTickets = append(wt.WinningTickets, ticket)
-			c.UserVotingConfig[msa] = userdata.UserVotingConfig{}
+			spd.UserVotingConfig[msa] = userdata.UserVotingConfig{}
 		}
 	}
 }
 
 func BenchmarkProcessWinningTickets(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		c.ProcessWinningTickets(wt)
+		spd.ProcessWinningTickets(wt)
 	}
 }
