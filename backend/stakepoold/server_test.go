@@ -6,13 +6,13 @@ package main
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
 	mrand "math/rand"
 	"strconv"
 	"testing"
 
-	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/hdkeychain/v2"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
@@ -24,7 +24,7 @@ func TestCalculateFeeAddresses(t *testing.T) {
 		"TsiWMbdbmfMaJ9SDb7ig8EKfYp3KU3pvYfu",
 		"TsgTraHPFWes88oTjpPVy7SEroJvgShv1G1",
 	}
-	params := &chaincfg.TestNet3Params
+	params := chaincfg.TestNet3Params()
 
 	// calculateFeeAddresses is currently hard-coded to return 10,000 addresses
 	numAddr := 10000
@@ -54,8 +54,8 @@ func TestCalculateFeeAddresses(t *testing.T) {
 	}
 
 	// wrong network
-	expectedErr := fmt.Errorf("extended public key is for wrong network")
-	addrs, err = calculateFeeAddresses(xpubStr, &chaincfg.MainNetParams)
+	expectedErr := hdkeychain.ErrWrongNetwork
+	addrs, err = calculateFeeAddresses(xpubStr, chaincfg.MainNetParams())
 	if err == nil {
 		t.Error("calculateFeeAddresses did not error with wrong network parmas")
 	}

@@ -20,10 +20,11 @@ import (
 	"time"
 
 	"github.com/dchest/captcha"
-	"github.com/decred/dcrd/chaincfg"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/dcrutil"
-	"github.com/decred/dcrd/hdkeychain"
+	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/dcrec"
+	"github.com/decred/dcrd/dcrutil/v2"
+	"github.com/decred/dcrd/hdkeychain/v2"
 	dcrdatatypes "github.com/decred/dcrdata/api/types/v4"
 	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/helpers"
@@ -32,7 +33,7 @@ import (
 	"github.com/decred/dcrstakepool/poolapi"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
-	"github.com/decred/dcrwallet/wallet/v2/udb"
+	"github.com/decred/dcrwallet/wallet/v3/udb"
 	"github.com/go-gorp/gorp"
 	"github.com/gorilla/csrf"
 	"github.com/zenazn/goji/web"
@@ -298,7 +299,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	userPubKeyAddr := r.FormValue("UserPubKeyAddr")
 
-	if _, err := validateUserPubKeyAddr(userPubKeyAddr); err != nil {
+	if _, err := validateUserPubKeyAddr(userPubKeyAddr, controller.Cfg.NetParams); err != nil {
 		return nil, codes.InvalidArgument, "address error", err
 	}
 
@@ -322,7 +323,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
-	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr); err != nil {
+	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr, controller.Cfg.NetParams); err != nil {
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
@@ -352,7 +353,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	models.UpdateUserByID(dbMap, user.Id, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
-		userFeeAddr.EncodeAddress(), importedHeight)
+		userFeeAddr.Address(), importedHeight)
 
 	log.Infof("successfully create multisigaddress for user %d", c.Env["APIUserID"])
 
@@ -560,7 +561,12 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 		return nil, err
 	}
 
-	addr, err := key.Address(controller.Cfg.NetParams)
+	ecPubKey, err := key.ECPubKey()
+	if err != nil {
+		return nil, err
+	}
+
+	addr, err := dcrutil.NewAddressPubKeyHash(dcrutil.Hash160(ecPubKey.Serialize()), controller.Cfg.NetParams, dcrec.STEcdsaSecp256k1)
 	if err != nil {
 		return nil, err
 	}
@@ -590,7 +596,12 @@ func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Addre
 		return nil, err
 	}
 
-	addr, err := key.Address(controller.Cfg.NetParams)
+	ecPubKey, err := key.ECPubKey()
+	if err != nil {
+		return nil, err
+	}
+
+	addr, err := dcrutil.NewAddressPubKeyHash(dcrutil.Hash160(ecPubKey.Serialize()), controller.Cfg.NetParams, dcrec.STEcdsaSecp256k1)
 	if err != nil {
 		return nil, err
 	}
@@ -718,7 +729,7 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	return controller.Parse(t, "main", c.Env), http.StatusOK
 }
 
-func validateUserPubKeyAddr(pubKeyAddr string) (dcrutil.Address, error) {
+func validateUserPubKeyAddr(pubKeyAddr string, params *chaincfg.Params) (dcrutil.Address, error) {
 	if len(pubKeyAddr) < 40 {
 		str := "Address is too short"
 		log.Warnf("User submitted invalid address: %s - %s", pubKeyAddr, str)
@@ -731,7 +742,7 @@ func validateUserPubKeyAddr(pubKeyAddr string) (dcrutil.Address, error) {
 		return nil, errors.New(str)
 	}
 
-	u, err := dcrutil.DecodeAddress(pubKeyAddr)
+	u, err := dcrutil.DecodeAddress(pubKeyAddr, params)
 	if err != nil {
 		log.Warnf("User submitted invalid address: %s - %v", pubKeyAddr, err)
 		return nil, errors.New("Couldn't decode address")
@@ -770,7 +781,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	log.Infof("Address POST from %v, pubkeyaddr %v", remoteIP, userPubKeyAddr)
 
-	if _, err := validateUserPubKeyAddr(userPubKeyAddr); err != nil {
+	if _, err := validateUserPubKeyAddr(userPubKeyAddr, controller.Cfg.NetParams); err != nil {
 		session.AddFlash(err.Error(), "address")
 		return controller.Address(c, r)
 	}
@@ -797,7 +808,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	poolPubKeyAddr := poolValidateAddress.PubKeyAddr
 
 	// Get back Address from pool's new pubkey address
-	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr); err != nil {
+	if _, err = dcrutil.DecodeAddress(poolPubKeyAddr, controller.Cfg.NetParams); err != nil {
 		return "/error", http.StatusSeeOther
 	}
 
@@ -832,7 +843,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	// addresses, and the fee address
 	models.UpdateUserByID(dbMap, uid64, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
-		userFeeAddr.EncodeAddress(), importedHeight)
+		userFeeAddr.Address(), importedHeight)
 
 	if err = controller.StakepooldUpdateUsers(dbMap); err != nil {
 		log.Errorf("unable to update all: %v", err)
@@ -1837,7 +1848,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	}
 
 	// Get P2SH Address
-	multisig, err := dcrutil.DecodeAddress(user.MultiSigAddress)
+	multisig, err := dcrutil.DecodeAddress(user.MultiSigAddress, controller.Cfg.NetParams)
 	if err != nil {
 		log.Warnf("Invalid address %v in database: %v", user.MultiSigAddress, err)
 		return "/error", http.StatusSeeOther

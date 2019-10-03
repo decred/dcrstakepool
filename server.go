@@ -13,7 +13,7 @@ import (
 
 	"github.com/gorilla/csrf"
 
-	"github.com/decred/dcrd/rpcclient/v3"
+	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/stakepooldclient"

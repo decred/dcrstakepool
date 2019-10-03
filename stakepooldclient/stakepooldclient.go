@@ -12,10 +12,10 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrd/dcrutil/v2"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/models"
-	"github.com/decred/dcrwallet/wallet/v2/udb"
+	"github.com/decred/dcrwallet/wallet/v3/udb"
 	"golang.org/x/net/context"
 )
 
@@ -552,7 +552,7 @@ func (s *StakepooldManager) ValidateAddress(addr dcrutil.Address) (*pb.ValidateA
 	responses := make(map[int]*pb.ValidateAddressResponse)
 
 	req := &pb.ValidateAddressRequest{
-		Address: addr.EncodeAddress(),
+		Address: addr.Address(),
 	}
 
 	// Get ValidateAddress response from all wallets

@@ -8,19 +8,19 @@ require (
 	github.com/dajohi/goemail v1.0.1
 	github.com/dchest/blake256 v1.1.0 // indirect
 	github.com/dchest/captcha v0.0.0-20170622155422-6a29415a8364
-	github.com/decred/dcrd/blockchain v1.2.0 // indirect
-	github.com/decred/dcrd/blockchain/stake v1.2.1
+	github.com/decred/dcrd/blockchain/stake/v2 v2.0.1
 	github.com/decred/dcrd/certgen v1.1.0
-	github.com/decred/dcrd/chaincfg v1.5.2
 	github.com/decred/dcrd/chaincfg/chainhash v1.0.2
-	github.com/decred/dcrd/dcrutil v1.4.0
-	github.com/decred/dcrd/hdkeychain v1.1.1
-	github.com/decred/dcrd/rpcclient/v3 v3.0.0
+	github.com/decred/dcrd/chaincfg/v2 v2.2.0
+	github.com/decred/dcrd/dcrec v1.0.0
+	github.com/decred/dcrd/dcrutil/v2 v2.0.0
+	github.com/decred/dcrd/hdkeychain/v2 v2.0.1
+	github.com/decred/dcrd/rpcclient/v4 v4.0.0
 	github.com/decred/dcrd/wire v1.2.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
 	github.com/decred/dcrdata/txhelpers/v3 v3.0.5 // indirect
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.2.0
-	github.com/decred/dcrwallet/wallet/v2 v2.1.1
+	github.com/decred/dcrwallet/wallet/v3 v3.0.0-20190808181959-172f45202d2c
 	github.com/decred/slog v1.0.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-gorp/gorp v2.0.1-0.20181104192722-f3677d4a0a88+incompatible
@@ -53,5 +53,8 @@ require (
 
 replace (
 	github.com/census-instrumentation/opencensus-proto v0.1.0-0.20181214143942-ba49f56771b8 => github.com/census-instrumentation/opencensus-proto v0.0.3-0.20181214143942-ba49f56771b8
+	github.com/decred/dcrwallet/deployments/v2 v2.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/deployments/v2 v2.0.0-20190927140119-e8a59aa721a4
+	github.com/decred/dcrwallet/errors/v2 v2.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/errors/v2 v2.0.0-20190927140119-e8a59aa721a4
+	github.com/decred/dcrwallet/rpc/client/dcrd v0.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/rpc/client/dcrd v0.0.0-20190927140119-e8a59aa721a4
 	github.com/go-macaron/cors v0.0.0-20190309005821-6fd6a9bfe14e9 => github.com/go-macaron/cors v0.0.0-20190418220122-6fd6a9bfe14e
 )
