@@ -22,7 +22,6 @@ import (
 	"github.com/dchest/captcha"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/chaincfg/v2"
-	"github.com/decred/dcrd/dcrec"
 	"github.com/decred/dcrd/dcrutil/v2"
 	"github.com/decred/dcrd/hdkeychain/v2"
 	dcrdatatypes "github.com/decred/dcrdata/api/types/v4"
@@ -566,7 +565,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 		return nil, err
 	}
 
-	addr, err := dcrutil.NewAddressPubKeyHash(dcrutil.Hash160(ecPubKey.Serialize()), controller.Cfg.NetParams, dcrec.STEcdsaSecp256k1)
+	addr, err := dcrutil.NewAddressSecpPubKey(ecPubKey.Serialize(), controller.Cfg.NetParams)
 	if err != nil {
 		return nil, err
 	}
@@ -601,7 +600,7 @@ func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Addre
 		return nil, err
 	}
 
-	addr, err := dcrutil.NewAddressPubKeyHash(dcrutil.Hash160(ecPubKey.Serialize()), controller.Cfg.NetParams, dcrec.STEcdsaSecp256k1)
+	addr, err := dcrutil.NewAddressSecpPubKey(ecPubKey.Serialize(), controller.Cfg.NetParams)
 	if err != nil {
 		return nil, err
 	}

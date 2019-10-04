@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/v2"
-	"github.com/decred/dcrd/dcrec"
 	"github.com/decred/dcrd/dcrutil/v2"
 	"github.com/decred/dcrd/hdkeychain/v2"
 	"github.com/decred/dcrd/rpcclient/v4"
@@ -110,7 +109,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 		if err != nil {
 			return nil, err
 		}
-		addr, err := dcrutil.NewAddressPubKeyHash(dcrutil.Hash160(ecPubKey.Serialize()), params, dcrec.STEcdsaSecp256k1)
+		addr, err := dcrutil.NewAddressSecpPubKey(ecPubKey.Serialize(), params)
 		if err != nil {
 			return nil, err
 		}
