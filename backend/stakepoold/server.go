@@ -21,7 +21,7 @@ import (
 	"github.com/decred/dcrd/dcrutil"
 	"github.com/decred/dcrd/hdkeychain"
 	"github.com/decred/dcrd/rpcclient/v3"
-	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
+	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/v2/txrules"
 	"github.com/decred/dcrwallet/wallet/v2/udb"
@@ -118,7 +118,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 	return addresses, nil
 }
 
-func runMain(shutdownContext context.Context) error {
+func runMain(ctx context.Context) error {
 	// WaitGroup to pass around and wait, after shutdown signal is received,
 	// for goroutines to safely stop.
 	wg := new(sync.WaitGroup)
@@ -159,7 +159,7 @@ func runMain(shutdownContext context.Context) error {
 	rpcclient.UseLogger(clientLog)
 
 	var walletVer semver
-	walletConn, walletVer, err := connectWalletRPC(shutdownContext, wg, cfg)
+	walletConn, walletVer, err := connectWalletRPC(ctx, wg, cfg)
 	if err != nil || walletConn == nil {
 		log.Infof("Connection to dcrwallet failed: %v", err)
 		return err
@@ -179,7 +179,7 @@ func runMain(shutdownContext context.Context) error {
 		return err
 	}
 
-	votingConfig := rpcserver.VotingConfig{
+	votingConfig := stakepool.VotingConfig{
 		VoteBits:         walletInfoRes.VoteBits,
 		VoteBitsExtended: walletInfoRes.VoteBitsExtended,
 		VoteVersion:      walletInfoRes.VoteVersion,
@@ -210,30 +210,30 @@ func runMain(shutdownContext context.Context) error {
 		return err
 	}
 
-	ctx := &rpcserver.AppContext{
+	spd := &stakepool.Stakepoold{
 		AddedLowFeeTicketsMSA:  addedLowFeeTicketsMSA,
 		DataPath:               cfg.DataDir,
 		ColdWalletExtPub:       cfg.ColdWalletExtPub,
 		FeeAddrs:               feeAddrs,
 		PoolFees:               cfg.PoolFees,
-		NewTicketsChan:         make(chan rpcserver.NewTicketsForBlock),
+		NewTicketsChan:         make(chan stakepool.NewTicketsForBlock),
 		Params:                 activeNetParams.Params,
-		SpentmissedTicketsChan: make(chan rpcserver.SpentMissedTicketsForBlock),
+		SpentmissedTicketsChan: make(chan stakepool.SpentMissedTicketsForBlock),
 		UserData:               userData,
 		UserVotingConfig:       userVotingConfig,
 		VotingConfig:           &votingConfig,
 		WalletConnection:       walletConn,
-		WinningTicketsChan:     make(chan rpcserver.WinningTicketsForBlock),
+		WinningTicketsChan:     make(chan stakepool.WinningTicketsForBlock),
 		Testing:                false,
 	}
 
 	// Daemon client connection
-	nodeConn, nodeVer, err := connectNodeRPC(ctx, cfg)
+	nodeConn, nodeVer, err := connectNodeRPC(spd, cfg)
 	if err != nil || nodeConn == nil {
 		log.Infof("Connection to dcrd failed: %v", err)
 		return err
 	}
-	ctx.NodeConnection = nodeConn
+	spd.NodeConnection = nodeConn
 
 	// Display connected network
 	curnet, err := nodeConn.GetCurrentNet()
@@ -245,27 +245,27 @@ func runMain(shutdownContext context.Context) error {
 		nodeVer.String(), curnet.String())
 
 	// prune save data
-	err = pruneData(ctx)
+	err = pruneData(spd)
 	if err != nil {
 		log.Warnf("pruneData error: %v", err)
 	}
 
 	// load AddedLowFeeTicketsMSA from disk cache if necessary
-	if len(ctx.AddedLowFeeTicketsMSA) == 0 && errMySQLFetchAddedLowFeeTickets != nil {
-		err = loadData(ctx, "AddedLowFeeTickets")
+	if len(spd.AddedLowFeeTicketsMSA) == 0 && errMySQLFetchAddedLowFeeTickets != nil {
+		err = loadData(spd, "AddedLowFeeTickets")
 		if err != nil {
 			// might not have any so continue
 			log.Warnf("unable to load added low fee tickets from disk "+
 				"cache: %v", err)
 		} else {
 			log.Infof("Loaded %v AddedLowFeeTickets from disk cache",
-				len(ctx.AddedLowFeeTicketsMSA))
+				len(spd.AddedLowFeeTicketsMSA))
 		}
 	}
 
 	// load userVotingConfig from disk cache if necessary
-	if len(ctx.UserVotingConfig) == 0 && errMySQLFetchUserVotingConfig != nil {
-		err = loadData(ctx, "UserVotingConfig")
+	if len(spd.UserVotingConfig) == 0 && errMySQLFetchUserVotingConfig != nil {
+		err = loadData(spd, "UserVotingConfig")
 		if err != nil {
 			// we could possibly die out here but it's probably better
 			// to let stakepoold vote with default preferences rather than
@@ -274,11 +274,11 @@ func runMain(shutdownContext context.Context) error {
 				"cache: %v", err)
 		} else {
 			log.Infof("Loaded UserVotingConfig for %d users from disk cache",
-				len(ctx.UserVotingConfig))
+				len(spd.UserVotingConfig))
 		}
 	}
 
-	if len(ctx.UserVotingConfig) == 0 {
+	if len(spd.UserVotingConfig) == 0 {
 		log.Warn("0 active users")
 	}
 
@@ -292,7 +292,7 @@ func runMain(shutdownContext context.Context) error {
 		}
 		log.Infof("current block height %v hash %v", curHeight, curHash)
 
-		ctx.IgnoredLowFeeTicketsMSA, ctx.LiveTicketsMSA, err = walletGetTickets(ctx)
+		spd.IgnoredLowFeeTicketsMSA, spd.LiveTicketsMSA, err = walletGetTickets(spd)
 		if err != nil {
 			log.Errorf("unable to get tickets: %v", err)
 			return err
@@ -336,26 +336,26 @@ func runMain(shutdownContext context.Context) error {
 	log.Info("subscribed to notifications from dcrd")
 
 	if !cfg.NoRPCListen {
-		if _, err = startGRPCServers(ctx); err != nil {
+		if _, err = startGRPCServers(spd); err != nil {
 			fmt.Printf("Failed to start GRPCServers: %s\n", err.Error())
 			return err
 		}
 	}
 
-	go ctx.NewTicketHandler(shutdownContext, wg)
-	go ctx.SpentmissedTicketHandler(shutdownContext, wg)
-	go ctx.WinningTicketHandler(shutdownContext, wg)
+	go spd.NewTicketHandler(ctx, wg)
+	go spd.SpentmissedTicketHandler(ctx, wg)
+	go spd.WinningTicketHandler(ctx, wg)
 
 	if cfg.NoRPCListen {
 		// Start reloading when a ticker fires
 		configTicker := time.NewTicker(time.Second * 240)
 		go func() {
 			for range configTicker.C {
-				err := ctx.UpdateTicketDataFromMySQL()
+				err := spd.UpdateTicketDataFromMySQL()
 				if err != nil {
 					log.Warnf("UpdateTicketDataFromMySQL failed %v:", err)
 				}
-				err = ctx.UpdateUserDataFromMySQL()
+				err = spd.UpdateUserDataFromMySQL()
 				if err != nil {
 					log.Warnf("UpdateUserDataFromMySQL failed %v:", err)
 				}
@@ -365,7 +365,7 @@ func runMain(shutdownContext context.Context) error {
 
 	// Wait for CTRL+C to signal goroutines to terminate
 	wg.Wait()
-	saveData(ctx)
+	saveData(spd)
 
 	return nil
 }
@@ -373,9 +373,9 @@ func runMain(shutdownContext context.Context) error {
 func main() {
 	// Create a context that is cancelled when a shutdown request is received
 	// through an interrupt signal
-	shutdownContext := withShutdownCancel(context.Background())
+	ctx := withShutdownCancel(context.Background())
 	go shutdownListener()
-	if err := runMain(shutdownContext); err != nil {
+	if err := runMain(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
@@ -397,17 +397,17 @@ func getDataNames() map[string]string {
 }
 
 // pruneData prunes any extra save files.
-func pruneData(ctx *rpcserver.AppContext) error {
+func pruneData(spd *stakepool.Stakepoold) error {
 	saveFiles := getDataNames()
 
-	if !fileExists(ctx.DataPath) {
-		return fmt.Errorf("datapath %v doesn't exist", ctx.DataPath)
+	if !fileExists(spd.DataPath) {
+		return fmt.Errorf("datapath %v doesn't exist", spd.DataPath)
 	}
 
 	for dataKind, dataVersion := range saveFiles {
 		var filesToPrune []string
 
-		files, err := ioutil.ReadDir(ctx.DataPath)
+		files, err := ioutil.ReadDir(spd.DataPath)
 		if err != nil {
 			return err
 		}
@@ -417,7 +417,7 @@ func pruneData(ctx *rpcserver.AppContext) error {
 			if strings.HasPrefix(file.Name(), strings.ToLower(dataKind)) &&
 				strings.Contains(file.Name(), dataVersion) &&
 				strings.HasSuffix(file.Name(), ".gob") {
-				filesToPrune = append(filesToPrune, filepath.Join(ctx.DataPath, file.Name()))
+				filesToPrune = append(filesToPrune, filepath.Join(spd.DataPath, file.Name()))
 			}
 		}
 
@@ -444,7 +444,7 @@ func pruneData(ctx *rpcserver.AppContext) error {
 
 // loadData looks for and attempts to load into memory the most recent save
 // file for a passed data kind.
-func loadData(ctx *rpcserver.AppContext, dataKind string) error {
+func loadData(spd *stakepool.Stakepoold, dataKind string) error {
 	var dataVersion string
 	found := false
 	saveFiles := getDataNames()
@@ -460,8 +460,8 @@ func loadData(ctx *rpcserver.AppContext, dataKind string) error {
 		return errors.New("unhandled data kind of " + dataKind)
 	}
 
-	if fileExists(ctx.DataPath) {
-		files, err := ioutil.ReadDir(ctx.DataPath)
+	if fileExists(spd.DataPath) {
+		files, err := ioutil.ReadDir(spd.DataPath)
 		if err != nil {
 			return err
 		}
@@ -484,7 +484,7 @@ func loadData(ctx *rpcserver.AppContext, dataKind string) error {
 			return nil
 		}
 
-		fullPath := filepath.Join(ctx.DataPath, lastseen)
+		fullPath := filepath.Join(spd.DataPath, lastseen)
 
 		r, err := os.Open(fullPath)
 		if err != nil {
@@ -493,17 +493,17 @@ func loadData(ctx *rpcserver.AppContext, dataKind string) error {
 		dec := gob.NewDecoder(r)
 		switch dataKind {
 		case "AddedLowFeeTickets":
-			err = dec.Decode(&ctx.AddedLowFeeTicketsMSA)
+			err = dec.Decode(&spd.AddedLowFeeTicketsMSA)
 			if err != nil {
 				return err
 			}
 		case "LiveTickets":
-			err = dec.Decode(&ctx.LiveTicketsMSA)
+			err = dec.Decode(&spd.LiveTicketsMSA)
 			if err != nil {
 				return err
 			}
 		case "UserVotingConfig":
-			err = dec.Decode(&ctx.UserVotingConfig)
+			err = dec.Decode(&spd.UserVotingConfig)
 			if err != nil {
 				return err
 			}
@@ -513,14 +513,14 @@ func loadData(ctx *rpcserver.AppContext, dataKind string) error {
 	}
 
 	// shouldn't get here -- data dir is created on startup
-	return errors.New("loadData - path " + ctx.DataPath + " does not exist")
+	return errors.New("loadData - path " + spd.DataPath + " does not exist")
 }
 
-// saveData saves some appContext fields to a file so they can be loaded back
+// saveData saves some stakepoold fields to a file so they can be loaded back
 // into memory at next run.
-func saveData(ctx *rpcserver.AppContext) {
-	ctx.Lock()
-	defer ctx.Unlock()
+func saveData(spd *stakepool.Stakepoold) {
+	spd.Lock()
+	defer spd.Unlock()
 
 	saveFiles := getDataNames()
 
@@ -529,22 +529,22 @@ func saveData(ctx *rpcserver.AppContext) {
 		destFilename := strings.Replace(dataFilenameTemplate, "KIND", filenameprefix, -1)
 		destFilename = strings.Replace(destFilename, "DATE", t.Format("2006_01_02_15_04_05"), -1)
 		destFilename = strings.Replace(destFilename, "VERSION", dataversion, -1)
-		destPath := strings.ToLower(filepath.Join(ctx.DataPath, destFilename))
+		destPath := strings.ToLower(filepath.Join(spd.DataPath, destFilename))
 
 		// Pre-validate whether we'll be saving or not.
 		switch filenameprefix {
 		case "AddedLowFeeTickets":
-			if len(ctx.AddedLowFeeTicketsMSA) == 0 {
+			if len(spd.AddedLowFeeTicketsMSA) == 0 {
 				log.Warn("saveData: addedLowFeeTicketsMSA is empty; skipping save")
 				continue
 			}
 		case "LiveTickets":
-			if len(ctx.LiveTicketsMSA) == 0 {
+			if len(spd.LiveTicketsMSA) == 0 {
 				log.Warn("saveData: liveTicketsMSA is empty; skipping save")
 				continue
 			}
 		case "UserVotingConfig":
-			if len(ctx.UserVotingConfig) == 0 {
+			if len(spd.UserVotingConfig) == 0 {
 				log.Warn("saveData: UserVotingConfig is empty; skipping save")
 				continue
 			}
@@ -555,7 +555,7 @@ func saveData(ctx *rpcserver.AppContext) {
 
 		w, err := os.Create(destPath)
 		if err != nil {
-			log.Errorf("Error opening file %s: %v", ctx.DataPath, err)
+			log.Errorf("Error opening file %s: %v", spd.DataPath, err)
 			continue
 		}
 		defer w.Close()
@@ -563,20 +563,20 @@ func saveData(ctx *rpcserver.AppContext) {
 		switch filenameprefix {
 		case "AddedLowFeeTickets":
 			enc := gob.NewEncoder(w)
-			if err := enc.Encode(&ctx.AddedLowFeeTicketsMSA); err != nil {
-				log.Errorf("Failed to encode file %s: %v", ctx.DataPath, err)
+			if err := enc.Encode(&spd.AddedLowFeeTicketsMSA); err != nil {
+				log.Errorf("Failed to encode file %s: %v", spd.DataPath, err)
 				continue
 			}
 		case "LiveTickets":
 			enc := gob.NewEncoder(w)
-			if err := enc.Encode(&ctx.LiveTicketsMSA); err != nil {
-				log.Errorf("Failed to encode file %s: %v", ctx.DataPath, err)
+			if err := enc.Encode(&spd.LiveTicketsMSA); err != nil {
+				log.Errorf("Failed to encode file %s: %v", spd.DataPath, err)
 				continue
 			}
 		case "UserVotingConfig":
 			enc := gob.NewEncoder(w)
-			if err := enc.Encode(&ctx.UserVotingConfig); err != nil {
-				log.Errorf("Failed to encode file %s: %v", ctx.DataPath, err)
+			if err := enc.Encode(&spd.UserVotingConfig); err != nil {
+				log.Errorf("Failed to encode file %s: %v", spd.DataPath, err)
 				continue
 			}
 		}

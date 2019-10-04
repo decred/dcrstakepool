@@ -20,6 +20,7 @@ import (
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
+	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
 
@@ -62,14 +63,14 @@ func (v *versionServer) Version(ctx context.Context, req *pb.VersionRequest) (*p
 // StakepooldServer provides RPC clients with the ability to trigger updates
 // to the user voting config
 type stakepooldServer struct {
-	appContext *AppContext
+	stakepoold *stakepool.Stakepoold
 }
 
 // StartStakepooldService creates an implementation of the StakepooldService
 // and registers it.
-func StartStakepooldService(appContext *AppContext, server *grpc.Server) {
+func StartStakepooldService(stakepoold *stakepool.Stakepoold, server *grpc.Server) {
 	pb.RegisterStakepooldServiceServer(server, &stakepooldServer{
-		appContext: appContext,
+		stakepoold: stakepoold,
 	})
 }
 
@@ -86,9 +87,9 @@ func processTickets(ticketsMSA map[chainhash.Hash]string) []*pb.Ticket {
 
 func (s *stakepooldServer) GetAddedLowFeeTickets(c context.Context, req *pb.GetAddedLowFeeTicketsRequest) (*pb.GetAddedLowFeeTicketsResponse, error) {
 
-	s.appContext.RLock()
-	ticketsMSA := s.appContext.AddedLowFeeTicketsMSA
-	s.appContext.RUnlock()
+	s.stakepoold.RLock()
+	ticketsMSA := s.stakepoold.AddedLowFeeTicketsMSA
+	s.stakepoold.RUnlock()
 
 	tickets := processTickets(ticketsMSA)
 	return &pb.GetAddedLowFeeTicketsResponse{Tickets: tickets}, nil
@@ -96,9 +97,9 @@ func (s *stakepooldServer) GetAddedLowFeeTickets(c context.Context, req *pb.GetA
 
 func (s *stakepooldServer) GetIgnoredLowFeeTickets(c context.Context, req *pb.GetIgnoredLowFeeTicketsRequest) (*pb.GetIgnoredLowFeeTicketsResponse, error) {
 
-	s.appContext.RLock()
-	ticketsMSA := s.appContext.IgnoredLowFeeTicketsMSA
-	s.appContext.RUnlock()
+	s.stakepoold.RLock()
+	ticketsMSA := s.stakepoold.IgnoredLowFeeTicketsMSA
+	s.stakepoold.RUnlock()
 
 	tickets := processTickets(ticketsMSA)
 	return &pb.GetIgnoredLowFeeTicketsResponse{Tickets: tickets}, nil
@@ -106,9 +107,9 @@ func (s *stakepooldServer) GetIgnoredLowFeeTickets(c context.Context, req *pb.Ge
 
 func (s *stakepooldServer) GetLiveTickets(c context.Context, req *pb.GetLiveTicketsRequest) (*pb.GetLiveTicketsResponse, error) {
 
-	s.appContext.RLock()
-	ticketsMSA := s.appContext.LiveTicketsMSA
-	s.appContext.RUnlock()
+	s.stakepoold.RLock()
+	ticketsMSA := s.stakepoold.LiveTicketsMSA
+	s.stakepoold.RUnlock()
 
 	tickets := processTickets(ticketsMSA)
 	return &pb.GetLiveTicketsResponse{Tickets: tickets}, nil
@@ -127,7 +128,7 @@ func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.Se
 		addedLowFeeTickets[*hash] = ticket.Address
 	}
 
-	s.appContext.UpdateTicketData(addedLowFeeTickets)
+	s.stakepoold.UpdateTicketData(addedLowFeeTickets)
 	return &pb.SetAddedLowFeeTicketsResponse{}, nil
 }
 
@@ -143,12 +144,12 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 		}
 	}
 
-	s.appContext.UpdateUserData(userVotingPrefs)
+	s.stakepoold.UpdateUserData(userVotingPrefs)
 	return &pb.SetUserVotingPrefsResponse{}, nil
 }
 
 func (s *stakepooldServer) ImportNewScript(ctx context.Context, req *pb.ImportNewScriptRequest) (*pb.ImportNewScriptResponse, error) {
-	heightImported, err := s.appContext.ImportNewScript(req.Script)
+	heightImported, err := s.stakepoold.ImportNewScript(req.Script)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +159,7 @@ func (s *stakepooldServer) ImportNewScript(ctx context.Context, req *pb.ImportNe
 }
 
 func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.ImportMissingScriptsRequest) (*pb.ImportMissingScriptsResponse, error) {
-	err := s.appContext.ImportMissingScripts(req.Scripts, int(req.RescanHeight))
+	err := s.stakepoold.ImportMissingScripts(req.Scripts, int(req.RescanHeight))
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +168,7 @@ func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.Imp
 
 func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsRequest) (*pb.ListScriptsResponse, error) {
 
-	scripts, err := s.appContext.ListScripts()
+	scripts, err := s.stakepoold.ListScripts()
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +178,7 @@ func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsR
 
 func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.AccountSyncAddressIndexRequest) (*pb.AccountSyncAddressIndexResponse, error) {
 
-	err := s.appContext.AccountSyncAddressIndex(req.Account, req.Branch, int(req.Index))
+	err := s.stakepoold.AccountSyncAddressIndex(req.Account, req.Branch, int(req.Index))
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +188,7 @@ func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.
 
 func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
 
-	tickets, err := s.appContext.GetTickets(req.IncludeImmature)
+	tickets, err := s.stakepoold.GetTickets(req.IncludeImmature)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +205,7 @@ func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsReq
 
 func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMissingTicketRequest) (*pb.AddMissingTicketResponse, error) {
 
-	err := s.appContext.AddMissingTicket(req.Hash)
+	err := s.stakepoold.AddMissingTicket(req.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +214,7 @@ func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMiss
 
 func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakePoolUserInfoRequest) (*pb.StakePoolUserInfoResponse, error) {
 
-	response, err := s.appContext.StakePoolUserInfo(req.MultiSigAddress)
+	response, err := s.stakepoold.StakePoolUserInfo(req.MultiSigAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +238,7 @@ func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakeP
 
 func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoRequest) (*pb.WalletInfoResponse, error) {
 
-	response, err := s.appContext.WalletInfo()
+	response, err := s.stakepoold.WalletInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +253,7 @@ func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoReq
 
 func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.ValidateAddressRequest) (*pb.ValidateAddressResponse, error) {
 
-	response, err := s.appContext.ValidateAddress(req.Address)
+	response, err := s.stakepoold.ValidateAddress(req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +266,7 @@ func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.Validate
 
 func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMultisigRequest) (*pb.CreateMultisigResponse, error) {
 
-	response, err := s.appContext.CreateMultisig(req.Address)
+	response, err := s.stakepoold.CreateMultisig(req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +279,7 @@ func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMul
 
 func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInfoRequest) (*pb.GetStakeInfoResponse, error) {
 
-	response, err := s.appContext.GetStakeInfo()
+	response, err := s.stakepoold.GetStakeInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -304,6 +305,6 @@ func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInf
 
 func (s *stakepooldServer) GetColdWalletExtPub(ctx context.Context, req *pb.GetColdWalletExtPubRequest) (*pb.GetColdWalletExtPubResponse, error) {
 	return &pb.GetColdWalletExtPubResponse{
-		ColdWalletExtPub: s.appContext.ColdWalletExtPub,
+		ColdWalletExtPub: s.stakepoold.ColdWalletExtPub,
 	}, nil
 }

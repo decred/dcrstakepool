@@ -9,14 +9,14 @@ import (
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/rpcclient/v3"
-	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/rpcserver"
+	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
 
 var requiredChainServerAPI = semver{major: 6, minor: 0, patch: 0}
 var requiredWalletAPI = semver{major: 6, minor: 0, patch: 1}
 
-func connectNodeRPC(ctx *rpcserver.AppContext, cfg *config) (*rpcclient.Client, semver, error) {
+func connectNodeRPC(spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, semver, error) {
 	var nodeVer semver
 
 	dcrdCert, err := ioutil.ReadFile(cfg.DcrdCert)
@@ -38,7 +38,7 @@ func connectNodeRPC(ctx *rpcserver.AppContext, cfg *config) (*rpcclient.Client, 
 		Certificates: dcrdCert,
 	}
 
-	ntfnHandlers := getNodeNtfnHandlers(ctx)
+	ntfnHandlers := getNodeNtfnHandlers(spd)
 	dcrdClient, err := rpcclient.New(connCfgDaemon, ntfnHandlers)
 	if err != nil {
 		log.Errorf("Failed to start dcrd RPC client: %s\n", err.Error())
@@ -64,7 +64,7 @@ func connectNodeRPC(ctx *rpcserver.AppContext, cfg *config) (*rpcclient.Client, 
 	return dcrdClient, nodeVer, nil
 }
 
-func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*rpcserver.Client, semver, error) {
+func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*stakepool.Client, semver, error) {
 	var walletVer semver
 
 	dcrwCert, err := ioutil.ReadFile(cfg.WalletCert)
@@ -90,7 +90,7 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*rp
 	ntfnHandlers := getWalletNtfnHandlers()
 
 	// New also starts an autoreconnect function.
-	dcrwClient, err := rpcserver.NewClient(ctx, wg, connCfgWallet, ntfnHandlers)
+	dcrwClient, err := stakepool.NewClient(ctx, wg, connCfgWallet, ntfnHandlers)
 	if err != nil {
 		log.Errorf("Verify that username and password is correct and that "+
 			"rpc.cert is for your wallet: %v", cfg.WalletCert)
@@ -117,16 +117,16 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*rp
 	return dcrwClient, walletVer, nil
 }
 
-func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
+func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
 	blockHashToHeightCache := make(map[chainhash.Hash]int32)
 
 	// This is suboptimal to copy and needs fixing.
 	userVotingConfig := make(map[string]userdata.UserVotingConfig)
-	ctx.RLock()
-	for k, v := range ctx.UserVotingConfig {
+	spd.RLock()
+	for k, v := range spd.UserVotingConfig {
 		userVotingConfig[k] = v
 	}
-	ctx.RUnlock()
+	spd.RUnlock()
 
 	ignoredLowFeeTickets := make(map[chainhash.Hash]string)
 	liveTickets := make(map[chainhash.Hash]string)
@@ -134,7 +134,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 
 	log.Info("Calling GetTickets...")
 	timenow := time.Now()
-	tickets, err := ctx.WalletConnection.RPCClient().GetTickets(false)
+	tickets, err := spd.WalletConnection.RPCClient().GetTickets(false)
 	log.Infof("GetTickets: took %v", time.Since(timenow))
 
 	if err != nil {
@@ -150,7 +150,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 	log.Debugf("setting up GetTransactionAsync for %v tickets", len(tickets))
 	for _, ticket := range tickets {
 		// lookup ownership of each ticket
-		promises = append(promises, promise{ctx.WalletConnection.RPCClient().GetTransactionAsync(ticket)})
+		promises = append(promises, promise{spd.WalletConnection.RPCClient().GetTransactionAsync(ticket)})
 	}
 
 	var counter int
@@ -180,11 +180,11 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 			// All tickets are present in the GetTickets response, whether they
 			// pay the correct fee or not.  So we need to verify fees and
 			// sort the tickets into their respective maps.
-			_, isAdded := ctx.AddedLowFeeTicketsMSA[*hash]
+			_, isAdded := spd.AddedLowFeeTicketsMSA[*hash]
 			if isAdded {
 				liveTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 			} else {
-				msgTx, err := rpcserver.MsgTxFromHex(gt.Hex)
+				msgTx, err := stakepool.MsgTxFromHex(gt.Hex)
 				if err != nil {
 					log.Warnf("MsgTxFromHex failed for %v: %v", gt.Hex, err)
 					continue
@@ -202,7 +202,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 				if inCache {
 					ticketBlockHeight = height
 				} else {
-					gbh, err := ctx.NodeConnection.GetBlockHeader(ticketBlockHash)
+					gbh, err := spd.NodeConnection.GetBlockHeader(ticketBlockHash)
 					if err != nil {
 						log.Warnf("GetBlockHeader failed for %v: %v", ticketBlockHash, err)
 						continue
@@ -212,18 +212,18 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 					ticketBlockHeight = int32(gbh.Height)
 				}
 
-				ticketFeesValid, err := ctx.EvaluateStakePoolTicket(msgTx, ticketBlockHeight)
+				ticketFeesValid, err := spd.EvaluateStakePoolTicket(msgTx, ticketBlockHeight)
 
 				if err != nil {
 					log.Warnf("ignoring ticket %v for multisig %v due to error: %v",
-						*hash, ctx.UserVotingConfig[addr].MultiSigAddress, err)
+						*hash, spd.UserVotingConfig[addr].MultiSigAddress, err)
 					ignoredLowFeeTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 				} else if ticketFeesValid {
 					normalFee++
 					liveTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 				} else {
 					log.Warnf("ignoring ticket %v for multisig %v due to invalid fee",
-						*hash, ctx.UserVotingConfig[addr].MultiSigAddress)
+						*hash, spd.UserVotingConfig[addr].MultiSigAddress)
 					ignoredLowFeeTickets[*hash] = userVotingConfig[addr].MultiSigAddress
 				}
 			}
@@ -232,7 +232,7 @@ func walletGetTickets(ctx *rpcserver.AppContext) (map[chainhash.Hash]string, map
 	}
 
 	log.Infof("tickets loaded -- addedLowFee %v ignoredLowFee %v normalFee %v "+
-		"live %v total %v", len(ctx.AddedLowFeeTicketsMSA),
+		"live %v total %v", len(spd.AddedLowFeeTicketsMSA),
 		len(ignoredLowFeeTickets), normalFee, len(liveTickets),
 		len(tickets))
 

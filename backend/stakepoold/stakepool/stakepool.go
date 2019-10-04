@@ -1,4 +1,8 @@
-package rpcserver
+// Copyright (c) 2019 The Decred developers
+
+// Package stakepool holds the Stakepool struct and processes incomming commands
+// and notifications.
+package stakepool
 
 import (
 	"bytes"
@@ -30,7 +34,7 @@ var (
 	ticketTypeSpentMissed = "SpentMissed"
 )
 
-type AppContext struct {
+type Stakepoold struct {
 	sync.RWMutex
 
 	// locking required
@@ -102,7 +106,7 @@ type ticketMetadata struct {
 // EvaluateStakePoolTicket evaluates a voting service ticket to see if it's
 // acceptable to the voting service. The ticket must pay out to the voting
 // service cold wallet, and must have a sufficient fee.
-func (ctx *AppContext) EvaluateStakePoolTicket(tx *wire.MsgTx, blockHeight int32) (bool, error) {
+func (spd *Stakepoold) EvaluateStakePoolTicket(tx *wire.MsgTx, blockHeight int32) (bool, error) {
 	// Check the first commitment output (txOuts[1])
 	// and ensure that the address found there exists
 	// in the list of approved addresses. Also ensure
@@ -110,7 +114,7 @@ func (ctx *AppContext) EvaluateStakePoolTicket(tx *wire.MsgTx, blockHeight int32
 	// requested by the pool.
 	commitmentOut := tx.TxOut[1]
 	commitAddr, err := stake.AddrFromSStxPkScrCommitment(
-		commitmentOut.PkScript, ctx.Params)
+		commitmentOut.PkScript, spd.Params)
 	if err != nil {
 		return false, fmt.Errorf("Failed to parse commit out addr: %s",
 			err.Error())
@@ -135,7 +139,7 @@ func (ctx *AppContext) EvaluateStakePoolTicket(tx *wire.MsgTx, blockHeight int32
 	}
 	fees := in - out
 
-	_, exists := ctx.FeeAddrs[commitAddr.EncodeAddress()]
+	_, exists := spd.FeeAddrs[commitAddr.EncodeAddress()]
 	if exists {
 		commitAmt, err := stake.AmountFromSStxPkScrCommitment(
 			commitmentOut.PkScript)
@@ -147,8 +151,8 @@ func (ctx *AppContext) EvaluateStakePoolTicket(tx *wire.MsgTx, blockHeight int32
 		// Calculate the fee required based on the current
 		// height and the required amount from the pool.
 		feeNeeded := txrules.StakePoolTicketFee(dcrutil.Amount(
-			tx.TxOut[0].Value), fees, blockHeight, ctx.PoolFees,
-			ctx.Params)
+			tx.TxOut[0].Value), fees, blockHeight, spd.PoolFees,
+			spd.Params)
 		if commitAmt < feeNeeded {
 			log.Warnf("User %s submitted ticket %v which "+
 				"has less fees than are required to use this "+
@@ -186,7 +190,7 @@ func MsgTxFromHex(txhex string) (*wire.MsgTx, error) {
 }
 
 // getticket pulls the transaction information for a ticket from dcrwallet. This is a go routine!
-func (ctx *AppContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
+func (spd *Stakepoold) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 	start := time.Now()
 
 	defer func() {
@@ -197,7 +201,7 @@ func (ctx *AppContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 	// Ask wallet to look up vote transaction to see if it belongs to us
 	log.Debugf("calling GetTransaction for %v ticket %v",
 		strings.ToLower(nt.ticketType), nt.ticket)
-	res, err := ctx.WalletConnection.RPCClient().GetTransaction(nt.ticket)
+	res, err := spd.WalletConnection.RPCClient().GetTransaction(nt.ticket)
 	nt.getDuration = time.Since(start)
 	if err != nil {
 		// suppress "No information for transaction ..." errors
@@ -208,7 +212,7 @@ func (ctx *AppContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 		return
 	}
 	for i := range res.Details {
-		_, ok := ctx.UserVotingConfig[res.Details[i].Address]
+		_, ok := spd.UserVotingConfig[res.Details[i].Address]
 		if ok {
 			// multisigaddress will match if it belongs a pool user
 			nt.msa = res.Details[i].Address
@@ -228,31 +232,31 @@ func (ctx *AppContext) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 		strings.ToLower(nt.ticketType), nt.ticket)
 }
 
-func (ctx *AppContext) UpdateTicketData(newAddedLowFeeTicketsMSA map[chainhash.Hash]string) {
-	ctx.Lock()
+func (spd *Stakepoold) UpdateTicketData(newAddedLowFeeTicketsMSA map[chainhash.Hash]string) {
+	spd.Lock()
 
 	// apply unconditional updates
 	for tickethash, msa := range newAddedLowFeeTicketsMSA {
 		// remove from ignored list if present
-		delete(ctx.IgnoredLowFeeTicketsMSA, tickethash)
+		delete(spd.IgnoredLowFeeTicketsMSA, tickethash)
 		// add to live list
-		ctx.LiveTicketsMSA[tickethash] = msa
+		spd.LiveTicketsMSA[tickethash] = msa
 	}
 
 	// if something is being deleted from the db by this update then
 	// we need to put it back on the ignored list
-	for th, m := range ctx.AddedLowFeeTicketsMSA {
+	for th, m := range spd.AddedLowFeeTicketsMSA {
 		_, exists := newAddedLowFeeTicketsMSA[th]
 		if !exists {
-			ctx.IgnoredLowFeeTicketsMSA[th] = m
+			spd.IgnoredLowFeeTicketsMSA[th] = m
 		}
 	}
 
-	ctx.AddedLowFeeTicketsMSA = newAddedLowFeeTicketsMSA
-	addedLowFeeTicketsCount := len(ctx.AddedLowFeeTicketsMSA)
-	ignoredLowFeeTicketsCount := len(ctx.IgnoredLowFeeTicketsMSA)
-	liveTicketsCount := len(ctx.LiveTicketsMSA)
-	ctx.Unlock()
+	spd.AddedLowFeeTicketsMSA = newAddedLowFeeTicketsMSA
+	addedLowFeeTicketsCount := len(spd.AddedLowFeeTicketsMSA)
+	ignoredLowFeeTicketsCount := len(spd.IgnoredLowFeeTicketsMSA)
+	liveTicketsCount := len(spd.LiveTicketsMSA)
+	spd.Unlock()
 	// Log ticket information outside of the handler.
 	go func() {
 		log.Infof("tickets loaded -- addedLowFee %v ignoredLowFee %v live %v "+
@@ -262,14 +266,14 @@ func (ctx *AppContext) UpdateTicketData(newAddedLowFeeTicketsMSA map[chainhash.H
 	}()
 }
 
-func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
+func (spd *Stakepoold) UpdateTicketDataFromMySQL() error {
 	start := time.Now()
-	newAddedLowFeeTicketsMSA, err := ctx.UserData.MySQLFetchAddedLowFeeTickets()
+	newAddedLowFeeTicketsMSA, err := spd.UserData.MySQLFetchAddedLowFeeTickets()
 	log.Infof("MySQLFetchAddedLowFeeTickets took %v", time.Since(start))
 	if err != nil {
 		return err
 	}
-	ctx.UpdateTicketData(newAddedLowFeeTicketsMSA)
+	spd.UpdateTicketData(newAddedLowFeeTicketsMSA)
 	return nil
 }
 
@@ -277,14 +281,14 @@ func (ctx *AppContext) UpdateTicketDataFromMySQL() error {
 // performed because we are importing a brand new script, it shouldn't have any
 // associated history. Current block height is returned to indicate which height
 // the new user has registered.
-func (ctx *AppContext) ImportNewScript(script []byte) (int64, error) {
-	err := ctx.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
+func (spd *Stakepoold) ImportNewScript(script []byte) (int64, error) {
+	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
 	if err != nil {
 		log.Errorf("ImportNewScript: ImportScriptRescanFrom rpc failed: %v", err)
 		return -1, err
 	}
 
-	_, bestBlockHeight, err := ctx.WalletConnection.RPCClient().GetBestBlock()
+	_, bestBlockHeight, err := spd.WalletConnection.RPCClient().GetBestBlock()
 	if err != nil {
 		log.Errorf("ImportNewScript: GetBestBlock rpc failed: %v", err)
 		return -1, err
@@ -296,11 +300,11 @@ func (ctx *AppContext) ImportNewScript(script []byte) (int64, error) {
 // will import all but one of the scripts without triggering a wallet rescan,
 // and finally trigger a rescan from the provided height after importing the
 // last one.
-func (ctx *AppContext) ImportMissingScripts(scripts [][]byte, rescanHeight int) error {
+func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) error {
 	// Import n-1 scripts without a rescan.
 	allButOne := scripts[:len(scripts)-1]
 	for _, script := range allButOne {
-		err := ctx.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
+		err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
 		if err != nil {
 			log.Errorf("ImportMissingScripts: ImportScript rpc failed: %v", err)
 			return err
@@ -309,7 +313,7 @@ func (ctx *AppContext) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 
 	// Import the last script and trigger a rescan
 	lastOne := scripts[len(scripts)-1]
-	err := ctx.WalletConnection.RPCClient().ImportScriptRescanFrom(lastOne, true, rescanHeight)
+	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(lastOne, true, rescanHeight)
 	if err != nil {
 		log.Errorf("ImportMissingScripts: ImportScriptRescanFrom rpc failed: %v", err)
 		return err
@@ -320,7 +324,7 @@ func (ctx *AppContext) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 	return nil
 }
 
-func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
+func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 	log.Infof("AddMissingTicket: Adding ticket with hash %s", ticketHash)
 
 	hash, err := chainhash.NewHash(ticketHash)
@@ -329,13 +333,13 @@ func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
 		return err
 	}
 
-	tx, err := ctx.WalletConnection.RPCClient().GetRawTransaction(hash)
+	tx, err := spd.WalletConnection.RPCClient().GetRawTransaction(hash)
 	if err != nil {
 		log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
 		return err
 	}
 
-	err = ctx.WalletConnection.RPCClient().AddTicket(tx)
+	err = spd.WalletConnection.RPCClient().AddTicket(tx)
 	if err != nil {
 		log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
 		return err
@@ -344,8 +348,8 @@ func (ctx *AppContext) AddMissingTicket(ticketHash []byte) error {
 	return nil
 }
 
-func (ctx *AppContext) ListScripts() ([][]byte, error) {
-	scripts, err := ctx.WalletConnection.RPCClient().ListScripts()
+func (spd *Stakepoold) ListScripts() ([][]byte, error) {
+	scripts, err := spd.WalletConnection.RPCClient().ListScripts()
 	if err != nil {
 		log.Errorf("ListScripts: ListScripts rpc failed: %v", err)
 		return nil, err
@@ -356,7 +360,7 @@ func (ctx *AppContext) ListScripts() ([][]byte, error) {
 
 // CreateMultisig decodes the provided array of addresses, and then
 // passes them to dcrwallet to create a 1-of-N multisig address.
-func (ctx *AppContext) CreateMultisig(addresses []string) (*wallettypes.CreateMultiSigResult, error) {
+func (spd *Stakepoold) CreateMultisig(addresses []string) (*wallettypes.CreateMultiSigResult, error) {
 	decodedAddresses := make([]dcrutil.Address, len(addresses))
 
 	for i, addr := range addresses {
@@ -368,7 +372,7 @@ func (ctx *AppContext) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 		decodedAddresses[i] = decodedAddress
 	}
 
-	result, err := ctx.WalletConnection.RPCClient().CreateMultisig(1, decodedAddresses)
+	result, err := spd.WalletConnection.RPCClient().CreateMultisig(1, decodedAddresses)
 	if err != nil {
 		log.Errorf("CreateMultisig: CreateMultisig rpc failed: %v", err)
 		return nil, err
@@ -377,8 +381,8 @@ func (ctx *AppContext) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 	return result, nil
 }
 
-func (ctx *AppContext) AccountSyncAddressIndex(account string, branch uint32, index int) error {
-	err := ctx.WalletConnection.RPCClient().AccountSyncAddressIndex(account, branch, index)
+func (spd *Stakepoold) AccountSyncAddressIndex(account string, branch uint32, index int) error {
+	err := spd.WalletConnection.RPCClient().AccountSyncAddressIndex(account, branch, index)
 	if err != nil {
 		log.Errorf("AccountSyncAddressIndex: AccountSyncAddressIndex rpc failed: %v", err)
 		return err
@@ -387,8 +391,8 @@ func (ctx *AppContext) AccountSyncAddressIndex(account string, branch uint32, in
 	return nil
 }
 
-func (ctx *AppContext) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
-	tickets, err := ctx.WalletConnection.RPCClient().GetTickets(includeImmature)
+func (spd *Stakepoold) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
+	tickets, err := spd.WalletConnection.RPCClient().GetTickets(includeImmature)
 	if err != nil {
 		log.Errorf("GetTickets: GetTickets rpc failed: %v", err)
 		return nil, err
@@ -397,14 +401,14 @@ func (ctx *AppContext) GetTickets(includeImmature bool) ([]*chainhash.Hash, erro
 	return tickets, nil
 }
 
-func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
+func (spd *Stakepoold) StakePoolUserInfo(multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
 	decodedMultisig, err := dcrutil.DecodeAddress(multisigAddress)
 	if err != nil {
 		log.Errorf("StakePoolUserInfo: Address could not be decoded %v: %v", multisigAddress, err)
 		return nil, err
 	}
 
-	response, err := ctx.WalletConnection.RPCClient().StakePoolUserInfo(decodedMultisig)
+	response, err := spd.WalletConnection.RPCClient().StakePoolUserInfo(decodedMultisig)
 	if err != nil {
 		log.Errorf("StakePoolUserInfo: StakePoolUserInfo rpc failed: %v", err)
 		return nil, err
@@ -413,8 +417,8 @@ func (ctx *AppContext) StakePoolUserInfo(multisigAddress string) (*wallettypes.S
 	return response, nil
 }
 
-func (ctx *AppContext) WalletInfo() (*wallettypes.WalletInfoResult, error) {
-	response, err := ctx.WalletConnection.RPCClient().WalletInfo()
+func (spd *Stakepoold) WalletInfo() (*wallettypes.WalletInfoResult, error) {
+	response, err := spd.WalletConnection.RPCClient().WalletInfo()
 	if err != nil {
 		log.Errorf("WalletInfo: WalletInfo rpc failed: %v", err)
 		return nil, err
@@ -423,14 +427,14 @@ func (ctx *AppContext) WalletInfo() (*wallettypes.WalletInfoResult, error) {
 	return response, nil
 }
 
-func (ctx *AppContext) ValidateAddress(address string) (*wallettypes.ValidateAddressWalletResult, error) {
+func (spd *Stakepoold) ValidateAddress(address string) (*wallettypes.ValidateAddressWalletResult, error) {
 	addr, err := dcrutil.DecodeAddress(address)
 	if err != nil {
 		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
 		return nil, err
 	}
 
-	response, err := ctx.WalletConnection.RPCClient().ValidateAddress(addr)
+	response, err := spd.WalletConnection.RPCClient().ValidateAddress(addr)
 	if err != nil {
 		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
 		return nil, err
@@ -440,8 +444,8 @@ func (ctx *AppContext) ValidateAddress(address string) (*wallettypes.ValidateAdd
 }
 
 // GetStakeInfo performs the rpc command GetStakeInfo.
-func (ctx *AppContext) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
-	response, err := ctx.WalletConnection.RPCClient().GetStakeInfo()
+func (spd *Stakepoold) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
+	response, err := spd.WalletConnection.RPCClient().GetStakeInfo()
 	if err != nil {
 		log.Errorf("GetStakeInfo: GetStakeInfo rpc failed: %v", err)
 		return nil, err
@@ -450,26 +454,26 @@ func (ctx *AppContext) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
 	return response, nil
 }
 
-func (ctx *AppContext) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
-	ctx.Lock()
-	ctx.UserVotingConfig = newUserVotingConfig
-	ctx.Unlock()
+func (spd *Stakepoold) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
+	spd.Lock()
+	spd.UserVotingConfig = newUserVotingConfig
+	spd.Unlock()
 }
 
-func (ctx *AppContext) UpdateUserDataFromMySQL() error {
+func (spd *Stakepoold) UpdateUserDataFromMySQL() error {
 	start := time.Now()
-	newUserVotingConfig, err := ctx.UserData.MySQLFetchUserVotingConfig()
+	newUserVotingConfig, err := spd.UserData.MySQLFetchUserVotingConfig()
 	log.Infof("MySQLFetchUserVotingConfig took %v",
 		time.Since(start))
 	if err != nil {
 		return err
 	}
-	ctx.UpdateUserData(newUserVotingConfig)
+	spd.UpdateUserData(newUserVotingConfig)
 	return nil
 }
 
 // vote Generates a vote and send it off to the network.  This is a go routine!
-func (ctx *AppContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, blockHeight int64, w *ticketMetadata) {
+func (spd *Stakepoold) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, blockHeight int64, w *ticketMetadata) {
 	start := time.Now()
 
 	defer func() {
@@ -479,8 +483,8 @@ func (ctx *AppContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 	// Ask wallet to generate vote result.
 	var res *wallettypes.GenerateVoteResult
-	res, w.err = ctx.WalletConnection.RPCClient().GenerateVote(blockHash, blockHeight,
-		w.ticket, w.config.VoteBits, ctx.VotingConfig.VoteBitsExtended)
+	res, w.err = spd.WalletConnection.RPCClient().GenerateVote(blockHash, blockHeight,
+		w.ticket, w.config.VoteBits, spd.VotingConfig.VoteBitsExtended)
 	if w.err != nil || res.Hex == "" {
 		return
 	}
@@ -500,7 +504,7 @@ func (ctx *AppContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 	// Ask node to transmit raw transaction.
 	startSend := time.Now()
-	tx, err := ctx.NodeConnection.SendRawTransaction(newTx, false)
+	tx, err := spd.NodeConnection.SendRawTransaction(newTx, false)
 	if err != nil {
 		log.Infof("vote err %v", err)
 		w.err = err
@@ -512,7 +516,7 @@ func (ctx *AppContext) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 // processNewTickets is invoked every time a new block is created. Any tickets
 // which matured in this block will be included in the parameter.
-func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
+func (spd *Stakepoold) processNewTickets(nt NewTicketsForBlock) {
 	start := time.Now()
 
 	log.Debugf("processNewTickets: Block %d contains %d newly matured tickets",
@@ -523,7 +527,7 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 
 	var wg sync.WaitGroup // wait group for go routine exits
 
-	ctx.RLock()
+	spd.RLock()
 	for _, tickethash := range nt.NewTickets {
 		n := &ticketMetadata{
 			blockHash:   nt.BlockHash,
@@ -534,9 +538,9 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 		newtickets = append(newtickets, n)
 
 		wg.Add(1)
-		go ctx.getticket(&wg, n)
+		go spd.getticket(&wg, n)
 	}
-	ctx.RUnlock()
+	spd.RUnlock()
 
 	wg.Wait()
 
@@ -556,7 +560,7 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 			continue
 		}
 
-		ticketFeesValid, err := ctx.EvaluateStakePoolTicket(msgTx, int32(nt.BlockHeight))
+		ticketFeesValid, err := spd.EvaluateStakePoolTicket(msgTx, int32(nt.BlockHeight))
 
 		if err != nil {
 			log.Warnf("ignoring ticket %v for multisig %v due to error: %v", n.ticket, n.msa, err)
@@ -569,22 +573,22 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 		}
 	}
 
-	ctx.Lock()
+	spd.Lock()
 	// update ignored low fee tickets
 	for ticket, msa := range newIgnoredLowFeeTickets {
-		ctx.IgnoredLowFeeTicketsMSA[ticket] = msa
+		spd.IgnoredLowFeeTicketsMSA[ticket] = msa
 	}
 
 	// update live tickets
 	for ticket, msa := range newLiveTickets {
-		ctx.LiveTicketsMSA[ticket] = msa
+		spd.LiveTicketsMSA[ticket] = msa
 	}
 
 	// update counts
-	addedLowFeeTicketsCount := len(ctx.AddedLowFeeTicketsMSA)
-	ignoredLowFeeTicketsCount := len(ctx.IgnoredLowFeeTicketsMSA)
-	liveTicketsCount := len(ctx.LiveTicketsMSA)
-	ctx.Unlock()
+	addedLowFeeTicketsCount := len(spd.AddedLowFeeTicketsMSA)
+	ignoredLowFeeTicketsCount := len(spd.IgnoredLowFeeTicketsMSA)
+	liveTicketsCount := len(spd.LiveTicketsMSA)
+	spd.Unlock()
 
 	// Log ticket information outside of the handler.
 	go func() {
@@ -611,7 +615,7 @@ func (ctx *AppContext) processNewTickets(nt NewTicketsForBlock) {
 // processSpentMissedTickets is invoked every time a new block is created. Any
 // tickets which are either spent or missed in this block will be included in
 // the parameter.
-func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock) {
+func (spd *Stakepoold) processSpentMissedTickets(smt SpentMissedTicketsForBlock) {
 	start := time.Now()
 
 	// We use pointer because it is the fastest accessor.
@@ -619,7 +623,7 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 
 	var wg sync.WaitGroup // wait group for go routine exits
 
-	ctx.RLock()
+	spd.RLock()
 	for ticket, spent := range smt.SmTickets {
 		sm := &ticketMetadata{
 			blockHash:   smt.BlockHash,
@@ -631,9 +635,9 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 		smtickets = append(smtickets, sm)
 
 		wg.Add(1)
-		go ctx.getticket(&wg, sm)
+		go spd.getticket(&wg, sm)
 	}
-	ctx.RUnlock()
+	spd.RUnlock()
 
 	wg.Wait()
 
@@ -658,18 +662,18 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 	var ticketCountNew int
 	var ticketCountOld int
 
-	ctx.Lock()
-	ticketCountOld = len(ctx.LiveTicketsMSA)
+	spd.Lock()
+	ticketCountOld = len(spd.LiveTicketsMSA)
 	for _, ticket := range missedtickets {
-		delete(ctx.IgnoredLowFeeTicketsMSA, *ticket)
-		delete(ctx.LiveTicketsMSA, *ticket)
+		delete(spd.IgnoredLowFeeTicketsMSA, *ticket)
+		delete(spd.LiveTicketsMSA, *ticket)
 	}
 	for _, ticket := range spenttickets {
-		delete(ctx.IgnoredLowFeeTicketsMSA, *ticket)
-		delete(ctx.LiveTicketsMSA, *ticket)
+		delete(spd.IgnoredLowFeeTicketsMSA, *ticket)
+		delete(spd.LiveTicketsMSA, *ticket)
 	}
-	ticketCountNew = len(ctx.LiveTicketsMSA)
-	ctx.Unlock()
+	ticketCountNew = len(spd.LiveTicketsMSA)
+	spd.Unlock()
 
 	// Log ticket information outside of the handler.
 	go func() {
@@ -692,7 +696,7 @@ func (ctx *AppContext) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 // voting.  The function requires ASAP processing for each vote and therefore
 // it is not sequential and hard to read.  This is unfortunate but a reality of
 // speeding up code.
-func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
+func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
 	start := time.Now()
 
 	log.Debugf("ProcessWinningTickets: Block %d contains %d winning tickets", wt.BlockHeight, len(wt.WinningTickets))
@@ -702,19 +706,19 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 
 	var wg sync.WaitGroup // wait group for go routine exits
 
-	ctx.RLock()
+	spd.RLock()
 	for _, ticket := range wt.WinningTickets {
 		// Look up multi sig address.
-		msa, ok := ctx.LiveTicketsMSA[*ticket]
+		msa, ok := spd.LiveTicketsMSA[*ticket]
 		if !ok {
 			log.Debugf("ProcessWinningTickets: unmanaged winning ticket: %v", ticket)
-			if ctx.Testing {
+			if spd.Testing {
 				panic("boom")
 			}
 			continue
 		}
 
-		voteCfg, ok := ctx.UserVotingConfig[msa]
+		voteCfg, ok := spd.UserVotingConfig[msa]
 		if !ok {
 			// Use defaults if not found.
 			log.Warnf("ProcessWinningTickets: vote config not found for %v using defaults",
@@ -722,21 +726,21 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 			voteCfg = userdata.UserVotingConfig{
 				Userid:          0,
 				MultiSigAddress: msa,
-				VoteBits:        ctx.VotingConfig.VoteBits,
-				VoteBitsVersion: ctx.VotingConfig.VoteVersion,
+				VoteBits:        spd.VotingConfig.VoteBits,
+				VoteBitsVersion: spd.VotingConfig.VoteVersion,
 			}
-		} else if voteCfg.VoteBitsVersion != ctx.VotingConfig.VoteVersion {
+		} else if voteCfg.VoteBitsVersion != spd.VotingConfig.VoteVersion {
 			// If the user's voting config has a vote version that
 			// is different from our global vote version that we
 			// plucked from dcrwallet walletinfo then just use the
 			// default votebits.
-			voteCfg.VoteBits = ctx.VotingConfig.VoteBits
+			voteCfg.VoteBits = spd.VotingConfig.VoteBits
 			log.Infof("ProcessWinningTickets: userid %v multisigaddress %v vote "+
 				"version mismatch user %v stakepoold "+
 				"%v using votebits %d",
 				voteCfg.Userid, voteCfg.MultiSigAddress,
 				voteCfg.VoteBitsVersion,
-				ctx.VotingConfig.VoteVersion,
+				spd.VotingConfig.VoteVersion,
 				voteCfg.VoteBits)
 		}
 
@@ -748,7 +752,7 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 		winners = append(winners, w)
 
 		// When testing we don't send the tickets.
-		if ctx.Testing {
+		if spd.Testing {
 			continue
 		}
 
@@ -756,10 +760,10 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 		log.Debugf("ProcessWinningTickets: calling GenerateVote with blockHash %v blockHeight %v "+
 			"ticket %v VoteBits %v VoteBitsExtended %v ",
 			wt.BlockHash, wt.BlockHeight, w.ticket, w.config.VoteBits,
-			ctx.VotingConfig.VoteBitsExtended)
-		go ctx.vote(&wg, wt.BlockHash, wt.BlockHeight, w)
+			spd.VotingConfig.VoteBitsExtended)
+		go spd.vote(&wg, wt.BlockHash, wt.BlockHeight, w)
 	}
-	ctx.RUnlock()
+	spd.RUnlock()
 
 	wg.Wait()
 
@@ -794,43 +798,43 @@ func (ctx *AppContext) ProcessWinningTickets(wt WinningTicketsForBlock) {
 	}()
 }
 
-func (ctx *AppContext) NewTicketHandler(shutdownContext context.Context, wg *sync.WaitGroup) {
+func (spd *Stakepoold) NewTicketHandler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
 
 	for {
 		select {
-		case nt := <-ctx.NewTicketsChan:
-			go ctx.processNewTickets(nt)
-		case <-shutdownContext.Done():
+		case nt := <-spd.NewTicketsChan:
+			go spd.processNewTickets(nt)
+		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (ctx *AppContext) SpentmissedTicketHandler(shutdownContext context.Context, wg *sync.WaitGroup) {
+func (spd *Stakepoold) SpentmissedTicketHandler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
 
 	for {
 		select {
-		case smt := <-ctx.SpentmissedTicketsChan:
-			go ctx.processSpentMissedTickets(smt)
-		case <-shutdownContext.Done():
+		case smt := <-spd.SpentmissedTicketsChan:
+			go spd.processSpentMissedTickets(smt)
+		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (ctx *AppContext) WinningTicketHandler(shutdownContext context.Context, wg *sync.WaitGroup) {
+func (spd *Stakepoold) WinningTicketHandler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
 
 	for {
 		select {
-		case wt := <-ctx.WinningTicketsChan:
-			go ctx.ProcessWinningTickets(wt)
-		case <-shutdownContext.Done():
+		case wt := <-spd.WinningTicketsChan:
+			go spd.ProcessWinningTickets(wt)
+		case <-ctx.Done():
 			return
 		}
 	}
