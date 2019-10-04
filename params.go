@@ -1,5 +1,5 @@
 // Copyright (c) 2013-2014 The btcsuite developers
-// Copyright (c) 2015-2016 The Decred developers
+// Copyright (c) 2015-2019 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -19,7 +19,6 @@ var activeNetParams = &mainNetParams
 type params struct {
 	*chaincfg.Params
 	StakepooldRPCServerPort string
-	WalletRPCServerPort     string
 }
 
 // mainNetParams contains parameters specific to the main network
@@ -31,7 +30,6 @@ type params struct {
 var mainNetParams = params{
 	Params:                  &chaincfg.MainNetParams,
 	StakepooldRPCServerPort: "9113",
-	WalletRPCServerPort:     "9110",
 }
 
 // testNet3Params contains parameters specific to the test network (version 0)
@@ -41,7 +39,6 @@ var mainNetParams = params{
 var testNet3Params = params{
 	Params:                  &chaincfg.TestNet3Params,
 	StakepooldRPCServerPort: "19113",
-	WalletRPCServerPort:     "19110",
 }
 
 // simNetParams contains parameters specific to the simulation test network
@@ -49,7 +46,6 @@ var testNet3Params = params{
 var simNetParams = params{
 	Params:                  &chaincfg.SimNetParams,
 	StakepooldRPCServerPort: "19560",
-	WalletRPCServerPort:     "19557",
 }
 
 // netName returns the name used when referring to a decred network.  At the
