@@ -3,14 +3,14 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-// Package rpcserver implements the RPC API and is used by the main package to
+// Package server implements the RPC API and is used by the main package to
 // start gRPC services.
 //
 // Full documentation of the API implemented by this package is maintained in a
 // language-agnostic document:
 //
 // TODO Document gRPC API like dcrwallet once the API is stable
-package rpcserver
+package server
 
 import (
 	"time"
