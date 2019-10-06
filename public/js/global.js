@@ -113,6 +113,16 @@ $('.form-check-input').change(function () {
   }
 });
 
+// hide input error when input's value changes
+$('.err-form-control').on("change paste keyup", function() {
+  // reset styling of input
+  $(this).removeClass('err-form-control'); 
+  // hides the error icon
+  $(this).next().hide();
+  // remove error text
+  $(this).parent().next().hide();
+});
+
 $(document).ready(function () {
   // Display elements with class js-only
   var els = document.getElementsByClassName("js-only")
