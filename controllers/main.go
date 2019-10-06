@@ -560,12 +560,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 		return nil, err
 	}
 
-	ecPubKey, err := key.ECPubKey()
-	if err != nil {
-		return nil, err
-	}
-
-	addr, err := dcrutil.NewAddressSecpPubKey(ecPubKey.Serialize(), controller.Cfg.NetParams)
+	addr, err := helpers.DCRutilAddressFromExtendedKey(key, controller.Cfg.NetParams)
 	if err != nil {
 		return nil, err
 	}
@@ -595,12 +590,7 @@ func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Addre
 		return nil, err
 	}
 
-	ecPubKey, err := key.ECPubKey()
-	if err != nil {
-		return nil, err
-	}
-
-	addr, err := dcrutil.NewAddressSecpPubKey(ecPubKey.Serialize(), controller.Cfg.NetParams)
+	addr, err := helpers.DCRutilAddressFromExtendedKey(key, controller.Cfg.NetParams)
 	if err != nil {
 		return nil, err
 	}

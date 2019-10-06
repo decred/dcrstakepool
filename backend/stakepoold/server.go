@@ -23,6 +23,7 @@ import (
 	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
+	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrwallet/wallet/v3/txrules"
 	"github.com/decred/dcrwallet/wallet/v3/udb"
 
@@ -105,11 +106,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 		if err != nil {
 			return nil, err
 		}
-		ecPubKey, err := child.ECPubKey()
-		if err != nil {
-			return nil, err
-		}
-		addr, err := dcrutil.NewAddressSecpPubKey(ecPubKey.Serialize(), params)
+		addr, err := helpers.DCRutilAddressFromExtendedKey(child, params)
 		if err != nil {
 			return nil, err
 		}
