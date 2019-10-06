@@ -118,9 +118,9 @@ $('.err-form-control').on("change paste keyup", function() {
   // reset styling of input
   $(this).removeClass('err-form-control'); 
   // hides the error icon
-  $(this).next().hide();
+  $(this).next().fadeOut();
   // remove error text
-  $(this).parent().next().hide();
+  $(this).parent().next().fadeOut();
 });
 
 $(document).ready(function () {
