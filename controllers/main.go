@@ -560,7 +560,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 		return nil, err
 	}
 
-	addr, err := helpers.DCRutilAddressFromExtendedKey(key, controller.Cfg.NetParams)
+	addr, err := helpers.DCRUtilAddressFromExtendedKey(key, controller.Cfg.NetParams)
 	if err != nil {
 		return nil, err
 	}
@@ -590,7 +590,7 @@ func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Addre
 		return nil, err
 	}
 
-	addr, err := helpers.DCRutilAddressFromExtendedKey(key, controller.Cfg.NetParams)
+	addr, err := helpers.DCRUtilAddressFromExtendedKey(key, controller.Cfg.NetParams)
 	if err != nil {
 		return nil, err
 	}

@@ -47,7 +47,7 @@ var dcrutilAddressTests = []dcrutilAddressTest{
 	{xpubSimNet, chaincfg.SimNetParams(), childrenSimNet},
 }
 
-func TestDCRutilAddressFromExtendedKey(t *testing.T) {
+func TestDCRUtilAddressFromExtendedKey(t *testing.T) {
 	for _, test := range dcrutilAddressTests {
 		key, err := hdkeychain.NewKeyFromString(test.xpub, test.net)
 		if err != nil {
@@ -68,7 +68,7 @@ func TestDCRutilAddressFromExtendedKey(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			addr, err := DCRutilAddressFromExtendedKey(child, test.net)
+			addr, err := DCRUtilAddressFromExtendedKey(child, test.net)
 			if err != nil {
 				t.Error(err)
 				return

@@ -11,9 +11,12 @@ import (
 	"github.com/decred/dcrd/hdkeychain/v2"
 )
 
-// DCRutilAddressFromExtendedKey returns a dcrutil Address object for extended
-// key and params.
-func DCRutilAddressFromExtendedKey(key *hdkeychain.ExtendedKey, params *chaincfg.Params) (*dcrutil.AddressPubKeyHash, error) {
+// DCRUtilAddressFromExtendedKey parses the public address of a hd extended key
+// using a secp256k1 elliptic curve into a ECDSA public key, compresses it using
+// ripemd160, and wraps it in a dcrutil AddressPubKeyHash in order to easily
+// obtain its human readable formats. Returns an error upon a parsing error or
+// if key is for the wrong network.
+func DCRUtilAddressFromExtendedKey(key *hdkeychain.ExtendedKey, params *chaincfg.Params) (*dcrutil.AddressPubKeyHash, error) {
 	ecPubKey, err := key.ECPubKey()
 	if err != nil {
 		return nil, err

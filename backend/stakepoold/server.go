@@ -106,7 +106,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 		if err != nil {
 			return nil, err
 		}
-		addr, err := helpers.DCRutilAddressFromExtendedKey(child, params)
+		addr, err := helpers.DCRUtilAddressFromExtendedKey(child, params)
 		if err != nil {
 			return nil, err
 		}
