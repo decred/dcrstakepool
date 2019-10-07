@@ -14,16 +14,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/decred/dcrd/blockchain/stake"
-	"github.com/decred/dcrd/chaincfg"
+	"github.com/decred/dcrd/blockchain/stake/v2"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/dcrutil"
+	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/dcrutil/v2"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 
-	"github.com/decred/dcrd/rpcclient/v3"
+	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrwallet/wallet/v2/txrules"
+	"github.com/decred/dcrwallet/wallet/v3/txrules"
 )
 
 var (
@@ -139,7 +139,7 @@ func (spd *Stakepoold) EvaluateStakePoolTicket(tx *wire.MsgTx, blockHeight int32
 	}
 	fees := in - out
 
-	_, exists := spd.FeeAddrs[commitAddr.EncodeAddress()]
+	_, exists := spd.FeeAddrs[commitAddr.Address()]
 	if exists {
 		commitAmt, err := stake.AmountFromSStxPkScrCommitment(
 			commitmentOut.PkScript)
@@ -157,7 +157,7 @@ func (spd *Stakepoold) EvaluateStakePoolTicket(tx *wire.MsgTx, blockHeight int32
 			log.Warnf("User %s submitted ticket %v which "+
 				"has less fees than are required to use this "+
 				"Voting service and is being skipped (required: %v"+
-				", found %v)", commitAddr.EncodeAddress(),
+				", found %v)", commitAddr.Address(),
 				tx.TxHash(), feeNeeded, commitAmt)
 
 			// Reject the entire transaction if it didn't
@@ -166,7 +166,7 @@ func (spd *Stakepoold) EvaluateStakePoolTicket(tx *wire.MsgTx, blockHeight int32
 		}
 	} else {
 		log.Warnf("Unknown pool commitment address %s for ticket %v",
-			commitAddr.EncodeAddress(), tx.TxHash())
+			commitAddr.Address(), tx.TxHash())
 		return false, nil
 	}
 
@@ -364,7 +364,7 @@ func (spd *Stakepoold) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 	decodedAddresses := make([]dcrutil.Address, len(addresses))
 
 	for i, addr := range addresses {
-		decodedAddress, err := dcrutil.DecodeAddress(addr)
+		decodedAddress, err := dcrutil.DecodeAddress(addr, spd.Params)
 		if err != nil {
 			log.Errorf("CreateMultisig: Address could not be decoded %v: %v", addr, err)
 			return nil, err
@@ -402,7 +402,7 @@ func (spd *Stakepoold) GetTickets(includeImmature bool) ([]*chainhash.Hash, erro
 }
 
 func (spd *Stakepoold) StakePoolUserInfo(multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
-	decodedMultisig, err := dcrutil.DecodeAddress(multisigAddress)
+	decodedMultisig, err := dcrutil.DecodeAddress(multisigAddress, spd.Params)
 	if err != nil {
 		log.Errorf("StakePoolUserInfo: Address could not be decoded %v: %v", multisigAddress, err)
 		return nil, err
@@ -428,7 +428,7 @@ func (spd *Stakepoold) WalletInfo() (*wallettypes.WalletInfoResult, error) {
 }
 
 func (spd *Stakepoold) ValidateAddress(address string) (*wallettypes.ValidateAddressWalletResult, error) {
-	addr, err := dcrutil.DecodeAddress(address)
+	addr, err := dcrutil.DecodeAddress(address, spd.Params)
 	if err != nil {
 		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
 		return nil, err

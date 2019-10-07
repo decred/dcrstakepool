@@ -17,14 +17,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/decred/dcrd/chaincfg"
-	"github.com/decred/dcrd/dcrutil"
-	"github.com/decred/dcrd/hdkeychain"
-	"github.com/decred/dcrd/rpcclient/v3"
+	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/dcrutil/v2"
+	"github.com/decred/dcrd/hdkeychain/v2"
+	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrwallet/wallet/v2/txrules"
-	"github.com/decred/dcrwallet/wallet/v2/udb"
+	"github.com/decred/dcrstakepool/helpers"
+	"github.com/decred/dcrwallet/wallet/v3/txrules"
+	"github.com/decred/dcrwallet/wallet/v3/udb"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -69,12 +70,9 @@ func calculateFeeAddresses(xpubStr string, params *chaincfg.Params) (map[string]
 	end := numServicePaymentFeeAddresses
 
 	// Parse the extended public key and ensure it's the right network.
-	key, err := hdkeychain.NewKeyFromString(xpubStr)
+	key, err := hdkeychain.NewKeyFromString(xpubStr, params)
 	if err != nil {
 		return nil, err
-	}
-	if !key.IsForNet(params) {
-		return nil, fmt.Errorf("extended public key is for wrong network")
 	}
 
 	// Derive from external branch
@@ -92,7 +90,7 @@ func calculateFeeAddresses(xpubStr string, params *chaincfg.Params) (map[string]
 
 	addrMap := make(map[string]struct{})
 	for i := range addrs {
-		addrMap[addrs[i].EncodeAddress()] = struct{}{}
+		addrMap[addrs[i].Address()] = struct{}{}
 	}
 
 	return addrMap, nil
@@ -108,7 +106,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 		if err != nil {
 			return nil, err
 		}
-		addr, err := child.Address(params)
+		addr, err := helpers.DCRUtilAddressFromExtendedKey(child, params)
 		if err != nil {
 			return nil, err
 		}

@@ -7,8 +7,8 @@ package main
 import (
 	"testing"
 
-	"github.com/decred/dcrd/chaincfg"
-	"github.com/decred/dcrd/hdkeychain"
+	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/hdkeychain/v2"
 )
 
 const (
@@ -41,22 +41,22 @@ type keyParse struct {
 //in keys, expected out keys, and error value
 var keyTestValues = []keyParse{
 	//testnet
-	{testNet3Params.Params, keysIn{testnetXPub1, testnetXPub2}, keysOut{hd(testnetXPub1), hd(testnetXPub2)}, false},
-	{testNet3Params.Params, keysIn{testnetXPub1, mainnetXPub2}, keysOut{hd(testnetXPub1), hd(mainnetXPub2)}, true},
-	{testNet3Params.Params, keysIn{"", mainnetXPub2}, keysOut{hd(""), hd(mainnetXPub2)}, true},
+	{testNet3Params.Params, keysIn{testnetXPub1, testnetXPub2}, keysOut{hd(testnetXPub1, testNet3Params.Params), hd(testnetXPub2, testNet3Params.Params)}, false},
+	{testNet3Params.Params, keysIn{testnetXPub1, mainnetXPub2}, keysOut{hd(testnetXPub1, testNet3Params.Params), hd(mainnetXPub2, testNet3Params.Params)}, true},
+	{testNet3Params.Params, keysIn{"", mainnetXPub2}, keysOut{hd("", testNet3Params.Params), hd(mainnetXPub2, testNet3Params.Params)}, true},
 	//mainnet
-	{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2}, keysOut{hd(mainnetXPub1), hd(mainnetXPub2)}, false},
-	{mainNetParams.Params, keysIn{simnetXPub1, mainnetXPub2}, keysOut{hd(simnetXPub1), hd(mainnetXPub2)}, true},
-	{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2 + "a"}, keysOut{hd(mainnetXPub1), hd(mainnetXPub2 + "a")}, true},
+	{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2}, keysOut{hd(mainnetXPub1, mainNetParams.Params), hd(mainnetXPub2, mainNetParams.Params)}, false},
+	{mainNetParams.Params, keysIn{simnetXPub1, mainnetXPub2}, keysOut{hd(simnetXPub1, mainNetParams.Params), hd(mainnetXPub2, mainNetParams.Params)}, true},
+	{mainNetParams.Params, keysIn{mainnetXPub1, mainnetXPub2 + "a"}, keysOut{hd(mainnetXPub1, mainNetParams.Params), hd(mainnetXPub2+"a", mainNetParams.Params)}, true},
 	//simnnet
-	{simNetParams.Params, keysIn{simnetXPub1, simnetXPub2}, keysOut{hd(simnetXPub1), hd(simnetXPub2)}, false},
-	{simNetParams.Params, keysIn{testnetXPub1, simnetXPub2}, keysOut{hd(testnetXPub1), hd(simnetXPub2)}, true},
-	{simNetParams.Params, keysIn{simnetXPub1[:len(simnetXPub1)-1], simnetXPub2}, keysOut{hd(simnetXPub1[:len(simnetXPub1)-1]), hd(simnetXPub2)}, true},
+	{simNetParams.Params, keysIn{simnetXPub1, simnetXPub2}, keysOut{hd(simnetXPub1, simNetParams.Params), hd(simnetXPub2, simNetParams.Params)}, false},
+	{simNetParams.Params, keysIn{testnetXPub1, simnetXPub2}, keysOut{hd(testnetXPub1, simNetParams.Params), hd(simnetXPub2, simNetParams.Params)}, true},
+	{simNetParams.Params, keysIn{simnetXPub1[:len(simnetXPub1)-1], simnetXPub2}, keysOut{hd(simnetXPub1[:len(simnetXPub1)-1], simNetParams.Params), hd(simnetXPub2, simNetParams.Params)}, true},
 }
 
 //helper func string to extended key
-func hd(s string) *hdkeychain.ExtendedKey {
-	hd, _ := hdkeychain.NewKeyFromString(s)
+func hd(s string, params *chaincfg.Params) *hdkeychain.ExtendedKey {
+	hd, _ := hdkeychain.NewKeyFromString(s, params)
 	return hd
 }
 

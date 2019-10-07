@@ -17,9 +17,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/decred/dcrd/chaincfg"
-	"github.com/decred/dcrd/dcrutil"
-	"github.com/decred/dcrd/hdkeychain"
+	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/dcrutil/v2"
+	"github.com/decred/dcrd/hdkeychain/v2"
 	"github.com/decred/dcrstakepool/internal/version"
 	flags "github.com/jessevdk/go-flags"
 )
@@ -262,20 +262,14 @@ func fileExists(name string) bool {
 func (c *config) parsePubKeys(params *chaincfg.Params) error {
 	// Parse the extended public key and the pool fees.
 	var err error
-	coldWalletFeeKey, err = hdkeychain.NewKeyFromString(c.ColdWalletExtPub)
+	coldWalletFeeKey, err = hdkeychain.NewKeyFromString(c.ColdWalletExtPub, params)
 	if err != nil {
 		return fmt.Errorf("cold wallet extended public key: %v", err)
 	}
-	if !coldWalletFeeKey.IsForNet(params) {
-		return fmt.Errorf("cold wallet extended public key is for wrong network")
-	}
 	// Parse the extended public key for the voting addresses.
-	votingWalletVoteKey, err = hdkeychain.NewKeyFromString(c.VotingWalletExtPub)
+	votingWalletVoteKey, err = hdkeychain.NewKeyFromString(c.VotingWalletExtPub, params)
 	if err != nil {
 		return fmt.Errorf("voting wallet extended public key: %v", err)
-	}
-	if !votingWalletVoteKey.IsForNet(params) {
-		return fmt.Errorf("voting wallet extended public key is for wrong network")
 	}
 	return nil
 }

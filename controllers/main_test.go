@@ -6,13 +6,13 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/decred/dcrd/chaincfg"
+	"github.com/decred/dcrd/chaincfg/v2"
 )
 
 func TestGetNetworkName(t *testing.T) {
 	// First test that "testnet3" is translated to "testnet"
 	cfg := Config{
-		NetParams: &chaincfg.TestNet3Params,
+		NetParams: chaincfg.TestNet3Params(),
 	}
 
 	mc := MainController{
@@ -26,7 +26,7 @@ func TestGetNetworkName(t *testing.T) {
 	}
 
 	// ensure "mainnet" is unaltered
-	mc.Cfg.NetParams = &chaincfg.MainNetParams
+	mc.Cfg.NetParams = chaincfg.MainNetParams()
 	netName = mc.getNetworkName()
 	if netName != "mainnet" {
 		t.Errorf("Incorrect network name: expected %s, got %s", "mainnet",
