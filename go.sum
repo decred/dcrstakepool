@@ -110,6 +110,8 @@ github.com/decred/dcrd/rpc/jsonrpc/types v1.0.0 h1:d5ptnjuSADTQMa3i83VpeJNoMRTOJ
 github.com/decred/dcrd/rpc/jsonrpc/types v1.0.0/go.mod h1:0dwmpIP21tJxjg/UuUHWIFMbfoLv2ifCBMokNKlOxpo=
 github.com/decred/dcrd/rpc/jsonrpc/types v1.0.1 h1:sWsGtWzdmrna6aysDCHwjANTJh+Lxt2xp6S10ahP79Y=
 github.com/decred/dcrd/rpc/jsonrpc/types v1.0.1/go.mod h1:dJUp9PoyFYklzmlImpVkVLOr6j4zKuUv66YgemP2sd8=
+github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.0.0-20191008154308-ee4a0e2e2a0e h1:WhrwKhv9lDROXic0VAPepLuVnOkFB8DRj5j1MWWqsCg=
+github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.0.0-20191008154308-ee4a0e2e2a0e/go.mod h1:syd0NdxoIBfhxMOdqXO4q7f96ohhp0p8C66HaltI6uM=
 github.com/decred/dcrd/rpcclient/v4 v4.0.0 h1:8C3lNs2mvfu9CDjFzz1BOiDDbWBG9aTH82PCiGMP3FE=
 github.com/decred/dcrd/rpcclient/v4 v4.0.0/go.mod h1:DNGwfiL5H+K/pk3hVB0z5ypRdiDXMssR+YEqDUEXCQo=
 github.com/decred/dcrd/txscript v1.0.1/go.mod h1:FqUX07Y+u3cJ1eIGPoyWbJg+Wk1NTllln/TyDpx9KnY=
@@ -140,6 +142,7 @@ github.com/decred/dcrwallet/errors/v2 v2.0.0-20190927140119-e8a59aa721a4/go.mod 
 github.com/decred/dcrwallet/rpc/client/dcrd v0.0.0-20190927140119-e8a59aa721a4/go.mod h1:D8NtMn0ZAs9pc+EJlsWUxIOJocuTz4gYKFa1H44AzC0=
 github.com/decred/dcrwallet/rpc/jsonrpc/types v1.0.0/go.mod h1:k+IOPnUY0YqlwhSDhczzaUN17NX/gMtztwl3UxKgVZY=
 github.com/decred/dcrwallet/rpc/jsonrpc/types v1.1.0/go.mod h1:xUT7XXATLOzE0pwwmvgfRWtZdrB+PsWFilo+jkH5/Ig=
+github.com/decred/dcrwallet/rpc/jsonrpc/types v1.2.0/go.mod h1:xUT7XXATLOzE0pwwmvgfRWtZdrB+PsWFilo+jkH5/Ig=
 github.com/decred/dcrwallet/rpc/jsonrpc/types v1.3.0 h1:yCxtFqK7X6GvZWQzHXjCwoGCy9YVe3tGEwxCjW5rYQk=
 github.com/decred/dcrwallet/rpc/jsonrpc/types v1.3.0/go.mod h1:Xvekb43GtfMiRbyIY4ZJ9Uhd9HRIAcnp46f3q2eIExU=
 github.com/decred/dcrwallet/validate v1.0.2/go.mod h1:1ur2sRZkQ23ECalUKdwgx6rdIiP8rIiaSQAz1Y9LQsI=
@@ -180,6 +183,7 @@ github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJS
 github.com/jrick/bitset v1.0.0/go.mod h1:ZOYB5Uvkla7wIEY4FEssPVi3IQXa02arznRaYaAEPe4=
 github.com/jrick/logrotate v1.0.0 h1:lQ1bL/n9mBNeIXoTUoYRlK4dHuNJVofX9oWqBtPnSzI=
 github.com/jrick/logrotate v1.0.0/go.mod h1:LNinyqDIJnpAur+b8yyulnQw/wDuN1+BYKlTRt3OuAQ=
+github.com/jrick/wsrpc/v2 v2.0.0 h1:f0ACoYeSG0fUNpA42gPpDdZ/xzYLUxZjT1F4L+HLTgY=
 github.com/jrick/wsrpc/v2 v2.0.0/go.mod h1:naH/fojac6vQWYgAA0e7b9TX/bShsWoVL7CwrdvFmUk=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=

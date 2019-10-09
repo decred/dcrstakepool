@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/server"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
@@ -66,6 +67,7 @@ func init() {
 	server.UseLogger(grpcLog)
 	stakepool.UseLogger(stakepoolLog)
 	signal.UseLogger(log)
+	client.UseLogger(clientLog)
 }
 
 // initLogRotator initializes the logging rotater to write logs to logFile and

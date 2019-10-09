@@ -17,6 +17,7 @@ require (
 	github.com/decred/dcrd/rpcclient/v4 v4.0.0
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
+	github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet v0.0.0-00010101000000-000000000000
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.3.0
 	github.com/decred/dcrwallet/wallet/v3 v3.0.0-20191015210243-b6a31b44514d
 	github.com/decred/slog v1.0.0
@@ -29,6 +30,7 @@ require (
 	github.com/gorilla/sessions v1.2.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
+	github.com/jrick/wsrpc/v2 v2.0.0
 	github.com/lib/pq v1.2.0 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
@@ -41,6 +43,7 @@ require (
 )
 
 replace (
+	github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet => ./backend/stakepoold/rpc/client/dcrwallet
 	github.com/decred/dcrwallet/deployments/v2 v2.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/deployments/v2 v2.0.0-20190927140119-e8a59aa721a4
 	github.com/decred/dcrwallet/errors/v2 v2.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/errors/v2 v2.0.0-20190927140119-e8a59aa721a4
 	github.com/decred/dcrwallet/rpc/client/dcrd v0.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/rpc/client/dcrd v0.0.0-20190927140119-e8a59aa721a4
