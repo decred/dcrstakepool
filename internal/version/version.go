@@ -27,7 +27,7 @@ const (
 // versioning 2.0.0 spec (http://semver.org/).
 const (
 	Major uint = 1
-	Minor uint = 4
+	Minor uint = 5
 	Patch uint = 0
 )
 
@@ -44,7 +44,7 @@ var (
 	// '-ldflags "-X github.com/decred/dcrstakepool/internal/version.BuildMetadata=foo"'
 	// if needed.  It MUST only contain characters from semanticBuildAlphabet
 	// per the semantic versioning spec.
-	BuildMetadata = "dev"
+	BuildMetadata = ""
 )
 
 // String returns the application version as a properly formed string per the
