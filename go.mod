@@ -16,8 +16,8 @@ require (
 	github.com/decred/dcrd/rpcclient/v4 v4.0.0
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
-	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.4.0
-	github.com/decred/dcrwallet/wallet/v3 v3.2.1
+	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.3.0
+	github.com/decred/dcrwallet/wallet/v3 v3.1.0
 	github.com/decred/slog v1.0.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-gorp/gorp v2.2.0+incompatible
@@ -28,8 +28,9 @@ require (
 	github.com/gorilla/sessions v1.2.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jrick/logrotate v1.0.0
-	github.com/lib/pq v1.3.0 // indirect
-	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
+	github.com/jrick/wsrpc/v2 v2.2.0
+	github.com/lib/pq v1.2.0 // indirect
+	github.com/mattn/go-sqlite3 v1.11.0 // indirect
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/stretchr/testify v1.5.1 // indirect
 	github.com/zenazn/goji v0.9.0
