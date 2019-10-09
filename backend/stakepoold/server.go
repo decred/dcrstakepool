@@ -166,7 +166,7 @@ func runMain(ctx context.Context) error {
 	}
 	log.Infof("Connected to dcrwallet (JSON-RPC API v%s)",
 		walletVer.String())
-	walletInfoRes, err := walletConn.RPCClient().WalletInfo()
+	walletInfoRes, err := walletConn.WalletInfo(context.TODO())
 	if err != nil || walletInfoRes == nil {
 		log.Errorf("Unable to retrieve walletinfo results")
 		return err
@@ -222,7 +222,7 @@ func runMain(ctx context.Context) error {
 		UserData:               userData,
 		UserVotingConfig:       userVotingConfig,
 		VotingConfig:           &votingConfig,
-		WalletConnection:       walletConn,
+		Wallet:                 walletConn,
 		WinningTicketsChan:     make(chan stakepool.WinningTicketsForBlock),
 		Testing:                false,
 	}
