@@ -24,14 +24,16 @@ import (
 
 	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrd/wire"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/v3/txrules"
 )
 
 var (
 	errSuccess            = errors.New("success")
-	errNoTxInfo           = "-5: no information for transaction"
-	errDuplicateVote      = "-32603: already have transaction "
+	errNoTxInfo           = "no information for transaction"
+	errDuplicateVote      = "already have transaction "
 	ticketTypeNew         = "New"
 	ticketTypeSpentMissed = "SpentMissed"
 )
@@ -57,9 +59,15 @@ type Stakepoold struct {
 	SpentmissedTicketsChan chan SpentMissedTicketsForBlock
 	UserData               *userdata.UserData
 	VotingConfig           *VotingConfig
-	WalletConnection       *Client
+	Wallet                 *Wallet
 	WinningTicketsChan     chan WinningTicketsForBlock
 	Testing                bool // enabled only for testing
+}
+
+// Wallet holds the dcrwallet client RPC and connection.
+type Wallet struct {
+	*dcrwallet.RPC
+	Conn *client.Conn
 }
 
 // NewTicketsForBlock stores tickets from a NewTickets notification.
@@ -207,7 +215,7 @@ func (spd *Stakepoold) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 	// Ask wallet to look up vote transaction to see if it belongs to us
 	log.Debugf("calling GetTransaction for %v ticket %v",
 		strings.ToLower(nt.ticketType), nt.ticket)
-	res, err := spd.WalletConnection.RPCClient().GetTransaction(nt.ticket)
+	res, err := spd.Wallet.GetTransaction(context.TODO(), nt.ticket)
 	nt.getDuration = time.Since(start)
 	if err != nil {
 		// suppress "No information for transaction ..." errors
@@ -291,13 +299,13 @@ func (spd *Stakepoold) UpdateTicketDataFromMySQL() error {
 // associated history. Current block height is returned to indicate which height
 // the new user has registered.
 func (spd *Stakepoold) ImportNewScript(script []byte) (int64, error) {
-	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
+	err := spd.Wallet.ImportScriptRescanFrom(context.TODO(), script, false, 0)
 	if err != nil {
 		log.Errorf("ImportNewScript: ImportScriptRescanFrom rpc failed: %v", err)
 		return -1, err
 	}
 
-	_, bestBlockHeight, err := spd.WalletConnection.RPCClient().GetBestBlock()
+	_, bestBlockHeight, err := spd.Wallet.GetBestBlock(context.TODO())
 	if err != nil {
 		log.Errorf("ImportNewScript: GetBestBlock rpc failed: %v", err)
 		return -1, err
@@ -313,7 +321,7 @@ func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 	// Import n-1 scripts without a rescan.
 	allButOne := scripts[:len(scripts)-1]
 	for _, script := range allButOne {
-		err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
+		err := spd.Wallet.ImportScriptRescanFrom(context.TODO(), script, false, 0)
 		if err != nil {
 			log.Errorf("ImportMissingScripts: ImportScript rpc failed: %v", err)
 			return err
@@ -322,7 +330,7 @@ func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 
 	// Import the last script and trigger a rescan
 	lastOne := scripts[len(scripts)-1]
-	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(lastOne, true, rescanHeight)
+	err := spd.Wallet.ImportScriptRescanFrom(context.TODO(), lastOne, true, rescanHeight)
 	if err != nil {
 		log.Errorf("ImportMissingScripts: ImportScriptRescanFrom rpc failed: %v", err)
 		return err
@@ -341,13 +349,13 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 		return err
 	}
 
-	tx, err := spd.WalletConnection.RPCClient().GetRawTransaction(hash)
+	tx, err := spd.NodeConnection.GetRawTransaction(hash)
 	if err != nil {
 		log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
 		return err
 	}
 
-	err = spd.WalletConnection.RPCClient().AddTicket(tx)
+	err = spd.Wallet.AddTicket(context.TODO(), tx)
 	if err != nil {
 		log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
 		return err
@@ -359,7 +367,7 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 
 // ListScripts performs the rpc command listscripts on dcrwallet.
 func (spd *Stakepoold) ListScripts() ([][]byte, error) {
-	scripts, err := spd.WalletConnection.RPCClient().ListScripts()
+	scripts, err := spd.Wallet.ListScripts(context.TODO())
 	if err != nil {
 		log.Errorf("ListScripts: ListScripts rpc failed: %v", err)
 		return nil, err
@@ -382,7 +390,7 @@ func (spd *Stakepoold) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 		decodedAddresses[i] = decodedAddress
 	}
 
-	result, err := spd.WalletConnection.RPCClient().CreateMultisig(1, decodedAddresses)
+	result, err := spd.Wallet.CreateMultisig(context.TODO(), 1, decodedAddresses)
 	if err != nil {
 		log.Errorf("CreateMultisig: CreateMultisig rpc failed: %v", err)
 		return nil, err
@@ -394,7 +402,7 @@ func (spd *Stakepoold) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 // AccountSyncAddressIndex performs the accountsyncaddressindex command on
 // dcrwallet and returns the result.
 func (spd *Stakepoold) AccountSyncAddressIndex(account string, branch uint32, index int) error {
-	err := spd.WalletConnection.RPCClient().AccountSyncAddressIndex(account, branch, index)
+	err := spd.Wallet.AccountSyncAddressIndex(context.TODO(), account, branch, index)
 	if err != nil {
 		log.Errorf("AccountSyncAddressIndex: AccountSyncAddressIndex rpc failed: %v", err)
 		return err
@@ -405,7 +413,7 @@ func (spd *Stakepoold) AccountSyncAddressIndex(account string, branch uint32, in
 
 // GetTickets performs the gettickets command on dcrwallet and returns the result.
 func (spd *Stakepoold) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
-	tickets, err := spd.WalletConnection.RPCClient().GetTickets(includeImmature)
+	tickets, err := spd.Wallet.GetTickets(context.TODO(), includeImmature)
 	if err != nil {
 		log.Errorf("GetTickets: GetTickets rpc failed: %v", err)
 		return nil, err
@@ -423,7 +431,7 @@ func (spd *Stakepoold) StakePoolUserInfo(multisigAddress string) (*wallettypes.S
 		return nil, err
 	}
 
-	response, err := spd.WalletConnection.RPCClient().StakePoolUserInfo(decodedMultisig)
+	response, err := spd.Wallet.StakePoolUserInfo(context.TODO(), decodedMultisig)
 	if err != nil {
 		log.Errorf("StakePoolUserInfo: StakePoolUserInfo rpc failed: %v", err)
 		return nil, err
@@ -435,7 +443,7 @@ func (spd *Stakepoold) StakePoolUserInfo(multisigAddress string) (*wallettypes.S
 // WalletInfo performs the rpc command walletinfo on dcrwallet and returns the
 // result.
 func (spd *Stakepoold) WalletInfo() (*wallettypes.WalletInfoResult, error) {
-	response, err := spd.WalletConnection.RPCClient().WalletInfo()
+	response, err := spd.Wallet.WalletInfo(context.TODO())
 	if err != nil {
 		log.Errorf("WalletInfo: WalletInfo rpc failed: %v", err)
 		return nil, err
@@ -453,7 +461,7 @@ func (spd *Stakepoold) ValidateAddress(address string) (*wallettypes.ValidateAdd
 		return nil, err
 	}
 
-	response, err := spd.WalletConnection.RPCClient().ValidateAddress(addr)
+	response, err := spd.Wallet.ValidateAddress(context.TODO(), addr)
 	if err != nil {
 		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
 		return nil, err
@@ -464,7 +472,7 @@ func (spd *Stakepoold) ValidateAddress(address string) (*wallettypes.ValidateAdd
 
 // GetStakeInfo performs the rpc command GetStakeInfo.
 func (spd *Stakepoold) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
-	response, err := spd.WalletConnection.RPCClient().GetStakeInfo()
+	response, err := spd.Wallet.GetStakeInfo(context.TODO())
 	if err != nil {
 		log.Errorf("GetStakeInfo: GetStakeInfo rpc failed: %v", err)
 		return nil, err
@@ -505,7 +513,7 @@ func (spd *Stakepoold) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 	// Ask wallet to generate vote result.
 	var res *wallettypes.GenerateVoteResult
-	res, w.err = spd.WalletConnection.RPCClient().GenerateVote(blockHash, blockHeight,
+	res, w.err = spd.Wallet.GenerateVote(context.TODO(), blockHash, blockHeight,
 		w.ticket, w.config.VoteBits, spd.VotingConfig.VoteBitsExtended)
 	if w.err != nil || res.Hex == "" {
 		return

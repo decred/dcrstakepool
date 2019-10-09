@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
@@ -31,8 +29,7 @@ func getNodeNtfnHandlers(spd *stakepool.Stakepoold) *rpcclient.NotificationHandl
 				SmTickets:   ticketsFixed,
 			}
 			// Wait for a wallet connection if not connected.
-			<-spd.WalletConnection.Connected()
-			spd.SpentmissedTicketsChan <- smt
+			spd.Wallet.Conn.TODO(func() { spd.SpentmissedTicketsChan <- smt })
 		},
 		OnWinningTickets: func(blockHash *chainhash.Hash, blockHeight int64, winningTickets []*chainhash.Hash) {
 			wt := stakepool.WinningTicketsForBlock{
@@ -41,15 +38,6 @@ func getNodeNtfnHandlers(spd *stakepool.Stakepoold) *rpcclient.NotificationHandl
 				WinningTickets: winningTickets,
 			}
 			spd.WinningTicketsChan <- wt
-		},
-	}
-}
-
-func getWalletNtfnHandlers() *rpcclient.NotificationHandlers {
-	return &rpcclient.NotificationHandlers{
-		OnUnknownNotification: func(method string, params []json.RawMessage) {
-			log.Infof("ignoring notification %v", method)
-			log.Tracef("%#v", params)
 		},
 	}
 }

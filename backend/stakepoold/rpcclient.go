@@ -9,8 +9,11 @@ import (
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/rpcclient/v4"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
+	walletjson "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 )
 
 var requiredChainServerAPI = semver{major: 6, minor: 1, patch: 1}
@@ -64,7 +67,7 @@ func connectNodeRPC(spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, 
 	return dcrdClient, nodeVer, nil
 }
 
-func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*stakepool.Client, semver, error) {
+func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*stakepool.Wallet, semver, error) {
 	var walletVer semver
 
 	dcrwCert, err := ioutil.ReadFile(cfg.WalletCert)
@@ -78,27 +81,22 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*st
 		"using certificate located in %s",
 		cfg.WalletHost, cfg.WalletUser, cfg.WalletCert)
 
-	connCfgWallet := &rpcclient.ConnConfig{
-		Host:                 cfg.WalletHost,
-		Endpoint:             "ws",
-		User:                 cfg.WalletUser,
-		Pass:                 cfg.WalletPassword,
-		Certificates:         dcrwCert,
-		DisableAutoReconnect: true,
+	testopts := &client.RPCOptions{
+		Host: cfg.WalletHost,
+		User: cfg.WalletUser,
+		Pass: cfg.WalletPassword,
+		CA:   dcrwCert,
 	}
 
-	ntfnHandlers := getWalletNtfnHandlers()
-
-	// New also starts an autoreconnect function.
-	dcrwClient, err := stakepool.NewClient(ctx, wg, connCfgWallet, ntfnHandlers)
+	conn, err := client.NewConn(ctx, wg, testopts)
 	if err != nil {
-		log.Errorf("Verify that username and password is correct and that "+
-			"rpc.cert is for your wallet: %v", cfg.WalletCert)
+		log.Errorf("new client connection error: %v", err)
 		return nil, walletVer, err
 	}
+	dcrwClient := dcrwallet.New(conn)
 
 	// Ensure the wallet RPC server has a compatible API version.
-	ver, err := dcrwClient.RPCClient().Version()
+	ver, err := dcrwClient.Version(ctx)
 	if err != nil {
 		log.Error("Unable to get RPC version: ", err)
 		return nil, walletVer, fmt.Errorf("Unable to get node RPC version")
@@ -114,7 +112,8 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*st
 		return nil, walletVer, fmt.Errorf("Incompatible dcrwallet RPC version")
 	}
 
-	return dcrwClient, walletVer, nil
+	wallet := &stakepool.Wallet{RPC: dcrwClient, Conn: conn}
+	return wallet, walletVer, nil
 }
 
 func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
@@ -134,7 +133,7 @@ func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map
 
 	log.Info("Calling GetTickets...")
 	timenow := time.Now()
-	tickets, err := spd.WalletConnection.RPCClient().GetTickets(false)
+	tickets, err := spd.Wallet.GetTickets(context.TODO(), false)
 	log.Infof("GetTickets: took %v", time.Since(timenow))
 
 	if err != nil {
@@ -142,22 +141,21 @@ func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map
 		return ignoredLowFeeTickets, liveTickets, err
 	}
 
-	type promise struct {
-		rpcclient.FutureGetTransactionResult
-	}
+	type promise func() (*walletjson.GetTransactionResult, error)
+
 	promises := make([]promise, 0, len(tickets))
 
 	log.Debugf("setting up GetTransactionAsync for %v tickets", len(tickets))
 	for _, ticket := range tickets {
 		// lookup ownership of each ticket
-		promises = append(promises, promise{spd.WalletConnection.RPCClient().GetTransactionAsync(ticket)})
+		promises = append(promises, spd.Wallet.GetTransactionAsync(context.TODO(), ticket))
 	}
 
 	var counter int
 	for _, p := range promises {
 		counter++
 		log.Debugf("Receiving GetTransaction result for ticket %v/%v", counter, len(tickets))
-		gt, err := p.Receive()
+		gt, err := p()
 		if err != nil {
 			// All tickets should exist and be able to be looked up
 			log.Warnf("GetTransaction error: %v", err)
