@@ -35,11 +35,10 @@ func NewSQLStore(ctx context.Context, wg *sync.WaitGroup, dbMap *gorp.DbMap, key
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-	out:
 		for {
 			select {
 			case <-ctx.Done():
-				break out
+				return
 			case <-time.After(time.Hour * 24):
 				if err := s.destroyExpiredSessions(); err != nil {
 					log.Warnf("destroyExpiredSessions: %v", err)
