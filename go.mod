@@ -31,6 +31,7 @@ require (
 	github.com/lib/pq v1.3.0 // indirect
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/poy/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
+	github.com/prometheus/client_golang v1.2.1
 	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/zenazn/goji v0.9.0
 	github.com/ziutek/mymysql v1.5.4 // indirect

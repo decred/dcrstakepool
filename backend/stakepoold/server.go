@@ -362,6 +362,10 @@ func runMain(ctx context.Context) error {
 		}()
 	}
 
+	if cfg.Prometheus {
+		spd.ExportPrometheusMetrics(ctx, wg, cfg.PrometheusWait, cfg.PrometheusListen)
+	}
+
 	// Wait for CTRL+C to signal goroutines to terminate
 	wg.Wait()
 	saveData(spd)

@@ -1,0 +1,35 @@
+rule_files:
+  - alerting.rules.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['127.0.0.1:9093']
+
+scrape_configs:
+
+  - job_name: 'stakepoold'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['node1.example.com:9101', 'node2.example.com:9101', 'node3.example.com:9101']
+        labels:
+          group: 'mainnet'
+
+  - job_name: 'health-checks'
+    metrics_path: /probe
+    scrape_interval: 30s
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://example.com/api/v2/stats
+        labels:
+          group: 'mainnet'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+

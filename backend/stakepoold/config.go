@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/decred/dcrd/dcrutil/v2"
 	"github.com/decred/dcrstakepool/internal/version"
@@ -39,6 +40,9 @@ var (
 	defaultDBName = "stakepool"
 	defaultDBPort = "3306"
 	defaultDBUser = "stakepool"
+
+	defaultPrometheusWait   = time.Minute
+	defaultPrometheusListen = ":9101"
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -76,6 +80,9 @@ type config struct {
 	RPCListeners     []string `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 9113, testnet: 19113)"`
 	RPCCert          string   `long:"rpccert" description:"File containing the certificate file"`
 	RPCKey           string   `long:"rpckey" description:"File containing the certificate key"`
+	Prometheus       bool          `long:"prometheus" description:"Export metrics for external monitoring. Disabled by default."`
+	PrometheusWait   time.Duration `long:"prometheuswait" description:"How long to wait between metric updates. Valid time units are {s, m, h}."`
+	PrometheusListen string        `long:"prometheuslisten" description:"Address/port to listen for Promethues scrapes. (default port: 9101)"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service
@@ -261,6 +268,9 @@ func loadConfig() (*config, []string, error) {
 		PoolFees:   defaultPoolFees,
 		RPCKey:     defaultRPCKeyFile,
 		RPCCert:    defaultRPCCertFile,
+
+		PrometheusWait:   defaultPrometheusWait,
+		PrometheusListen: defaultPrometheusListen,
 	}
 
 	// Service options which are only added on Windows.

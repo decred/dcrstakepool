@@ -1,0 +1,24 @@
+[Unit]
+Description=Prometheus alertmanager daemon
+After=network.target
+
+[Service]
+# useradd -Us /usr/bin/nologin -Md /opt/prometheus -c "Prometheus daemon" prometheus
+User=prometheus
+Group=prometheus
+
+ExecStartPre=/opt/bin/amtool check-config /opt/alertmanager/alertmanager.yml
+
+# alertmanager fails to start if no private address is found
+# fix: set cluster.advertise-address
+# https://gitlab.com/gitlab-org/omnibus-gitlab/issues/3764
+ExecStart=/opt/bin/alertmanager \
+    --config.file=/opt/alertmanager/alertmanager.yml \
+    --storage.path=/opt/alertmanager/data \
+    --web.listen-address=0.0.0.0:9093 \
+    --cluster.advertise-address=127.0.0.1:9093
+
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target

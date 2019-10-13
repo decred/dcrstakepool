@@ -1,0 +1,21 @@
+[Unit]
+Description=Prometheus monitoring daemon
+After=network.target
+
+[Service]
+# useradd -Us /usr/bin/nologin -Md /opt/prometheus -c "Prometheus daemon" prometheus
+User=prometheus
+Group=prometheus
+
+ExecStartPre=/opt/bin/promtool check config /opt/prometheus/prometheus.yml
+
+ExecStart=/opt/bin/prometheus \
+    --config.file=/opt/prometheus/prometheus.yml \
+    --storage.tsdb.path=/opt/prometheus/data \
+    --web.console.templates=/opt/prometheus/consoles \
+    --web.console.libraries=/opt/prometheus/console_libraries
+
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
