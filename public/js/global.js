@@ -41,33 +41,6 @@ submitState('#ChangeEmail');
 submitState('#ChangePassword');
 submitState('#captcha-form');
 
-$('.form-check-input').change(function () {
-  if ($(this).is(":checked")) {
-    $('.update-btn').addClass("d-flex");
-  } else {
-      var flag=0;
-      $('.form-check-input').each(function(){
-          if ($(this).is(":checked")) {
-              $('.update-btn').addClass("d-flex");
-            flag=1;             
-          }
-          if(flag == 0){
-              $('.update-btn').removeClass('d-flex');
-          }
-      });
-  }
-});
-
-// hide input error when input's value changes
-$('.err-form-control').on("change paste keyup", function() {
-  // reset styling of input
-  $(this).removeClass('err-form-control'); 
-  // hides the error icon
-  $(this).next().fadeOut();
-  // remove error text
-  $(this).parent().next().fadeOut();
-});
-
 $(document).ready(function () {
   // Display elements with class js-only
   var els = document.getElementsByClassName("js-only")
