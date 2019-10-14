@@ -87,7 +87,14 @@
 							</div>
 							<div class="col-12 mb-5">
 								<div class="bg-white pt-4">
-									<div id="chart1" class="stats-chart"></div>
+									<div id="chart1" class="stats-chart"
+										data-label1="Missed"
+										data-label2="Voted"
+										data-color1="#fd714b"
+										data-color2="#41bf53"
+										data-value1="{{ .StakeInfo.Missed }}"
+										data-value2="{{ .StakeInfo.Voted }}">
+									</div>
 								</div>
 							</div>
 							<div class="col-12 px-5 mb-3">
@@ -95,7 +102,14 @@
 							</div>
 							<div class="col-12 mb-3">
 								<div class="bg-white pt-4">
-									<div id="chart3" class="stats-chart"></div>
+									<div id="chart3" class="stats-chart"
+										data-label1="VSP Ticket Pool"
+										data-label2="Network Ticket Pool"
+										data-color1="#ffc84e"
+										data-color2="#73d5f3"
+										data-value1="{{ .StakeInfo.Live }}"
+										data-value2="{{ .StakeInfo.PoolSize }}">
+		  							</div>
 								</div>
 							</div>
 						</div>
@@ -107,7 +121,14 @@
 							</div>
 							<div class="col-12 mb-5">
 								<div class="bg-white pt-4">
-									<div id="chart2" class="stats-chart"></div>
+									<div id="chart2" class="stats-chart"
+										data-label1="Immature"
+										data-label2="Live"
+										data-color1="#44d6a5"
+										data-color2="#3478f7"
+										data-value1="{{ .StakeInfo.Immature }}"
+										data-value2="{{ .StakeInfo.Live }}">
+									</div>
 								</div>
 							</div>
 						</div>
