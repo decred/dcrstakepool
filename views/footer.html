@@ -28,6 +28,10 @@
 	{{/* dcrstakepool custom js */}}
 	<script src="/assets/js/global.js"></script>
 	
+  {{if .IsAdminTickets }}
+    <script src="/assets/js/admintickets.js"></script>
+  {{ end }}
+
 	{{if .IsStats }}
     <!-- The order of these d3 files is important
          because some of them depend on eachother -->
