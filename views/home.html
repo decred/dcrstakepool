@@ -123,7 +123,7 @@
         <div class="col-12 block__content">
           <h2>All Voting Service Providers</h2>
           <p>To encourage decentralization of the network, it is recommended to avoid VSPs that have over 5% of network votes.</p>
-          <div id="stakepool-data" class="table-scroll-y text-nowrap mb-4">
+          <div id="stakepool-data" data-ismainnet="{{ if eq .Network "mainnet"}}true{{else}}false{{end}}" class="table-scroll-y text-nowrap mb-4">
             <noscript>
               <div class="row col-12 block__description">
                 <p>Enable Javascript to see all available VSPs</p>
