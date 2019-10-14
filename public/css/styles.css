@@ -7412,6 +7412,9 @@ h2 {
     color: #8997a5; }
   .site-header p {
     color: #424F67; }
+  .site-header a {
+    border-bottom: 5px solid transparent;
+  }
   .site-header a:hover, .site-header a:focus, .site-header a.active {
     text-decoration: none;
     color: #091440;
