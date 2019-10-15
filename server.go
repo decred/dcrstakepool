@@ -5,17 +5,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/csrf"
 
 	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/email"
+	"github.com/decred/dcrstakepool/signal"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 
@@ -44,7 +47,10 @@ func listenTo(bind string) (net.Listener, error) {
 	return nil, fmt.Errorf("error while parsing bind arg %v", bind)
 }
 
-func runMain() error {
+func runMain(ctx context.Context) error {
+	// WaitGroup to pass around and wait, after shutdown signal is received,
+	// for goroutines to safely stop.
+	wg := new(sync.WaitGroup)
 	// Load configuration and parse command line.  This function also
 	// initializes logging and configures it accordingly.
 	loadedCfg, _, err := loadConfig()
@@ -62,7 +68,7 @@ func runMain() error {
 
 	var application = &system.Application{}
 
-	application.Init(cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
+	application.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
 		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
 		cfg.DBUser)
 	if application.DbMap == nil {
@@ -287,17 +293,39 @@ func runMain() error {
 		return fmt.Errorf("could not bind %v", err)
 	}
 
+	// Cleanly shutdown server on interrupt signal.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// Wait for shutdown.
+		<-ctx.Done()
+
+		// We received an interrupt signal, shut down.
+		if err := server.Shutdown(context.Background()); err != nil {
+			// Error from closing listeners, or context timeout:
+			err = fmt.Errorf("HTTP server Shutdown: %v", err)
+			fmt.Fprintln(os.Stderr, err)
+		}
+	}()
+
 	log.Infof("listening on %v", listener.Addr())
 
-	if err = server.Serve(listener); err != nil {
+	if err = server.Serve(listener); err != http.ErrServerClosed {
 		return fmt.Errorf("Serve error: %s", err.Error())
 	}
+
+	// Wait for all goroutines to finish.
+	wg.Wait()
 
 	return nil
 }
 
 func main() {
-	if err := runMain(); err != nil {
+	// Create a context that is cancelled when a shutdown request is received
+	// through an interrupt signal
+	ctx := signal.WithShutdownCancel(context.Background())
+	go signal.ShutdownListener()
+	if err := runMain(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

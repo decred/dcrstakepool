@@ -24,6 +24,7 @@ import (
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrstakepool/helpers"
+	"github.com/decred/dcrstakepool/signal"
 	"github.com/decred/dcrwallet/wallet/v3/txrules"
 	"github.com/decred/dcrwallet/wallet/v3/udb"
 
@@ -371,8 +372,8 @@ func runMain(ctx context.Context) error {
 func main() {
 	// Create a context that is cancelled when a shutdown request is received
 	// through an interrupt signal
-	ctx := withShutdownCancel(context.Background())
-	go shutdownListener()
+	ctx := signal.WithShutdownCancel(context.Background())
+	go signal.ShutdownListener()
 	if err := runMain(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)

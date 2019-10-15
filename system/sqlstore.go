@@ -2,11 +2,13 @@ package system
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/base32"
 	"encoding/gob"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/decred/dcrstakepool/models"
@@ -24,17 +26,23 @@ type SQLStore struct {
 
 // NewSQLStore returns a new SQLStore. The keyPairs are used in the same way as
 // the gorilla sessions CookieStore.
-func NewSQLStore(dbMap *gorp.DbMap, keyPairs ...[]byte) *SQLStore {
+func NewSQLStore(ctx context.Context, wg *sync.WaitGroup, dbMap *gorp.DbMap, keyPairs ...[]byte) *SQLStore {
 	s := &SQLStore{
 		codecs: securecookie.CodecsFromPairs(keyPairs...),
 		dbMap:  dbMap,
 	}
 	// clean db of expired sessions once a day
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for {
-			time.Sleep(time.Hour * 24)
-			if err := s.destroyExpiredSessions(); err != nil {
-				log.Warn(err)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Hour * 24):
+				if err := s.destroyExpiredSessions(); err != nil {
+					log.Warnf("destroyExpiredSessions: %v", err)
+				}
 			}
 		}
 	}()

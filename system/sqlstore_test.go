@@ -2,6 +2,7 @@ package system
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"database/sql/driver"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -71,6 +73,8 @@ func expectUpdate(mock sqlmock.Sqlmock, args []driver.Value) {
 
 // setup db, mock db, and sqlstore
 func makeDbAndStore() (sqlmock.Sqlmock, *sql.DB, *SQLStore) {
+	var wg sync.WaitGroup
+	ctx := context.Background()
 	// Open new mock database
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -84,7 +88,7 @@ func makeDbAndStore() (sqlmock.Sqlmock, *sql.DB, *SQLStore) {
 	dbMap.AddTableWithName(models.Session{}, "Session").SetKeys(true, "Id")
 	hash := sha256.New()
 	io.WriteString(hash, "abrakadabra")
-	s := NewSQLStore(dbMap, hash.Sum(nil))
+	s := NewSQLStore(ctx, &wg, dbMap, hash.Sum(nil))
 	s.Options = &sessions.Options{
 		Path:     "/",
 		HttpOnly: true,

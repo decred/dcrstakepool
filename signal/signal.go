@@ -3,7 +3,8 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package main
+// Package signal provides a shutdown context and listener.
+package signal
 
 import (
 	"context"
@@ -17,9 +18,8 @@ import (
 var shutdownSignaled = make(chan struct{})
 
 // withShutdownCancel creates a copy of a context that is cancelled whenever
-// shutdown is invoked through an interrupt signal or from an JSON-RPC stop
-// request.
-func withShutdownCancel(ctx context.Context) context.Context {
+// shutdown is invoked through an interrupt signal.
+func WithShutdownCancel(ctx context.Context) context.Context {
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		<-shutdownSignaled
@@ -31,7 +31,7 @@ func withShutdownCancel(ctx context.Context) context.Context {
 // shutdownListener listens for shutdown requests and cancels all contexts
 // created from withShutdownCancel.  This function never returns and is intended
 // to be spawned in a new goroutine.
-func shutdownListener() {
+func ShutdownListener() {
 	interruptChannel := make(chan os.Signal, 1)
 	// Only accept a single CTRL+C.
 	signal.Notify(interruptChannel, os.Interrupt)
