@@ -17,6 +17,7 @@ require (
 	github.com/decred/dcrd/rpcclient/v4 v4.0.0
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
+	github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrd v0.0.0-00010101000000-000000000000
 	github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet v0.0.0-00010101000000-000000000000
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.3.0
 	github.com/decred/dcrwallet/wallet/v3 v3.0.0-20191015210243-b6a31b44514d
@@ -43,6 +44,7 @@ require (
 )
 
 replace (
+	github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrd => ./backend/stakepoold/rpc/client/dcrd
 	github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet => ./backend/stakepoold/rpc/client/dcrwallet
 	github.com/decred/dcrwallet/deployments/v2 v2.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/deployments/v2 v2.0.0-20190927140119-e8a59aa721a4
 	github.com/decred/dcrwallet/errors/v2 v2.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/errors/v2 v2.0.0-20190927140119-e8a59aa721a4
