@@ -20,7 +20,6 @@ import (
 	"github.com/decred/dcrd/chaincfg/v2"
 	"github.com/decred/dcrd/dcrutil/v2"
 	"github.com/decred/dcrd/hdkeychain/v2"
-	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrstakepool/helpers"
@@ -156,17 +155,15 @@ func runMain(ctx context.Context) error {
 		return err
 	}
 
-	rpcclient.UseLogger(clientLog)
-
 	var walletVer semver
-	walletConn, walletVer, err := connectWalletRPC(ctx, wg, cfg)
-	if err != nil || walletConn == nil {
+	wallet, walletConn, walletVer, err := connectWalletRPC(ctx, wg, cfg)
+	if err != nil || wallet == nil {
 		log.Infof("Connection to dcrwallet failed: %v", err)
 		return err
 	}
 	log.Infof("Connected to dcrwallet (JSON-RPC API v%s)",
 		walletVer.String())
-	walletInfoRes, err := walletConn.WalletInfo(context.TODO())
+	walletInfoRes, err := wallet.WalletInfo(context.TODO())
 	if err != nil || walletInfoRes == nil {
 		log.Errorf("Unable to retrieve walletinfo results")
 		return err
@@ -222,13 +219,13 @@ func runMain(ctx context.Context) error {
 		UserData:               userData,
 		UserVotingConfig:       userVotingConfig,
 		VotingConfig:           &votingConfig,
-		Wallet:                 walletConn,
+		Wallet:                 wallet,
 		WinningTicketsChan:     make(chan stakepool.WinningTicketsForBlock),
 		Testing:                false,
 	}
 
 	// Daemon client connection
-	nodeConn, nodeVer, err := connectNodeRPC(spd, cfg)
+	nodeConn, nodeVer, err := connectNodeRPC(ctx, wg, spd, walletConn, cfg)
 	if err != nil || nodeConn == nil {
 		log.Infof("Connection to dcrd failed: %v", err)
 		return err
@@ -236,7 +233,7 @@ func runMain(ctx context.Context) error {
 	spd.NodeConnection = nodeConn
 
 	// Display connected network
-	curnet, err := nodeConn.GetCurrentNet()
+	curnet, err := nodeConn.GetCurrentNet(context.TODO())
 	if err != nil {
 		log.Errorf("Unable to get current network from dcrd: %v", err)
 		return err
@@ -285,7 +282,7 @@ func runMain(ctx context.Context) error {
 	// refresh the ticket list and make sure a block didn't come in
 	// while we were getting it
 	for {
-		curHash, curHeight, err := nodeConn.GetBestBlock()
+		curHash, curHeight, err := nodeConn.GetBestBlock(context.TODO())
 		if err != nil {
 			log.Errorf("unable to get bestblock from dcrd: %v", err)
 			return err
@@ -298,7 +295,7 @@ func runMain(ctx context.Context) error {
 			return err
 		}
 
-		afterHash, afterHeight, err := nodeConn.GetBestBlock()
+		afterHash, afterHeight, err := nodeConn.GetBestBlock(context.TODO())
 		if err != nil {
 			log.Errorf("unable to get bestblock from dcrd: %v", err)
 			return err
@@ -312,23 +309,17 @@ func runMain(ctx context.Context) error {
 		log.Infof("block %v hash %v came in during GetTickets, refreshing...",
 			afterHeight, afterHash)
 	}
-
-	if err = nodeConn.NotifyBlocks(); err != nil {
-		fmt.Printf("Failed to register daemon RPC client for "+
-			"block notifications: %s\n", err.Error())
-		return err
-	}
-	if err = nodeConn.NotifyWinningTickets(); err != nil {
+	if err = nodeConn.NotifyWinningTickets(context.TODO()); err != nil {
 		fmt.Printf("Failed to register daemon RPC client for "+
 			"winning tickets notifications: %s\n", err.Error())
 		return err
 	}
-	if err = nodeConn.NotifyNewTickets(); err != nil {
+	if err = nodeConn.NotifyNewTickets(context.TODO()); err != nil {
 		fmt.Printf("Failed to register daemon RPC client for "+
 			"new tickets notifications: %s\n", err.Error())
 		return err
 	}
-	if err = nodeConn.NotifySpentAndMissedTickets(); err != nil {
+	if err = nodeConn.NotifySpentAndMissedTickets(context.TODO()); err != nil {
 		fmt.Printf("Failed to register daemon RPC client for "+
 			"spent/missed tickets notifications: %s\n", err.Error())
 		return err

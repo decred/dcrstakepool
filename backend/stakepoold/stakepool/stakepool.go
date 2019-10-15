@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -18,13 +19,11 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/chaincfg/v2"
 	"github.com/decred/dcrd/dcrutil/v2"
-	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
-
-	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrd/wire"
-	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrd"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
+	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 	"github.com/decred/dcrwallet/wallet/v3/txrules"
 )
 
@@ -51,7 +50,7 @@ type Stakepoold struct {
 	FeeAddrs               map[string]struct{}
 	PoolFees               float64
 	NewTicketsChan         chan NewTicketsForBlock
-	NodeConnection         *rpcclient.Client
+	NodeConnection         *Node
 	Params                 *chaincfg.Params
 	SpentmissedTicketsChan chan SpentMissedTicketsForBlock
 	UserData               *userdata.UserData
@@ -61,10 +60,14 @@ type Stakepoold struct {
 	Testing                bool // enabled only for testing
 }
 
-// Wallet holds the dcrwallet client RPC and connection.
+// Wallet holds the dcrwallet client RPC.
 type Wallet struct {
 	*dcrwallet.RPC
-	Conn *client.Conn
+}
+
+// Node holds the dcrd client RPC.
+type Node struct {
+	*dcrd.RPC
 }
 
 type NewTicketsForBlock struct {
@@ -516,7 +519,7 @@ func (spd *Stakepoold) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 	// Ask node to transmit raw transaction.
 	startSend := time.Now()
-	tx, err := spd.NodeConnection.SendRawTransaction(newTx, false)
+	tx, err := spd.NodeConnection.SendRawTransaction(context.TODO(), newTx, false)
 	if err != nil {
 		log.Infof("vote err %v", err)
 		w.err = err
@@ -850,4 +853,51 @@ func (spd *Stakepoold) WinningTicketHandler(ctx context.Context, wg *sync.WaitGr
 			return
 		}
 	}
+}
+
+func (spd *Stakepoold) NotificationNewTickets(params json.RawMessage) error {
+	blockHash, blockHeight, _, tickets, err := dcrd.ParseNewTickets(params)
+	if err != nil {
+		return fmt.Errorf("unable to parse new tickets: %v", err)
+	}
+	nt := NewTicketsForBlock{
+		BlockHash:   blockHash,
+		BlockHeight: blockHeight,
+		NewTickets:  tickets,
+	}
+	spd.NewTicketsChan <- nt
+	return nil
+}
+
+func (spd *Stakepoold) NotificationWinningTickets(params json.RawMessage) error {
+	blockHash, blockHeight, winningTickets, err := dcrd.ParseWinningTickets(params)
+	if err != nil {
+		return fmt.Errorf("unable to parse winning tickets: %v", err)
+	}
+	wt := WinningTicketsForBlock{
+		BlockHash:      blockHash,
+		BlockHeight:    blockHeight,
+		WinningTickets: winningTickets,
+	}
+	spd.WinningTicketsChan <- wt
+	return nil
+}
+
+func (spd *Stakepoold) NotificationSpentAndMissedTickets(params json.RawMessage) error {
+	blockHash, blockHeight, _, tickets, err := dcrd.ParseSpentAndMissedTickets(params)
+	if err != nil {
+		return fmt.Errorf("unable to parse spent and missed tickets: %v", err)
+	}
+	ticketsFixed := make(map[*chainhash.Hash]bool)
+	for ticketHash, spent := range tickets {
+		ticketHash := ticketHash
+		ticketsFixed[&ticketHash] = spent
+	}
+	smt := SpentMissedTicketsForBlock{
+		BlockHash:   blockHash,
+		BlockHeight: blockHeight,
+		SmTickets:   ticketsFixed,
+	}
+	spd.SpentmissedTicketsChan <- smt
+	return nil
 }

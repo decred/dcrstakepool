@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client"
+	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrd"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
@@ -19,7 +19,7 @@ import (
 var requiredChainServerAPI = semver{major: 6, minor: 0, patch: 0}
 var requiredWalletAPI = semver{major: 6, minor: 0, patch: 1}
 
-func connectNodeRPC(spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, semver, error) {
+func connectNodeRPC(ctx context.Context, wg *sync.WaitGroup, spd *stakepool.Stakepoold, walletConn *client.Conn, cfg *config) (*stakepool.Node, semver, error) {
 	var nodeVer semver
 
 	dcrdCert, err := ioutil.ReadFile(cfg.DcrdCert)
@@ -33,23 +33,25 @@ func connectNodeRPC(spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, 
 		"using certificate located in %s",
 		cfg.DcrdHost, cfg.DcrdUser, cfg.DcrdCert)
 
-	connCfgDaemon := &rpcclient.ConnConfig{
-		Host:         cfg.DcrdHost,
-		Endpoint:     "ws", // websocket
-		User:         cfg.DcrdUser,
-		Pass:         cfg.DcrdPassword,
-		Certificates: dcrdCert,
+	notifier := client.NewNotifier(spd, walletConn)
+
+	testopts := &client.RPCOptions{
+		Host:     cfg.DcrdHost,
+		User:     cfg.DcrdUser,
+		Pass:     cfg.DcrdPassword,
+		Notifier: notifier,
+		CA:       dcrdCert,
 	}
 
-	ntfnHandlers := getNodeNtfnHandlers(spd)
-	dcrdClient, err := rpcclient.New(connCfgDaemon, ntfnHandlers)
+	conn, err := client.NewConn(ctx, wg, testopts)
 	if err != nil {
-		log.Errorf("Failed to start dcrd RPC client: %s\n", err.Error())
+		log.Errorf("new client connection error: %v", err)
 		return nil, nodeVer, err
 	}
+	dcrdClient := dcrd.New(conn)
 
 	// Ensure the RPC server has a compatible API version.
-	ver, err := dcrdClient.Version()
+	ver, err := dcrdClient.Version(ctx)
 	if err != nil {
 		log.Error("Unable to get RPC version: ", err)
 		return nil, nodeVer, fmt.Errorf("Unable to get node RPC version")
@@ -64,17 +66,19 @@ func connectNodeRPC(spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, 
 			nodeVer, requiredChainServerAPI)
 	}
 
-	return dcrdClient, nodeVer, nil
+	node := &stakepool.Node{RPC: dcrdClient}
+
+	return node, nodeVer, nil
 }
 
-func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*stakepool.Wallet, semver, error) {
+func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*stakepool.Wallet, *client.Conn, semver, error) {
 	var walletVer semver
 
 	dcrwCert, err := ioutil.ReadFile(cfg.WalletCert)
 	if err != nil {
 		log.Errorf("Failed to read dcrwallet cert file at %s: %s\n",
 			cfg.WalletCert, err.Error())
-		return nil, walletVer, err
+		return nil, nil, walletVer, err
 	}
 
 	log.Infof("Attempting to connect to dcrwallet RPC %s as user %s "+
@@ -91,7 +95,7 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*st
 	conn, err := client.NewConn(ctx, wg, testopts)
 	if err != nil {
 		log.Errorf("new client connection error: %v", err)
-		return nil, walletVer, err
+		return nil, nil, walletVer, err
 	}
 	dcrwClient := dcrwallet.New(conn)
 
@@ -99,7 +103,7 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*st
 	ver, err := dcrwClient.Version(ctx)
 	if err != nil {
 		log.Error("Unable to get RPC version: ", err)
-		return nil, walletVer, fmt.Errorf("Unable to get node RPC version")
+		return nil, nil, walletVer, fmt.Errorf("Unable to get node RPC version")
 	}
 
 	dcrwVer := ver["dcrwalletjsonrpcapi"]
@@ -109,11 +113,11 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*st
 		log.Errorf("Node JSON-RPC server %v does not have "+
 			"a compatible API version. Advertizes %v but require %v",
 			cfg.WalletHost, walletVer, requiredWalletAPI)
-		return nil, walletVer, fmt.Errorf("Incompatible dcrwallet RPC version")
+		return nil, nil, walletVer, fmt.Errorf("Incompatible dcrwallet RPC version")
 	}
 
-	wallet := &stakepool.Wallet{RPC: dcrwClient, Conn: conn}
-	return wallet, walletVer, nil
+	wallet := &stakepool.Wallet{RPC: dcrwClient}
+	return wallet, conn, walletVer, nil
 }
 
 func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
@@ -200,7 +204,7 @@ func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map
 				if inCache {
 					ticketBlockHeight = height
 				} else {
-					gbh, err := spd.NodeConnection.GetBlockHeader(ticketBlockHash)
+					gbh, err := spd.NodeConnection.GetBlockHeader(context.TODO(), ticketBlockHash)
 					if err != nil {
 						log.Warnf("GetBlockHeader failed for %v: %v", ticketBlockHash, err)
 						continue
