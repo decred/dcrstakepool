@@ -25,10 +25,11 @@ const (
 // RPCOptions specifies the network settings for establishing a websocket
 // connection to a JSON-RPC server.
 type RPCOptions struct {
-	Host string
-	User string
-	Pass string
-	CA   []byte
+	Host     string
+	User     string
+	Pass     string
+	Notifier *notifier
+	CA       []byte
 }
 
 // Conn holds the information related to an rpcclient and handles access to
@@ -61,11 +62,14 @@ func (c *Conn) Call(ctx context.Context, method string, res interface{}, args ..
 // New creates a new Conn and starts the automatic reconnection handler.
 // Returns an error if unable to dial the RPC server.
 func NewConn(ctx context.Context, wg *sync.WaitGroup, options *RPCOptions) (*Conn, error) {
-	opts := make([]wsrpc.Option, 0, 2)
+	opts := make([]wsrpc.Option, 0, 3)
 	pool := x509.NewCertPool()
 	pool.AppendCertsFromPEM(options.CA)
 	tc := &tls.Config{
 		RootCAs: pool,
+	}
+	if options.Notifier != nil {
+		opts = append(opts, wsrpc.WithNotifier(options.Notifier))
 	}
 	opts = append(opts, wsrpc.WithBasicAuth(options.User, options.Pass), wsrpc.WithTLSConfig(tc))
 	hostAddr := "wss://" + options.Host + "/ws"
@@ -86,10 +90,10 @@ func NewConn(ctx context.Context, wg *sync.WaitGroup, options *RPCOptions) (*Con
 	return c, nil
 }
 
-// TODO waits and performs a function when connected. Functions will be
+// todofn waits and performs a function when connected. Functions will be
 // performed in FIFO order upon connection. Will stop blocking and not perform
 // functions after autoconnect is stopped.
-func (c *Conn) TODO(f func()) {
+func (c *Conn) todofn(f func()) {
 	select {
 	case <-c.done:
 	case c.todo <- f:
