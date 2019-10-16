@@ -8302,6 +8302,16 @@ input[type="submit"]:disabled {
 .form input:placeholder-shown {
   border-bottom: 1px solid #c4cbd2; }
 
+.form input:placeholder-shown {
+    border-bottom: 1px solid #c4cbd2; }
+
+.form input:placeholder-shown.err-form-control {
+  border-color: #ed6d47 }
+
+.err-form-control, 
+.err-message {
+  color: #ed6d47 }
+
 .form__tabs {
   margin-top: -70px;
   margin-bottom: 40px; }
@@ -8774,6 +8784,11 @@ https://flickity.metafizzy.co
   background-repeat: no-repeat;
   cursor: pointer;
 }
+
+.icon-warning {
+  width: 22px;
+  height: 20px;
+  background-image: url(/assets/images/warning-sign.svg); }
 
 .indicator {
 	display: block;

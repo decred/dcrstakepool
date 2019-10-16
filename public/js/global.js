@@ -8,9 +8,9 @@ $('#sidebarCollapse').on('click', function () {
 });
 
 //disables the form submit buttons until the inputs are filled in
-function submitState(el) {
+function submitState(elSelector) {
 
-    var $form = $(el),
+    var $form = $(elSelector),
         $requiredInputs = $form.find('input:required'),
         $submit = $form.find('input[type="submit"]');
 
@@ -111,6 +111,16 @@ $('.form-check-input').change(function () {
           }
       });
   }
+});
+
+// hide input error when input's value changes
+$('.err-form-control').on("change paste keyup", function() {
+  // reset styling of input
+  $(this).removeClass('err-form-control'); 
+  // hides the error icon
+  $(this).next().fadeOut();
+  // remove error text
+  $(this).parent().next().fadeOut();
 });
 
 $(document).ready(function () {
