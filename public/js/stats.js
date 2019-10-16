@@ -10,10 +10,10 @@ var drawChart = function (containerID) {
         container.getAttribute("data-color1"),
         container.getAttribute("data-color2"),
     ];
-    data = [
-        container.getAttribute("data-value1"),
-        container.getAttribute("data-value2"),
-    ];
+    data = {
+        a: container.getAttribute("data-value1"),
+        b: container.getAttribute("data-value2"),
+    };
 
     // create the svg canvas
     var svg = d3.select(containerID)
