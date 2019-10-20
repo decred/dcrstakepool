@@ -1,4 +1,19 @@
-var drawChart = function (containerID, keys, colors, data) {
+var drawChart = function (containerID) {
+
+    container = document.querySelector(containerID);
+
+    labels = [
+        container.getAttribute("data-label1"),
+        container.getAttribute("data-label2"),
+    ];
+    colors = [
+        container.getAttribute("data-color1"),
+        container.getAttribute("data-color2"),
+    ];
+    data = {
+        a: container.getAttribute("data-value1"),
+        b: container.getAttribute("data-value2"),
+    };
 
     // create the svg canvas
     var svg = d3.select(containerID)
@@ -16,7 +31,7 @@ var drawChart = function (containerID, keys, colors, data) {
     // draw a legend using dots and labels
     svg
         .selectAll("mydots")
-        .data(keys)
+        .data(labels)
         .enter()
         .append("circle")
         .attr("cx", -100)
@@ -26,7 +41,7 @@ var drawChart = function (containerID, keys, colors, data) {
         
     svg
         .selectAll("mylabels")
-        .data(keys)
+        .data(labels)
         .enter()
         .append("text")
         .attr("x", -80)
@@ -67,3 +82,7 @@ var drawChart = function (containerID, keys, colors, data) {
         .style("font-size", 15)
         .style("fill", "#fff");
 };
+
+drawChart("#chart1");
+drawChart("#chart2");
+drawChart("#chart3");
