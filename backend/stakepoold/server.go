@@ -28,6 +28,7 @@ import (
 	"github.com/decred/dcrwallet/wallet/v3/txrules"
 	"github.com/decred/dcrwallet/wallet/v3/udb"
 
+	// register database driver
 	_ "github.com/go-sql-driver/mysql"
 )
 
