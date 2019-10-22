@@ -72,7 +72,7 @@ func (c *Client) RPCClient() *rpcclient.Client {
 	return c.client
 }
 
-// New creates a new Client and starts the automatic reconnection handler.
+// NewClient creates a new Client and starts the automatic reconnection handler.
 // Returns an error if unable to construct a new rpcclient.
 func NewClient(ctx context.Context, wg *sync.WaitGroup, cfg *rpcclient.ConnConfig, ntfnHandlers *rpcclient.NotificationHandlers) (*Client, error) {
 	client, err := rpcclient.New(cfg, ntfnHandlers)

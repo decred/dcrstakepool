@@ -17,7 +17,7 @@ import (
 // this is closed.
 var shutdownSignaled = make(chan struct{})
 
-// withShutdownCancel creates a copy of a context that is cancelled whenever
+// WithShutdownCancel creates a copy of a context that is cancelled whenever
 // shutdown is invoked through an interrupt signal.
 func WithShutdownCancel(ctx context.Context) context.Context {
 	ctx, cancel := context.WithCancel(ctx)
@@ -28,7 +28,7 @@ func WithShutdownCancel(ctx context.Context) context.Context {
 	return ctx
 }
 
-// shutdownListener listens for shutdown requests and cancels all contexts
+// ShutdownListener listens for shutdown requests and cancels all contexts
 // created from withShutdownCancel.  This function never returns and is intended
 // to be spawned in a new goroutine.
 func ShutdownListener() {
