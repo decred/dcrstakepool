@@ -15,7 +15,7 @@ import (
 	"github.com/decred/dcrd/hdkeychain/v2"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrwallet/wallet/v3/udb"
+	"github.com/decred/dcrstakepool/helpers"
 )
 
 func TestCalculateFeeAddresses(t *testing.T) {
@@ -184,7 +184,7 @@ func TestDeriveChildAddresses(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		branchKey, err := key.Child(udb.ExternalBranch)
+		branchKey, err := key.Child(helpers.ExternalBranch)
 		if err != nil {
 			t.Error(err)
 			return
