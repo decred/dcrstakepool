@@ -457,11 +457,11 @@ func loadData(spd *stakepool.Stakepoold, dataKind string) error {
 	}
 
 	if !found {
-		return errors.New("unhandled data kind of " + dataKind)
+		return fmt.Errorf("unhandled data kind of %s", dataKind)
 	}
 
 	if !fileExists(spd.DataPath) {
-		return errors.New("loadData - path " + spd.DataPath + " does not exist")
+		return fmt.Errorf("loadData - path %s does not exist", spd.DataPath)
 	}
 
 	files, err := ioutil.ReadDir(spd.DataPath)
@@ -493,6 +493,8 @@ func loadData(spd *stakepool.Stakepoold, dataKind string) error {
 	if err != nil {
 		return err
 	}
+
+	defer r.Close()
 
 	dec := gob.NewDecoder(r)
 	switch dataKind {
@@ -544,7 +546,7 @@ func saveData(spd *stakepool.Stakepoold) {
 				continue
 			}
 		default:
-			log.Warn("saveData: passed unhandled data name " + filenameprefix)
+			log.Warnf("saveData: passed unhandled data name %s", filenameprefix)
 			continue
 		}
 
