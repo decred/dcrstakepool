@@ -15,7 +15,7 @@ import (
 	"github.com/zenazn/goji/web/mutil"
 )
 
-// Makes sure templates are stored in the context
+// ApplyTemplates makes sure templates are stored in the context
 func (application *Application) ApplyTemplates(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		c.Env["Template"] = application.Template
@@ -24,7 +24,7 @@ func (application *Application) ApplyTemplates(c *web.C, h http.Handler) http.Ha
 	return http.HandlerFunc(fn)
 }
 
-// Makes sure controllers can have access to session
+// ApplySessions makes sure controllers can have access to session
 func (application *Application) ApplySessions(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		session, err := application.Store.New(r, "session")

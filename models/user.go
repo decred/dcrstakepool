@@ -14,6 +14,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-gorp/gorp"
+	// register database driver
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 )

@@ -438,7 +438,7 @@ func (controller *MainController) APIStats(c web.C,
 	return stats, codes.OK, "stats successfully retrieved", nil
 }
 
-// APIVotingPost is the API version of VotingPost
+// APIVoting is the API version of Voting
 func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string, codes.Code, string, error) {
 	dbMap := controller.GetDbMap(c)
 

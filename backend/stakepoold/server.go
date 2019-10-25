@@ -28,6 +28,7 @@ import (
 	"github.com/decred/dcrwallet/wallet/v3/txrules"
 	"github.com/decred/dcrwallet/wallet/v3/udb"
 
+	// register database driver
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -456,63 +457,60 @@ func loadData(spd *stakepool.Stakepoold, dataKind string) error {
 	}
 
 	if !found {
-		return errors.New("unhandled data kind of " + dataKind)
+		return fmt.Errorf("unhandled data kind of %s", dataKind)
 	}
 
-	if fileExists(spd.DataPath) {
-		files, err := ioutil.ReadDir(spd.DataPath)
-		if err != nil {
-			return err
-		}
+	if !fileExists(spd.DataPath) {
+		return fmt.Errorf("loadData - path %s does not exist", spd.DataPath)
+	}
 
-		var lastseen string
+	files, err := ioutil.ReadDir(spd.DataPath)
+	if err != nil {
+		return err
+	}
 
-		for i, file := range files {
-			log.Debugf("entry %d => %s", i, file.Name())
-			if strings.HasPrefix(file.Name(), strings.ToLower(dataKind)) &&
-				strings.Contains(file.Name(), dataVersion) &&
-				strings.HasSuffix(file.Name(), ".gob") {
-				lastseen = file.Name()
-			}
-		}
+	var lastseen string
 
-		// we could warn/error here but it's not really a problem.
-		// maybe the admin deleted the gob files to reset the cache
-		// or the cache hasn't been initialized yet.
-		if lastseen == "" {
-			return nil
+	for i, file := range files {
+		log.Debugf("entry %d => %s", i, file.Name())
+		if strings.HasPrefix(file.Name(), strings.ToLower(dataKind)) &&
+			strings.Contains(file.Name(), dataVersion) &&
+			strings.HasSuffix(file.Name(), ".gob") {
+			lastseen = file.Name()
 		}
+	}
 
-		fullPath := filepath.Join(spd.DataPath, lastseen)
-
-		r, err := os.Open(fullPath)
-		if err != nil {
-			return err
-		}
-		dec := gob.NewDecoder(r)
-		switch dataKind {
-		case "AddedLowFeeTickets":
-			err = dec.Decode(&spd.AddedLowFeeTicketsMSA)
-			if err != nil {
-				return err
-			}
-		case "LiveTickets":
-			err = dec.Decode(&spd.LiveTicketsMSA)
-			if err != nil {
-				return err
-			}
-		case "UserVotingConfig":
-			err = dec.Decode(&spd.UserVotingConfig)
-			if err != nil {
-				return err
-			}
-		}
-		log.Infof("Loaded %s from %s", dataKind, fullPath)
+	// we could warn/error here but it's not really a problem.
+	// maybe the admin deleted the gob files to reset the cache
+	// or the cache hasn't been initialized yet.
+	if lastseen == "" {
 		return nil
 	}
 
-	// shouldn't get here -- data dir is created on startup
-	return errors.New("loadData - path " + spd.DataPath + " does not exist")
+	fullPath := filepath.Join(spd.DataPath, lastseen)
+
+	r, err := os.Open(fullPath)
+	if err != nil {
+		return err
+	}
+
+	defer r.Close()
+
+	dec := gob.NewDecoder(r)
+	switch dataKind {
+	case "AddedLowFeeTickets":
+		err = dec.Decode(&spd.AddedLowFeeTicketsMSA)
+	case "LiveTickets":
+		err = dec.Decode(&spd.LiveTicketsMSA)
+	case "UserVotingConfig":
+		err = dec.Decode(&spd.UserVotingConfig)
+	}
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Loaded %s from %s", dataKind, fullPath)
+	return nil
 }
 
 // saveData saves some stakepoold fields to a file so they can be loaded back
@@ -548,7 +546,7 @@ func saveData(spd *stakepool.Stakepoold) {
 				continue
 			}
 		default:
-			log.Warn("saveData: passed unhandled data name " + filenameprefix)
+			log.Warnf("saveData: passed unhandled data name %s", filenameprefix)
 			continue
 		}
 
