@@ -333,7 +333,7 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 		return err
 	}
 
-	tx, err := spd.WalletConnection.RPCClient().GetRawTransaction(hash)
+	tx, err := spd.NodeConnection.GetRawTransaction(hash)
 	if err != nil {
 		log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
 		return err
