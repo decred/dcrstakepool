@@ -333,27 +333,31 @@ func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 }
 
 func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
-	log.Infof("AddMissingTicket: Adding ticket with hash %s", ticketHash)
+	return errors.New("function disfunction.")
+	// The following code is being discussed and will be corrected in due course.
+	/*
+		log.Infof("AddMissingTicket: Adding ticket with hash %s", ticketHash)
 
-	hash, err := chainhash.NewHash(ticketHash)
-	if err != nil {
-		log.Errorf("AddMissingTicket: Failed to parse ticket hash: %v", err)
-		return err
-	}
+		hash, err := chainhash.NewHash(ticketHash)
+		if err != nil {
+			log.Errorf("AddMissingTicket: Failed to parse ticket hash: %v", err)
+			return err
+		}
 
-	tx, err := spd.NodeConnection.GetRawTransaction(hash)
-	if err != nil {
-		log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
-		return err
-	}
+		tx, err := spd.NodeConnection.GetRawTransaction(hash)
+		if err != nil {
+			log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
+			return err
+		}
 
-	err = spd.Wallet.AddTicket(context.TODO(), tx)
-	if err != nil {
-		log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
-		return err
-	}
+		err = spd.Wallet.AddTicket(context.TODO(), tx)
+		if err != nil {
+			log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
+			return err
+		}
 
-	return nil
+		return nil
+	*/
 }
 
 func (spd *Stakepoold) ListScripts() ([][]byte, error) {
