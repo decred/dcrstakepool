@@ -41,6 +41,16 @@ submitState('#ChangeEmail');
 submitState('#ChangePassword');
 submitState('#captcha-form');
 
+// hide input error when input's value changes
+$('.err-form-control').on("change paste keyup", function() {
+  // reset styling of input
+  $(this).removeClass('err-form-control'); 
+  // hides the error icon
+  $(this).next().fadeOut();
+  // remove error text
+  $(this).parent().next().fadeOut();
+});
+
 $(document).ready(function () {
   // Display elements with class js-only
   var els = document.getElementsByClassName("js-only")
