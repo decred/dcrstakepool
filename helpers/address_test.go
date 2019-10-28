@@ -8,7 +8,6 @@ import (
 
 	"github.com/decred/dcrd/chaincfg/v2"
 	"github.com/decred/dcrd/hdkeychain/v2"
-	"github.com/decred/dcrwallet/wallet/v3/udb"
 )
 
 var (
@@ -54,7 +53,7 @@ func TestDCRUtilAddressFromExtendedKey(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		branchKey, err := key.Child(udb.ExternalBranch)
+		branchKey, err := key.Child(ExternalBranch)
 		if err != nil {
 			t.Error(err)
 			return

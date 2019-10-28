@@ -14,8 +14,8 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/dcrutil/v2"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
+	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/models"
-	"github.com/decred/dcrwallet/wallet/v3/udb"
 	"golang.org/x/net/context"
 )
 
@@ -278,7 +278,7 @@ func (s *StakepooldManager) SyncAll(multiSigScripts []models.User, maxUsers int6
 
 	// Set watched address indexes to maxUsers so all generated ticket
 	// addresses show as 'ismine'.
-	err := s.syncWatchedAddresses(defaultAccountName, udb.ExternalBranch, maxUsers)
+	err := s.syncWatchedAddresses(defaultAccountName, helpers.ExternalBranch, maxUsers)
 	if err != nil {
 		return err
 	}

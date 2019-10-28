@@ -32,7 +32,6 @@ import (
 	"github.com/decred/dcrstakepool/poolapi"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
-	"github.com/decred/dcrwallet/wallet/v3/udb"
 	"github.com/go-gorp/gorp"
 	"github.com/gorilla/csrf"
 	"github.com/zenazn/goji/web"
@@ -550,7 +549,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 	index := uint32(uid)
 
 	// Derive the appropriate branch key
-	branchKey, err := acctKey.Child(udb.ExternalBranch)
+	branchKey, err := acctKey.Child(helpers.ExternalBranch)
 	if err != nil {
 		return nil, err
 	}
@@ -580,7 +579,7 @@ func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Addre
 	index := uint32(uid)
 
 	// Derive the appropriate branch key
-	branchKey, err := acctKey.Child(udb.ExternalBranch)
+	branchKey, err := acctKey.Child(helpers.ExternalBranch)
 	if err != nil {
 		return nil, err
 	}
