@@ -10,7 +10,9 @@ import (
 	"context"
 	"encoding/hex"
 
+	"github.com/decred/base58"
 	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	"github.com/decred/dcrd/dcrutil/v2"
 	dcrdjson "github.com/decred/dcrd/rpc/jsonrpc/types/v2"
 	walletjson "github.com/decred/dcrwallet/rpc/jsonrpc/types"
@@ -67,6 +69,21 @@ func (r *RPC) CreateMultisig(ctx context.Context, requiredSigs int, addresses []
 		return nil, err
 	}
 	return res, nil
+}
+
+// DumpPrivKey gets the private key corresponding to the passed address
+//
+// NOTE: This function requires to the wallet to be unlocked.  See the
+// WalletPassphrase function for more details.
+func (r *RPC) DumpPrivKey(ctx context.Context, address dcrutil.Address) (*secp256k1.PrivateKey, error) {
+	res := ""
+	if err := r.Call(ctx, "dumpprivkey", &res, address.Address()); err != nil {
+		return nil, err
+	}
+	decoded := base58.Decode(res)
+	key := decoded[3 : len(decoded)-4]
+	privKey, _ := secp256k1.PrivKeyFromBytes(key)
+	return privKey, nil
 }
 
 // GenerateVote returns hex of an SSGen.

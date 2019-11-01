@@ -7,6 +7,7 @@ package stakepool
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,9 +17,14 @@ import (
 	"time"
 
 	"github.com/decred/dcrd/blockchain/stake/v2"
+	blockchain "github.com/decred/dcrd/blockchain/standalone"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/chaincfg/v2/chainec"
+	"github.com/decred/dcrd/dcrec"
+	"github.com/decred/dcrd/dcrec/secp256k1/v2"
 	"github.com/decred/dcrd/dcrutil/v2"
+	"github.com/decred/dcrd/txscript/v2"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrd"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet"
@@ -776,7 +782,7 @@ func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
 			"ticket %v VoteBits %v VoteBitsExtended %v ",
 			wt.BlockHash, wt.BlockHeight, w.ticket, w.config.VoteBits,
 			spd.VotingConfig.VoteBitsExtended)
-		go spd.vote(&wg, wt.BlockHash, wt.BlockHeight, w)
+		go spd.testVote(&wg, wt.BlockHash, wt.BlockHeight, w)
 	}
 	spd.RUnlock()
 
@@ -811,6 +817,198 @@ func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
 			wt.BlockHeight, wt.BlockHash, time.Since(start), votedCount,
 			dupeCount, errorCount)
 	}()
+}
+
+// vote Generates a vote and send it off to the network.  This is a go routine!
+func (spd *Stakepoold) testVote(wg *sync.WaitGroup, blockHash *chainhash.Hash, blockHeight int64, w *ticketMetadata) (err error) {
+	start := time.Now()
+
+	defer func() {
+		w.err = err
+		w.duration = time.Since(start)
+		wg.Done()
+	}()
+
+	if err := spd.UpdateUserDataFromMySQL(); err != nil {
+		err = fmt.Errorf("Unable to update user data: %v", err)
+		return err
+	}
+
+	ticketPurchase, err := spd.NodeConnection.GetRawTransaction(context.TODO(), w.ticket)
+	if err != nil {
+		err = fmt.Errorf("GetRawTransaction rpc failed: %v", err)
+		return err
+	}
+
+	voteBits := stake.VoteBits{
+		Bits:         w.config.VoteBits,
+		ExtendedBits: []byte(spd.VotingConfig.VoteBitsExtended),
+	}
+
+	// Generate vote.
+	vote, err := createUnsignedVote(w.ticket, ticketPurchase.MsgTx(), int32(blockHeight), blockHash,
+		voteBits, blockchain.NewSubsidyCache(spd.Params), spd.Params)
+	if err != nil {
+		err = fmt.Errorf("failed to create unsigned vote: %v", err)
+		return err
+	}
+
+	uvc, ok := spd.UserVotingConfig[w.msa]
+	if !ok {
+		err = fmt.Errorf("did not find user voting config for multi sig address %v", w.msa)
+		return err
+	}
+
+	if uvc.PoolPubKeyAddr == "" {
+		err = fmt.Errorf("did not find pool address for multi sig address %v", w.msa)
+		return err
+	}
+
+	if len(uvc.MultiSigScript) == 0 {
+		err = fmt.Errorf("did not find redeem script for multi sig address %v", w.msa)
+		return err
+	}
+
+	poolPub, err := dcrutil.DecodeAddress(uvc.PoolPubKeyAddr, spd.Params)
+	if err != nil {
+		err = fmt.Errorf("unable to decode pool public address: %v", err)
+		return err
+	}
+
+	poolPriv, err := spd.Wallet.DumpPrivKey(context.Background(), poolPub)
+	if err != nil {
+		err = fmt.Errorf("DumpPrivKey rpc failed: %v", err)
+		return err
+	}
+
+	// Sign vote.
+	err = signVoteOrRevokation(poolPriv, uvc.MultiSigScript, spd.Params, ticketPurchase.MsgTx(), vote, true)
+	if err != nil {
+		err = fmt.Errorf("unable to sign vote: %v", err)
+		return err
+	}
+
+	w.signDuration = time.Since(start)
+
+	// Ask node to transmit raw transaction.
+	startSend := time.Now()
+	tx, err := spd.NodeConnection.SendRawTransaction(context.TODO(), vote, false)
+	if err != nil {
+		err = fmt.Errorf("unable to send raw transaction: %v", err)
+		return err
+	}
+
+	w.txid = tx
+
+	w.sendDuration = time.Since(startSend)
+	return nil
+}
+
+// signVoteOrRevocation signs a vote or revocation, specified by the isVote
+// argument.  This signs the transaction by modifying tx's input scripts.
+func signVoteOrRevokation(privKey *secp256k1.PrivateKey, script []byte, params *chaincfg.Params, ticketPurchase, tx *wire.MsgTx, isVote bool) error {
+	// Prepare functions to look up private key and script secrets so signing
+	// can be performed.
+	var getKey txscript.KeyClosure = func(addr dcrutil.Address) (chainec.PrivateKey, bool, error) {
+		return privKey, true, nil // secp256k1 pubkeys are always compressed in Decred
+	}
+	var getScript txscript.ScriptClosure = func(addr dcrutil.Address) ([]byte, error) {
+		return script, nil
+	}
+	// Revocations only contain one input, which is the input that must be
+	// signed.  The first input for a vote is the stakebase and the second input
+	// must be signed.
+	inputToSign := 0
+	if isVote {
+		inputToSign = 1
+	}
+
+	// Sign the input.
+	redeemTicketScript := ticketPurchase.TxOut[0].PkScript
+	signedScript, err := txscript.SignTxOutput(params, tx, inputToSign,
+		redeemTicketScript, txscript.SigHashAll, getKey, getScript,
+		tx.TxIn[inputToSign].SignatureScript, dcrec.STEcdsaSecp256k1)
+	if err != nil {
+		return fmt.Errorf("txscript.SignTxOutput: %v", err)
+	}
+	if isVote {
+		tx.TxIn[0].SignatureScript = params.StakeBaseSigScript
+	}
+	tx.TxIn[inputToSign].SignatureScript = signedScript
+
+	return nil
+}
+
+// newVoteScript generates a voting script from the passed VoteBits, for
+// use in a vote.
+func newVoteScript(voteBits stake.VoteBits) ([]byte, error) {
+	b := make([]byte, 2+len(voteBits.ExtendedBits))
+	binary.LittleEndian.PutUint16(b[0:2], voteBits.Bits)
+	copy(b[2:], voteBits.ExtendedBits)
+	return txscript.GenerateProvablyPruneableOut(b)
+}
+
+// createUnsignedVote creates an unsigned vote transaction that votes using the
+// ticket specified by a ticket purchase hash and transaction with the provided
+// vote bits.  The block height and hash must be of the previous block the vote
+// is voting on.
+func createUnsignedVote(ticketHash *chainhash.Hash, ticketPurchase *wire.MsgTx,
+	blockHeight int32, blockHash *chainhash.Hash, voteBits stake.VoteBits,
+	subsidyCache *blockchain.SubsidyCache, params *chaincfg.Params) (*wire.MsgTx, error) {
+
+	// Parse the ticket purchase transaction to determine the required output
+	// destinations for vote rewards or revocations.
+	ticketPayKinds, ticketHash160s, ticketValues, _, _, _ :=
+		stake.TxSStxStakeOutputInfo(ticketPurchase)
+
+		// Calculate the subsidy for votes at this height.
+	subsidy := subsidyCache.CalcStakeVoteSubsidy(int64(blockHeight))
+
+	// Calculate the output values from this vote using the subsidy.
+	voteRewardValues := stake.CalculateRewards(ticketValues,
+		ticketPurchase.TxOut[0].Value, subsidy)
+
+	// Begin constructing the vote transaction.
+	vote := wire.NewMsgTx()
+
+	// Add stakebase input to the vote.
+	stakebaseOutPoint := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0),
+		wire.TxTreeRegular)
+	stakebaseInput := wire.NewTxIn(stakebaseOutPoint, subsidy, nil)
+	vote.AddTxIn(stakebaseInput)
+
+	// Votes reference the ticket purchase with the second input.
+	ticketOutPoint := wire.NewOutPoint(ticketHash, 0, wire.TxTreeStake)
+	ticketInput := wire.NewTxIn(ticketOutPoint,
+		ticketPurchase.TxOut[ticketOutPoint.Index].Value, nil)
+	vote.AddTxIn(ticketInput)
+
+	// The first output references the previous block the vote is voting on.
+	// This function never errors.
+	blockRefScript, _ := txscript.GenerateSSGenBlockRef(*blockHash,
+		uint32(blockHeight))
+	vote.AddTxOut(wire.NewTxOut(0, blockRefScript))
+
+	// The second output contains the votebits encode as a null data script.
+	voteScript, err := newVoteScript(voteBits)
+	if err != nil {
+		return nil, err
+	}
+	vote.AddTxOut(wire.NewTxOut(0, voteScript))
+
+	// All remaining outputs pay to the output destinations and amounts tagged
+	// by the ticket purchase.
+	for i, hash160 := range ticketHash160s {
+		scriptFn := txscript.PayToSSGenPKHDirect
+		if ticketPayKinds[i] { // P2SH
+			scriptFn = txscript.PayToSSGenSHDirect
+		}
+		// Error is checking for a nil hash160, just ignore it.
+		script, _ := scriptFn(hash160)
+		vote.AddTxOut(wire.NewTxOut(voteRewardValues[i], script))
+	}
+
+	return vote, nil
 }
 
 func (spd *Stakepoold) NewTicketHandler(ctx context.Context, wg *sync.WaitGroup) {

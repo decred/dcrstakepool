@@ -7,14 +7,18 @@ require (
 	github.com/apoydence/onpar v0.0.0-20190519213022-ee068f8ea4d1 // indirect
 	github.com/dajohi/goemail v1.0.1
 	github.com/dchest/captcha v0.0.0-20170622155422-6a29415a8364
+	github.com/decred/base58 v1.0.1
 	github.com/decred/dcrd/blockchain/stake/v2 v2.0.2
+	github.com/decred/dcrd/blockchain/standalone v1.0.0
 	github.com/decred/dcrd/certgen v1.1.0
 	github.com/decred/dcrd/chaincfg/chainhash v1.0.2
 	github.com/decred/dcrd/chaincfg/v2 v2.3.0
 	github.com/decred/dcrd/dcrec v1.0.0
+	github.com/decred/dcrd/dcrec/secp256k1/v2 v2.0.0
 	github.com/decred/dcrd/dcrutil/v2 v2.0.1
 	github.com/decred/dcrd/hdkeychain/v2 v2.1.0
 	github.com/decred/dcrd/rpcclient/v4 v4.0.0
+	github.com/decred/dcrd/txscript/v2 v2.1.0
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
 	github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrd v0.0.0-00010101000000-000000000000

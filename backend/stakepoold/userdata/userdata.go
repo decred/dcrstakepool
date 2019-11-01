@@ -2,6 +2,7 @@ package userdata
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"sync"
 
@@ -27,6 +28,8 @@ type UserData struct {
 type UserVotingConfig struct {
 	Userid          int64
 	MultiSigAddress string
+	MultiSigScript  []byte
+	PoolPubKeyAddr  string
 	VoteBits        uint16
 	VoteBitsVersion uint32
 }
@@ -86,6 +89,8 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 	var (
 		userid          int64
 		multiSigAddress string
+		multiSigScript  string
+		poolPubKeyAddr  string
 		voteBits        int64
 		voteBitsVersion int64
 	)
@@ -105,7 +110,7 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 		return userInfo, err
 	}
 
-	rows, err := db.Query("SELECT UserId, MultiSigAddress, VoteBits, VoteBitsVersion FROM Users WHERE MultiSigAddress <> ''")
+	rows, err := db.Query("SELECT UserId, MultiSigAddress, MultiSigScript, PoolPubKeyAddr, VoteBits, VoteBitsVersion FROM Users WHERE MultiSigAddress <> ''")
 	if err != nil {
 		log.Errorf("Unable to query db: %v", err)
 		return userInfo, err
@@ -113,14 +118,21 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 
 	defer rows.Close()
 	for rows.Next() {
-		err := rows.Scan(&userid, &multiSigAddress, &voteBits, &voteBitsVersion)
+		err := rows.Scan(&userid, &multiSigAddress, &multiSigScript, &poolPubKeyAddr, &voteBits, &voteBitsVersion)
 		if err != nil {
 			log.Errorf("Unable to scan row %v", err)
 			continue
 		}
+		byteScript, err := hex.DecodeString(multiSigScript)
+		if err != nil {
+			log.Errorf("failed to decode script %s: %v", multiSigScript, err)
+			return nil, err
+		}
 		userInfo[multiSigAddress] = UserVotingConfig{
 			Userid:          userid,
 			MultiSigAddress: multiSigAddress,
+			MultiSigScript:  byteScript,
+			PoolPubKeyAddr:  poolPubKeyAddr,
 			VoteBits:        uint16(voteBits),
 			VoteBitsVersion: uint32(voteBitsVersion),
 		}
