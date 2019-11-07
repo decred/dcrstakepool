@@ -466,8 +466,8 @@ func (spd *Stakepoold) GetTicketInfo(ticketHash string) (*TicketInfo, error) {
 	}
 
 	return &TicketInfo{
-		MultiSigAddress:    multiSigAddress.Address(),
-		VspRewardAddress:   vspCommitAddr.Address(),
+		MultiSigAddress:   multiSigAddress.Address(),
+		VspRewardAddress:  vspCommitAddr.Address(),
 		UserRewardAddress: ownerCommitAddr.Address(),
 	}, nil
 }
