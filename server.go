@@ -71,7 +71,7 @@ func runMain(ctx context.Context) error {
 
 	application.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
 		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
-		cfg.DBUser)
+		cfg.DBUser, activeNetParams)
 	if application.DbMap == nil {
 		return fmt.Errorf("failed to open database")
 	}

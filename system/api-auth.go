@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/decred/dcrd/dcrutil"
-	"github.com/decred/dcrwallet/wallet"
+	"github.com/decred/dcrd/dcrutil/v2"
+	"github.com/decred/dcrwallet/wallet/v3"
 	"github.com/dgrijalva/jwt-go"
 )
 
@@ -79,12 +79,12 @@ func (application *Application) validateTicketOwnership(authHeader string) (stri
 	}
 
 	// Check if timestamp signature checks out against user's reward address.
-	addr, err := dcrutil.DecodeAddress(ticketInfo.UserRewardAddress)
+	addr, err := dcrutil.DecodeAddress(ticketInfo.UserRewardAddress, application.Params)
 	if err != nil {
 		return "", fmt.Errorf("ticket auth, unexpected decode address error: %v", err)
 	}
 
-	valid, err := wallet.VerifyMessage(timestamp, addr, decodedSignature)
+	valid, err := wallet.VerifyMessage(timestamp, addr, decodedSignature, application.Params)
 	if err != nil {
 		return "", fmt.Errorf("error validating timestamp signature for ticket auth %v", err)
 	}
