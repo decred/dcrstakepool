@@ -18,13 +18,13 @@ require (
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.3.0
-	github.com/decred/dcrwallet/wallet/v3 v3.0.0-20191015210243-b6a31b44514d
+	github.com/decred/dcrwallet/wallet/v3 v3.1.0
 	github.com/decred/slog v1.0.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-gorp/gorp v2.0.1-0.20181104192722-f3677d4a0a88+incompatible
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang/protobuf v1.3.2
-	github.com/gorilla/csrf v1.6.1
+	github.com/gorilla/csrf v1.6.2
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.0
 	github.com/jessevdk/go-flags v1.4.0
@@ -38,10 +38,4 @@ require (
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582
 	google.golang.org/grpc v1.24.0
-)
-
-replace (
-	github.com/decred/dcrwallet/deployments/v2 v2.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/deployments/v2 v2.0.0-20190927140119-e8a59aa721a4
-	github.com/decred/dcrwallet/errors/v2 v2.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/errors/v2 v2.0.0-20190927140119-e8a59aa721a4
-	github.com/decred/dcrwallet/rpc/client/dcrd v0.0.0-00010101000000-000000000000 => github.com/decred/dcrwallet/rpc/client/dcrd v0.0.0-20190927140119-e8a59aa721a4
 )
