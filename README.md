@@ -38,27 +38,24 @@ suitable for use on testnet. Further documentation can be found in `./harness.sh
 
 ## Requirements
 
-- [Go](https://golang.org) 1.11.13 or newer (1.13 is recommended).
+- [Go](https://golang.org) 1.12 or newer (1.13 is recommended).
 - MySQL
 - Nginx or other web server to proxy to dcrstakepool
 
 
 ## Installation
 
-### Build from source (all platforms)
+### Build from source
 
 Building or updating from source requires the following build dependencies:
 
-- **Go 1.11 ~ 1.13**
+- **Go 1.12 or 1.13**
 
-  Installation instructions can be found here: https://golang.org/doc/install.
-  It is recommended to add `$GOPATH/bin` to your `PATH` at this point.
+Building or updating from source requires only an installation of Go
+([instructions](https://golang.org/doc/install)). It is recommended to add
+`$GOPATH/bin` to your `PATH` at this point.
 
-- **Git**
-
-  Installation instructions can be found at https://git-scm.com
-
-To build and install from a checked-out repo, run `go install . ./backend/stakepoold/...`
+To build and install from a checked-out repo, run `go install . ./backend/stakepoold`
 in the repo's root directory.
 
 * Set the `GO111MODULE=on` environment variable if building from within
@@ -116,7 +113,7 @@ $ dcrctl --wallet accountsyncaddressindex teststakepoolfees 0 10000
 
 - Create the wallets.  All wallets should have the same seed.  **Backup the seed
   for disaster recovery!**
-- Log into wallet servers separatly and create wallets one at a time using the
+- Log into wallet servers separately and create wallets one at a time using the
   same seed.
 
 ```bash
