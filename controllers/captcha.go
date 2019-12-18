@@ -11,11 +11,12 @@ import (
 	"github.com/zenazn/goji/web"
 )
 
-type CaptchaHandler struct {
+type captchaHandler struct {
 	ImgWidth  int
 	ImgHeight int
 }
 
+// CaptchaServe writes and serves captchas.
 func (controller *MainController) CaptchaServe(c web.C, w http.ResponseWriter, r *http.Request) {
 	// Get the captcha id by stripping the file extension.
 	_, file := path.Split(r.URL.Path)
@@ -46,6 +47,8 @@ func (controller *MainController) CaptchaServe(c web.C, w http.ResponseWriter, r
 	http.ServeContent(w, r, id+ext, time.Time{}, bytes.NewReader(content.Bytes()))
 }
 
+// CaptchaVerify verifies that the provided captcha matches the on screen text
+// and sets the CaptchaDone session value.
 func (controller *MainController) CaptchaVerify(c web.C, w http.ResponseWriter, r *http.Request) {
 	id, solution := r.FormValue("captchaId"), r.FormValue("captchaSolution")
 	if id == "" {

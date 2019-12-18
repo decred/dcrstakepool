@@ -4,6 +4,7 @@ import (
 	"github.com/decred/dcrstakepool/system"
 )
 
-type ApiController struct {
+// APIController holds a dcrstakepool/system controller
+type APIController struct {
 	system.Controller
 }

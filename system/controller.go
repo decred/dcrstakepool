@@ -12,26 +12,32 @@ import (
 	"github.com/zenazn/goji/web"
 )
 
+// Controller is the type of the main web controller.
 type Controller struct {
 }
 
+// GetSession returns the session stored in the header.
 func (controller *Controller) GetSession(c web.C) *sessions.Session {
 	return c.Env["Session"].(*sessions.Session)
 }
 
+// GetTemplate returns the template stored in the header.
 func (controller *Controller) GetTemplate(c web.C) *template.Template {
 	return c.Env["Template"].(*template.Template)
 }
 
+// GetDbMap returns the DbMap stored in the header.
 func (controller *Controller) GetDbMap(c web.C) *gorp.DbMap {
 	return c.Env["DbMap"].(*gorp.DbMap)
 }
 
+// IsCaptchaDone returns the CaptchaDone value stored in the header.
 func (controller *Controller) IsCaptchaDone(c web.C) bool {
 	done, ok := c.Env["CaptchaDone"].(bool)
 	return done && ok
 }
 
+// Parse parses html templates and returns the template as a string.
 func (controller *Controller) Parse(t *template.Template, name string, data interface{}) string {
 	var doc bytes.Buffer
 	err := t.ExecuteTemplate(&doc, name, data)

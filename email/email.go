@@ -13,11 +13,13 @@ import (
 	"github.com/dajohi/goemail"
 )
 
+// Sender holds information related to outgoing smtp mail.
 type Sender struct {
 	smtpFrom   string
 	smtpServer *goemail.SMTP
 }
 
+// NewSender returns an initiated Sender to send emails with.
 func NewSender(smtpHost string, smtpUsername string, smtpPassword string,
 	smtpFrom string, useSMTPS bool, systemCerts *x509.CertPool,
 	skipVerify bool) (Sender, error) {
@@ -75,6 +77,7 @@ func (s *Sender) sendMail(emailaddress, subject, body string) error {
 	return s.smtpServer.Send(mailMsg)
 }
 
+// PasswordChangeRequest creates and sends a password reset email.
 func (s *Sender) PasswordChangeRequest(email, clientIP, baseURL, token string) error {
 	body := "A request to reset your password was made from IP address: " +
 		clientIP + "\r\n\n" +
@@ -88,6 +91,7 @@ func (s *Sender) PasswordChangeRequest(email, clientIP, baseURL, token string) e
 	return s.sendMail(email, "Voting service password reset", body)
 }
 
+// EmailChangeVerification creates and sends an email change verification email.
 func (s *Sender) EmailChangeVerification(baseURL, currentEmail, newEmail, clientIP, token string) error {
 	body := "A request was made to change the email address " +
 		"for a voting service account at " + baseURL +
@@ -102,6 +106,7 @@ func (s *Sender) EmailChangeVerification(baseURL, currentEmail, newEmail, client
 	return s.sendMail(newEmail, "Voting service email change", body)
 }
 
+// EmailChangeNotification creates and sends an email change notification email.
 func (s *Sender) EmailChangeNotification(baseURL, currentEmail, newEmail, clientIP string) error {
 	body := "A request was made to change the email address " +
 		"for your voting service account at " + baseURL +
@@ -113,6 +118,7 @@ func (s *Sender) EmailChangeNotification(baseURL, currentEmail, newEmail, client
 	return s.sendMail(currentEmail, "Voting service email change", body)
 }
 
+// PasswordChangeConfirm creates and sends a password change confirmation email.
 func (s *Sender) PasswordChangeConfirm(email, baseURL, clientIP string) error {
 	body := "Your voting service password for " + baseURL +
 		" was just changed by IP Address " + clientIP + "\r\n\n" +
@@ -122,6 +128,7 @@ func (s *Sender) PasswordChangeConfirm(email, baseURL, clientIP string) error {
 	return s.sendMail(email, "Voting service password change", body)
 }
 
+// Registration creates and sends a registration email.
 func (s *Sender) Registration(email, baseURL, clientIP, token string) error {
 	body := "A request for an account for " + baseURL + " was made from " +
 		clientIP + " for this email address.\r\n\n" +

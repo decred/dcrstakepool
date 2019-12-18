@@ -623,6 +623,7 @@ type BackendStatus struct {
 	*WalletStatus
 }
 
+// WalletStatus holds information about a dcrwallet.
 type WalletStatus struct {
 	DaemonConnected bool
 	VoteVersion     uint32
