@@ -32,7 +32,7 @@ func EmailChangeComplete(dbMap *gorp.DbMap, token models.UserToken) error {
 	return err
 }
 
-// EmailChangeTokenExists checks whether the token exits and returns the
+// EmailChangeTokenExists checks whether the token exists and returns the
 // EmailChange information if found in the DB.
 func EmailChangeTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.EmailChange, error) {
 	var emailChange models.EmailChange
@@ -56,7 +56,7 @@ func EmailExists(dbMap *gorp.DbMap, email string) (*models.User, error) {
 	return &user, err
 }
 
-// EmailVerificationTokenExists checks whether the token exits and returns User
+// EmailVerificationTokenExists checks whether the token exists and returns User
 // information if found in the DB.
 func EmailVerificationTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.User, error) {
 	var user models.User
@@ -69,7 +69,7 @@ func EmailVerificationTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*m
 	return &user, err
 }
 
-// EmailVerificationComplete Changes a users EmailVerified value to 1.
+// EmailVerificationComplete changes a users EmailVerified value to 1.
 func EmailVerificationComplete(dbMap *gorp.DbMap, token models.UserToken) error {
 	_, err := dbMap.Exec(`UPDATE Users
 		SET EmailToken = '', EmailVerified = 1
@@ -77,14 +77,14 @@ func EmailVerificationComplete(dbMap *gorp.DbMap, token models.UserToken) error 
 	return err
 }
 
-// PasswordResetTokenDelete delets the PasswordReset row identified by token
+// PasswordResetTokenDelete deletes the PasswordReset row identified by token
 // from the DB.
 func PasswordResetTokenDelete(dbMap *gorp.DbMap, token models.UserToken) error {
 	_, err := dbMap.Exec("DELETE FROM PasswordReset WHERE Token = ?", token.String())
 	return err
 }
 
-// PasswordResetTokenExists checks whether the token exits and returns
+// PasswordResetTokenExists checks whether the token exists and returns
 // PasswordReset information if found in the DB.
 func PasswordResetTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.PasswordReset, error) {
 	var passwordReset models.PasswordReset

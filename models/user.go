@@ -216,7 +216,7 @@ func InsertEmailChange(dbMap *gorp.DbMap, emailChange *EmailChange) error {
 	return dbMap.Insert(emailChange)
 }
 
-// InsertLowFeeTicket inserts a user into the DB.
+// InsertLowFeeTicket inserts a low fee ticket into the DB.
 func InsertLowFeeTicket(dbMap *gorp.DbMap, lowFeeTicket *LowFeeTicket) error {
 	return dbMap.Insert(lowFeeTicket)
 }

@@ -34,7 +34,7 @@ var (
 	ticketTypeSpentMissed = "SpentMissed"
 )
 
-// Stakepoold is stores everything related to stakepoold.
+// Stakepoold stores everything related to stakepoold.
 type Stakepoold struct {
 	sync.RWMutex
 

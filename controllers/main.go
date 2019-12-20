@@ -49,7 +49,7 @@ const (
 	agendasCacheLife = time.Hour
 )
 
-// Config holds all the data used to create an new MainController.
+// Config holds all the data used to create a new MainController.
 type Config struct {
 	AdminIPs             []string
 	AdminUserIDs         []string
