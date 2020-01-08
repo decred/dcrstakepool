@@ -7781,70 +7781,37 @@ input[type="submit"]:disabled {
   transition: max-height .3s ease-in-out, padding    .3s ease-in-out;
   padding: 0; }
 
-.voting_accordion {
+.voting_card {
   background: #fff; }
-  .voting_accordion input[type='checkbox']:checked + label + .accordion__contents {
-    max-height: 200px;
-    padding: 15px 30px; }
-  .voting_accordion .accordion__toggle {
-    padding: 20px 30px; }
-    .voting_accordion .accordion__toggle h2, .voting_accordion .accordion__toggle p {
-      margin-bottom: 0; }
-    .voting_accordion .accordion__toggle .description {
-      color: #596d81; }
-      .voting_accordion .accordion__toggle .description span {
-        color: #0c1e3e; }
-    .voting_accordion .accordion__toggle .btn {
-      padding: 2px 5px 2px 18px;
-      font-size: 13px;
-      line-height: 1.23;
-      letter-spacing: normal;
-      color: #2971ff !important;
-      border-radius: 2px;
-      border: 1px solid #2971ff; }
-      .voting_accordion .accordion__toggle .btn span {
-        position: absolute;
-        top: -2px;
-        left: 3px; }
-  .voting_accordion .accordion__contents {
-    background-color: #d4f0fd;
-    color: #091440; }
-    .voting_accordion .accordion__contents p {
-      word-wrap: break-word; }
-    .voting_accordion .accordion__contents label {
-      display: block;
-      position: relative;
-      padding-left: 22px;
-      cursor: pointer; }
-    .voting_accordion .accordion__contents input {
-      position: absolute;
-      opacity: 0;
-      cursor: pointer;
-      margin-right: 0 !important;
-      width: 5px; }
-      .voting_accordion .accordion__contents input:checked ~ .checkmark:after {
-        display: block; }
-    .voting_accordion .accordion__contents .checkmark {
-      position: absolute;
-      top: 1px;
-      left: 1px;
-      height: 16px;
-      width: 16px;
-      border: solid 1px #8997a5;
-      border-radius: 50%; }
-      @media (max-width: 767.98px) {
-        .voting_accordion .accordion__contents .checkmark {
-          top: 3px; } }
-      .voting_accordion .accordion__contents .checkmark:after {
-        content: "";
-        position: absolute;
-        display: none;
-        top: 2px;
-        left: 2px;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #8997a5; }
+
+.voting_card .voting_card_desc {
+  padding: 20px 30px; }
+.voting_card .voting_card_desc h2,
+.voting_card .voting_card_desc p {
+  margin-bottom: 0; }
+.voting_card .voting_card_desc .description {
+  color: #596d81; }
+.voting_card .voting_card_desc .description span {
+  color: #0c1e3e; }
+
+.voting_card_options {
+  background-color: #d4f0fd;
+  color: #091440;
+  max-height: 200px;
+  padding: 15px 30px;}
+.voting_card_options p {
+  word-wrap: break-word; }
+.voting_card_options label {
+  display: block;
+  position: relative;
+  padding-left: 22px;
+  cursor: pointer; }
+.voting_card_options input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  margin-right: 0 !important;
+  width: 5px; }
 
 .status {
   padding: 5px 8px;
