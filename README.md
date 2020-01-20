@@ -14,6 +14,7 @@ vote on their behalf when the ticket is selected.
 was approved by stakeholders to rename "Stakepool" to "Voting Service Provider", a.k.a. "VSP".
 These names are used interchangably in this repository.
 
+
 ## Architecture
 
 ![Voting Service Architecture](docs/img/architecture.png)
@@ -26,6 +27,7 @@ These names are used interchangably in this repository.
 - The architecture is subject to change in the future to lessen the dependence
   on MySQL.
 
+
 ## Test Harness
 
 A test harness is provided in `./harness.sh`. The test harness uses tmux to start
@@ -33,74 +35,37 @@ a dcrd node, multiple dcrwallet and stakepoold instances, and finally a dcrstake
 instance. It uses hard-coded wallet seeds and pubkeys, and as a result it is only
 suitable for use on testnet. Further documentation can be found in `./harness.sh`.
 
+
 ## Requirements
 
-- [Go](https://golang.org) 1.11.13 or newer (1.12 is recommended).
+- [Go](https://golang.org) 1.12 or newer (1.13 is recommended).
 - MySQL
 - Nginx or other web server to proxy to dcrstakepool
 
+
 ## Installation
 
-### Build from Source
+### Build from source
+
+Building or updating from source requires the following build dependencies:
+
+- **Go 1.12 or 1.13**
 
 Building or updating from source requires only an installation of Go
 ([instructions](https://golang.org/doc/install)). It is recommended to add
 `$GOPATH/bin` to your `PATH` at this point.
 
-Clone the dcrstakepool repository into any folder and follow the instructions
-below for your version of Go.
+To build and install from a checked-out repo, run `go install . ./backend/stakepoold`
+in the repo's root directory.
 
-#### Building with Go 1.12
+* Set the `GO111MODULE=on` environment variable if building from within
+  `GOPATH`.
 
-If building in a folder
-under `GOPATH`, it is necessary to explicitly build with modules enabled:
-
-```bash
-    GO111MODULE=on go build
-```
-
-If building outside of `GOPATH`, modules are automatically enabled, and `go
-build` is sufficient.
-
-The `go` tool will process the source code and automatically download
-dependencies. If the dependencies are configured correctly, there will be no
-modifications to the `go.mod` and `go.sum` files.
-
-### Components
-
-The frontend server (dcrstakepool) and the backend daemon (stakepoold) are built
-separately. Since module-enabled builds no longer require building under
-`$GOPATH`, the following instructions use the placeholder
-`{{YOUR_GO_MODULE_PATH}}` to refer to wherever you checkout your Go code.
-
-#### Frontend - dcrstakepool
-
-Build dcrstakepool and copy it to the web server.
-
-```bash
-$ cd {{YOUR_GO_MODULE_PATH}}/github.com/decred/dcrstakepool
-$ go build
-```
-
-#### Backend - stakepoold
-
-Build stakepoold and copy it to each voting wallet node.
-
-```bash
-$ cd {{YOUR_GO_MODULE_PATH}}/src/github.com/decred/dcrstakepool/backend/stakepoold
-$ go build
-```
 
 ## Updating
 
-To update an existing source tree, pull the latest changes and install the
-matching dependencies:
+Please defer to the 1.2.0 [release notes](docs/release-note-1.2.0.md/#recommended-upgrade-path).
 
-```bash
-$ cd $GOPATH/src/github.com/decred/dcrstakepool
-$ git pull
-$ go build . ./backend/stakepool
-```
 
 ## Setup
 
@@ -116,10 +81,12 @@ These instructions assume you are familiar with dcrd/dcrwallet.
 
 - Run dcrd instances and let them fully sync.
 
+
 ### Voting service fees/cold wallet
 
 - Setup a new wallet for receiving payment for voting service fees.  **This should
   be completely separate from the voting service infrastructure.**
+- From your local machine...
 
 ```bash
 $ dcrwallet --create
@@ -130,8 +97,8 @@ $ dcrwallet
   configure dcrwallet and dcrstakepool.
 
 ```bash
-$ dcrctl --wallet createnewaccount teststakepoolfees
-$ dcrctl --wallet getmasterpubkey teststakepoolfees
+$ dcrctl --wallet createnewaccount stakepoolfees
+$ dcrctl --wallet getmasterpubkey stakepoolfees
 ```
 
 - Mark 10000 addresses in use for the account so the wallet will recognize
@@ -146,15 +113,23 @@ $ dcrctl --wallet accountsyncaddressindex teststakepoolfees 0 10000
 
 - Create the wallets.  All wallets should have the same seed.  **Backup the seed
   for disaster recovery!**
+- Log into wallet servers separately and create wallets one at a time using the
+  same seed.
 
 ```bash
+$ ssh walletserver1
 $ dcrwallet --create
 ```
 
 - Start a properly configured dcrwallet and unlock it. See
   sample-dcrwallet.conf.
+- From your local machine...
 
 ```bash
+$ cp sample-dcrwallet.conf dcrwallet.conf
+$ vim dcrwallet.conf
+$ scp dcrwallet.conf walletserver1:~/.dcrwallet/
+$ ssh walletserver1
 $ dcrwallet
 ```
 
@@ -162,16 +137,19 @@ $ dcrwallet
   votingwalletextpub in dcrstakepool.conf.
 
 ```bash
+$ ssh walletserver1
 $ dcrctl --wallet getmasterpubkey default
 ```
 
 ### MySQL
 
+- Log into your frontend
 - Install, configure, and start MySQL
 - Add stakepool user and create the stakepool database
 
 ```bash
-$ mysql -uroot -ppassword
+$ ssh frontendserver
+$ mysql -uroot -p
 
 MySQL> CREATE USER 'stakepool'@'localhost' IDENTIFIED BY 'password';
 MySQL> GRANT ALL PRIVILEGES ON *.* TO 'stakepool'@'localhost' WITH GRANT OPTION;
@@ -185,15 +163,36 @@ MySQL> CREATE DATABASE stakepool;
   configuration. To prepare pre-zipped files to save the reverse proxy the
   trouble of compressing data on-the-fly, see the zipassets.sh script.
 
+
 ### stakepoold setup
 
-- Adapt sample-stakepoold.conf and run stakepoold.
+- Copy sample config and edit appropriately.
+- From your local machine...
+
+```bash
+$ mkdir .stakepoold
+$ cp sample-stakepoold.conf .stakepoold/stakepoold.conf
+$ vim .stakepoold/stakepoold.conf
+$ scp -r .stakepoold walletserver1:~/
+$ scp -r .stakepoold walletserver2:~/
+```
+
+- Build and copy the stakepoold executable to each wallet server.
+- From your local machine...
+
+```bash
+$ cd backend/stakepoold/
+$ go build
+$ scp stakepoold walletserver1:~/
+$ scp stakepoold walletserver2:~/
+```
 
 ### dcrstakepool setup
 
 - Create the .dcrstakepool directory and copy dcrwallet certs to it:
 
 ```bash
+$ ssh frontendserver
 $ mkdir ~/.dcrstakepool
 $ cd ~/.dcrstakepool
 $ scp walletserver1:~/.dcrwallet/rpc.cert wallet1.cert
@@ -203,22 +202,41 @@ $ scp walletserver2:~/.stakepoold/rpc.cert stakepoold2.cert
 ```
 
 - Copy sample config and edit appropriately.
+- From your local machine...
 
 ```bash
-$ cp -p sample-dcrstakepool.conf dcrstakepool.conf
+$ cp sample-dcrstakepool.conf dcrstakepool.conf
+$ vim dcrstakepool.conf
+$ scp dcrstakepool.conf frontendserver:~/.dcrstakepool/
+```
+- Build and copy the entire dcrstakepool folder to your frontend.
+- From your local machine...
+
+```bash
+$ go build
+$ scp -r ../dcrstakepool frontendserver:~/
 ```
 
 ## Running
 
-The easiest way to run the stakepool code is to run it directly from the root of
-the source tree:
+### stakepoold
+
+Log into all servers and run stakepoold one at a time.
 
 ```bash
-$ cd $GOPATH/src/github.com/decred/dcrstakepool
-$ go build
-$ ./dcrstakepool
+$ ssh walletserver1
+$ ./stakepoold
 ```
 
+### dcrstakepool
+
+Log into your frontend and run dcrstakepool
+
+```bash
+$ ssh frontendserver
+$ cd dcrstakepool
+$ ./dcrstakepool
+```
 To run `dcrstakepool` from another folder, such as `/opt/dcrstakepool`, it is
 necessary to copy (1) the `dcrstakepool` executable generated by `go build`, (2)
 the `public` folder, and (3) the `views` folder into the other folder.
