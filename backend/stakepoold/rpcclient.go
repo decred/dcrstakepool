@@ -13,8 +13,8 @@ import (
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
 
-var requiredChainServerAPI = semver{major: 6, minor: 0, patch: 0}
-var requiredWalletAPI = semver{major: 6, minor: 0, patch: 1}
+var requiredChainServerAPI = semver{major: 6, minor: 1, patch: 1}
+var requiredWalletAPI = semver{major: 6, minor: 2, patch: 0}
 
 func connectNodeRPC(spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, semver, error) {
 	var nodeVer semver
