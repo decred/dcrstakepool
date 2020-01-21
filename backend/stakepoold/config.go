@@ -39,6 +39,7 @@ var (
 	defaultDBName = "stakepool"
 	defaultDBPort = "3306"
 	defaultDBUser = "stakepool"
+	defaultDBTLS  = "false"
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -67,6 +68,7 @@ type config struct {
 	DBPassword       string   `long:"dbpassword" description:"Password for database connection"`
 	DBPort           string   `long:"dbport" description:"Port for database connection"`
 	DBName           string   `long:"dbname" description:"Name of database"`
+	DBTLS            string   `long:"dbtls" description:"Use encryption when connecting to database"`
 	DcrdHost         string   `long:"dcrdhost" description:"Hostname/IP for dcrd server"`
 	DcrdUser         string   `long:"dcrduser" description:"Username for dcrd server"`
 	DcrdPassword     string   `long:"dcrdpassword" description:"Password for dcrd server"`
@@ -260,6 +262,7 @@ func loadConfig() (*config, []string, error) {
 		DBName:     defaultDBName,
 		DBPort:     defaultDBPort,
 		DBUser:     defaultDBUser,
+		DBTLS:      defaultDBTLS,
 		LogDir:     defaultLogDir,
 		PoolFees:   defaultPoolFees,
 		RPCKey:     defaultRPCKeyFile,
