@@ -22,7 +22,6 @@ import (
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 
-	"github.com/zenazn/goji/graceful"
 	"github.com/zenazn/goji/web"
 	"github.com/zenazn/goji/web/middleware"
 )
@@ -99,7 +98,6 @@ func runMain(ctx context.Context) error {
 		sender, err = email.NewSender(cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
 			cfg.SMTPFrom, cfg.UseSMTPS, cfg.SystemCerts, cfg.SMTPSkipVerify)
 		if err != nil {
-			application.Close()
 			return fmt.Errorf("Failed to initialize the smtp server: %v", err)
 		}
 	}
@@ -130,21 +128,18 @@ func runMain(ctx context.Context) error {
 	controller, err := controllers.NewMainController(&controllerCfg)
 
 	if err != nil {
-		application.Close()
 		return fmt.Errorf("Failed to initialize the main controller: %v", err)
 	}
 
 	// Check that dcrstakepool config and all stakepoold configs
 	// have the same value set for `coldwalletextpub`.
 	if err = controller.Cfg.StakepooldServers.CrossCheckColdWalletExtPubs(cfg.ColdWalletExtPub); err != nil {
-		application.Close()
 		return err
 	}
 
 	// reset votebits if Vote Version changed or stored VoteBits are invalid
 	_, err = controller.CheckAndResetUserVoteBits(application.DbMap)
 	if err != nil {
-		application.Close()
 		return fmt.Errorf("failed to check and reset user vote bits: %v", err)
 	}
 
@@ -172,7 +167,6 @@ func runMain(ctx context.Context) error {
 
 	err = controller.RPCSync(application.DbMap)
 	if err != nil {
-		application.Close()
 		return fmt.Errorf("Failed to sync the wallets: %v",
 			err)
 	}
@@ -280,10 +274,6 @@ func runMain(ctx context.Context) error {
 	parent.Handle("/captchas/*", static)
 	parent.Handle("/*", app)
 
-	graceful.PostHook(func() {
-		application.Close()
-	})
-
 	app.Compile()
 
 	server := &http.Server{Handler: parent}
@@ -326,7 +316,8 @@ func main() {
 	ctx := signal.WithShutdownCancel(context.Background())
 	go signal.ShutdownListener()
 	if err := runMain(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		log.Error(err)
 		os.Exit(1)
 	}
+	log.Info("server off")
 }
