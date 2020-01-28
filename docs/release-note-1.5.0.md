@@ -50,6 +50,7 @@ No new config items have been added in 1.5.0.
    1. Install latest dcrd binary and start
    1. Install latest dcrwallet binary and start
    1. Make required changes to stakepoold.conf (detailed [above](#config-changes))
+   1. Ensure both dcrd and dcrwallet are synced with the network
    1. Install latest stakepoold binary and start
    1. Check log files for warnings or errors
 1. Make required changes to dcrstakepool.conf (detailed [above](#config-changes))

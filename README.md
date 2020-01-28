@@ -64,7 +64,7 @@ in the repo's root directory.
 
 ## Updating
 
-Please defer to the 1.2.0 [release notes](docs/release-note-1.2.0.md/#recommended-upgrade-path).
+Please defer to the 1.5.0 [release notes](docs/release-note-1.5.0.md/#recommended-upgrade-path).
 
 
 ## Setup
