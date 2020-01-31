@@ -56,9 +56,6 @@ type config struct {
 	LogDir           string   `long:"logdir" description:"Directory to log output."`
 	TestNet          bool     `long:"testnet" description:"Use the test network"`
 	SimNet           bool     `long:"simnet" description:"Use the simulation test network"`
-	Profile          string   `long:"profile" description:"Deprecated: This config has no effect"`
-	CPUProfile       string   `long:"cpuprofile" description:"Deprecated: This config has no effect"`
-	MemProfile       string   `long:"memprofile" description:"Deprecated: This config has no effect"`
 	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
 	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the voting service with their tickets"`
@@ -575,22 +572,6 @@ func loadConfig() (*config, []string, error) {
 		}
 	} else {
 		cfg.RPCListeners = normalizeAddresses(cfg.RPCListeners, activeNetParams.RPCServerPort)
-	}
-
-	// Warn about deprecated config items if they have been set
-	if cfg.Profile != "" {
-		str := "%s: Config Profile is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if cfg.CPUProfile != "" {
-		str := "%s: Config CPUProfile is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if cfg.MemProfile != "" {
-		str := "%s: Config MemProfile is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
 	}
 
 	// Warn about missing config file only after all other configuration is

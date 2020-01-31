@@ -70,9 +70,6 @@ type config struct {
 	Listen             string  `long:"listen" description:"Listen for connections on the specified interface/port (default all interfaces port: 9113, testnet: 19113)"`
 	TestNet            bool    `long:"testnet" description:"Use the test network"`
 	SimNet             bool    `long:"simnet" description:"Use the simulation test network"`
-	Profile            string  `long:"profile" description:"Deprecated: This config has no effect"`
-	CPUProfile         string  `long:"cpuprofile" description:"Deprecated: This config has no effect"`
-	MemProfile         string  `long:"memprofile" description:"Deprecated: This config has no effect"`
 	DebugLevel         string  `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
 	APISecret          string  `long:"apisecret" description:"Secret string used to encrypt API tokens."`
 	BaseURL            string  `long:"baseurl" description:"BaseURL to use when sending links via email"`
@@ -589,23 +586,6 @@ func loadConfig() (*config, []string, error) {
 		if cfg.SMTPSkipVerify {
 			log.Warnf("SMTPCert has been set so SMTPSkipVerify is being disregarded.")
 		}
-	}
-
-	// Warn about deprecated config items if they have been set
-
-	if cfg.Profile != "" {
-		str := "%s: Config Profile is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if cfg.CPUProfile != "" {
-		str := "%s: Config CPUProfile is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
-	}
-
-	if cfg.MemProfile != "" {
-		str := "%s: Config MemProfile is deprecated and has no effect. Please remove from your config file"
-		log.Warnf(str, funcName)
 	}
 
 	// Warn about missing config file only after all other configuration is
