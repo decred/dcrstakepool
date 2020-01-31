@@ -97,10 +97,6 @@ func (application *Application) LoadTemplates(templatePath string) error {
 	return err
 }
 
-func (application *Application) Close() {
-	log.Info("Application.Close() called")
-}
-
 func (application *Application) Route(controller interface{}, route string) web.HandlerFunc {
 	return func(c web.C, w http.ResponseWriter, r *http.Request) {
 		c.Env["Content-Type"] = "text/html"
