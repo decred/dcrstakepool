@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -97,16 +96,15 @@ func (application *Application) LoadTemplates(templatePath string) error {
 	return err
 }
 
-func (application *Application) Route(controller interface{}, route string) web.HandlerFunc {
+// route is a type for http endpoints.
+type route func(web.C, *http.Request) (string, int)
+
+func (application *Application) Route(fn route) web.HandlerFunc {
 	return func(c web.C, w http.ResponseWriter, r *http.Request) {
 		c.Env["Content-Type"] = "text/html"
 
-		// TODO: nuke Route and get rid of this reflect usage.
-		methodValue := reflect.ValueOf(controller).MethodByName(route)
-		methodInterface := methodValue.Interface()
-		method := methodInterface.(func(c web.C, r *http.Request) (string, int))
-
-		body, code := method(c, r)
+		// TODO: nuke Route.
+		body, code := fn(c, r)
 
 		// Save the session in c.Env["Session"].
 		if err := saveSession(c, w, r); err != nil {

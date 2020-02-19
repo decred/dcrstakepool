@@ -208,63 +208,63 @@ func runMain(ctx context.Context) error {
 		http.FileServer(http.Dir(cfg.PublicPath))))
 
 	// Home page
-	html.Get("/", application.Route(controller, "Index"))
+	html.Get("/", application.Route(controller.Index))
 
 	// Admin tickets page
-	html.Get("/admintickets", application.Route(controller, "AdminTickets"))
-	html.Post("/admintickets", application.Route(controller, "AdminTicketsPost"))
+	html.Get("/admintickets", application.Route(controller.AdminTickets))
+	html.Post("/admintickets", application.Route(controller.AdminTicketsPost))
 	// Admin status page
-	html.Get("/status", application.Route(controller, "AdminStatus"))
+	html.Get("/status", application.Route(controller.AdminStatus))
 
 	// Address form
-	html.Get("/address", application.Route(controller, "Address"))
-	html.Post("/address", application.Route(controller, "AddressPost"))
+	html.Get("/address", application.Route(controller.Address))
+	html.Post("/address", application.Route(controller.AddressPost))
 
 	// Email change/update confirmation
-	html.Get("/emailupdate", application.Route(controller, "EmailUpdate"))
+	html.Get("/emailupdate", application.Route(controller.EmailUpdate))
 
 	// Email verification
-	html.Get("/emailverify", application.Route(controller, "EmailVerify"))
+	html.Get("/emailverify", application.Route(controller.EmailVerify))
 
 	// Error page
-	html.Get("/error", application.Route(controller, "Error"))
+	html.Get("/error", application.Route(controller.Error))
 
 	// Password Reset routes
-	html.Get("/passwordreset", application.Route(controller, "PasswordReset"))
-	html.Post("/passwordreset", application.Route(controller, "PasswordResetPost"))
+	html.Get("/passwordreset", application.Route(controller.PasswordReset))
+	html.Post("/passwordreset", application.Route(controller.PasswordResetPost))
 
 	// Password Update routes
-	html.Get("/passwordupdate", application.Route(controller, "PasswordUpdate"))
-	html.Post("/passwordupdate", application.Route(controller, "PasswordUpdatePost"))
+	html.Get("/passwordupdate", application.Route(controller.PasswordUpdate))
+	html.Post("/passwordupdate", application.Route(controller.PasswordUpdatePost))
 
 	// Settings routes
-	html.Get("/settings", application.Route(controller, "Settings"))
-	html.Post("/settings", application.Route(controller, "SettingsPost"))
+	html.Get("/settings", application.Route(controller.Settings))
+	html.Post("/settings", application.Route(controller.SettingsPost))
 
 	// Login routes
-	html.Get("/login", application.Route(controller, "Login"))
-	html.Post("/login", application.Route(controller, "LoginPost"))
+	html.Get("/login", application.Route(controller.Login))
+	html.Post("/login", application.Route(controller.LoginPost))
 
 	// Register routes
-	html.Get("/register", application.Route(controller, "Register"))
-	html.Post("/register", application.Route(controller, "RegisterPost"))
+	html.Get("/register", application.Route(controller.Register))
+	html.Post("/register", application.Route(controller.RegisterPost))
 
 	// Captcha
 	static.Get("/captchas/*", controller.CaptchaServe)
 	html.Post("/verifyhuman", controller.CaptchaVerify)
 
 	// Stats
-	html.Get("/stats", application.Route(controller, "Stats"))
+	html.Get("/stats", application.Route(controller.Stats))
 
 	// Tickets
-	html.Get("/tickets", application.Route(controller, "Tickets"))
+	html.Get("/tickets", application.Route(controller.Tickets))
 
 	// Voting routes
-	html.Get("/voting", application.Route(controller, "Voting"))
-	html.Post("/voting", application.Route(controller, "VotingPost"))
+	html.Get("/voting", application.Route(controller.Voting))
+	html.Post("/voting", application.Route(controller.VotingPost))
 
 	// KTHXBYE
-	html.Get("/logout", application.Route(controller, "Logout"))
+	html.Get("/logout", application.Route(controller.Logout))
 
 	app.Handle("/api/*", api)
 	app.Handle("/*", html)
