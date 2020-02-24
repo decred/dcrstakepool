@@ -66,7 +66,7 @@ type Config struct {
 	Designation          string
 	APIVersionsSupported []int
 	FeeXpub              *hdkeychain.ExtendedKey
-	StakepooldServers    *stakepooldclient.StakepooldManager
+	StakepooldServers    stakepooldclient.Manager
 	EmailSender          email.Sender
 	VotingXpub           *hdkeychain.ExtendedKey
 

@@ -86,9 +86,7 @@ func runMain(ctx context.Context) error {
 	// Supported API versions are advertised in the API stats result
 	APIVersionsSupported := []int{1, 2}
 
-	var stakepooldConnMan *stakepooldclient.StakepooldManager
-
-	stakepooldConnMan, err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts)
+	stakepooldConnMan, err := stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts)
 	if err != nil {
 		return fmt.Errorf("failed to connect to stakepoold host: %v", err)
 	}
