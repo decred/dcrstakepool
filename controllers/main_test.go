@@ -2,6 +2,7 @@ package controllers
 
 import (
 	mrand "math/rand"
+	"net/http"
 	"reflect"
 	"sort"
 	"testing"
@@ -138,5 +139,60 @@ func benchmarkSortBySpentByHeight(ticketCount int, b *testing.B) {
 
 		// Sort with BySpentByHeight, the test subject
 		sort.Sort(BySpentByHeight(ticketInfoVoted2))
+	}
+}
+
+func TestGetClientIP(t *testing.T) {
+	tests := []struct {
+		name, realIPHeader, realAddr, remoteAddr, wantAddr string
+	}{{
+		name:         "has realIPHeader default name",
+		realIPHeader: "X-Real-IP",
+		realAddr:     "240.111.3.145:3000",
+		wantAddr:     "240.111.3.145",
+	}, {
+		name:         "has realIPHeader no port",
+		realIPHeader: "X-Real-IP",
+		realAddr:     "240.111.3.145",
+		wantAddr:     "240.111.3.145",
+	}, {
+		name:         "has realIPHeader custom name",
+		realIPHeader: "the real ip",
+		realAddr:     "240.111.3.145:5454",
+		wantAddr:     "240.111.3.145",
+	}, {
+		name:         "has realIPHeader host name",
+		realIPHeader: "X-Real-IP",
+		realAddr:     "hosting service",
+		wantAddr:     "hosting service",
+	}, {
+		name:       "no realIPHeader has remoteAddr",
+		remoteAddr: "240.111.3.145:80",
+		wantAddr:   "240.111.3.145",
+	}, {
+		name:       "no realIPHeader has remoteAddr no port",
+		remoteAddr: "240.111.3.145",
+		wantAddr:   "240.111.3.145",
+	}, {
+		name:       "no realIPHeader has remoteAddr host name",
+		remoteAddr: "hosting service",
+		wantAddr:   "hosting service",
+	}, {
+		name:     "no realIPHeader no remoteAddr",
+		wantAddr: "",
+	}}
+
+	r, _ := http.NewRequest("GET", "", nil)
+	for _, test := range tests {
+		requestHeader := make(http.Header)
+		if test.realIPHeader != "" {
+			requestHeader.Add(test.realIPHeader, test.realAddr)
+		}
+		r.RemoteAddr = test.remoteAddr
+		r.Header = requestHeader
+		addr := getClientIP(r, test.realIPHeader)
+		if addr != test.wantAddr {
+			t.Fatalf("expected \"%v\" for \"%v\" but got \"%v\"", test.wantAddr, test.name, addr)
+		}
 	}
 }
