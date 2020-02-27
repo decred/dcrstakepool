@@ -10,6 +10,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +26,10 @@ import (
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/v3/txrules"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -470,6 +476,95 @@ func (spd *Stakepoold) UpdateUserDataFromMySQL() error {
 	}
 	spd.UpdateUserData(newUserVotingConfig)
 	return nil
+}
+
+// Enable early detection of outages by periodically scraping dcrd and
+// dcrwallet, and exporting the results to a monitoring system.
+func (spd *Stakepoold) ExportPrometheusMetrics(ctx context.Context, wg *sync.WaitGroup, wait time.Duration, addr string) {
+	promConnectionCount := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "dcr_peer_connections",
+		Help: "Returns a count of connections from peers",
+	})
+	promTicketsLive := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "dcr_tickets_live",
+		Help: "Returns a count of live tickets",
+	})
+	promTicketsMissed := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "dcr_tickets_missed",
+		Help: "Returns a count of missed tickets",
+	})
+	promBlockHeight := promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "dcr_block_height",
+		Help: "Returns the latest block height",
+	})
+
+	// Initialize metrics on startup from dcrd and dcrwallet
+	dcrdConnectionCount, err := spd.NodeConnection.GetConnectionCount()
+	if err == nil {
+		promConnectionCount.Set(float64(dcrdConnectionCount))
+	}
+	stakeInfo, err := spd.GetStakeInfo()
+	if err == nil {
+		promBlockHeight.Set(float64(stakeInfo.BlockHeight))
+		promTicketsLive.Set(float64(stakeInfo.Live))
+		promTicketsMissed.Set(float64(stakeInfo.Missed))
+	}
+
+	// Periodically update metrics in a thread
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(wait):
+				dcrdConnectionCount, err := spd.NodeConnection.GetConnectionCount()
+				if err != nil {
+					log.Debugf("ExportPrometheusMetrics: unable to retreive metrics: %v", err)
+					continue
+				}
+				promConnectionCount.Set(float64(dcrdConnectionCount))
+				stakeInfo, err := spd.GetStakeInfo()
+				if err != nil {
+					log.Debugf("ExportPrometheusMetrics: unable to retreive metrics: %v", err)
+					continue
+				}
+				promBlockHeight.Set(float64(stakeInfo.BlockHeight))
+				promTicketsLive.Set(float64(stakeInfo.Live))
+				promTicketsMissed.Set(float64(stakeInfo.Missed))
+			}
+		}
+	}()
+
+	// Set up http server to provide metrics to a scraping Prometheus server.
+	srv := &http.Server{}
+	http.Handle("/metrics", promhttp.Handler())
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Errorf("Error parsing PrometheusListen: %s", err.Error())
+		return
+	}
+
+	// Cleanly shutdown http server on interrupt signal.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// Wait for shutdown.
+		<-ctx.Done()
+
+		// We received an interrupt signal, shut down.
+		if err := srv.Shutdown(context.Background()); err != nil {
+			// Error from closing listeners, or context timeout:
+			log.Errorf("HTTP server Shutdown: %v", err)
+		}
+	}()
+
+	// Start the http server.
+	log.Infof("Exporting metrics on %v", listener.Addr())
+	if err = srv.Serve(listener); err != http.ErrServerClosed {
+		log.Errorf("Error exporting metrics: %s", err.Error())
+	}
 }
 
 // vote Generates a vote and send it off to the network.  This is a go routine!

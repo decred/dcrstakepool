@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/decred/dcrd/dcrutil/v2"
 	"github.com/decred/dcrstakepool/internal/version"
@@ -39,6 +40,9 @@ var (
 	defaultDBName = "stakepool"
 	defaultDBPort = "3306"
 	defaultDBUser = "stakepool"
+
+	defaultPrometheusWait   = time.Minute
+	defaultPrometheusListen = ":9101"
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -49,33 +53,36 @@ var runServiceCommand func(string) error
 //
 // See loadConfig for details on the configuration load process.
 type config struct {
-	HomeDir          string   `short:"A" long:"appdata" description:"Path to application home directory"`
-	ShowVersion      bool     `short:"V" long:"version" description:"Display version information and exit"`
-	ConfigFile       string   `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir          string   `short:"b" long:"datadir" description:"Directory to store data"`
-	LogDir           string   `long:"logdir" description:"Directory to log output."`
-	TestNet          bool     `long:"testnet" description:"Use the test network"`
-	SimNet           bool     `long:"simnet" description:"Use the simulation test network"`
-	DebugLevel       string   `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
-	ColdWalletExtPub string   `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
-	PoolFees         float64  `long:"poolfees" description:"The per-ticket fees the user must send to the voting service with their tickets"`
-	DBHost           string   `long:"dbhost" description:"Hostname for database connection"`
-	DBUser           string   `long:"dbuser" description:"Username for database connection"`
-	DBPassword       string   `long:"dbpassword" description:"Password for database connection"`
-	DBPort           string   `long:"dbport" description:"Port for database connection"`
-	DBName           string   `long:"dbname" description:"Name of database"`
-	DcrdHost         string   `long:"dcrdhost" description:"Hostname/IP for dcrd server"`
-	DcrdUser         string   `long:"dcrduser" description:"Username for dcrd server"`
-	DcrdPassword     string   `long:"dcrdpassword" description:"Password for dcrd server"`
-	DcrdCert         string   `long:"dcrdcert" description:"Certificate path for dcrd server"`
-	WalletHost       string   `long:"wallethost" description:"Hostname for wallet server"`
-	WalletUser       string   `long:"walletuser" description:"Username for wallet server"`
-	WalletPassword   string   `long:"walletpassword" description:"Password for wallet server"`
-	WalletCert       string   `long:"walletcert" description:"Certificate path for wallet server"`
-	NoRPCListen      bool     `long:"norpclisten" description:"Do not start a gRPC server. User voting preferences update on a ticker"`
-	RPCListeners     []string `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 9113, testnet: 19113)"`
-	RPCCert          string   `long:"rpccert" description:"File containing the certificate file"`
-	RPCKey           string   `long:"rpckey" description:"File containing the certificate key"`
+	HomeDir          string        `short:"A" long:"appdata" description:"Path to application home directory"`
+	ShowVersion      bool          `short:"V" long:"version" description:"Display version information and exit"`
+	ConfigFile       string        `short:"C" long:"configfile" description:"Path to configuration file"`
+	DataDir          string        `short:"b" long:"datadir" description:"Directory to store data"`
+	LogDir           string        `long:"logdir" description:"Directory to log output."`
+	TestNet          bool          `long:"testnet" description:"Use the test network"`
+	SimNet           bool          `long:"simnet" description:"Use the simulation test network"`
+	DebugLevel       string        `short:"d" long:"debuglevel" description:"Logging level for all subsystems {trace, debug, info, warn, error, critical} -- You may also specify <subsystem>=<level>,<subsystem2>=<level>,... to set the log level for individual subsystems -- Use show to list available subsystems"`
+	ColdWalletExtPub string        `long:"coldwalletextpub" description:"The extended public key for addresses to which voting service user fees are sent."`
+	PoolFees         float64       `long:"poolfees" description:"The per-ticket fees the user must send to the voting service with their tickets"`
+	DBHost           string        `long:"dbhost" description:"Hostname for database connection"`
+	DBUser           string        `long:"dbuser" description:"Username for database connection"`
+	DBPassword       string        `long:"dbpassword" description:"Password for database connection"`
+	DBPort           string        `long:"dbport" description:"Port for database connection"`
+	DBName           string        `long:"dbname" description:"Name of database"`
+	DcrdHost         string        `long:"dcrdhost" description:"Hostname/IP for dcrd server"`
+	DcrdUser         string        `long:"dcrduser" description:"Username for dcrd server"`
+	DcrdPassword     string        `long:"dcrdpassword" description:"Password for dcrd server"`
+	DcrdCert         string        `long:"dcrdcert" description:"Certificate path for dcrd server"`
+	WalletHost       string        `long:"wallethost" description:"Hostname for wallet server"`
+	WalletUser       string        `long:"walletuser" description:"Username for wallet server"`
+	WalletPassword   string        `long:"walletpassword" description:"Password for wallet server"`
+	WalletCert       string        `long:"walletcert" description:"Certificate path for wallet server"`
+	NoRPCListen      bool          `long:"norpclisten" description:"Do not start a gRPC server. User voting preferences update on a ticker"`
+	RPCListeners     []string      `long:"rpclisten" description:"Add an interface/port to listen for RPC connections (default port: 9113, testnet: 19113)"`
+	RPCCert          string        `long:"rpccert" description:"File containing the certificate file"`
+	RPCKey           string        `long:"rpckey" description:"File containing the certificate key"`
+	Prometheus       bool          `long:"prometheus" description:"Export metrics for external monitoring. Disabled by default."`
+	PrometheusWait   time.Duration `long:"prometheuswait" description:"How long to wait between metric updates. Valid time units are {s, m, h}."`
+	PrometheusListen string        `long:"prometheuslisten" description:"Address/port to listen for Promethues scrapes. (default port: 9101)"`
 }
 
 // serviceOptions defines the configuration options for the daemon as a service
@@ -261,6 +268,9 @@ func loadConfig() (*config, []string, error) {
 		PoolFees:   defaultPoolFees,
 		RPCKey:     defaultRPCKeyFile,
 		RPCCert:    defaultRPCCertFile,
+
+		PrometheusWait:   defaultPrometheusWait,
+		PrometheusListen: defaultPrometheusListen,
 	}
 
 	// Service options which are only added on Windows.

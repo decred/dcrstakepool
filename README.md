@@ -295,11 +295,16 @@ running with `txindex=1`):
 dcrctl --wallet stakepooluserinfo "MultiSigAddress" | grep -Pzo '(?<="invalid": \[)[^\]]*' | tr -d , | xargs -Itickethash dcrctl --wallet getrawtransaction tickethash | xargs -Itickethex dcrctl --wallet addticket "tickethex"
 ```
 
-## Backups, monitoring, security considerations
+## Backups, security considerations
 
 - MySQL should be backed up often and regularly (probably at least hourly).
   Backups should be transferred off-site.  If using binary backups, do a test
   restore. For .sql files, verify visually.
+
+- Wallets should never be used for anything else (they should always have a
+  balance of 0).
+
+## Monitoring
 
 - A monitoring system with alerting should be pointed at dcrstakepool and
   tested/verified to be operating properly.  There is a hidden /status page
@@ -307,9 +312,7 @@ dcrctl --wallet stakepooluserinfo "MultiSigAddress" | grep -Pzo '(?<="invalid": 
   supports it, add additional points of verification such as: checking that the
   /stats page loads and has expected information in it, create a test account
   and setup automated login testing, etc.
-
-- Wallets should never be used for anything else (they should always have a
-  balance of 0).
+- [docs/prometheus-quickstart.md](docs/prometheus-quickstart.md) and [docs/prometheus-examples.md](docs/prometheus-examples.md) describe how to roll your own monitoring system that can detect and notify you about problems.
 
 ## Disaster Recovery
 

@@ -1,0 +1,29 @@
+# https://prometheus.io/docs/alerting/configuration/
+global:
+  resolve_timeout: 2m 
+
+route:
+  group_by: [group]
+  group_wait: 90s
+  group_interval: 1m
+  repeat_interval: 6h 
+  receiver: pushover-notify
+  match:
+    group: example
+    receiver: pushover-escalate
+
+receivers:
+  - name: pushover-notify
+    pushover_configs:
+      - user_key: <user_key>
+        token: <token>
+        sound: none
+        # pushover will vibrate notify once
+        priority: '{{ if eq .Status "firing" }}1{{ else }}0{{ end }}'
+  - name: pushover-escalate
+    pushover_configs:
+      - user_key: <user_key>
+        token: <token>
+        sound: none
+        # pushover will notify periodically until acknowleded
+        priority: '{{ if eq .Status "firing" }}2{{ else }}0{{ end }}'

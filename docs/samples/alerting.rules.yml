@@ -1,0 +1,28 @@
+groups:
+  - name: observer
+    rules:
+
+      - alert: ProbeFailing
+        expr: probe_success{job="health-checks"} == 0
+        for: 15m
+        annotations:
+          summary: The dcrstakepool health check failed, my require a restart
+
+      - alert: InstanceDown
+        expr: up{job="stakepoold"} == 0
+        for: 10m
+        annotations:
+          summary: Node is unreachable
+
+      - alert: BlockHeightStalled
+        expr: dcr_block_height{job="stakepoold"} < on() group_left max(dcr_block_height{job="stakepoold"})
+        for: 2h
+        annotations:
+          summary: Node is behind on best block height, may require a restart
+
+      - alert: LiveTicketParity
+        expr: dcr_tickets_live{job="stakepoold"} > on() group_left min(dcr_tickets_live{job="stakepoold"})
+        for: 2h
+        annotations:
+          summary: Live ticket count differs, wallet may require a rescan
+

@@ -1,0 +1,17 @@
+[Unit]
+Description=Prometheus blackbox exporter
+After=network.target
+
+[Service]
+User=prometheus
+Group=prometheus
+ExecStartPre=/opt/bin/blackbox_exporter \
+    --config.file=/opt/blackbox_exporter/blackbox.yml \
+	--config.check
+ExecStart=/opt/bin/blackbox_exporter \
+    --config.file=/opt/blackbox_exporter/blackbox.yml
+ExecReload=/bin/kill -HUP $MAINPID
+
+
+[Install]
+WantedBy=multi-user.target
