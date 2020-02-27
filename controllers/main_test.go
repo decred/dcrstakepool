@@ -196,3 +196,99 @@ func TestGetClientIP(t *testing.T) {
 		}
 	}
 }
+
+const (
+	voteIDFixLNSeqLocks     = "fixlnseqlocks"
+	voteIDHeaderCommitments = "headercommitments"
+)
+
+var tDeployments = map[uint32][]chaincfg.ConsensusDeployment{
+	7: {{
+		Vote: chaincfg.Vote{
+			Id:          voteIDFixLNSeqLocks,
+			Description: "Modify sequence lock handling as defined in DCP0004",
+			Mask:        0x0006, // Bits 1 and 2
+			Choices: []chaincfg.Choice{{
+				Id:          "abstain",
+				Description: "abstain voting for change",
+				Bits:        0x0000,
+				IsAbstain:   true,
+				IsNo:        false,
+			}, {
+				Id:          "no",
+				Description: "keep the existing consensus rules",
+				Bits:        0x0002, // Bit 1
+				IsAbstain:   false,
+				IsNo:        true,
+			}, {
+				Id:          "yes",
+				Description: "change to the new consensus rules",
+				Bits:        0x0004, // Bit 2
+				IsAbstain:   false,
+				IsNo:        false,
+			}},
+		},
+		StartTime:  1548633600, // Jan 28th, 2019
+		ExpireTime: 1580169600, // Jan 28th, 2020
+	}},
+	8: {{
+		Vote: chaincfg.Vote{
+			Id:          voteIDHeaderCommitments,
+			Description: "Enable header commitments as defined in DCP0005",
+			Mask:        0x0006, // Bits 1 and 2
+			Choices: []chaincfg.Choice{{
+				Id:          "abstain",
+				Description: "abstain voting for change",
+				Bits:        0x0000,
+				IsAbstain:   true,
+				IsNo:        false,
+			}, {
+				Id:          "no",
+				Description: "keep the existing consensus rules",
+				Bits:        0x0002, // Bit 1
+				IsAbstain:   false,
+				IsNo:        true,
+			}, {
+				Id:          "yes",
+				Description: "change to the new consensus rules",
+				Bits:        0x0004, // Bit 2
+				IsAbstain:   false,
+				IsNo:        false,
+			}},
+		},
+		StartTime:  1567641600, // Sep 5th, 2019
+		ExpireTime: 1599264000, // Sep 5th, 2020
+	}},
+}
+
+func TestGetAgendas(t *testing.T) {
+	tests := []struct {
+		name        string
+		voteVersion uint32
+		deployments map[uint32][]chaincfg.ConsensusDeployment
+		want        []chaincfg.ConsensusDeployment
+	}{{
+		name:        "ok",
+		voteVersion: 7,
+		deployments: tDeployments,
+		want:        tDeployments[7],
+	}, {
+		name:        "nonexistant deployment",
+		voteVersion: 2,
+		deployments: tDeployments,
+		want:        nil,
+	}, {
+		name:        "no deployments",
+		voteVersion: 7,
+		want:        nil,
+	}}
+	for _, test := range tests {
+		params := &chaincfg.Params{Deployments: test.deployments}
+		cfg := &Config{NetParams: params}
+		mc := &MainController{Cfg: cfg, voteVersion: test.voteVersion}
+		agendas := mc.getAgendas()
+		if !reflect.DeepEqual(agendas, test.want) {
+			t.Fatalf("expected deployments %v for test %s but got %v", test.want, test.name, agendas)
+		}
+	}
+}
