@@ -8,10 +8,13 @@ import (
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/chaincfg/v2"
 	"github.com/decred/dcrd/dcrutil/v2"
+	dcrdatatypes "github.com/decred/dcrdata/api/types/v4"
+	"github.com/decred/dcrdata/db/dbtypes/v2"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/stakepooldclient"
@@ -205,11 +208,68 @@ func TestGetClientIP(t *testing.T) {
 }
 
 const (
+	voteIDSDiffAlgorithm    = "diffalgorithm"
+	voteIDLNSupport         = "lnsupport"
 	voteIDFixLNSeqLocks     = "fixlnseqlocks"
 	voteIDHeaderCommitments = "headercommitments"
 )
 
 var tDeployments = map[uint32][]chaincfg.ConsensusDeployment{
+	4: {{
+		Vote: chaincfg.Vote{
+			Id:          voteIDSDiffAlgorithm,
+			Description: "Change stake difficulty algorithm as defined in DCP0001",
+			Mask:        0x0006, // Bits 1 and 2
+			Choices: []chaincfg.Choice{{
+				Id:          "abstain",
+				Description: "abstain voting for change",
+				Bits:        0x0000,
+				IsAbstain:   true,
+				IsNo:        false,
+			}, {
+				Id:          "no",
+				Description: "keep the existing algorithm",
+				Bits:        0x0002, // Bit 1
+				IsAbstain:   false,
+				IsNo:        true,
+			}, {
+				Id:          "yes",
+				Description: "change to the new algorithm",
+				Bits:        0x0004, // Bit 2
+				IsAbstain:   false,
+				IsNo:        false,
+			}},
+		},
+		StartTime:  1493164800, // Apr 26th, 2017
+		ExpireTime: 1524700800, // Apr 26th, 2018
+	}, {
+		Vote: chaincfg.Vote{
+			Id:          voteIDLNSupport,
+			Description: "Request developers begin work on Lightning Network (LN) integration",
+			Mask:        0x0018, // Bits 3 and 4
+			Choices: []chaincfg.Choice{{
+				Id:          "abstain",
+				Description: "abstain from voting",
+				Bits:        0x0000,
+				IsAbstain:   true,
+				IsNo:        false,
+			}, {
+				Id:          "no",
+				Description: "no, do not work on integrating LN support",
+				Bits:        0x0008, // Bit 3
+				IsAbstain:   false,
+				IsNo:        true,
+			}, {
+				Id:          "yes",
+				Description: "yes, begin work on integrating LN support",
+				Bits:        0x0010, // Bit 4
+				IsAbstain:   false,
+				IsNo:        false,
+			}},
+		},
+		StartTime:  1493164800, // Apr 26th, 2017
+		ExpireTime: 1508976000, // Oct 26th, 2017
+	}},
 	7: {{
 		Vote: chaincfg.Vote{
 			Id:          voteIDFixLNSeqLocks,
@@ -446,5 +506,91 @@ func TestNewMainController(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error for test \"%s\": %v", test.name, err)
 		}
+	}
+}
+
+func TestAgendas(t *testing.T) {
+	tInfos := func(_ string) ([]*dcrdatatypes.AgendasInfo, error) {
+		return []*dcrdatatypes.AgendasInfo{{
+			Name:      voteIDSDiffAlgorithm,
+			MileStone: &dbtypes.MileStone{Status: dbtypes.FailedAgendaStatus},
+		}, {
+			Name:      voteIDLNSupport,
+			MileStone: &dbtypes.MileStone{Status: dbtypes.ActivatedAgendaStatus},
+		}}, nil
+	}
+	tAgendas := &[]agenda{{
+		Agenda: tDeployments[4][0],
+		Status: "failed",
+	}, {
+		Agenda: tDeployments[4][1],
+		Status: "finished",
+	}}
+	tests := []struct {
+		name           string
+		infos          func(string) ([]*dcrdatatypes.AgendasInfo, error)
+		agendasInitial *[]agenda
+		timerInitial   time.Time
+		deployments    map[uint32][]chaincfg.ConsensusDeployment
+		want           *[]agenda
+	}{{
+		name:        "no error or initial agendas",
+		infos:       tInfos,
+		deployments: tDeployments,
+		want:        tAgendas,
+	}, {
+		name: "no error with expired initial agendas",
+		agendasInitial: &[]agenda{{
+			Agenda: tDeployments[7][0],
+			Status: "everyone voted no",
+		}},
+		infos:       tInfos,
+		deployments: tDeployments,
+		want:        tAgendas,
+	}, {
+		name:           "infos error with expired initial agendas",
+		agendasInitial: tAgendas,
+		infos: func(_ string) ([]*dcrdatatypes.AgendasInfo, error) {
+			return nil, errors.New("error")
+		},
+		want: tAgendas,
+	}, {
+		name: "infos error with no initial agendas",
+		infos: func(_ string) ([]*dcrdatatypes.AgendasInfo, error) {
+			return nil, errors.New("error")
+		},
+		deployments: tDeployments,
+		want: &[]agenda{{
+			Agenda: tDeployments[4][0],
+		}, {
+			Agenda: tDeployments[4][1],
+		}},
+	}, {
+		name:           "within agendas life",
+		agendasInitial: tAgendas,
+		timerInitial:   time.Now(),
+		want:           tAgendas,
+	}, {
+		name: "no deployments",
+		want: &[]agenda{},
+	}}
+	for _, test := range tests {
+		agendasCache.Lock()
+		agendasCache.agendas = test.agendasInitial
+		agendasCache.timer = test.timerInitial
+		agendasCache.Unlock()
+		params := &chaincfg.Params{Deployments: test.deployments}
+		cfg := &Config{NetParams: params}
+		mc := &MainController{Cfg: cfg, voteVersion: 4}
+		agendas := mc.agendas(test.infos)
+		if !reflect.DeepEqual(agendas, test.want) {
+			t.Fatalf("expected deployments %v but got %v for test %s", test.want, agendas, test.name)
+		}
+		agendasCache.Lock()
+		// agendas always sets the agendasCache.
+		if !reflect.DeepEqual(agendasCache.agendas, test.want) {
+			t.Fatalf("expected deployments %v but got %v for agendasCache for test %s", test.want, agendasCache.agendas, test.name)
+		}
+		agendasCache.Unlock()
 	}
 }
