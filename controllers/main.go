@@ -185,24 +185,29 @@ func (controller *MainController) getNetworkName() string {
 
 // agendas returns agendas and their statuses. Fetches agenda status from
 // dcrdata.org if past agenda.Timer limit from previous fetch. Caches agenda
-// data for agendasCacheLife. This method is safe for concurrent use.
-func (controller *MainController) agendas() []agenda {
+// data for agendasCacheLife. Takes an infos function that can be used to
+// fetch agenda info. Defaults to dcrDataAgendas. This method is safe for
+// concurrent use.
+func (controller *MainController) agendas(infos func(url string) ([]*dcrdatatypes.AgendasInfo, error)) *[]agenda {
 	agendasCache.Lock()
 	defer agendasCache.Unlock()
 	now := time.Now()
 	if agendasCache.timer.After(now) {
-		return *agendasCache.agendas
+		return agendasCache.agendas
 	}
 	agendasCache.timer = now.Add(agendasCacheLife)
 	url := fmt.Sprintf("%s/api/agendas", controller.DCRDataURL)
-	agendaInfos, err := dcrDataAgendas(url)
+	if infos == nil {
+		infos = dcrDataAgendas
+	}
+	agendaInfos, err := infos(url)
 	if err != nil {
 		// Ensure the next call tries to fetch statuses again.
 		agendasCache.timer = time.Time{}
 		log.Warnf("unable to retrieve data from %v: %v", url, err)
 		// If we have initialized agendas, return that.
 		if agendasCache.agendas != nil {
-			return *agendasCache.agendas
+			return agendasCache.agendas
 		}
 	}
 	agendaArray := controller.getAgendas()
@@ -219,7 +224,7 @@ func (controller *MainController) agendas() []agenda {
 		}
 	}
 	agendasCache.agendas = &agendasNew
-	return *agendasCache.agendas
+	return agendasCache.agendas
 }
 
 // dcrDataAgendas gets json data for current agendas from url. url is either
@@ -1963,7 +1968,7 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 		c.Env["Agenda"+strk+"Selected"] = v
 	}
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
-	c.Env["Agendas"] = controller.agendas()
+	c.Env["Agendas"] = controller.agendas(nil)
 	c.Env["FlashError"] = session.Flashes("votingError")
 	c.Env["FlashSuccess"] = session.Flashes("votingSuccess")
 	c.Env["IsVoting"] = true

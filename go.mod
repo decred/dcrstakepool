@@ -16,6 +16,7 @@ require (
 	github.com/decred/dcrd/rpcclient/v4 v4.0.0
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
+	github.com/decred/dcrdata/db/dbtypes/v2 v2.1.4
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.4.0
 	github.com/decred/dcrwallet/wallet/v3 v3.2.1
 	github.com/decred/slog v1.0.0
