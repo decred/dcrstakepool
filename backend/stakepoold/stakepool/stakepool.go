@@ -34,6 +34,7 @@ var (
 	ticketTypeSpentMissed = "SpentMissed"
 )
 
+// Stakepoold stores everything related to stakepoold.
 type Stakepoold struct {
 	sync.RWMutex
 
@@ -59,12 +60,14 @@ type Stakepoold struct {
 	Testing                bool // enabled only for testing
 }
 
+// NewTicketsForBlock stores tickets from a NewTickets notification.
 type NewTicketsForBlock struct {
 	BlockHash   *chainhash.Hash
 	BlockHeight int64
 	NewTickets  []*chainhash.Hash
 }
 
+// SpentMissedTicketsForBlock stores tickets from a SpentMissedTickets notification.
 type SpentMissedTicketsForBlock struct {
 	BlockHash   *chainhash.Hash
 	BlockHeight int64
@@ -78,6 +81,7 @@ type VotingConfig struct {
 	VoteBitsExtended string
 }
 
+// WinningTicketsForBlock stores tickets from a WinningTickets notification.
 type WinningTicketsForBlock struct {
 	BlockHash      *chainhash.Hash
 	BlockHeight    int64
@@ -232,6 +236,7 @@ func (spd *Stakepoold) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 		strings.ToLower(nt.ticketType), nt.ticket)
 }
 
+// UpdateTicketData moves ignored low fee tickets to live tickets for voting.
 func (spd *Stakepoold) UpdateTicketData(newAddedLowFeeTicketsMSA map[chainhash.Hash]string) {
 	spd.Lock()
 
@@ -266,6 +271,8 @@ func (spd *Stakepoold) UpdateTicketData(newAddedLowFeeTicketsMSA map[chainhash.H
 	}()
 }
 
+// UpdateTicketDataFromMySQL moves ignored low fee tickets to live tickets for
+// voting based on information pulled from the DB.
 func (spd *Stakepoold) UpdateTicketDataFromMySQL() error {
 	start := time.Now()
 	newAddedLowFeeTicketsMSA, err := spd.UserData.MySQLFetchAddedLowFeeTickets()
@@ -324,6 +331,7 @@ func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 	return nil
 }
 
+// AddMissingTicket forcefully adds a ticket to be watched by dcrwallet.
 func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 	log.Infof("AddMissingTicket: Adding ticket with hash %s", ticketHash)
 
@@ -348,6 +356,7 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 	return nil
 }
 
+// ListScripts performs the rpc command listscripts on dcrwallet.
 func (spd *Stakepoold) ListScripts() ([][]byte, error) {
 	scripts, err := spd.WalletConnection.RPCClient().ListScripts()
 	if err != nil {
@@ -381,6 +390,8 @@ func (spd *Stakepoold) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 	return result, nil
 }
 
+// AccountSyncAddressIndex performs the accountsyncaddressindex command on
+// dcrwallet and returns the result.
 func (spd *Stakepoold) AccountSyncAddressIndex(account string, branch uint32, index int) error {
 	err := spd.WalletConnection.RPCClient().AccountSyncAddressIndex(account, branch, index)
 	if err != nil {
@@ -391,6 +402,7 @@ func (spd *Stakepoold) AccountSyncAddressIndex(account string, branch uint32, in
 	return nil
 }
 
+// GetTickets performs the gettickets command on dcrwallet and returns the result.
 func (spd *Stakepoold) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
 	tickets, err := spd.WalletConnection.RPCClient().GetTickets(includeImmature)
 	if err != nil {
@@ -401,6 +413,8 @@ func (spd *Stakepoold) GetTickets(includeImmature bool) ([]*chainhash.Hash, erro
 	return tickets, nil
 }
 
+// StakePoolUserInfo performs the rpc command stakepooluserinfo on dcrwallet and
+// returns the result.
 func (spd *Stakepoold) StakePoolUserInfo(multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
 	decodedMultisig, err := dcrutil.DecodeAddress(multisigAddress, spd.Params)
 	if err != nil {
@@ -417,6 +431,8 @@ func (spd *Stakepoold) StakePoolUserInfo(multisigAddress string) (*wallettypes.S
 	return response, nil
 }
 
+// WalletInfo performs the rpc command walletinfo on dcrwallet and returns the
+// result.
 func (spd *Stakepoold) WalletInfo() (*wallettypes.WalletInfoResult, error) {
 	response, err := spd.WalletConnection.RPCClient().WalletInfo()
 	if err != nil {
@@ -427,6 +443,8 @@ func (spd *Stakepoold) WalletInfo() (*wallettypes.WalletInfoResult, error) {
 	return response, nil
 }
 
+// ValidateAddress performs the validateaddress command on dcrwallet and returns
+// the result.
 func (spd *Stakepoold) ValidateAddress(address string) (*wallettypes.ValidateAddressWalletResult, error) {
 	addr, err := dcrutil.DecodeAddress(address, spd.Params)
 	if err != nil {
@@ -454,12 +472,15 @@ func (spd *Stakepoold) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
 	return response, nil
 }
 
+// UpdateUserData replaces the user voting config in memory with newUserVotingConfig.
 func (spd *Stakepoold) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	spd.Lock()
 	spd.UserVotingConfig = newUserVotingConfig
 	spd.Unlock()
 }
 
+// UpdateUserDataFromMySQL performs UpdateUserData using the voting config
+// pulled from the DB.
 func (spd *Stakepoold) UpdateUserDataFromMySQL() error {
 	start := time.Now()
 	newUserVotingConfig, err := spd.UserData.MySQLFetchUserVotingConfig()
@@ -798,6 +819,8 @@ func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
 	}()
 }
 
+// NewTicketHandler is a go routine that waits for NewTicket notifications from
+// dcrd.
 func (spd *Stakepoold) NewTicketHandler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
@@ -812,6 +835,8 @@ func (spd *Stakepoold) NewTicketHandler(ctx context.Context, wg *sync.WaitGroup)
 	}
 }
 
+// SpentmissedTicketHandler is a go routine that waits for SpentMissedTicket
+// notification from dcrd.
 func (spd *Stakepoold) SpentmissedTicketHandler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
@@ -826,6 +851,8 @@ func (spd *Stakepoold) SpentmissedTicketHandler(ctx context.Context, wg *sync.Wa
 	}
 }
 
+// WinningTicketHandler is a go routine that waits for WinningTicket notifications
+// from dcrd.
 func (spd *Stakepoold) WinningTicketHandler(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()

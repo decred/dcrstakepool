@@ -71,10 +71,10 @@ func runMain(ctx context.Context) error {
 		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
 		cfg.DBUser)
 	if application.DbMap == nil {
-		return fmt.Errorf("Failed to open database.")
+		return fmt.Errorf("failed to open database")
 	}
 	if err = application.LoadTemplates(cfg.TemplatePath); err != nil {
-		return fmt.Errorf("Failed to load templates: %v", err)
+		return fmt.Errorf("failed to load templates: %v", err)
 	}
 
 	// Set up signal handler
@@ -90,7 +90,7 @@ func runMain(ctx context.Context) error {
 
 	stakepooldConnMan, err = stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts)
 	if err != nil {
-		return fmt.Errorf("Failed to connect to stakepoold host: %v", err)
+		return fmt.Errorf("failed to connect to stakepoold host: %v", err)
 	}
 
 	var sender email.Sender
@@ -98,7 +98,7 @@ func runMain(ctx context.Context) error {
 		sender, err = email.NewSender(cfg.SMTPHost, cfg.SMTPUsername, cfg.SMTPPassword,
 			cfg.SMTPFrom, cfg.UseSMTPS, cfg.SystemCerts, cfg.SMTPSkipVerify)
 		if err != nil {
-			return fmt.Errorf("Failed to initialize the smtp server: %v", err)
+			return fmt.Errorf("failed to initialize the smtp server: %v", err)
 		}
 	}
 
@@ -128,7 +128,7 @@ func runMain(ctx context.Context) error {
 	controller, err := controllers.NewMainController(&controllerCfg)
 
 	if err != nil {
-		return fmt.Errorf("Failed to initialize the main controller: %v", err)
+		return fmt.Errorf("failed to initialize the main controller: %v", err)
 	}
 
 	// Check that dcrstakepool config and all stakepoold configs
@@ -167,7 +167,7 @@ func runMain(ctx context.Context) error {
 
 	err = controller.RPCSync(application.DbMap)
 	if err != nil {
-		return fmt.Errorf("Failed to sync the wallets: %v",
+		return fmt.Errorf("failed to sync the wallets: %v",
 			err)
 	}
 

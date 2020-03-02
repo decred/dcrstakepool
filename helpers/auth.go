@@ -6,6 +6,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// EmailChangeComplete checks that token is correct, updates a users email
+// based on their choice, and deletes the EmailChange row from the DB.
 func EmailChangeComplete(dbMap *gorp.DbMap, token models.UserToken) error {
 	var emailChange models.EmailChange
 
@@ -16,12 +18,12 @@ func EmailChangeComplete(dbMap *gorp.DbMap, token models.UserToken) error {
 	}
 
 	_, err = dbMap.Exec("UPDATE Users SET Email = ? WHERE UserId = ?",
-		emailChange.NewEmail, emailChange.UserId)
+		emailChange.NewEmail, emailChange.UserID)
 	if err != nil {
 		return err
 	}
 
-	_, err = dbMap.Exec("DELETE FROM PasswordReset WHERE UserId = ?", emailChange.UserId)
+	_, err = dbMap.Exec("DELETE FROM PasswordReset WHERE UserId = ?", emailChange.UserID)
 	if err != nil {
 		return err
 	}
@@ -30,6 +32,8 @@ func EmailChangeComplete(dbMap *gorp.DbMap, token models.UserToken) error {
 	return err
 }
 
+// EmailChangeTokenExists checks whether the token exists and returns the
+// EmailChange information if found in the DB.
 func EmailChangeTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.EmailChange, error) {
 	var emailChange models.EmailChange
 	err := dbMap.SelectOne(&emailChange,
@@ -41,6 +45,7 @@ func EmailChangeTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.
 	return &emailChange, err
 }
 
+// EmailExists returns User information if email exists for a user in the DB.
 func EmailExists(dbMap *gorp.DbMap, email string) (*models.User, error) {
 	var user models.User
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE Email = ?", email)
@@ -51,6 +56,8 @@ func EmailExists(dbMap *gorp.DbMap, email string) (*models.User, error) {
 	return &user, err
 }
 
+// EmailVerificationTokenExists checks whether the token exists and returns User
+// information if found in the DB.
 func EmailVerificationTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.User, error) {
 	var user models.User
 	err := dbMap.SelectOne(&user,
@@ -62,6 +69,7 @@ func EmailVerificationTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*m
 	return &user, err
 }
 
+// EmailVerificationComplete changes a users EmailVerified value to 1.
 func EmailVerificationComplete(dbMap *gorp.DbMap, token models.UserToken) error {
 	_, err := dbMap.Exec(`UPDATE Users
 		SET EmailToken = '', EmailVerified = 1
@@ -69,11 +77,15 @@ func EmailVerificationComplete(dbMap *gorp.DbMap, token models.UserToken) error 
 	return err
 }
 
+// PasswordResetTokenDelete deletes the PasswordReset row identified by token
+// from the DB.
 func PasswordResetTokenDelete(dbMap *gorp.DbMap, token models.UserToken) error {
 	_, err := dbMap.Exec("DELETE FROM PasswordReset WHERE Token = ?", token.String())
 	return err
 }
 
+// PasswordResetTokenExists checks whether the token exists and returns
+// PasswordReset information if found in the DB.
 func PasswordResetTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*models.PasswordReset, error) {
 	var passwordReset models.PasswordReset
 	err := dbMap.SelectOne(&passwordReset,
@@ -85,7 +97,9 @@ func PasswordResetTokenExists(dbMap *gorp.DbMap, token models.UserToken) (*model
 	return &passwordReset, err
 }
 
-func PasswordValidById(dbMap *gorp.DbMap, id int64, password string) (*models.User, error) {
+// PasswordValidByID checks whether the passed password belongs to the user
+// specified by id. Return the User information if found in the DB.
+func PasswordValidByID(dbMap *gorp.DbMap, id int64, password string) (*models.User, error) {
 	var user models.User
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 	if err != nil {
@@ -99,7 +113,9 @@ func PasswordValidById(dbMap *gorp.DbMap, id int64, password string) (*models.Us
 	return &user, err
 }
 
-func UpdateUserPasswordById(dbMap *gorp.DbMap, id int64, password []byte) (*models.User, error) {
+// UpdateUserPasswordByID sets the user's password specified by id to the
+// password hash. Returns the User information if found in the DB.
+func UpdateUserPasswordByID(dbMap *gorp.DbMap, id int64, password []byte) (*models.User, error) {
 	var user models.User
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
 	if err != nil {
@@ -116,6 +132,8 @@ func UpdateUserPasswordById(dbMap *gorp.DbMap, id int64, password []byte) (*mode
 	return &user, err
 }
 
+// UpdateVoteBitsByID sets the user's vote bits specified by id to voteBits.
+// Returns the User information if found in the DB.
 func UpdateVoteBitsByID(dbMap *gorp.DbMap, id int64, voteBits uint16) (*models.User, error) {
 	var user models.User
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
@@ -133,6 +151,8 @@ func UpdateVoteBitsByID(dbMap *gorp.DbMap, id int64, voteBits uint16) (*models.U
 	return &user, err
 }
 
+// UpdateVoteBitsVersionByID sets the user's vote bits version specified by id
+// to voteVersion. Returns the User information if found in the DB.
 func UpdateVoteBitsVersionByID(dbMap *gorp.DbMap, id int64, voteVersion uint32) (*models.User, error) {
 	var user models.User
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", id)
@@ -150,6 +170,7 @@ func UpdateVoteBitsVersionByID(dbMap *gorp.DbMap, id int64, voteVersion uint32) 
 	return &user, err
 }
 
+// UserIDExists returns User information if found in the DB.
 func UserIDExists(dbMap *gorp.DbMap, userid int64) (*models.User, error) {
 	var user models.User
 	err := dbMap.SelectOne(&user, "SELECT * FROM Users WHERE UserId = ?", userid)

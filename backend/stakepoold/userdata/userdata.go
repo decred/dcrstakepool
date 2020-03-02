@@ -8,6 +8,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 )
 
+// DBConfig stores DB login information.
 type DBConfig struct {
 	DBHost     string
 	DBName     string

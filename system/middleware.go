@@ -37,6 +37,7 @@ func (application *Application) ApplySessions(c *web.C, h http.Handler) http.Han
 	return http.HandlerFunc(fn)
 }
 
+// ApplyDbMap makes sure controllers can have access to the gorp DbMap.
 func (application *Application) ApplyDbMap(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		c.Env["DbMap"] = application.DbMap
@@ -45,6 +46,7 @@ func (application *Application) ApplyDbMap(c *web.C, h http.Handler) http.Handle
 	return http.HandlerFunc(fn)
 }
 
+// ApplyAPI verifies the header's API token and ensures it belongs to a user.
 func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api") {
@@ -65,12 +67,12 @@ func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler 
 				} else if claims, ok := JWTtoken.Claims.(jwt.MapClaims); ok && JWTtoken.Valid {
 					dbMap := c.Env["DbMap"].(*gorp.DbMap)
 
-					user, err := models.GetUserById(dbMap, int64(claims["loggedInAs"].(float64)))
+					user, err := models.GetUserByID(dbMap, int64(claims["loggedInAs"].(float64)))
 					if err != nil {
 						log.Errorf("unable to map apitoken %v to user id %v", apitoken, claims["loggedInAs"])
 					} else {
-						c.Env["APIUserID"] = user.Id
-						log.Infof("mapped apitoken %v to user id %v", apitoken, user.Id)
+						c.Env["APIUserID"] = user.ID
+						log.Infof("mapped apitoken %v to user id %v", apitoken, user.ID)
 					}
 				}
 			}
@@ -80,6 +82,7 @@ func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler 
 	return http.HandlerFunc(fn)
 }
 
+// ApplyCaptcha verfies whether or not the captcha has been solved.
 func (application *Application) ApplyCaptcha(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		session := c.Env["Session"].(*sessions.Session)
@@ -93,13 +96,15 @@ func (application *Application) ApplyCaptcha(c *web.C, h http.Handler) http.Hand
 	return http.HandlerFunc(fn)
 }
 
+// ApplyAuth populates a user's info in the header if their userID is found in
+// the database.
 func (application *Application) ApplyAuth(c *web.C, h http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		session := c.Env["Session"].(*sessions.Session)
-		if userId := session.Values["UserId"]; userId != nil {
+		if userID := session.Values["UserId"]; userID != nil {
 			dbMap := c.Env["DbMap"].(*gorp.DbMap)
 
-			user, err := dbMap.Get(models.User{}, userId)
+			user, err := dbMap.Get(models.User{}, userID)
 			if err != nil {
 				log.Warnf("Auth error: %v", err)
 				c.Env["User"] = nil

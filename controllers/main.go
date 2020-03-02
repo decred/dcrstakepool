@@ -49,6 +49,7 @@ const (
 	agendasCacheLife = time.Hour
 )
 
+// Config holds all the data used to create a new MainController.
 type Config struct {
 	AdminIPs             []string
 	AdminUserIDs         []string
@@ -79,7 +80,7 @@ type MainController struct {
 	system.Controller
 
 	Cfg            *Config
-	captchaHandler *CaptchaHandler
+	captchaHandler *captchaHandler
 	voteVersion    uint32
 	DCRDataURL     string
 }
@@ -126,7 +127,7 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 
 // NewMainController is the constructor for the entire controller routing.
 func NewMainController(cfg *Config) (*MainController, error) {
-	ch := &CaptchaHandler{
+	ch := &captchaHandler{
 		ImgHeight: 127,
 		ImgWidth:  257,
 	}
@@ -289,7 +290,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unauthenticated, "address error", errors.New("invalid api token")
 	}
 
-	user, _ := models.GetUserById(dbMap, c.Env["APIUserID"].(int64))
+	user, _ := models.GetUserByID(dbMap, c.Env["APIUserID"].(int64))
 
 	if len(user.UserPubKeyAddr) > 0 {
 		return nil, codes.AlreadyExists, "address error", errors.New("address already submitted")
@@ -343,13 +344,13 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	userFeeAddr, err := controller.FeeAddressForUserID(int(user.Id))
+	userFeeAddr, err := controller.FeeAddressForUserID(int(user.ID))
 	if err != nil {
 		log.Warnf("unexpected error deriving pool addr: %s", err.Error())
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	models.UpdateUserByID(dbMap, user.Id, createMultiSig.Address,
+	models.UpdateUserByID(dbMap, user.ID, createMultiSig.Address,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.Address(), importedHeight)
 
@@ -372,7 +373,7 @@ func (controller *MainController) APIPurchaseInfo(c web.C,
 		return nil, codes.Unauthenticated, "purchaseinfo error", errors.New("invalid api token")
 	}
 
-	user, _ := models.GetUserById(dbMap, c.Env["APIUserID"].(int64))
+	user, _ := models.GetUserByID(dbMap, c.Env["APIUserID"].(int64))
 
 	if len(user.UserPubKeyAddr) == 0 {
 		return nil, codes.FailedPrecondition, "purchaseinfo error", errors.New("no address submitted")
@@ -445,7 +446,7 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 		return nil, codes.Unauthenticated, "voting error", errors.New("invalid api token")
 	}
 
-	user, _ := models.GetUserById(dbMap, c.Env["APIUserID"].(int64))
+	user, _ := models.GetUserByID(dbMap, c.Env["APIUserID"].(int64))
 	oldVoteBits := user.VoteBits
 
 	vb := r.FormValue("VoteBits")
@@ -459,7 +460,7 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 		return nil, codes.InvalidArgument, "voting error", errors.New("votebits invalid for current agendas")
 	}
 
-	user, err = helpers.UpdateVoteBitsByID(dbMap, user.Id, userVoteBits)
+	user, err = helpers.UpdateVoteBitsByID(dbMap, user.ID, userVoteBits)
 	if err != nil {
 		return nil, codes.Internal, "voting error", errors.New("failed to update voting prefs in database")
 	}
@@ -471,7 +472,7 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 	}
 
 	log.Infof("updated voteBits for user %d from %d to %d",
-		user.Id, oldVoteBits, userVoteBits)
+		user.ID, oldVoteBits, userVoteBits)
 
 	return nil, codes.OK, "successfully updated voting preferences", nil
 }
@@ -615,7 +616,7 @@ func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap) (
 	userMax := models.GetUserMax(dbMap)
 	for userid := int64(1); userid <= userMax; userid++ {
 		// may have gaps due to users deleted from the database
-		user, err := models.GetUserById(dbMap, userid)
+		user, err := models.GetUserByID(dbMap, userid)
 		if err != nil {
 			continue
 		}
@@ -662,12 +663,12 @@ func (controller *MainController) CheckAndResetUserVoteBits(dbMap *gorp.DbMap) (
 	allUsers := make(map[int64]*models.User)
 	for userid := int64(1); userid <= userMax; userid++ {
 		// may have gaps due to users deleted from the database
-		user, err := models.GetUserById(dbMap, userid)
+		user, err := models.GetUserByID(dbMap, userid)
 		if err != nil || user.MultiSigAddress == "" {
 			continue
 		}
 
-		allUsers[user.Id] = user
+		allUsers[user.ID] = user
 	}
 
 	return allUsers, nil
@@ -690,16 +691,16 @@ func (controller *MainController) Address(c web.C, r *http.Request) (string, int
 	c.Env["Network"] = controller.getNetworkName()
 
 	c.Env["Flash"] = session.Flashes("address")
-	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+	user, _ := models.GetUserByID(dbMap, session.Values["UserId"].(int64))
 
 	// Generate an API Token for the user on demand if one does not exist and
 	// refresh the user's data before displaying it.
 	if user.APIToken == "" {
 		token, err := models.SetUserAPIToken(dbMap, controller.Cfg.APISecret,
-			controller.Cfg.BaseURL, user.Id)
+			controller.Cfg.BaseURL, user.ID)
 		if err != nil {
 			session.AddFlash("Unable to set API Token", "settingsError")
-			log.Errorf("could not set API Token for UserId %v", user.Id)
+			log.Errorf("could not set API Token for UserId %v", user.ID)
 		}
 
 		c.Env["APIToken"] = token
@@ -759,7 +760,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	// Only accept address if user does not already have a PubKeyAddr set.
 	dbMap := controller.GetDbMap(c)
-	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+	user, _ := models.GetUserByID(dbMap, session.Values["UserId"].(int64))
 	if len(user.UserPubKeyAddr) > 0 {
 		session.AddFlash("The voting service is currently limited to one address per account", "address")
 		return controller.Address(c, r)
@@ -991,7 +992,7 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 			expires := controller.CalcEstimatedTicketExpiry()
 
 			lowFeeTicket := &models.LowFeeTicket{
-				AddedByUid:    userID,
+				AddedByUID:    userID,
 				TicketAddress: msa,
 				TicketHash:    t,
 				TicketExpiry:  0,
@@ -1288,7 +1289,7 @@ func (controller *MainController) PasswordResetPost(c web.C, r *http.Request) (s
 
 		token := models.NewUserToken()
 		passReset := &models.PasswordReset{
-			UserId:  user.Id,
+			UserID:  user.ID,
 			Token:   token.String(),
 			Created: t.Unix(),
 			Expires: expires.Unix(),
@@ -1381,7 +1382,7 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 		return controller.PasswordUpdate(c, r)
 	}
 
-	user, err := helpers.UserIDExists(dbMap, resetData.UserId)
+	user, err := helpers.UserIDExists(dbMap, resetData.UserID)
 	if err != nil {
 		log.Infof("UserIDExists failure %v, %v", err, remoteIP)
 		session.AddFlash("Unable to find User ID.", "passwordupdateError")
@@ -1392,7 +1393,7 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 		user.Email)
 
 	user.HashPassword(password)
-	_, err = helpers.UpdateUserPasswordById(dbMap, resetData.UserId,
+	_, err = helpers.UpdateUserPasswordByID(dbMap, resetData.UserID,
 		user.Password)
 	if err != nil {
 		log.Errorf("error updating password %v", err)
@@ -1406,9 +1407,9 @@ func (controller *MainController) PasswordUpdatePost(c web.C, r *http.Request) (
 	}
 
 	// destroy session data
-	if err := system.DestroySessionsForUserID(dbMap, user.Id); err != nil {
+	if err := system.DestroySessionsForUserID(dbMap, user.ID); err != nil {
 		log.Warnf("PasswordUpdatePost: DestroySessionsForUserID '%v' failed: %v",
-			user.Id, err)
+			user.ID, err)
 	}
 	session.AddFlash("Password successfully updated", "passwordupdateSuccess")
 	return controller.PasswordUpdate(c, r)
@@ -1465,7 +1466,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 	}
 
 	// Changes to email or password require the current password.
-	user, err := helpers.PasswordValidById(dbMap, session.Values["UserId"].(int64), password)
+	user, err := helpers.PasswordValidByID(dbMap, session.Values["UserId"].(int64), password)
 	if err != nil {
 		session.AddFlash("Password not valid", "settingsError")
 		return controller.Settings(c, r)
@@ -1488,7 +1489,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 
 		token := models.NewUserToken()
 		emailChange := &models.EmailChange{
-			UserId:   user.Id,
+			UserID:   user.ID,
 			NewEmail: newEmail,
 			Token:    token.String(),
 			Created:  t.Unix(),
@@ -1529,7 +1530,7 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		}
 
 		user.HashPassword(newPassword)
-		_, err = helpers.UpdateUserPasswordById(dbMap, user.Id,
+		_, err = helpers.UpdateUserPasswordByID(dbMap, user.ID,
 			user.Password)
 		if err != nil {
 			log.Errorf("error updating password %v", err)
@@ -1538,9 +1539,9 @@ func (controller *MainController) SettingsPost(c web.C, r *http.Request) (string
 		}
 
 		// destroy session data
-		err := system.DestroySessionsForUserID(dbMap, user.Id)
+		err := system.DestroySessionsForUserID(dbMap, user.ID)
 		if err != nil {
-			log.Warnf("SettingsPost: DestroySessionsForUserId '%v' failed: %v", user.Id, err)
+			log.Warnf("SettingsPost: DestroySessionsForUserID '%v' failed: %v", user.ID, err)
 		}
 
 		// send a confirmation email.
@@ -1604,7 +1605,7 @@ func (controller *MainController) LoginPost(c web.C, r *http.Request) (string, i
 		return controller.Login(c, r)
 	}
 
-	session.Values["UserId"] = user.Id
+	session.Values["UserId"] = user.ID
 
 	// Go to Address page if multisig script not yet set up.
 	// GUI users can copy their API Token from here.
@@ -1828,7 +1829,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 	c.Env["Title"] = "Decred VSP - Tickets"
 
 	dbMap := controller.GetDbMap(c)
-	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+	user, _ := models.GetUserByID(dbMap, session.Values["UserId"].(int64))
 
 	if user.MultiSigAddress == "" {
 		log.Info("Multisigaddress empty")
@@ -1945,7 +1946,7 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 		return "/", http.StatusSeeOther
 	}
 
-	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+	user, _ := models.GetUserByID(dbMap, session.Values["UserId"].(int64))
 
 	if user.MultiSigAddress == "" {
 		log.Info("Multisigaddress empty")
@@ -1988,7 +1989,7 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 
 	var generatedVoteBits uint16
 
-	user, _ := models.GetUserById(dbMap, session.Values["UserId"].(int64))
+	user, _ := models.GetUserByID(dbMap, session.Values["UserId"].(int64))
 
 	// last block valid
 	generatedVoteBits |= 1
@@ -2012,14 +2013,14 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 	}
 
 	oldVoteBits := user.VoteBits
-	user, err := helpers.UpdateVoteBitsByID(dbMap, user.Id, generatedVoteBits)
+	user, err := helpers.UpdateVoteBitsByID(dbMap, user.ID, generatedVoteBits)
 	if err != nil {
 		session.AddFlash("unable to save new voting preferences", "votingError")
 		return "/voting", http.StatusSeeOther
 	}
 
 	log.Infof("updated voteBits for user %d from %d to %d",
-		user.Id, oldVoteBits, generatedVoteBits)
+		user.ID, oldVoteBits, generatedVoteBits)
 	if uint16(oldVoteBits) != generatedVoteBits {
 		if err := controller.StakepooldUpdateUsers(dbMap); err != nil {
 			log.Errorf("unable to update all: %v", err)

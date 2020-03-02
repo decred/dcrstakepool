@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 )
 
+// Response is the JSON API response to all requests and holds data related to
+// the request if successful.
 type Response struct {
 	Status  string           `json:"status"`
 	Message string           `json:"message"`
@@ -12,6 +14,7 @@ type Response struct {
 
 // TODO: make JSON tags lower-case and add "_" between words
 
+// PurchaseInfo is a JSON data struct related to a user's ticket purchases.
 type PurchaseInfo struct {
 	PoolAddress     string  `json:"PoolAddress"`
 	PoolFees        float64 `json:"PoolFees"`
@@ -21,6 +24,7 @@ type PurchaseInfo struct {
 	VoteBitsVersion uint32  `json:"VoteBitsVersion"`
 }
 
+// Stats is a JSON data struct with information about the pool.
 type Stats struct {
 	AllMempoolTix        uint32  `json:"AllMempoolTix"`
 	APIVersionsSupported []int   `json:"APIVersionsSupported"`

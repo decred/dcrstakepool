@@ -22,6 +22,8 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+// Application represents dcrstakepool's infrastructure, including html
+// templates and the mysql database.
 type Application struct {
 	APISecret     string
 	Template      *template.Template
@@ -38,6 +40,7 @@ func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
 	}
 }
 
+// Init initiates an Application with the passed variables.
 func (application *Application) Init(ctx context.Context, wg *sync.WaitGroup,
 	APISecret, baseURL, cookieSecret string, cookieSecure bool, DBHost,
 	DBName, DBPassword, DBPort, DBUser string) {
@@ -71,6 +74,7 @@ var funcMap = template.FuncMap{
 	},
 }
 
+// LoadTemplates parses and loads all html templates found in templatePath.
 func (application *Application) LoadTemplates(templatePath string) error {
 	var templates []string
 
@@ -99,6 +103,8 @@ func (application *Application) LoadTemplates(templatePath string) error {
 // route is a type for http endpoints.
 type route func(web.C, *http.Request) (string, int)
 
+// Route calls methods from controllers/main, directs users based on the
+// returned status, and writes the response.
 func (application *Application) Route(fn route) web.HandlerFunc {
 	return func(c web.C, w http.ResponseWriter, r *http.Request) {
 		c.Env["Content-Type"] = "text/html"

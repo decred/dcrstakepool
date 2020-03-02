@@ -85,7 +85,7 @@ func makeDbAndStore() (sqlmock.Sqlmock, *sql.DB, *SQLStore) {
 		Dialect:         gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8MB4"},
 		ExpandSliceArgs: true,
 	}
-	dbMap.AddTableWithName(models.Session{}, "Session").SetKeys(true, "Id")
+	dbMap.AddTableWithName(models.Session{}, "Session").SetKeys(true, "ID")
 	hash := sha256.New()
 	io.WriteString(hash, "abrakadabra")
 	s := NewSQLStore(ctx, &wg, dbMap, hash.Sum(nil))
