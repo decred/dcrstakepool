@@ -1,6 +1,6 @@
 module github.com/decred/dcrstakepool
 
-go 1.12
+go 1.13
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.4.0

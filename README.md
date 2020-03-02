@@ -1,8 +1,11 @@
-# dcrstakepool
+dcrstakepool
+============
 
-[![GoDoc](https://godoc.org/github.com/decred/dcrstakepool?status.svg)](https://godoc.org/github.com/decred/dcrstakepool)
 [![Build Status](https://github.com/decred/dcrstakepool/workflows/Build%20and%20Test/badge.svg)](https://github.com/decred/dcrstakepool/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/decred/dcrstakepool)](https://goreportcard.com/report/github.com/decred/dcrstakepool)
+[![Doc](https://img.shields.io/badge/doc-reference-blue.svg)](https://pkg.go.dev/github.com/decred/dcrstakepool)
+
+## Overview
 
 dcrstakepool is a web application which coordinates generating 1-of-2 multisig
 addresses on a pool of [dcrwallet](https://github.com/decred/dcrwallet) servers
@@ -35,9 +38,9 @@ suitable for use on testnet. Further documentation can be found in `./harness.sh
 
 ## Requirements
 
-- [Go](https://golang.org) 1.12 or newer (1.13 is recommended).
-- MySQL
-- Nginx or other web server to proxy to dcrstakepool
+- [Go](https://golang.org) 1.13 or newer.
+- MySQL.
+- A web server, such as nginx, to proxy to dcrstakepool.
 
 ## Installation
 
@@ -45,7 +48,7 @@ suitable for use on testnet. Further documentation can be found in `./harness.sh
 
 Building or updating from source requires the following build dependencies:
 
-- **Go 1.12 or 1.13**
+- **Go 1.13 or newer**
 
 Building or updating from source requires only an installation of Go
 ([instructions](https://golang.org/doc/install)). It is recommended to add
