@@ -1,20 +1,34 @@
 package controllers
 
 import (
+	"database/sql/driver"
 	"errors"
 	mrand "math/rand"
 	"net/http"
+	"os"
 	"reflect"
 	"sort"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/chaincfg/v2"
 	"github.com/decred/dcrd/dcrutil/v2"
+	"github.com/decred/dcrd/hdkeychain/v2"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/stakepooldclient"
+	"github.com/decred/slog"
+	"github.com/go-gorp/gorp"
+	"github.com/zenazn/goji/web"
+	"google.golang.org/grpc/codes"
 )
+
+func init() {
+	// Enable logging for the controllers package.
+	log = slog.NewBackend(os.Stdout).Logger("TEST")
+	log.SetLevel(slog.LevelTrace)
+}
 
 func TestGetNetworkName(t *testing.T) {
 	// First test that "testnet3" is translated to "testnet"
@@ -442,6 +456,253 @@ func TestNewMainController(t *testing.T) {
 		}
 		if err != nil {
 			t.Fatalf("unexpected error for test \"%s\": %v", test.name, err)
+		}
+	}
+}
+
+// makeDB creates a fake database for testing.
+func makeDB() (sqlmock.Sqlmock, *gorp.DbMap) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		panic(err)
+	}
+	dbMap := &gorp.DbMap{
+		Db:              db,
+		Dialect:         gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8MB4"},
+		ExpandSliceArgs: true,
+	}
+	dbMap.AddTableWithName(models.User{}, "Users").SetKeys(true, "ID")
+	return mock, dbMap
+}
+
+var tUserCol = []string{"UserId", "Email", "Username", "Password",
+	"MultiSigAddress", "MultiSigScript", "PoolPubKeyAddr",
+	"UserPubKeyAddr", "UserFeeAddr", "HeightRegistered",
+	"EmailVerified", "EmailToken", "APIToken", "VoteBits", "VoteBitsVersion"}
+
+func TestAPIAddress(t *testing.T) {
+	tMSA := "Tcbvn2hiEAXBDwUPDLDG2SxF9iANMKhdVev"
+	tRedeemScript := "512103af3c24d005ca8b755e7167617f3a5b4c60a65f8" +
+		"318a7fcd1b0cacb1abd2a97fc21027b81bc16954e28adb83224814" +
+		"0eb58bedb6078ae5f4dabf21fde5a8ab7135cb652ae"
+	tUserPubKeyAddr := "TkKmVKG7u7PwhQaYr7wgMqBwHneJ2cN4e5YpMVUsWSopx81NFXEzK"
+	tPoolPubKeyAddr := "TkQ4hPAjU7fWxNgTdNxDXzrGQc1r4w2yjeM667Rkxa6MtsgcJmNpu"
+	tUserFeeAddr := "TsbyH2p611jSWnvUAq3erSsRYnCxBg3nT2S"
+	tVotingXpub := "tpubVpoboFfxtp3JShb4cvMNpeTFp48tYx8cSAJBphAE4iR" +
+		"q1BqzPQBZ912mLDqh9Z4TnrzgnCMDt93A9qgpfoBAX4VxbeRY1tasnNNkBZZR6vU"
+	tFeeXpub := "tpubVpCySS6qPiiHrLHzkL2kdbZrW8ftwax4frjXp12mUMDmho" +
+		"pdhfuG2JAW8a8Z22at4uqGiwFenEzY8uVhJ3nGsfVFTFtKbnkEPuxYsp3rZYb"
+	tUser := []driver.Value{46, "", "", "", "", "", "", "", "", 0, 0, "", "", 0, 0}
+	params := chaincfg.TestNet3Params()
+	vXpub, err := hdkeychain.NewKeyFromString(tVotingXpub, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fXpub, err := hdkeychain.NewKeyFromString(tFeeXpub, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name, userPubKeyAddr string
+		userID               int64
+		stakepooldQueue      []queueItem
+		queryArgs            []driver.Value
+		noSecondQuery        bool
+		updateArgs           []driver.Value
+		row                  []driver.Value
+		wantErrCode          codes.Code
+	}{{
+		name:           "ok",
+		userID:         46,
+		userPubKeyAddr: tUserPubKeyAddr,
+		stakepooldQueue: []queueItem{{
+			// ValidateAddress
+			thing: &pb.ValidateAddressResponse{
+				IsMine:     true,
+				PubKeyAddr: tPoolPubKeyAddr,
+			}}, {
+			// CreateMultisig
+			thing: &pb.CreateMultisigResponse{
+				RedeemScript: tRedeemScript,
+				Address:      tMSA,
+			}}, {
+			// ImportNewScript
+			thing: 0,
+		}, {
+			// SetUserVotingPrefs
+		}},
+		queryArgs:   []driver.Value{46},
+		updateArgs:  []driver.Value{"", "", []byte{}, tMSA, tRedeemScript, tPoolPubKeyAddr, tUserPubKeyAddr, tUserFeeAddr, 0, 0, "", "", 0, 0, 46},
+		row:         tUser,
+		wantErrCode: codes.OK,
+	}, {
+		name:        "invalid api token",
+		userID:      -1,
+		wantErrCode: codes.Unauthenticated,
+	}, {
+		name:          "user pubkey address already exists",
+		userID:        46,
+		queryArgs:     []driver.Value{46},
+		noSecondQuery: true,
+		row:           append(append(append([]driver.Value{}, tUser[:7]...), "pubkeyaddr"), tUser[8:]...),
+		wantErrCode:   codes.AlreadyExists,
+	}, {
+		name:           "bad user pubkey address",
+		userID:         46,
+		userPubKeyAddr: "bogus address",
+		queryArgs:      []driver.Value{46},
+		row:            tUser,
+		noSecondQuery:  true,
+		wantErrCode:    codes.InvalidArgument,
+	}, {
+		name:           "over max users",
+		userID:         MaxUsers + 1,
+		userPubKeyAddr: tUserPubKeyAddr,
+		queryArgs:      []driver.Value{MaxUsers + 1},
+		row:            tUser,
+		noSecondQuery:  true,
+		wantErrCode:    codes.Unavailable,
+	}, {
+		name:           "unable to validate pool address",
+		userID:         46,
+		userPubKeyAddr: tUserPubKeyAddr,
+		stakepooldQueue: []queueItem{{
+			// ValidateAddress
+			err: errors.New("error"),
+		}},
+		queryArgs:     []driver.Value{46},
+		row:           tUser,
+		noSecondQuery: true,
+		wantErrCode:   codes.Unavailable,
+	}, {
+		name:           "pool address is not mine",
+		userID:         46,
+		userPubKeyAddr: tUserPubKeyAddr,
+		stakepooldQueue: []queueItem{{
+			// ValidateAddress
+			thing: &pb.ValidateAddressResponse{
+				IsMine: false,
+			}}},
+		queryArgs:     []driver.Value{46},
+		row:           tUser,
+		noSecondQuery: true,
+		wantErrCode:   codes.Unavailable,
+	}, {
+		name:           "unable to decode pool pubkey address",
+		userID:         46,
+		userPubKeyAddr: tUserPubKeyAddr,
+		stakepooldQueue: []queueItem{{
+			// ValidateAddress
+			thing: &pb.ValidateAddressResponse{
+				IsMine:     true,
+				PubKeyAddr: "bogus address",
+			}}},
+		queryArgs:     []driver.Value{46},
+		row:           tUser,
+		noSecondQuery: true,
+		wantErrCode:   codes.Unavailable,
+	}, {
+		name:           "unable to create multisig",
+		userID:         46,
+		userPubKeyAddr: tUserPubKeyAddr,
+		stakepooldQueue: []queueItem{{
+			// ValidateAddress
+			thing: &pb.ValidateAddressResponse{
+				IsMine:     true,
+				PubKeyAddr: tPoolPubKeyAddr,
+			}}, {
+			// CreateMultisig
+			err: errors.New("error"),
+		}},
+		queryArgs:     []driver.Value{46},
+		row:           tUser,
+		noSecondQuery: true,
+		wantErrCode:   codes.Unavailable,
+	}, {
+		name:           "unable to serialize redeem script",
+		userID:         46,
+		userPubKeyAddr: tUserPubKeyAddr,
+		stakepooldQueue: []queueItem{{
+			// ValidateAddress
+			thing: &pb.ValidateAddressResponse{
+				IsMine:     true,
+				PubKeyAddr: tPoolPubKeyAddr,
+			}}, {
+			// CreateMultisig
+			thing: &pb.CreateMultisigResponse{
+				RedeemScript: "bogus script",
+				Address:      tMSA,
+			}}},
+		queryArgs:     []driver.Value{46},
+		row:           tUser,
+		noSecondQuery: true,
+		wantErrCode:   codes.Unavailable,
+	}, {
+		name:           "unable to import redeem script",
+		userID:         46,
+		userPubKeyAddr: tUserPubKeyAddr,
+		stakepooldQueue: []queueItem{{
+			// ValidateAddress
+			thing: &pb.ValidateAddressResponse{
+				IsMine:     true,
+				PubKeyAddr: tPoolPubKeyAddr,
+			}}, {
+			// CreateMultisig
+			thing: &pb.CreateMultisigResponse{
+				RedeemScript: tRedeemScript,
+				Address:      tMSA,
+			}}, {
+			// ImportNewScript
+			err: errors.New("error"),
+		}},
+		queryArgs:     []driver.Value{46},
+		row:           tUser,
+		noSecondQuery: true,
+		wantErrCode:   codes.Unavailable,
+	}}
+	c := web.C{Env: map[interface{}]interface{}{}}
+	for _, test := range tests {
+		mock, dbMap := makeDB()
+		sm := tManagerWithQueue(test.stakepooldQueue)
+		cfg := &Config{StakepooldServers: sm, NetParams: params, VotingXpub: vXpub, FeeXpub: fXpub}
+		mc := &MainController{Cfg: cfg}
+		// Set expected database queries and updates.
+		if test.queryArgs != nil {
+			mock.ExpectQuery(`^SELECT (.*) FROM Users WHERE UserId = (.+)$`).
+				WithArgs(test.queryArgs...).
+				WillReturnRows(sqlmock.NewRows(tUserCol).AddRow(test.row...))
+			if !test.noSecondQuery {
+				mock.ExpectQuery(`^SELECT (.*) FROM Users WHERE UserId = (.+)$`).
+					WithArgs(test.queryArgs...).
+					WillReturnRows(sqlmock.NewRows(tUserCol).AddRow(test.row...))
+			}
+		}
+		if test.updateArgs != nil {
+			mock.ExpectExec("^update `Users` set `Email`=(.+)," +
+				" `Username`=(.+), `Password`=(.+), `MultiSigAddress`=(.+), " +
+				"`MultiSigScript`=(.+), `PoolPubKeyAddr`=(.+), `UserPubKeyAddr`=(.+), " +
+				"`UserFeeAddr`=(.+), `HeightRegistered`=(.+), `EmailVerified`=(.+), " +
+				"`EmailToken`=(.+), `APIToken`=(.+), `VoteBits`=(.+), " +
+				"`VoteBitsVersion`=(.+) where `UserId`=(.+);$").
+				WithArgs(test.updateArgs...).
+				WillReturnResult(sqlmock.NewResult(0, 0))
+		}
+		c.Env["APIUserID"] = test.userID
+		// nil APIUserID indicats an authentication error occured.
+		// Simulating that on userid -1.
+		if test.userID == -1 {
+			c.Env["APIUserID"] = nil
+		}
+		c.Env["DbMap"] = dbMap
+		// Put userPubKeyAddr as form value.
+		r, _ := http.NewRequest("GET", "?UserPubKeyAddr="+test.userPubKeyAddr, nil)
+		_, errCode, _, _ := mc.APIAddress(c, r)
+		if errCode != test.wantErrCode {
+			t.Fatalf("wanted error code %d but got %d for test %s", test.wantErrCode, errCode, test.name)
+		}
+		// Ensure all database commands were called.
+		if err = mock.ExpectationsWereMet(); err != nil {
+			t.Fatalf("unmet expectation error: %s", err)
 		}
 	}
 }
