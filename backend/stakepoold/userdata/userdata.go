@@ -52,16 +52,17 @@ func (u *UserData) MySQLFetchAddedLowFeeTickets() (map[chainhash.Hash]string, er
 	// Verify that the data source name is valid with Ping:
 	if err = db.Ping(); err != nil {
 		log.Errorf("Unable to establish connection to db: %v", err)
+		db.Close()
 		return tickets, err
 	}
 
 	rows, err := db.Query("SELECT TicketHash, TicketAddress FROM LowFeeTicket")
 	if err != nil {
 		log.Errorf("Unable to query db: %v", err)
+		db.Close()
 		return tickets, err
 	}
 
-	defer rows.Close()
 	for rows.Next() {
 		err := rows.Scan(&ticketHashString, &ticketAddress)
 		if err != nil {
@@ -75,9 +76,12 @@ func (u *UserData) MySQLFetchAddedLowFeeTickets() (map[chainhash.Hash]string, er
 		}
 		tickets[*ticketHash] = ticketAddress
 	}
+	if err = rows.Err(); err != nil {
+		db.Close()
+		return tickets, err
+	}
 
-	err = db.Close()
-	return tickets, err
+	return tickets, db.Close()
 }
 
 // MySQLFetchUserVotingConfig fetches the voting preferences of all users
@@ -103,12 +107,14 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 	// Verify that the data source name is valid with Ping:
 	if err = db.Ping(); err != nil {
 		log.Errorf("Unable to establish connection to db: %v", err)
+		db.Close()
 		return userInfo, err
 	}
 
 	rows, err := db.Query("SELECT UserId, MultiSigAddress, VoteBits, VoteBitsVersion FROM Users WHERE MultiSigAddress <> ''")
 	if err != nil {
 		log.Errorf("Unable to query db: %v", err)
+		db.Close()
 		return userInfo, err
 	}
 
@@ -126,9 +132,12 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 			VoteBitsVersion: uint32(voteBitsVersion),
 		}
 	}
+	if err = rows.Err(); err != nil {
+		db.Close()
+		return userInfo, err
+	}
 
-	err = db.Close()
-	return userInfo, err
+	return userInfo, db.Close()
 }
 
 // DBSetConfig sets the database configuration.
