@@ -2,9 +2,12 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	mrand "math/rand"
+	"net"
 	"net/http"
+	"os"
 	"reflect"
 	"sort"
 	"testing"
@@ -18,7 +21,14 @@ import (
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/stakepooldclient"
+	"github.com/decred/slog"
 )
+
+func init() {
+	// Enable logging for the controllers package.
+	log = slog.NewBackend(os.Stdout).Logger("TEST")
+	log.SetLevel(slog.LevelTrace)
+}
 
 func TestGetNetworkName(t *testing.T) {
 	// First test that "testnet3" is translated to "testnet"
@@ -509,16 +519,50 @@ func TestNewMainController(t *testing.T) {
 	}
 }
 
-func TestAgendas(t *testing.T) {
-	tInfos := func(_ string) ([]*dcrdatatypes.AgendasInfo, error) {
-		return []*dcrdatatypes.AgendasInfo{{
-			Name:      voteIDSDiffAlgorithm,
-			MileStone: &dbtypes.MileStone{Status: dbtypes.FailedAgendaStatus},
-		}, {
-			Name:      voteIDLNSupport,
-			MileStone: &dbtypes.MileStone{Status: dbtypes.ActivatedAgendaStatus},
-		}}, nil
+// tServe serves up thing at address addr. Returns a function that must be
+// called to release resources.
+func tServe(addr string, thing interface{}) func() {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	handleJSON := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		encoder := json.NewEncoder(w)
+		if err := encoder.Encode(thing); err != nil {
+			panic(err)
+		}
 	}
+	srv := &http.Server{Handler: http.HandlerFunc(handleJSON)}
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+	go func() {
+		<-ctx.Done()
+		if err := srv.Shutdown(context.Background()); err != nil {
+			panic(err)
+		}
+	}()
+	go func() {
+		if err := srv.Serve(listener); err != http.ErrServerClosed {
+			panic(err)
+		}
+		close(done)
+	}()
+	return func() {
+		cancel()
+		<-done
+	}
+}
+
+func TestAgendas(t *testing.T) {
+	tInfos := []*dcrdatatypes.AgendasInfo{{
+		Name:      voteIDSDiffAlgorithm,
+		MileStone: &dbtypes.MileStone{Status: dbtypes.FailedAgendaStatus},
+	}, {
+		Name:      voteIDLNSupport,
+		MileStone: &dbtypes.MileStone{Status: dbtypes.ActivatedAgendaStatus},
+	}}
 	tAgendas := &[]agenda{{
 		Agenda: tDeployments[4][0],
 		Status: "failed",
@@ -528,7 +572,7 @@ func TestAgendas(t *testing.T) {
 	}}
 	tests := []struct {
 		name           string
-		infos          func(string) ([]*dcrdatatypes.AgendasInfo, error)
+		infos          []*dcrdatatypes.AgendasInfo
 		agendasInitial *[]agenda
 		timerInitial   time.Time
 		deployments    map[uint32][]chaincfg.ConsensusDeployment
@@ -550,15 +594,9 @@ func TestAgendas(t *testing.T) {
 	}, {
 		name:           "infos error with expired initial agendas",
 		agendasInitial: tAgendas,
-		infos: func(_ string) ([]*dcrdatatypes.AgendasInfo, error) {
-			return nil, errors.New("error")
-		},
-		want: tAgendas,
+		want:           tAgendas,
 	}, {
-		name: "infos error with no initial agendas",
-		infos: func(_ string) ([]*dcrdatatypes.AgendasInfo, error) {
-			return nil, errors.New("error")
-		},
+		name:        "infos error with no initial agendas",
 		deployments: tDeployments,
 		want: &[]agenda{{
 			Agenda: tDeployments[4][0],
@@ -568,7 +606,7 @@ func TestAgendas(t *testing.T) {
 	}, {
 		name:           "within agendas life",
 		agendasInitial: tAgendas,
-		timerInitial:   time.Now(),
+		timerInitial:   time.Now().Add(agendasCacheLife),
 		want:           tAgendas,
 	}, {
 		name: "no deployments",
@@ -579,10 +617,16 @@ func TestAgendas(t *testing.T) {
 		agendasCache.agendas = test.agendasInitial
 		agendasCache.timer = test.timerInitial
 		agendasCache.Unlock()
+		addr := "127.0.0.1:3000"
+		done := func() {}
+		if test.infos != nil {
+			done = tServe(addr, test.infos)
+		}
 		params := &chaincfg.Params{Deployments: test.deployments}
 		cfg := &Config{NetParams: params}
-		mc := &MainController{Cfg: cfg, voteVersion: 4}
-		agendas := mc.agendas(test.infos)
+		mc := &MainController{Cfg: cfg, voteVersion: 4, DCRDataURL: "http://" + addr}
+		agendas := mc.agendas()
+		done()
 		if !reflect.DeepEqual(agendas, test.want) {
 			t.Fatalf("expected deployments %v but got %v for test %s", test.want, agendas, test.name)
 		}
