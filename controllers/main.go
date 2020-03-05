@@ -185,10 +185,8 @@ func (controller *MainController) getNetworkName() string {
 
 // agendas returns agendas and their statuses. Fetches agenda status from
 // dcrdata.org if past agenda.Timer limit from previous fetch. Caches agenda
-// data for agendasCacheLife. Takes an infos function that can be used to
-// fetch agenda info. Defaults to dcrDataAgendas. This method is safe for
-// concurrent use.
-func (controller *MainController) agendas(infos func(url string) ([]*dcrdatatypes.AgendasInfo, error)) *[]agenda {
+// data for agendasCacheLife. This method is safe for concurrent use.
+func (controller *MainController) agendas() *[]agenda {
 	agendasCache.Lock()
 	defer agendasCache.Unlock()
 	now := time.Now()
@@ -197,10 +195,7 @@ func (controller *MainController) agendas(infos func(url string) ([]*dcrdatatype
 	}
 	agendasCache.timer = now.Add(agendasCacheLife)
 	url := fmt.Sprintf("%s/api/agendas", controller.DCRDataURL)
-	if infos == nil {
-		infos = dcrDataAgendas
-	}
-	agendaInfos, err := infos(url)
+	agendaInfos, err := dcrDataAgendas(url)
 	if err != nil {
 		// Ensure the next call tries to fetch statuses again.
 		agendasCache.timer = time.Time{}
@@ -1968,7 +1963,7 @@ func (controller *MainController) Voting(c web.C, r *http.Request) (string, int)
 		c.Env["Agenda"+strk+"Selected"] = v
 	}
 	c.Env["Admin"], _ = controller.isAdmin(c, r)
-	c.Env["Agendas"] = controller.agendas(nil)
+	c.Env["Agendas"] = controller.agendas()
 	c.Env["FlashError"] = session.Flashes("votingError")
 	c.Env["FlashSuccess"] = session.Flashes("votingSuccess")
 	c.Env["IsVoting"] = true
