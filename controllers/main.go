@@ -286,11 +286,16 @@ func (controller *MainController) API(c web.C, r *http.Request) *system.APIRespo
 func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string, codes.Code, string, error) {
 	dbMap := controller.GetDbMap(c)
 
-	if c.Env["APIUserID"] == nil {
-		return nil, codes.Unauthenticated, "address error", errors.New("invalid api token")
+	uid, exists := c.Env["APIUserID"].(int64)
+	if !exists {
+		return nil, codes.Unauthenticated, "purchaseinfo error", errors.New("invalid api token")
 	}
 
-	user, _ := models.GetUserByID(dbMap, c.Env["APIUserID"].(int64))
+	user, err := models.GetUserByID(dbMap, uid)
+	if err != nil {
+		log.Warnf("failure to get GetUserByID for user %d: %v", uid, err)
+		return nil, codes.Internal, "purchaseinfo error", errors.New("internal error")
+	}
 
 	if len(user.UserPubKeyAddr) > 0 {
 		return nil, codes.AlreadyExists, "address error", errors.New("address already submitted")
@@ -303,7 +308,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 	}
 
 	// Get the ticket address for this user
-	pooladdress, err := controller.TicketAddressForUserID(int(c.Env["APIUserID"].(int64)))
+	pooladdress, err := controller.TicketAddressForUserID(int(uid))
 	if err != nil {
 		log.Errorf("unable to derive ticket address: %v", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
@@ -344,7 +349,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	userFeeAddr, err := controller.FeeAddressForUserID(int(user.ID))
+	userFeeAddr, err := controller.FeeAddressForUserID(int(uid))
 	if err != nil {
 		log.Warnf("unexpected error deriving pool addr: %s", err.Error())
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
@@ -354,7 +359,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.Address(), importedHeight)
 
-	log.Infof("successfully create multisigaddress for user %d", c.Env["APIUserID"])
+	log.Infof("successfully create multisigaddress for user %d", uid)
 
 	err = controller.StakepooldUpdateUsers(dbMap)
 	if err != nil {

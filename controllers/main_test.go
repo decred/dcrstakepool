@@ -540,6 +540,10 @@ func TestAPIAddress(t *testing.T) {
 		userID:      -1,
 		wantErrCode: codes.Unauthenticated,
 	}, {
+		name:        "error retrieving from database",
+		userID:      1,
+		wantErrCode: codes.Internal,
+	}, {
 		name:          "user pubkey address already exists",
 		userID:        46,
 		queryArgs:     []driver.Value{46},
