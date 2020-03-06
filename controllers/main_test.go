@@ -1,14 +1,29 @@
 package controllers
 
 import (
+	"database/sql/driver"
 	mrand "math/rand"
 	"net/http"
+	"os"
 	"reflect"
 	"sort"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrstakepool/models"
+	"github.com/decred/dcrstakepool/poolapi"
+	"github.com/decred/slog"
+	"github.com/go-gorp/gorp"
+	"github.com/zenazn/goji/web"
+	"google.golang.org/grpc/codes"
 )
+
+func init() {
+	// Enable logging for the controllers package.
+	log = slog.NewBackend(os.Stdout).Logger("TEST")
+	log.SetLevel(slog.LevelTrace)
+}
 
 func TestGetNetworkName(t *testing.T) {
 	// First test that "testnet3" is translated to "testnet"
@@ -289,6 +304,100 @@ func TestGetAgendas(t *testing.T) {
 		agendas := mc.getAgendas()
 		if !reflect.DeepEqual(agendas, test.want) {
 			t.Fatalf("expected deployments %v for test %s but got %v", test.want, test.name, agendas)
+		}
+	}
+}
+
+// makeDB creates a fake database for testing.
+func makeDB() (sqlmock.Sqlmock, *gorp.DbMap) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		panic(err)
+	}
+	dbMap := &gorp.DbMap{
+		Db:              db,
+		Dialect:         gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8MB4"},
+		ExpandSliceArgs: true,
+	}
+	dbMap.AddTableWithName(models.User{}, "Users").SetKeys(true, "ID")
+	return mock, dbMap
+}
+
+var tUserCol = []string{"UserId", "Email", "Username", "Password",
+	"MultiSigAddress", "MultiSigScript", "PoolPubKeyAddr",
+	"UserPubKeyAddr", "UserFeeAddr", "HeightRegistered",
+	"EmailVerified", "EmailToken", "APIToken", "VoteBits", "VoteBitsVersion"}
+
+func TestAPIAddress(t *testing.T) {
+	tMSA := "Tcbvn2hiEAXBDwUPDLDG2SxF9iANMKhdVev"
+	tRedeemScript := "512103af3c24d005ca8b755e7167617f3a5b4c60a65f8" +
+		"318a7fcd1b0cacb1abd2a97fc21027b81bc16954e28adb83224814" +
+		"0eb58bedb6078ae5f4dabf21fde5a8ab7135cb652ae"
+	tUserFeeAddr := "TsbyH2p611jSWnvUAq3erSsRYnCxBg3nT2S"
+	tests := []struct {
+		name             string
+		userID           int64
+		queryArgs        []driver.Value
+		row              []driver.Value
+		wantErrCode      codes.Code
+		wantPurchaseInfo *poolapi.PurchaseInfo
+	}{{
+		name:        "ok",
+		userID:      1,
+		queryArgs:   []driver.Value{1},
+		row:         []driver.Value{1, "", "", "", tMSA, tRedeemScript, "", "non null", tUserFeeAddr, 0, 0, "", "", 5, 0},
+		wantErrCode: codes.OK,
+		wantPurchaseInfo: &poolapi.PurchaseInfo{
+			PoolAddress:   tUserFeeAddr,
+			PoolFees:      0.15,
+			Script:        tRedeemScript,
+			TicketAddress: tMSA,
+			VoteBits:      5,
+		},
+	}, {
+		name:        "not authenticated",
+		userID:      -1,
+		wantErrCode: codes.Unauthenticated,
+	}, {
+		name:        "error retrieving from database",
+		userID:      1,
+		wantErrCode: codes.Internal,
+	}, {
+		name:        "user address not submitted",
+		userID:      1,
+		queryArgs:   []driver.Value{1},
+		row:         []driver.Value{1, "", "", "", "", "", "", "", "", 0, 0, "", "", 0, 0},
+		wantErrCode: codes.FailedPrecondition,
+	}}
+	c := web.C{Env: map[interface{}]interface{}{}}
+	for _, test := range tests {
+		mock, dbMap := makeDB()
+		cfg := &Config{PoolFees: 0.15}
+		mc := &MainController{Cfg: cfg}
+		// Set expected database queries.
+		if test.queryArgs != nil {
+			mock.ExpectQuery(`^SELECT (.*) FROM Users WHERE UserId = (.+)$`).
+				WithArgs(test.queryArgs...).
+				WillReturnRows(sqlmock.NewRows(tUserCol).AddRow(test.row...))
+		}
+		c.Env["APIUserID"] = test.userID
+		// nil APIUserID indicats an authentication error occured.
+		// Simulating that on userid -1.
+		if test.userID == -1 {
+			c.Env["APIUserID"] = nil
+		}
+		c.Env["DbMap"] = dbMap
+		r, _ := http.NewRequest("GET", "", nil)
+		pi, errCode, _, _ := mc.APIPurchaseInfo(c, r)
+		if errCode != test.wantErrCode {
+			t.Fatalf("wanted error code %d but got %d for test %s", test.wantErrCode, errCode, test.name)
+		}
+		// Ensure all database commands were called.
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Fatalf("unmet expectation error: %s", err)
+		}
+		if !reflect.DeepEqual(pi, test.wantPurchaseInfo) {
+			t.Fatalf("wanted and got purchase info not equal for test %s", test.name)
 		}
 	}
 }

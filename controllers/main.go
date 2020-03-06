@@ -369,11 +369,16 @@ func (controller *MainController) APIPurchaseInfo(c web.C,
 	r *http.Request) (*poolapi.PurchaseInfo, codes.Code, string, error) {
 	dbMap := controller.GetDbMap(c)
 
-	if c.Env["APIUserID"] == nil {
+	uid, exists := c.Env["APIUserID"].(int64)
+	if !exists {
 		return nil, codes.Unauthenticated, "purchaseinfo error", errors.New("invalid api token")
 	}
 
-	user, _ := models.GetUserByID(dbMap, c.Env["APIUserID"].(int64))
+	user, err := models.GetUserByID(dbMap, uid)
+	if err != nil {
+		log.Warnf("failure to get GetUserByID for user %d: %v", uid, err)
+		return nil, codes.Internal, "purchaseinfo error", errors.New("internal error")
+	}
 
 	if len(user.UserPubKeyAddr) == 0 {
 		return nil, codes.FailedPrecondition, "purchaseinfo error", errors.New("no address submitted")
