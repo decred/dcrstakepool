@@ -361,11 +361,6 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 // and returns a list of redeem scripts.
 func (spd *Stakepoold) ListScripts() ([][]byte, error) {
 	const op = "ListScripts"
-	type result struct {
-		addr, hex string
-		err       error
-	}
-	results := make(chan *result)
 	spd.Lock()
 	addrs := make([]dcrutil.Address, 0, len(spd.UserVotingConfig))
 	// UserVotingConfig should have multi sig addresses for all users.
@@ -380,6 +375,11 @@ func (spd *Stakepoold) ListScripts() ([][]byte, error) {
 		addrs = append(addrs, decodedAddress)
 	}
 	spd.Unlock()
+	type result struct {
+		addr, hex string
+		err       error
+	}
+	results := make(chan *result)
 	var wg sync.WaitGroup
 	wg.Add(len(addrs))
 	// listScripts validates a slice of addresses using RPC calls.
