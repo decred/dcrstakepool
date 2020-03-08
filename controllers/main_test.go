@@ -8,11 +8,18 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/go-gorp/gorp"
+	"github.com/zenazn/goji/web"
+	"google.golang.org/grpc/codes"
+
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/chaincfg/v2"
 	"github.com/decred/dcrd/dcrutil/v2"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
+	"github.com/decred/dcrstakepool/internal/version"
 	"github.com/decred/dcrstakepool/models"
+	"github.com/decred/dcrstakepool/poolapi"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 )
 
@@ -442,6 +449,90 @@ func TestNewMainController(t *testing.T) {
 		}
 		if err != nil {
 			t.Fatalf("unexpected error for test \"%s\": %v", test.name, err)
+		}
+	}
+}
+
+// makeDB creates a fake database for testing.
+func makeDB() (sqlmock.Sqlmock, *gorp.DbMap) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		panic(err)
+	}
+	dbMap := &gorp.DbMap{
+		Db:              db,
+		Dialect:         gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8MB4"},
+		ExpandSliceArgs: true,
+	}
+	dbMap.AddTableWithName(models.User{}, "Users").SetKeys(true, "ID")
+	return mock, dbMap
+}
+
+func TestAPIStats(t *testing.T) {
+	tests := []struct {
+		name            string
+		stakepooldQueue []queueItem
+		closePool       bool
+		wantErrCode     codes.Code
+		wantStats       *poolapi.Stats
+	}{{
+		name: "pool open",
+		stakepooldQueue: []queueItem{{
+			thing: &pb.GetStakeInfoResponse{},
+		}},
+		wantStats: &poolapi.Stats{
+			Network:         chaincfg.TestNet3Params().Name,
+			UserCount:       5,
+			UserCountActive: 3,
+			PoolStatus:      "Open",
+			Version:         version.String(),
+		},
+		wantErrCode: codes.OK,
+	}, {
+		name: "pool closed",
+		stakepooldQueue: []queueItem{{
+			thing: &pb.GetStakeInfoResponse{},
+		}},
+		closePool: true,
+		wantStats: &poolapi.Stats{
+			Network:         chaincfg.TestNet3Params().Name,
+			UserCount:       5,
+			UserCountActive: 3,
+			PoolStatus:      "Closed",
+			Version:         version.String(),
+		},
+		wantErrCode: codes.OK,
+	}, {
+		name: "error getting GetStakeInfo",
+		stakepooldQueue: []queueItem{{
+			err: errors.New("error"),
+		}},
+		wantErrCode: codes.Unavailable,
+	}}
+	c := web.C{Env: map[interface{}]interface{}{}}
+	for _, test := range tests {
+		mock, dbMap := makeDB()
+		// GetUserCount
+		mock.ExpectQuery(`^SELECT COUNT`).
+			WillReturnRows(sqlmock.NewRows([]string{""}).AddRow(5))
+		// GetUserCountActive
+		mock.ExpectQuery(`^SELECT COUNT`).
+			WillReturnRows(sqlmock.NewRows([]string{""}).AddRow(3))
+		sm := tManagerWithQueue(test.stakepooldQueue)
+		cfg := &Config{NetParams: chaincfg.TestNet3Params(), StakepooldServers: sm, ClosePool: test.closePool}
+		mc := &MainController{Cfg: cfg}
+		c.Env["DbMap"] = dbMap
+		r, _ := http.NewRequest("GET", "", nil)
+		stats, errCode, _, _ := mc.APIStats(c, r)
+		if errCode != test.wantErrCode {
+			t.Fatalf("wanted error code %d but got %d for test %s", test.wantErrCode, errCode, test.name)
+		}
+		if !reflect.DeepEqual(stats, test.wantStats) {
+			t.Fatalf("wanted %v but got %v for test %s", test.wantStats, stats, test.name)
+		}
+		// Ensure all database commands were called.
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Fatalf("unmet expectation error: %s", err)
 		}
 	}
 }
