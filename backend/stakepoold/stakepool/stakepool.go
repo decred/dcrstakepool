@@ -357,14 +357,33 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 	return nil
 }
 
-// ListScripts performs the rpc command listscripts on dcrwallet.
+// ListScripts performs the rpc command validateaddress on all known addresses
+// and returns a list of redeem scripts.
 func (spd *Stakepoold) ListScripts() ([][]byte, error) {
-	scripts, err := spd.WalletConnection.RPCClient().ListScripts()
-	if err != nil {
-		log.Errorf("ListScripts: ListScripts rpc failed: %v", err)
-		return nil, err
+	const op = "ListScripts"
+	spd.Lock()
+	defer spd.Unlock()
+	scripts := make([][]byte, 0, len(spd.UserVotingConfig))
+	for addr := range spd.UserVotingConfig {
+		decodedAddress, err := dcrutil.DecodeAddress(addr, spd.Params)
+		if err != nil {
+			log.Errorf("%s: failed to decode address %s: %v", op, addr, err)
+			return nil, err
+		}
+		validated, err := spd.WalletConnection.RPCClient().ValidateAddress(decodedAddress)
+		if err != nil {
+			return nil, fmt.Errorf("%s: failed to validate address %s", op, addr)
+		}
+		if len(validated.Hex) == 0 {
+			log.Errorf("%s: failed to retrieve script for address %s", op, addr)
+			continue
+		}
+		b, err := hex.DecodeString(validated.Hex)
+		if err != nil {
+			return nil, fmt.Errorf("%s: failed to decode script for address %s", op, addr)
+		}
+		scripts = append(scripts, b)
 	}
-
 	return scripts, nil
 }
 
