@@ -361,30 +361,78 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 // and returns a list of redeem scripts.
 func (spd *Stakepoold) ListScripts() ([][]byte, error) {
 	const op = "ListScripts"
+	type result struct {
+		addr, hex string
+		err       error
+	}
+	results := make(chan *result)
 	spd.Lock()
-	defer spd.Unlock()
-	scripts := make([][]byte, 0, len(spd.UserVotingConfig))
+	addrs := make([]dcrutil.Address, 0, len(spd.UserVotingConfig))
+	// UserVotingConfig should have multi sig addresses for all users.
 	for addr := range spd.UserVotingConfig {
 		decodedAddress, err := dcrutil.DecodeAddress(addr, spd.Params)
 		if err != nil {
-			log.Errorf("%s: failed to decode address %s: %v", op, addr, err)
+			spd.Unlock()
+			err = fmt.Errorf("%s: failed to decode address %s: %v", op, addr, err)
+			log.Error(err)
 			return nil, err
 		}
-		validated, err := spd.WalletConnection.RPCClient().ValidateAddress(decodedAddress)
-		if err != nil {
-			return nil, fmt.Errorf("%s: failed to validate address %s", op, addr)
+		addrs = append(addrs, decodedAddress)
+	}
+	spd.Unlock()
+	var wg sync.WaitGroup
+	wg.Add(len(addrs))
+	// listScripts validates a slice of addresses using RPC calls.
+	listScripts := func(addrs []dcrutil.Address) {
+		for _, addr := range addrs {
+			defer wg.Done()
+			validated, err := spd.WalletConnection.RPCClient().ValidateAddress(addr)
+			if err != nil {
+				err = fmt.Errorf("failed to validate address %s", addr.String())
+				log.Error("%s: %v", op, err)
+				results <- &result{err: err}
+				continue
+			}
+			results <- &result{addr: addr.String(), hex: validated.Hex}
 		}
-		if len(validated.Hex) == 0 {
-			log.Errorf("%s: failed to retrieve script for address %s", op, addr)
+	}
+	// Validate two halves of addresses in parallel.
+	go listScripts(addrs[:len(addrs)/2])
+	go listScripts(addrs[len(addrs)/2:])
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+	scripts := make([][]byte, 0, len(addrs))
+	errs := []error{}
+	// Add errors to errs and results to scripts as they come in.
+	for res := range results {
+		if res.err != nil {
+			errs = append(errs, res.err)
 			continue
 		}
-		b, err := hex.DecodeString(validated.Hex)
+		if len(res.hex) == 0 {
+			log.Errorf("%s: failed to retrieve script for address %s", op, res.addr)
+			continue
+		}
+		b, err := hex.DecodeString(res.hex)
 		if err != nil {
-			return nil, fmt.Errorf("%s: failed to decode script for address %s", op, addr)
+			err = fmt.Errorf("failed to decode script for address %s", res.addr)
+			log.Errorf("%s, %v", op, err)
+			errs = append(errs, err)
+			continue
 		}
 		scripts = append(scripts, b)
 	}
-	return scripts, nil
+	var err error
+	// Merge all errors into one error.
+	for _, e := range errs {
+		if err == nil {
+			err = errors.New(op)
+		}
+		err = fmt.Errorf("%v: %v", err, e)
+	}
+	return scripts, err
 }
 
 // CreateMultisig decodes the provided array of addresses, and then
