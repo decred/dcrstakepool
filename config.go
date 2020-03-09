@@ -333,6 +333,7 @@ func loadConfig() (*config, []string, error) {
 			fmt.Fprintln(os.Stderr, err)
 			return nil, nil, err
 		}
+		return nil, nil, err
 	}
 
 	// Show the version and exit if the version flag was specified.
@@ -357,7 +358,6 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	// Load additional config from file.
-	var configFileError error
 	parser := newConfigParser(&cfg, &serviceOpts, flags.Default)
 	if !(preCfg.SimNet) || preCfg.ConfigFile != defaultConfigFile {
 		err := flags.NewIniParser(parser).ParseFile(preCfg.ConfigFile)
@@ -368,7 +368,7 @@ func loadConfig() (*config, []string, error) {
 				fmt.Fprintln(os.Stderr, usageMessage)
 				return nil, nil, err
 			}
-			configFileError = err
+			return nil, nil, err
 		}
 	}
 
@@ -586,13 +586,6 @@ func loadConfig() (*config, []string, error) {
 		if cfg.SMTPSkipVerify {
 			log.Warnf("SMTPCert has been set so SMTPSkipVerify is being disregarded.")
 		}
-	}
-
-	// Warn about missing config file only after all other configuration is
-	// done.  This prevents the warning on help messages and invalid
-	// options.  Note this should go directly before the return.
-	if configFileError != nil {
-		log.Warnf("%v", configFileError)
 	}
 
 	return &cfg, remainingArgs, nil
