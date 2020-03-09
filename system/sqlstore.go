@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/base32"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -63,7 +64,7 @@ func (s *SQLStore) New(r *http.Request, name string) (*sessions.Session, error) 
 	session.Options = &opts
 	c, err := r.Cookie(name)
 	if err != nil {
-		if err == http.ErrNoCookie {
+		if errors.Is(err, http.ErrNoCookie) {
 			return session, nil
 		}
 		return session, err
@@ -108,7 +109,7 @@ func (s *SQLStore) load(session *sessions.Session) error {
 	var dbSession models.Session
 	if err := s.dbMap.SelectOne(&dbSession, "SELECT * FROM Session WHERE Token = ?", session.ID); err != nil {
 		// if no rows are found nothing is done
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil
 		}
 		return fmt.Errorf("could not select session to destroy: %v", err)
@@ -127,7 +128,7 @@ func (s *SQLStore) save(session *sessions.Session) error {
 	var buf bytes.Buffer
 	var isNew bool
 	if err := s.dbMap.SelectOne(&dbSession, "SELECT * FROM Session WHERE Token = ?", session.ID); err != nil {
-		if err != sql.ErrNoRows {
+		if !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("could not select session: %v", err)
 		}
 		// no rows found so new
@@ -162,7 +163,7 @@ func (s *SQLStore) destroy(session *sessions.Session) error {
 	var dbSession models.Session
 	if err := s.dbMap.SelectOne(&dbSession, "SELECT * FROM Session WHERE Token = ?", session.ID); err != nil {
 		// if no rows are found nothing is done
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil
 		}
 		return fmt.Errorf("could not select session to destroy: %v", err)

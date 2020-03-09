@@ -1,9 +1,10 @@
-// Copyright (c) 2019 The Decred developers
+// Copyright (c) 2019-2020 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 package helpers
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/decred/dcrd/chaincfg/v2"
@@ -60,7 +61,7 @@ func TestDCRUtilAddressFromExtendedKey(t *testing.T) {
 		}
 		for i := 0; i < 10; i++ {
 			child, err := branchKey.Child(uint32(i))
-			if err == hdkeychain.ErrInvalidChild {
+			if errors.Is(err, hdkeychain.ErrInvalidChild) {
 				continue
 			}
 			if err != nil {

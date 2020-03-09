@@ -1,4 +1,4 @@
-// Copyright (c) 2017 The Decred developers
+// Copyright (c) 2017-2020 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -101,7 +101,7 @@ func deriveChildAddresses(key *hdkeychain.ExtendedKey, startIndex, count uint32,
 	addresses := make([]dcrutil.Address, 0, count)
 	for i := uint32(0); i < count; {
 		child, err := key.Child(startIndex + i)
-		if err == hdkeychain.ErrInvalidChild {
+		if errors.Is(err, hdkeychain.ErrInvalidChild) {
 			continue
 		}
 		if err != nil {
