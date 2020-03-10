@@ -316,7 +316,7 @@ func main() {
 	ctx := signal.WithShutdownCancel(context.Background())
 	go signal.ShutdownListener()
 	if err := runMain(ctx); err != nil {
-		log.Error(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	log.Info("server off")
