@@ -1,6 +1,7 @@
 package stakepooldclient
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -16,7 +17,6 @@ import (
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/models"
-	"golang.org/x/net/context"
 )
 
 var (

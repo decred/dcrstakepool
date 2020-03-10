@@ -18,8 +18,6 @@ import (
 	"strings"
 	"time"
 
-	xcontext "golang.org/x/net/context"
-
 	"github.com/decred/dcrd/certgen"
 	"github.com/decred/dcrstakepool/backend/stakepoold/rpc/server"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
@@ -81,7 +79,7 @@ func generateRPCKeyPair(writeKey bool) (tls.Certificate, error) {
 	return keyPair, nil
 }
 
-func interceptUnary(ctx xcontext.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+func interceptUnary(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	startTime := time.Now()
 
 	// parse out method from '/package.service/method'

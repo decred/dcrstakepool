@@ -13,9 +13,9 @@
 package server
 
 import (
+	"context"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
