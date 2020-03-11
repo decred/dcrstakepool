@@ -33,7 +33,7 @@ type Application struct {
 	Store                     *SQLStore
 	DbMap                     *gorp.DbMap
 	Params                    dcrutil.AddressParams
-	StakepooldConnMan         *stakepooldclient.StakepooldManager
+	StakepooldManager         stakepooldclient.Manager
 	ProcessedTicketChallenges *ticketChallengesCache
 }
 

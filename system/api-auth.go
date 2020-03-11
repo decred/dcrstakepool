@@ -73,7 +73,7 @@ func (application *Application) validateTicketOwnership(authHeader string) (stri
 
 	// get user wallet address using ticket hash
 	// todo: may be better to maintain a memory map of tickets-userWalletAddresses
-	ticketInfo, err := application.StakepooldConnMan.GetTicketInfo(ticketHash)
+	ticketInfo, err := application.StakepooldManager.GetTicketInfo(ticketHash)
 	if err != nil {
 		return "", fmt.Errorf("ticket auth, get ticket info failed: %v", err)
 	}

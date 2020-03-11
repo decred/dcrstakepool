@@ -307,6 +307,11 @@ type tStakepooldManager struct {
 	qItem func() queueItem
 }
 
+func (m *tStakepooldManager) GetTicketInfo(hash string) (*pb.GetTicketInfoResponse, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(*pb.GetTicketInfoResponse)
+	return thing, item.err
+}
 func (m *tStakepooldManager) GetAddedLowFeeTickets(_ context.Context) (map[chainhash.Hash]string, error) {
 	item := m.qItem()
 	thing, _ := item.thing.(map[chainhash.Hash]string)

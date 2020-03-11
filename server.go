@@ -23,7 +23,6 @@ import (
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
 
-	"github.com/zenazn/goji/graceful"
 	"github.com/zenazn/goji/web"
 	"github.com/zenazn/goji/web/middleware"
 )
@@ -94,7 +93,7 @@ func runMain(ctx context.Context) error {
 		return fmt.Errorf("failed to connect to stakepoold host: %v", err)
 	}
 
-	application.StakepooldConnMan = stakepooldConnMan
+	application.StakepooldManager = stakepooldConnMan
 
 	var sender email.Sender
 	if cfg.SMTPHost != "" {

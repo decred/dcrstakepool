@@ -17,12 +17,9 @@ require (
 	github.com/decred/dcrd/txscript/v2 v2.1.0
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
+	github.com/decred/dcrdata/txhelpers/v3 v3.0.5 // indirect
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.4.0
 	github.com/decred/dcrwallet/wallet/v3 v3.2.1
-	github.com/decred/dcrdata/txhelpers/v3 v3.0.5 // indirect
-	github.com/decred/dcrwallet/errors v1.1.0 // indirect
-	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.3.0
-	github.com/decred/dcrwallet/wallet/v3 v3.0.4
 	github.com/decred/slog v1.0.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-gorp/gorp v2.2.0+incompatible
@@ -40,5 +37,8 @@ require (
 	github.com/zenazn/goji v0.9.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
+	golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3 // indirect
+	golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135 // indirect
 	google.golang.org/grpc v1.27.1
+	honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc // indirect
 )
