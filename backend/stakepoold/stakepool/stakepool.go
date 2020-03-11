@@ -22,10 +22,6 @@ import (
 	"github.com/decred/dcrd/dcrutil/v2"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 
-	"github.com/decred/dcrd/blockchain/stake"
-	"github.com/decred/dcrd/chaincfg"
-	"github.com/decred/dcrd/dcrutil"
-	"github.com/decred/dcrd/rpcclient"
 	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
