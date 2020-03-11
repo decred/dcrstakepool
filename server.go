@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 The Decred developers
+// Copyright (c) 2016-2020 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -300,7 +301,7 @@ func runMain(ctx context.Context) error {
 
 	log.Infof("listening on %v", listener.Addr())
 
-	if err = server.Serve(listener); err != http.ErrServerClosed {
+	if err = server.Serve(listener); !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("Serve error: %s", err.Error())
 	}
 
