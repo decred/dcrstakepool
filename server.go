@@ -19,6 +19,7 @@ import (
 	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/email"
+	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/signal"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/decred/dcrstakepool/system"
@@ -66,14 +67,30 @@ func runMain(ctx context.Context) error {
 		}
 	}()
 
-	var application = &system.Application{}
+	dbMap := models.GetDbMap(
+		cfg.APISecret,
+		cfg.BaseURL,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBName)
 
-	application.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
-		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
-		cfg.DBUser, activeNetParams)
-	if application.DbMap == nil {
+	if dbMap == nil {
 		return fmt.Errorf("failed to open database")
 	}
+
+	stakepooldConnMan, err := stakepooldclient.ConnectStakepooldGRPC(ctx, cfg.StakepooldHosts,
+		cfg.StakepooldCerts)
+	if err != nil {
+		return fmt.Errorf("failed to connect to stakepoold host: %v", err)
+	}
+
+	var application = &system.Application{}
+
+	application.Init(ctx, dbMap, stakepooldConnMan, wg, cfg.APISecret, cfg.CookieSecret,
+		cfg.CookieSecure, activeNetParams)
+
 	if err = application.LoadTemplates(cfg.TemplatePath); err != nil {
 		return fmt.Errorf("failed to load templates: %v", err)
 	}
@@ -86,14 +103,6 @@ func runMain(ctx context.Context) error {
 
 	// Supported API versions are advertised in the API stats result
 	APIVersionsSupported := []int{1, 2}
-
-	stakepooldConnMan, err := stakepooldclient.ConnectStakepooldGRPC(ctx, cfg.StakepooldHosts,
-		cfg.StakepooldCerts)
-	if err != nil {
-		return fmt.Errorf("failed to connect to stakepoold host: %v", err)
-	}
-
-	application.StakepooldManager = stakepooldConnMan
 
 	var sender email.Sender
 	if cfg.SMTPHost != "" {
@@ -121,7 +130,7 @@ func runMain(ctx context.Context) error {
 
 		APIVersionsSupported: APIVersionsSupported,
 		FeeXpub:              coldWalletFeeKey,
-		StakepooldServers:    stakepooldConnMan,
+		StakepooldServers:    application.StakepooldManager,
 		EmailSender:          sender,
 		VotingXpub:           votingWalletVoteKey,
 		NetParams:            activeNetParams.Params,

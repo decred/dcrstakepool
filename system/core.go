@@ -15,7 +15,6 @@ import (
 	"sync"
 
 	"github.com/decred/dcrd/dcrutil/v2"
-	"github.com/decred/dcrstakepool/models"
 	"github.com/decred/dcrstakepool/stakepooldclient"
 	"github.com/go-gorp/gorp"
 	"github.com/gorilla/sessions"
@@ -46,18 +45,9 @@ func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
 }
 
 // Init initiates an Application with the passed variables.
-func (application *Application) Init(ctx context.Context, wg *sync.WaitGroup,
-	APISecret, baseURL, cookieSecret string, cookieSecure bool, DBHost,
-	DBName, DBPassword, DBPort, DBUser string, params dcrutil.AddressParams) {
-
-	application.DbMap = models.GetDbMap(
-		APISecret,
-		baseURL,
-		DBUser,
-		DBPassword,
-		DBHost,
-		DBPort,
-		DBName)
+func (application *Application) Init(ctx context.Context, dbMap *gorp.DbMap,
+	stakepooldManager stakepooldclient.Manager, wg *sync.WaitGroup,
+	APISecret, cookieSecret string, cookieSecure bool, params dcrutil.AddressParams) {
 
 	hash := sha256.New()
 	io.WriteString(hash, cookieSecret)
@@ -70,6 +60,8 @@ func (application *Application) Init(ctx context.Context, wg *sync.WaitGroup,
 		MaxAge: 60 * 60 * 6,
 	}
 
+	application.DbMap = dbMap
+	application.StakepooldManager = stakepooldManager
 	application.APISecret = APISecret
 	application.Params = params
 	application.ProcessedTicketChallenges = newTicketChallengesCache()
