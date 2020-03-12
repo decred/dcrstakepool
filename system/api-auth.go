@@ -73,9 +73,7 @@ func (application *Application) validateTicketOwnership(authHeader string) (stri
 	// Mark this timestamp signature as used to prevent subsequent reuse.
 	application.processedTicketChallenges.addChallenge(timestampSignature, maxTicketChallengeAge)
 
-	// todo check if ticket belongs to this vsp
-
-	// get user wallet address using ticket hash
+	// Get ticket info using ticket hash, also checks if the ticket is watched by this vsp.
 	// todo: may be better to maintain a memory map of tickets-userWalletAddresses
 	ticketInfo, err := application.stakepooldManager.GetTicketInfo(ticketHash)
 	if err != nil {

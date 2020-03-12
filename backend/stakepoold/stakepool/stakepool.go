@@ -111,9 +111,9 @@ type ticketMetadata struct {
 }
 
 type ticketInfo struct {
-	multiSigAddress   string
-	vspRewardAddress  string
-	userRewardAddress string
+	MultiSigAddress   string
+	VspRewardAddress  string
+	UserRewardAddress string
 }
 
 // EvaluateStakePoolTicket evaluates a voting service ticket to see if it's
@@ -436,11 +436,32 @@ func (spd *Stakepoold) GetTicketInfo(ticketHash string) (*ticketInfo, error) {
 		return nil, err
 	}
 
-	// get txout addresses using tx hex
 	msgTx, err := MsgTxFromHex(res.Hex)
 	if err != nil {
 		log.Errorf("GetTicketInfo: MsgTxFromHex failed for %v: %v", res.Hex, err)
 		return nil, err
+	}
+
+	if !stake.IsSStx(msgTx) {
+		log.Errorf("GetTicketInfo: %s not a ticket purchase transaction", ticketHash)
+		return nil, fmt.Errorf("%s not a ticket purchase transaction", ticketHash)
+	}
+
+	ticketBlockHash, err := chainhash.NewHashFromStr(res.BlockHash)
+	if err != nil {
+		log.Warnf("GetTicketInfo: NewHashFromStr failed for %v: %v", res.BlockHash, err)
+		return nil, err
+	}
+
+	ticketBlockHeader, err := spd.NodeConnection.GetBlockHeader(ticketBlockHash)
+	if err != nil {
+		log.Warnf("GetTicketInfo: GetBlockHeader failed for %v: %v", ticketBlockHash, err)
+		return nil, err
+	}
+
+	if knownByVsp, _ := spd.EvaluateStakePoolTicket(msgTx, int32(ticketBlockHeader.Height)); !knownByVsp {
+		log.Errorf("GetTicketInfo: ticket (%s) not watched by this VSP", ticketHash)
+		return nil, fmt.Errorf("ticket (%s) not watched by this VSP", ticketHash)
 	}
 
 	p2shOut := msgTx.TxOut[0]
@@ -466,9 +487,9 @@ func (spd *Stakepoold) GetTicketInfo(ticketHash string) (*ticketInfo, error) {
 	}
 
 	return &ticketInfo{
-		multiSigAddress:   multiSigAddress.Address(),
-		vspRewardAddress:  vspCommitAddr.Address(),
-		userRewardAddress: ownerCommitAddr.Address(),
+		MultiSigAddress:   multiSigAddress.Address(),
+		VspRewardAddress:  vspCommitAddr.Address(),
+		UserRewardAddress: ownerCommitAddr.Address(),
 	}, nil
 }
 
