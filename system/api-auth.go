@@ -1,3 +1,7 @@
+// Copyright (c) 2019-2020 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package system
 
 import (
@@ -44,7 +48,7 @@ func (application *Application) validateTicketOwnership(authHeader string) (stri
 	}
 
 	// Ensure that this signature had not been used in a previous authentication attempt.
-	if application.ProcessedTicketChallenges.ContainsChallenge(timestampSignature) {
+	if application.processedTicketChallenges.containsChallenge(timestampSignature) {
 		return "", fmt.Errorf("disallowed reuse of ticket auth signature %v", timestampSignature)
 	}
 
@@ -67,24 +71,24 @@ func (application *Application) validateTicketOwnership(authHeader string) (stri
 	}
 
 	// Mark this timestamp signature as used to prevent subsequent reuse.
-	application.ProcessedTicketChallenges.AddChallenge(timestampSignature, maxTicketChallengeAge)
+	application.processedTicketChallenges.addChallenge(timestampSignature, maxTicketChallengeAge)
 
 	// todo check if ticket belongs to this vsp
 
 	// get user wallet address using ticket hash
 	// todo: may be better to maintain a memory map of tickets-userWalletAddresses
-	ticketInfo, err := application.StakepooldManager.GetTicketInfo(ticketHash)
+	ticketInfo, err := application.stakepooldManager.GetTicketInfo(ticketHash)
 	if err != nil {
 		return "", fmt.Errorf("ticket auth, get ticket info failed: %v", err)
 	}
 
 	// Check if timestamp signature checks out against user's reward address.
-	addr, err := dcrutil.DecodeAddress(ticketInfo.UserRewardAddress, application.Params)
+	addr, err := dcrutil.DecodeAddress(ticketInfo.UserRewardAddress, application.addressParams)
 	if err != nil {
 		return "", fmt.Errorf("ticket auth, unexpected decode address error: %v", err)
 	}
 
-	valid, err := wallet.VerifyMessage(timestamp, addr, decodedSignature, application.Params)
+	valid, err := wallet.VerifyMessage(timestamp, addr, decodedSignature, application.addressParams)
 	if err != nil {
 		return "", fmt.Errorf("error validating timestamp signature for ticket auth %v", err)
 	}

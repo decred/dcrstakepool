@@ -130,7 +130,7 @@ func runMain(ctx context.Context) error {
 
 		APIVersionsSupported: APIVersionsSupported,
 		FeeXpub:              coldWalletFeeKey,
-		StakepooldServers:    application.StakepooldManager,
+		StakepooldServers:    stakepooldConnMan,
 		EmailSender:          sender,
 		VotingXpub:           votingWalletVoteKey,
 		NetParams:            activeNetParams.Params,

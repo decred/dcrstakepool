@@ -1,3 +1,7 @@
+// Copyright (c) 2019-2020 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 package system
 
 import (
@@ -45,15 +49,15 @@ func newTicketChallengesCache() *ticketChallengesCache {
 	return cache
 }
 
-func (cache *ticketChallengesCache) AddChallenge(signature string, expiresIn int64) {
+func (cache *ticketChallengesCache) addChallenge(signature string, expiresIn int64) {
 	cache.Lock()
 	if _, ok := cache.usedSignatures[signature]; !ok {
 		cache.usedSignatures[signature] = time.Now().Unix() + expiresIn
 	}
-	cache.RUnlock()
+	cache.Unlock()
 }
 
-func (cache *ticketChallengesCache) ContainsChallenge(signatures string) bool {
+func (cache *ticketChallengesCache) containsChallenge(signatures string) bool {
 	cache.RLock()
 	defer cache.RUnlock()
 	_, exists := cache.usedSignatures[signatures]

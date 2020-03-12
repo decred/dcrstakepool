@@ -110,10 +110,10 @@ type ticketMetadata struct {
 	err          error                     // log errors along the way
 }
 
-type TicketInfo struct {
-	MultiSigAddress   string
-	VspRewardAddress  string
-	UserRewardAddress string
+type ticketInfo struct {
+	multiSigAddress   string
+	vspRewardAddress  string
+	userRewardAddress string
 }
 
 // EvaluateStakePoolTicket evaluates a voting service ticket to see if it's
@@ -423,7 +423,7 @@ func (spd *Stakepoold) GetTickets(includeImmature bool) ([]*chainhash.Hash, erro
 
 // GetTicketInfo pulls the transaction information for a ticket from dcrwallet,
 // returning the voting address and reward addresses for the ticket.
-func (spd *Stakepoold) GetTicketInfo(ticketHash string) (*TicketInfo, error) {
+func (spd *Stakepoold) GetTicketInfo(ticketHash string) (*ticketInfo, error) {
 	hash, err := chainhash.NewHashFromStr(ticketHash)
 	if err != nil {
 		log.Errorf("GetTicketInfo: Failed to parse ticket hash: %v", err)
@@ -446,7 +446,7 @@ func (spd *Stakepoold) GetTicketInfo(ticketHash string) (*TicketInfo, error) {
 	p2shOut := msgTx.TxOut[0]
 	_, p2shOutAddresses, _, err := txscript.ExtractPkScriptAddrs(p2shOut.Version, p2shOut.PkScript, spd.Params)
 	if err != nil {
-		log.Errorf("GetTicketInfo: Failed to parse p2sh out addr: %s", err.Error())
+		log.Errorf("GetTicketInfo: Failed to parse p2sh out addr: %v", err)
 		return nil, err
 	}
 	multiSigAddress := p2shOutAddresses[0]
@@ -454,21 +454,21 @@ func (spd *Stakepoold) GetTicketInfo(ticketHash string) (*TicketInfo, error) {
 	vspCommitmentOut := msgTx.TxOut[1]
 	vspCommitAddr, err := stake.AddrFromSStxPkScrCommitment(vspCommitmentOut.PkScript, spd.Params)
 	if err != nil {
-		log.Errorf("GetTicketInfo: Failed to parse commit out addr: %s", err.Error())
+		log.Errorf("GetTicketInfo: Failed to parse commit out addr: %v", err)
 		return nil, err
 	}
 
 	ownerCommitmentOut := msgTx.TxOut[3]
 	ownerCommitAddr, err := stake.AddrFromSStxPkScrCommitment(ownerCommitmentOut.PkScript, spd.Params)
 	if err != nil {
-		log.Errorf("GetTicketInfo: Failed to parse commit out addr: %s", err.Error())
+		log.Errorf("GetTicketInfo: Failed to parse commit out addr: %v", err)
 		return nil, err
 	}
 
-	return &TicketInfo{
-		MultiSigAddress:   multiSigAddress.Address(),
-		VspRewardAddress:  vspCommitAddr.Address(),
-		UserRewardAddress: ownerCommitAddr.Address(),
+	return &ticketInfo{
+		multiSigAddress:   multiSigAddress.Address(),
+		vspRewardAddress:  vspCommitAddr.Address(),
+		userRewardAddress: ownerCommitAddr.Address(),
 	}, nil
 }
 

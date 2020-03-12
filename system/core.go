@@ -31,9 +31,9 @@ type Application struct {
 	TemplatesPath             string
 	Store                     *SQLStore
 	DbMap                     *gorp.DbMap
-	Params                    dcrutil.AddressParams
-	StakepooldManager         stakepooldclient.Manager
-	ProcessedTicketChallenges *ticketChallengesCache
+	addressParams             dcrutil.AddressParams
+	stakepooldManager         stakepooldclient.Manager
+	processedTicketChallenges *ticketChallengesCache
 }
 
 // GojiWebHandlerFunc is an adaptor that allows an http.HanderFunc where a
@@ -47,7 +47,13 @@ func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
 // Init initiates an Application with the passed variables.
 func (application *Application) Init(ctx context.Context, dbMap *gorp.DbMap,
 	stakepooldManager stakepooldclient.Manager, wg *sync.WaitGroup,
-	APISecret, cookieSecret string, cookieSecure bool, params dcrutil.AddressParams) {
+	APISecret, cookieSecret string, cookieSecure bool, addressParams dcrutil.AddressParams) {
+
+	application.DbMap = dbMap
+	application.stakepooldManager = stakepooldManager
+	application.APISecret = APISecret
+	application.addressParams = addressParams
+	application.processedTicketChallenges = newTicketChallengesCache()
 
 	hash := sha256.New()
 	io.WriteString(hash, cookieSecret)
@@ -59,12 +65,6 @@ func (application *Application) Init(ctx context.Context, dbMap *gorp.DbMap,
 		//six hours
 		MaxAge: 60 * 60 * 6,
 	}
-
-	application.DbMap = dbMap
-	application.StakepooldManager = stakepooldManager
-	application.APISecret = APISecret
-	application.Params = params
-	application.ProcessedTicketChallenges = newTicketChallengesCache()
 }
 
 var funcMap = template.FuncMap{
