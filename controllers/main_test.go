@@ -217,6 +217,155 @@ func TestGetClientIP(t *testing.T) {
 	}
 }
 
+var _ stakepooldclient.Manager = (*tStakepooldManager)(nil)
+
+// tStakepooldManager satisfies the stakepooldClient.Manager interface.
+type tStakepooldManager struct {
+	qItem func() queueItem
+}
+
+func (m *tStakepooldManager) GetAddedLowFeeTickets(_ context.Context) (map[chainhash.Hash]string, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(map[chainhash.Hash]string)
+	return thing, item.err
+}
+func (m *tStakepooldManager) GetIgnoredLowFeeTickets(_ context.Context) (map[chainhash.Hash]string, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(map[chainhash.Hash]string)
+	return thing, item.err
+}
+func (m *tStakepooldManager) GetLiveTickets(_ context.Context) (map[chainhash.Hash]string, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(map[chainhash.Hash]string)
+	return thing, item.err
+}
+func (m *tStakepooldManager) SetAddedLowFeeTickets(_ context.Context, _ []models.LowFeeTicket) error {
+	item := m.qItem()
+	return item.err
+}
+func (m *tStakepooldManager) CreateMultisig(_ context.Context, _ []string) (*pb.CreateMultisigResponse, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(*pb.CreateMultisigResponse)
+	return thing, item.err
+}
+func (m *tStakepooldManager) SyncAll(_ context.Context, _ []models.User, _ int64) error {
+	item := m.qItem()
+	return item.err
+}
+func (m *tStakepooldManager) StakePoolUserInfo(_ context.Context, _ string) (*pb.StakePoolUserInfoResponse, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(*pb.StakePoolUserInfoResponse)
+	return thing, item.err
+}
+func (m *tStakepooldManager) SetUserVotingPrefs(_ context.Context, _ map[int64]*models.User) error {
+	item := m.qItem()
+	return item.err
+}
+func (m *tStakepooldManager) WalletInfo(_ context.Context) ([]*pb.WalletInfoResponse, error) {
+	item := m.qItem()
+	thing, _ := item.thing.([]*pb.WalletInfoResponse)
+	return thing, item.err
+}
+func (m *tStakepooldManager) ValidateAddress(_ context.Context, _ dcrutil.Address) (*pb.ValidateAddressResponse, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(*pb.ValidateAddressResponse)
+	return thing, item.err
+}
+func (m *tStakepooldManager) ImportNewScript(_ context.Context, _ []byte) (heightImported int64, err error) {
+	item := m.qItem()
+	thing, _ := item.thing.(int64)
+	return thing, item.err
+}
+func (m *tStakepooldManager) BackendStatus(_ context.Context) []stakepooldclient.BackendStatus {
+	item := m.qItem()
+	thing, _ := item.thing.([]stakepooldclient.BackendStatus)
+	return thing
+}
+func (m *tStakepooldManager) GetStakeInfo(_ context.Context) (*pb.GetStakeInfoResponse, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(*pb.GetStakeInfoResponse)
+	return thing, item.err
+}
+func (m *tStakepooldManager) CrossCheckColdWalletExtPubs(_ context.Context, _ string) error {
+	item := m.qItem()
+	return item.err
+}
+
+type queueItem struct {
+	thing interface{}
+	err   error
+}
+
+// tManagerWithQueue will return a tStakepooldManager that outputs items in the
+// order of queueItems.
+func tManagerWithQueue(queueItems []queueItem) *tStakepooldManager {
+	i := 0
+	getItem := func() queueItem {
+		defer func() { i++ }()
+		return queueItems[i]
+	}
+	sm := &tStakepooldManager{getItem}
+	return sm
+}
+
+func TestNewMainController(t *testing.T) {
+	tests := []struct {
+		name            string
+		stakepooldQueue []queueItem
+		wantErr         bool
+	}{{
+		name: "ok one wallet",
+		stakepooldQueue: []queueItem{{
+			thing: []*pb.WalletInfoResponse{{
+				VoteVersion: 7,
+			}},
+		}},
+		wantErr: false,
+	}, {
+		name: "ok two wallets",
+		stakepooldQueue: []queueItem{{
+			thing: []*pb.WalletInfoResponse{{
+				VoteVersion: 7,
+			}, {
+				VoteVersion: 7,
+			}},
+		}},
+		wantErr: false,
+	}, {
+		name: "wallet different vote version",
+		stakepooldQueue: []queueItem{{
+			thing: []*pb.WalletInfoResponse{{
+				VoteVersion: 5,
+			}, {
+				VoteVersion: 7,
+			}},
+		}},
+		wantErr: true,
+	}, {
+		name: "wallet info error",
+		stakepooldQueue: []queueItem{{
+			err: errors.New("error"),
+		}},
+		wantErr: true,
+	}}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		sm := tManagerWithQueue(test.stakepooldQueue)
+		cfg := &Config{StakepooldServers: sm, NetParams: chaincfg.TestNet3Params()}
+		_, err := NewMainController(ctx, cfg)
+		if test.wantErr {
+			if err == nil {
+				t.Fatalf("expected error for test \"%s\"", test.name)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("unexpected error for test \"%s\": %v", test.name, err)
+		}
+	}
+}
+
 const (
 	voteIDSDiffAlgorithm    = "diffalgorithm"
 	voteIDLNSupport         = "lnsupport"
@@ -366,155 +515,6 @@ func TestGetAgendas(t *testing.T) {
 		agendas := mc.getAgendas()
 		if !reflect.DeepEqual(agendas, test.want) {
 			t.Fatalf("expected deployments %v for test %s but got %v", test.want, test.name, agendas)
-		}
-	}
-}
-
-var _ stakepooldclient.Manager = (*tStakepooldManager)(nil)
-
-// tStakepooldManager satisfies the stakepooldClient.Manager interface.
-type tStakepooldManager struct {
-	qItem func() queueItem
-}
-
-func (m *tStakepooldManager) GetAddedLowFeeTickets(_ context.Context) (map[chainhash.Hash]string, error) {
-	item := m.qItem()
-	thing, _ := item.thing.(map[chainhash.Hash]string)
-	return thing, item.err
-}
-func (m *tStakepooldManager) GetIgnoredLowFeeTickets(_ context.Context) (map[chainhash.Hash]string, error) {
-	item := m.qItem()
-	thing, _ := item.thing.(map[chainhash.Hash]string)
-	return thing, item.err
-}
-func (m *tStakepooldManager) GetLiveTickets(_ context.Context) (map[chainhash.Hash]string, error) {
-	item := m.qItem()
-	thing, _ := item.thing.(map[chainhash.Hash]string)
-	return thing, item.err
-}
-func (m *tStakepooldManager) SetAddedLowFeeTickets(_ context.Context, _ []models.LowFeeTicket) error {
-	item := m.qItem()
-	return item.err
-}
-func (m *tStakepooldManager) CreateMultisig(_ context.Context, _ []string) (*pb.CreateMultisigResponse, error) {
-	item := m.qItem()
-	thing, _ := item.thing.(*pb.CreateMultisigResponse)
-	return thing, item.err
-}
-func (m *tStakepooldManager) SyncAll(_ context.Context, _ []models.User, _ int64) error {
-	item := m.qItem()
-	return item.err
-}
-func (m *tStakepooldManager) StakePoolUserInfo(_ context.Context, _ string) (*pb.StakePoolUserInfoResponse, error) {
-	item := m.qItem()
-	thing, _ := item.thing.(*pb.StakePoolUserInfoResponse)
-	return thing, item.err
-}
-func (m *tStakepooldManager) SetUserVotingPrefs(_ context.Context, _ map[int64]*models.User) error {
-	item := m.qItem()
-	return item.err
-}
-func (m *tStakepooldManager) WalletInfo(_ context.Context) ([]*pb.WalletInfoResponse, error) {
-	item := m.qItem()
-	thing, _ := item.thing.([]*pb.WalletInfoResponse)
-	return thing, item.err
-}
-func (m *tStakepooldManager) ValidateAddress(_ context.Context, _ dcrutil.Address) (*pb.ValidateAddressResponse, error) {
-	item := m.qItem()
-	thing, _ := item.thing.(*pb.ValidateAddressResponse)
-	return thing, item.err
-}
-func (m *tStakepooldManager) ImportNewScript(_ context.Context, _ []byte) (heightImported int64, err error) {
-	item := m.qItem()
-	thing, _ := item.thing.(int64)
-	return thing, item.err
-}
-func (m *tStakepooldManager) BackendStatus(_ context.Context) []stakepooldclient.BackendStatus {
-	item := m.qItem()
-	thing, _ := item.thing.([]stakepooldclient.BackendStatus)
-	return thing
-}
-func (m *tStakepooldManager) GetStakeInfo(_ context.Context) (*pb.GetStakeInfoResponse, error) {
-	item := m.qItem()
-	thing, _ := item.thing.(*pb.GetStakeInfoResponse)
-	return thing, item.err
-}
-func (m *tStakepooldManager) CrossCheckColdWalletExtPubs(_ context.Context, _ string) error {
-	item := m.qItem()
-	return item.err
-}
-
-type queueItem struct {
-	thing interface{}
-	err   error
-}
-
-// tManagerWithQueue will return a tStakepooldManager that outputs items in the
-// order of queueItems.
-func tManagerWithQueue(queueItems []queueItem) *tStakepooldManager {
-	i := 0
-	getItem := func() queueItem {
-		defer func() { i++ }()
-		return queueItems[i]
-	}
-	sm := &tStakepooldManager{getItem}
-	return sm
-}
-
-func TestNewMainController(t *testing.T) {
-	tests := []struct {
-		name            string
-		stakepooldQueue []queueItem
-		wantErr         bool
-	}{{
-		name: "ok one wallet",
-		stakepooldQueue: []queueItem{{
-			thing: []*pb.WalletInfoResponse{{
-				VoteVersion: 7,
-			}},
-		}},
-		wantErr: false,
-	}, {
-		name: "ok two wallets",
-		stakepooldQueue: []queueItem{{
-			thing: []*pb.WalletInfoResponse{{
-				VoteVersion: 7,
-			}, {
-				VoteVersion: 7,
-			}},
-		}},
-		wantErr: false,
-	}, {
-		name: "wallet different vote version",
-		stakepooldQueue: []queueItem{{
-			thing: []*pb.WalletInfoResponse{{
-				VoteVersion: 5,
-			}, {
-				VoteVersion: 7,
-			}},
-		}},
-		wantErr: true,
-	}, {
-		name: "wallet info error",
-		stakepooldQueue: []queueItem{{
-			err: errors.New("error"),
-		}},
-		wantErr: true,
-	}}
-
-	ctx := context.Background()
-	for _, test := range tests {
-		sm := tManagerWithQueue(test.stakepooldQueue)
-		cfg := &Config{StakepooldServers: sm, NetParams: chaincfg.TestNet3Params()}
-		_, err := NewMainController(ctx, cfg)
-		if test.wantErr {
-			if err == nil {
-				t.Fatalf("expected error for test \"%s\"", test.name)
-			}
-			continue
-		}
-		if err != nil {
-			t.Fatalf("unexpected error for test \"%s\": %v", test.name, err)
 		}
 	}
 }
