@@ -1,10 +1,11 @@
-// Copyright (c) 2016-2019 The Decred developers
+// Copyright (c) 2016-2020 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package controllers
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -126,7 +127,7 @@ func getClientIP(r *http.Request, realIPHeader string) string {
 }
 
 // NewMainController is the constructor for the entire controller routing.
-func NewMainController(cfg *Config) (*MainController, error) {
+func NewMainController(ctx context.Context, cfg *Config) (*MainController, error) {
 	ch := &captchaHandler{
 		ImgHeight: 127,
 		ImgWidth:  257,
@@ -137,7 +138,7 @@ func NewMainController(cfg *Config) (*MainController, error) {
 		captchaHandler: ch,
 	}
 
-	walletInfo, err := cfg.StakepooldServers.WalletInfo()
+	walletInfo, err := cfg.StakepooldServers.WalletInfo(ctx)
 	if err != nil {
 		cErr := fmt.Errorf("Failed to get wallets' Vote Version: %v", err)
 		return nil, cErr
@@ -309,7 +310,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	poolValidateAddress, err := controller.Cfg.StakepooldServers.ValidateAddress(pooladdress)
+	poolValidateAddress, err := controller.Cfg.StakepooldServers.ValidateAddress(r.Context(), pooladdress)
 	if err != nil {
 		log.Errorf("unable to validate address: %v", err)
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
@@ -326,7 +327,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
 
-	createMultiSig, err := controller.Cfg.StakepooldServers.CreateMultisig([]string{poolPubKeyAddr, userPubKeyAddr})
+	createMultiSig, err := controller.Cfg.StakepooldServers.CreateMultisig(r.Context(), []string{poolPubKeyAddr, userPubKeyAddr})
 	if err != nil {
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
@@ -339,7 +340,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	// Import the redeem script
 	var importedHeight int64
-	importedHeight, err = controller.Cfg.StakepooldServers.ImportNewScript(serializedScript)
+	importedHeight, err = controller.Cfg.StakepooldServers.ImportNewScript(r.Context(), serializedScript)
 	if err != nil {
 		return nil, codes.Unavailable, "system error", errors.New("unable to process wallet commands")
 	}
@@ -356,7 +357,7 @@ func (controller *MainController) APIAddress(c web.C, r *http.Request) ([]string
 
 	log.Infof("successfully create multisigaddress for user %d", c.Env["APIUserID"])
 
-	err = controller.StakepooldUpdateUsers(dbMap)
+	err = controller.StakepooldUpdateUsers(r.Context(), dbMap)
 	if err != nil {
 		log.Warnf("failure to update users: %v", err)
 	}
@@ -397,7 +398,7 @@ func (controller *MainController) APIStats(c web.C,
 	userCount := models.GetUserCount(dbMap)
 	userCountActive := models.GetUserCountActive(dbMap)
 
-	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo()
+	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo(r.Context())
 	if err != nil {
 		log.Infof("RPC GetStakeInfo failed: %v", err)
 		return nil, codes.Unavailable, "stats error", errors.New("RPC server error")
@@ -466,7 +467,7 @@ func (controller *MainController) APIVoting(c web.C, r *http.Request) ([]string,
 	}
 
 	if uint16(oldVoteBits) != userVoteBits {
-		if err := controller.StakepooldUpdateUsers(dbMap); err != nil {
+		if err := controller.StakepooldUpdateUsers(r.Context(), dbMap); err != nil {
 			log.Warnf("APIVoting: StakepooldUpdateUsers failed: %v", err)
 		}
 	}
@@ -504,13 +505,13 @@ func (controller *MainController) isAdmin(c web.C, r *http.Request) (bool, error
 
 // StakepooldUpdateTickets attempts to trigger all connected stakepoold
 // instances to pull a data update of the specified kind.
-func (controller *MainController) StakepooldUpdateTickets(dbMap *gorp.DbMap) error {
+func (controller *MainController) StakepooldUpdateTickets(ctx context.Context, dbMap *gorp.DbMap) error {
 	votableLowFeeTickets, err := models.GetVotableLowFeeTickets(dbMap)
 	if err != nil {
 		return err
 	}
 
-	err = controller.Cfg.StakepooldServers.SetAddedLowFeeTickets(votableLowFeeTickets)
+	err = controller.Cfg.StakepooldServers.SetAddedLowFeeTickets(ctx, votableLowFeeTickets)
 	if err != nil {
 		log.Errorf("error updating tickets on stakepoold: %v", err)
 		return err
@@ -521,7 +522,7 @@ func (controller *MainController) StakepooldUpdateTickets(dbMap *gorp.DbMap) err
 
 // StakepooldUpdateUsers attempts to trigger all connected stakepoold
 // instances to pull a data update of the specified kind.
-func (controller *MainController) StakepooldUpdateUsers(dbMap *gorp.DbMap) error {
+func (controller *MainController) StakepooldUpdateUsers(ctx context.Context, dbMap *gorp.DbMap) error {
 	// reset votebits if Vote Version changed or if the stored VoteBits are
 	// somehow invalid
 	allUsers, err := controller.CheckAndResetUserVoteBits(dbMap)
@@ -529,7 +530,7 @@ func (controller *MainController) StakepooldUpdateUsers(dbMap *gorp.DbMap) error
 		return err
 	}
 
-	err = controller.Cfg.StakepooldServers.SetUserVotingPrefs(allUsers)
+	err = controller.Cfg.StakepooldServers.SetUserVotingPrefs(ctx, allUsers)
 	if err != nil {
 		log.Errorf("error updating users on stakepoold: %v", err)
 		return err
@@ -599,13 +600,13 @@ func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Addre
 }
 
 // RPCSync checks to ensure that the wallets are synced on startup.
-func (controller *MainController) RPCSync(dbMap *gorp.DbMap) error {
+func (controller *MainController) RPCSync(ctx context.Context, dbMap *gorp.DbMap) error {
 	multisigScripts, err := models.GetAllCurrentMultiSigScripts(dbMap)
 	if err != nil {
 		return err
 	}
 
-	err = controller.Cfg.StakepooldServers.SyncAll(multisigScripts, MaxUsers)
+	err = controller.Cfg.StakepooldServers.SyncAll(ctx, multisigScripts, MaxUsers)
 	return err
 }
 
@@ -784,7 +785,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// From new address (pkh), get pubkey address
-	poolValidateAddress, err := controller.Cfg.StakepooldServers.ValidateAddress(pooladdress)
+	poolValidateAddress, err := controller.Cfg.StakepooldServers.ValidateAddress(r.Context(), pooladdress)
 	if err != nil {
 		return "/error", http.StatusSeeOther
 	}
@@ -802,7 +803,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 	}
 
 	// Create the the multisig script. Result includes a P2SH and redeem script.
-	createMultiSig, err := controller.Cfg.StakepooldServers.CreateMultisig([]string{poolPubKeyAddr, userPubKeyAddr})
+	createMultiSig, err := controller.Cfg.StakepooldServers.CreateMultisig(r.Context(), []string{poolPubKeyAddr, userPubKeyAddr})
 	if err != nil {
 		return "/error", http.StatusSeeOther
 	}
@@ -815,7 +816,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 
 	// Import the redeem script
 	var importedHeight int64
-	importedHeight, err = controller.Cfg.StakepooldServers.ImportNewScript(serializedScript)
+	importedHeight, err = controller.Cfg.StakepooldServers.ImportNewScript(r.Context(), serializedScript)
 	if err != nil {
 		return "/error", http.StatusSeeOther
 	}
@@ -834,7 +835,7 @@ func (controller *MainController) AddressPost(c web.C, r *http.Request) (string,
 		createMultiSig.RedeemScript, poolPubKeyAddr, userPubKeyAddr,
 		userFeeAddr.Address(), importedHeight)
 
-	if err = controller.StakepooldUpdateUsers(dbMap); err != nil {
+	if err = controller.StakepooldUpdateUsers(r.Context(), dbMap); err != nil {
 		log.Errorf("unable to update all: %v", err)
 	}
 
@@ -849,7 +850,7 @@ func (controller *MainController) AdminStatus(c web.C, r *http.Request) (string,
 		return "", http.StatusUnauthorized
 	}
 
-	backendStatus := controller.Cfg.StakepooldServers.BackendStatus()
+	backendStatus := controller.Cfg.StakepooldServers.BackendStatus(r.Context())
 
 	t := controller.GetTemplate(c)
 	c.Env["Admin"] = isAdmin
@@ -891,7 +892,7 @@ func (controller *MainController) AdminTickets(c web.C, r *http.Request) (string
 		}
 	}
 
-	ignoredLowFeeTickets, err := controller.Cfg.StakepooldServers.GetIgnoredLowFeeTickets()
+	ignoredLowFeeTickets, err := controller.Cfg.StakepooldServers.GetIgnoredLowFeeTickets(r.Context())
 	if err != nil {
 		log.Errorf("Could not retrieve ignored low fee tickets from stakepoold: %v", err)
 		session.AddFlash("Could not retrieve ignored low fee tickets from stakepoold", "adminTicketsError")
@@ -970,7 +971,7 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 	switch action {
 	case "add":
 		actionVerb = "added"
-		ignoredLowFeeTickets, err := controller.Cfg.StakepooldServers.GetIgnoredLowFeeTickets()
+		ignoredLowFeeTickets, err := controller.Cfg.StakepooldServers.GetIgnoredLowFeeTickets(r.Context())
 		if err != nil {
 			session.AddFlash("GetIgnoredLowFeeTickets error: "+err.Error(),
 				"adminTicketsError")
@@ -1028,7 +1029,7 @@ func (controller *MainController) AdminTicketsPost(c web.C, r *http.Request) (st
 		}
 	}
 
-	err = controller.StakepooldUpdateTickets(dbMap)
+	err = controller.StakepooldUpdateTickets(r.Context(), dbMap)
 	if err != nil {
 		session.AddFlash("StakepooldUpdateAll error: "+err.Error(), "adminTicketsError")
 	}
@@ -1206,7 +1207,7 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	c.Env["CustomDescription"] = controller.Cfg.Description
 	c.Env["PoolLink"] = controller.Cfg.PoolLink
 
-	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo()
+	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo(r.Context())
 	if err != nil {
 		log.Errorf("RPC GetStakeInfo failed: %v", err)
 		return "/error", http.StatusSeeOther
@@ -1737,7 +1738,7 @@ func (controller *MainController) Stats(c web.C, r *http.Request) (string, int) 
 	userCount := models.GetUserCount(dbMap)
 	userCountActive := models.GetUserCountActive(dbMap)
 
-	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo()
+	gsi, err := controller.Cfg.StakepooldServers.GetStakeInfo(r.Context())
 	if err != nil {
 		log.Errorf("RPC GetStakeInfo failed: %v", err)
 		return "/error", http.StatusSeeOther
@@ -1848,7 +1849,7 @@ func (controller *MainController) Tickets(c web.C, r *http.Request) (string, int
 
 	start := time.Now()
 
-	spui, err := controller.Cfg.StakepooldServers.StakePoolUserInfo(multisig.String())
+	spui, err := controller.Cfg.StakepooldServers.StakePoolUserInfo(r.Context(), multisig.String())
 	if err != nil {
 		// Render page with message to try again later
 		log.Errorf("RPC StakePoolUserInfo failed: %v", err)
@@ -2022,7 +2023,7 @@ func (controller *MainController) VotingPost(c web.C, r *http.Request) (string, 
 	log.Infof("updated voteBits for user %d from %d to %d",
 		user.ID, oldVoteBits, generatedVoteBits)
 	if uint16(oldVoteBits) != generatedVoteBits {
-		if err := controller.StakepooldUpdateUsers(dbMap); err != nil {
+		if err := controller.StakepooldUpdateUsers(r.Context(), dbMap); err != nil {
 			log.Errorf("unable to update all: %v", err)
 		}
 	}
