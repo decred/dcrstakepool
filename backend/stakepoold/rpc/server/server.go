@@ -319,3 +319,14 @@ func (s *stakepooldServer) VerifyMessage(ctx context.Context, req *pb.VerifyMess
 		Valid: response,
 	}, nil
 }
+
+func (s *stakepooldServer) GetTransaction(ctx context.Context, req *pb.GetTransactionRequest) (*pb.GetTransactionResponse, error) {
+	response, err := s.stakepoold.GetTransaction(req.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetTransactionResponse{
+		Hex: response,
+	}, nil
+}

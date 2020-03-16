@@ -51,6 +51,7 @@ type Manager interface {
 	GetStakeInfo(context.Context) (*pb.GetStakeInfoResponse, error)
 	CrossCheckColdWalletExtPubs(ctx context.Context, dcrstakepoolColdWalletExtPub string) error
 	VerifyMessage(ctx context.Context, addr dcrutil.Address, signature, message string) (bool, error)
+	GetTransaction(ctx context.Context, txHash *chainhash.Hash) (*pb.GetTransactionResponse, error)
 }
 
 // stakepooldManager coordinates the communication between dcrstakepool and
@@ -562,6 +563,21 @@ func (s *stakepooldManager) WalletInfo(ctx context.Context) ([]*pb.WalletInfoRes
 	}
 
 	return responses, nil
+}
+
+// GetTransaction calls the gettransaction rpc
+func (s *stakepooldManager) GetTransaction(ctx context.Context, txHash *chainhash.Hash) (*pb.GetTransactionResponse, error) {
+	req := &pb.GetTransactionRequest{
+		Hash: txHash.String(),
+	}
+
+	// Get a transaction
+	for _, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		return client.GetTransaction(ctx, req)
+	}
+
+	return nil, fmt.Errorf("no connections")
 }
 
 // VerifyMessage calls the verifymessage rpc

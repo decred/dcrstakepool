@@ -378,6 +378,11 @@ func (m *tStakepooldManager) VerifyMessage(_ context.Context, _ dcrutil.Address,
 	thing, _ := item.thing.(bool)
 	return thing, item.err
 }
+func (m *tStakepooldManager) GetTransaction(_ context.Context, _ *chainhash.Hash) (*pb.GetTransactionResponse, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(*pb.GetTransactionResponse)
+	return thing, item.err
+}
 
 type queueItem struct {
 	thing interface{}

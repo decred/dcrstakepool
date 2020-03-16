@@ -21,6 +21,7 @@ service StakepooldService {
 	rpc GetStakeInfo (GetStakeInfoRequest) returns (GetStakeInfoResponse);
 	rpc GetColdWalletExtPub (GetColdWalletExtPubRequest) returns (GetColdWalletExtPubResponse);
 	rpc VerifyMessage (VerifyMessageRequest) returns (VerifyMessageResponse);
+	rpc GetTransaction (GetTransactionRequest) returns (GetTransactionResponse);
 }
 
 service VersionService {
@@ -190,4 +191,12 @@ message VerifyMessageRequest {
 }
 message VerifyMessageResponse {
 	bool Valid = 1;
+}
+
+message GetTransactionRequest {
+	string Hash = 1;
+}
+message GetTransactionResponse {
+	int64 Confirmations = 1;
+	bytes Hex = 2;
 }

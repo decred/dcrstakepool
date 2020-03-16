@@ -487,6 +487,28 @@ func (spd *Stakepoold) VerifyMessage(address, signature, message string) (bool, 
 	return response, nil
 }
 
+// GetTransaction performs the gettransaction rpc command.
+func (spd *Stakepoold) GetTransaction(txHash string) ([]byte, error) {
+	hash, err := chainhash.NewHashFromStr(txHash)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := spd.WalletConnection.RPCClient().GetTransaction(hash)
+	if err != nil {
+		log.Errorf("VerifyMessage failed: %v", err)
+		return nil, err
+	}
+
+	hex, err := hex.DecodeString(response.Hex)
+	if err != nil {
+		log.Errorf("DecodeString failed: %v", err)
+		return nil, err
+	}
+
+	return hex, nil
+}
+
 // UpdateUserData replaces the user voting config in memory with newUserVotingConfig.
 func (spd *Stakepoold) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	spd.Lock()
