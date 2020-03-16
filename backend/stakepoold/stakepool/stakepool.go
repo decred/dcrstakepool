@@ -472,6 +472,21 @@ func (spd *Stakepoold) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
 	return response, nil
 }
 
+// VerifyMessage performs the verifymessage rpc command.
+func (spd *Stakepoold) VerifyMessage(address, signature, message string) (bool, error) {
+	addr, err := dcrutil.DecodeAddress(address, spd.Params)
+	if err != nil {
+		return false, err
+	}
+
+	response, err := spd.WalletConnection.RPCClient().VerifyMessage(addr, signature, message)
+	if err != nil {
+		log.Errorf("VerifyMessage failed: %v", err)
+		return false, err
+	}
+	return response, nil
+}
+
 // UpdateUserData replaces the user voting config in memory with newUserVotingConfig.
 func (spd *Stakepoold) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	spd.Lock()

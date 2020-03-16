@@ -50,6 +50,7 @@ type Manager interface {
 	BackendStatus(context.Context) []BackendStatus
 	GetStakeInfo(context.Context) (*pb.GetStakeInfoResponse, error)
 	CrossCheckColdWalletExtPubs(ctx context.Context, dcrstakepoolColdWalletExtPub string) error
+	VerifyMessage(ctx context.Context, addr dcrutil.Address, signature, message string) (bool, error)
 }
 
 // stakepooldManager coordinates the communication between dcrstakepool and
@@ -561,6 +562,37 @@ func (s *stakepooldManager) WalletInfo(ctx context.Context) ([]*pb.WalletInfoRes
 	}
 
 	return responses, nil
+}
+
+// VerifyMessage calls the verifymessage rpc
+func (s *stakepooldManager) VerifyMessage(ctx context.Context, addr dcrutil.Address, signature, message string) (bool, error) {
+	req := &pb.VerifyMessageRequest{
+		Address:   addr.String(),
+		Signature: signature,
+		Message:   message,
+	}
+
+	// Get verifymessage response from all wallets
+	responses := make(map[int]*pb.VerifyMessageResponse, len(s.grpcConnections))
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		resp, err := client.VerifyMessage(ctx, req)
+		if err != nil {
+			log.Errorf("VerifyMessage RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+			return false, err
+		}
+		responses[i] = resp
+	}
+
+	valid := responses[0].Valid
+	for i, resp := range responses {
+		if valid != resp.Valid {
+			return false, fmt.Errorf("wallets 0 and %d have different verifymessage responses: %v != %v",
+				i, valid, resp.Valid)
+		}
+	}
+
+	return valid, nil
 }
 
 // ValidateAddress calls ValidateAddress RPC on all stakepoold servers.

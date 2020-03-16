@@ -35,5 +35,5 @@ require (
 	github.com/zenazn/goji v0.9.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
-	google.golang.org/grpc v1.27.1
+	google.golang.org/grpc v1.28.0
 )
