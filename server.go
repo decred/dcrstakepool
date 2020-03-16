@@ -87,7 +87,8 @@ func runMain(ctx context.Context) error {
 	// Supported API versions are advertised in the API stats result
 	APIVersionsSupported := []int{1, 2}
 
-	stakepooldConnMan, err := stakepooldclient.ConnectStakepooldGRPC(cfg.StakepooldHosts, cfg.StakepooldCerts)
+	stakepooldConnMan, err := stakepooldclient.ConnectStakepooldGRPC(ctx, cfg.StakepooldHosts,
+		cfg.StakepooldCerts)
 	if err != nil {
 		return fmt.Errorf("failed to connect to stakepoold host: %v", err)
 	}
@@ -124,7 +125,7 @@ func runMain(ctx context.Context) error {
 		NetParams:            activeNetParams.Params,
 	}
 
-	controller, err := controllers.NewMainController(&controllerCfg)
+	controller, err := controllers.NewMainController(ctx, &controllerCfg)
 
 	if err != nil {
 		return fmt.Errorf("failed to initialize the main controller: %v", err)
@@ -132,7 +133,7 @@ func runMain(ctx context.Context) error {
 
 	// Check that dcrstakepool config and all stakepoold configs
 	// have the same value set for `coldwalletextpub`.
-	if err = controller.Cfg.StakepooldServers.CrossCheckColdWalletExtPubs(cfg.ColdWalletExtPub); err != nil {
+	if err = controller.Cfg.StakepooldServers.CrossCheckColdWalletExtPubs(ctx, cfg.ColdWalletExtPub); err != nil {
 		return err
 	}
 
@@ -142,29 +143,29 @@ func runMain(ctx context.Context) error {
 		return fmt.Errorf("failed to check and reset user vote bits: %v", err)
 	}
 
-	err = controller.StakepooldUpdateUsers(application.DbMap)
+	err = controller.StakepooldUpdateUsers(ctx, application.DbMap)
 	if err != nil {
 		return fmt.Errorf("StakepooldUpdateUsers failed: %v", err)
 	}
-	err = controller.StakepooldUpdateTickets(application.DbMap)
+	err = controller.StakepooldUpdateTickets(ctx, application.DbMap)
 	if err != nil {
 		return fmt.Errorf("StakepooldUpdateTickets failed: %v", err)
 	}
 	// Log the reported count of ignored/added/live tickets from each stakepoold
-	_, err = controller.Cfg.StakepooldServers.GetIgnoredLowFeeTickets()
+	_, err = controller.Cfg.StakepooldServers.GetIgnoredLowFeeTickets(ctx)
 	if err != nil {
 		return fmt.Errorf("StakepooldGetIgnoredLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.Cfg.StakepooldServers.GetAddedLowFeeTickets()
+	_, err = controller.Cfg.StakepooldServers.GetAddedLowFeeTickets(ctx)
 	if err != nil {
 		return fmt.Errorf("StakepooldGetAddedLowFeeTickets failed: %v", err)
 	}
-	_, err = controller.Cfg.StakepooldServers.GetLiveTickets()
+	_, err = controller.Cfg.StakepooldServers.GetLiveTickets(ctx)
 	if err != nil {
 		return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
 	}
 
-	err = controller.RPCSync(application.DbMap)
+	err = controller.RPCSync(ctx, application.DbMap)
 	if err != nil {
 		return fmt.Errorf("failed to sync the wallets: %v",
 			err)

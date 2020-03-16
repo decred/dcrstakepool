@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"errors"
 	mrand "math/rand"
 	"net/http"
@@ -306,69 +307,69 @@ type tStakepooldManager struct {
 	qItem func() queueItem
 }
 
-func (m *tStakepooldManager) GetAddedLowFeeTickets() (map[chainhash.Hash]string, error) {
+func (m *tStakepooldManager) GetAddedLowFeeTickets(_ context.Context) (map[chainhash.Hash]string, error) {
 	item := m.qItem()
 	thing, _ := item.thing.(map[chainhash.Hash]string)
 	return thing, item.err
 }
-func (m *tStakepooldManager) GetIgnoredLowFeeTickets() (map[chainhash.Hash]string, error) {
+func (m *tStakepooldManager) GetIgnoredLowFeeTickets(_ context.Context) (map[chainhash.Hash]string, error) {
 	item := m.qItem()
 	thing, _ := item.thing.(map[chainhash.Hash]string)
 	return thing, item.err
 }
-func (m *tStakepooldManager) GetLiveTickets() (map[chainhash.Hash]string, error) {
+func (m *tStakepooldManager) GetLiveTickets(_ context.Context) (map[chainhash.Hash]string, error) {
 	item := m.qItem()
 	thing, _ := item.thing.(map[chainhash.Hash]string)
 	return thing, item.err
 }
-func (m *tStakepooldManager) SetAddedLowFeeTickets(_ []models.LowFeeTicket) error {
+func (m *tStakepooldManager) SetAddedLowFeeTickets(_ context.Context, _ []models.LowFeeTicket) error {
 	item := m.qItem()
 	return item.err
 }
-func (m *tStakepooldManager) CreateMultisig(_ []string) (*pb.CreateMultisigResponse, error) {
+func (m *tStakepooldManager) CreateMultisig(_ context.Context, _ []string) (*pb.CreateMultisigResponse, error) {
 	item := m.qItem()
 	thing, _ := item.thing.(*pb.CreateMultisigResponse)
 	return thing, item.err
 }
-func (m *tStakepooldManager) SyncAll(_ []models.User, _ int64) error {
+func (m *tStakepooldManager) SyncAll(_ context.Context, _ []models.User, _ int64) error {
 	item := m.qItem()
 	return item.err
 }
-func (m *tStakepooldManager) StakePoolUserInfo(_ string) (*pb.StakePoolUserInfoResponse, error) {
+func (m *tStakepooldManager) StakePoolUserInfo(_ context.Context, _ string) (*pb.StakePoolUserInfoResponse, error) {
 	item := m.qItem()
 	thing, _ := item.thing.(*pb.StakePoolUserInfoResponse)
 	return thing, item.err
 }
-func (m *tStakepooldManager) SetUserVotingPrefs(_ map[int64]*models.User) error {
+func (m *tStakepooldManager) SetUserVotingPrefs(_ context.Context, _ map[int64]*models.User) error {
 	item := m.qItem()
 	return item.err
 }
-func (m *tStakepooldManager) WalletInfo() ([]*pb.WalletInfoResponse, error) {
+func (m *tStakepooldManager) WalletInfo(_ context.Context) ([]*pb.WalletInfoResponse, error) {
 	item := m.qItem()
 	thing, _ := item.thing.([]*pb.WalletInfoResponse)
 	return thing, item.err
 }
-func (m *tStakepooldManager) ValidateAddress(_ dcrutil.Address) (*pb.ValidateAddressResponse, error) {
+func (m *tStakepooldManager) ValidateAddress(_ context.Context, _ dcrutil.Address) (*pb.ValidateAddressResponse, error) {
 	item := m.qItem()
 	thing, _ := item.thing.(*pb.ValidateAddressResponse)
 	return thing, item.err
 }
-func (m *tStakepooldManager) ImportNewScript(_ []byte) (heightImported int64, err error) {
+func (m *tStakepooldManager) ImportNewScript(_ context.Context, _ []byte) (heightImported int64, err error) {
 	item := m.qItem()
 	thing, _ := item.thing.(int64)
 	return thing, item.err
 }
-func (m *tStakepooldManager) BackendStatus() []stakepooldclient.BackendStatus {
+func (m *tStakepooldManager) BackendStatus(_ context.Context) []stakepooldclient.BackendStatus {
 	item := m.qItem()
 	thing, _ := item.thing.([]stakepooldclient.BackendStatus)
 	return thing
 }
-func (m *tStakepooldManager) GetStakeInfo() (*pb.GetStakeInfoResponse, error) {
+func (m *tStakepooldManager) GetStakeInfo(_ context.Context) (*pb.GetStakeInfoResponse, error) {
 	item := m.qItem()
 	thing, _ := item.thing.(*pb.GetStakeInfoResponse)
 	return thing, item.err
 }
-func (m *tStakepooldManager) CrossCheckColdWalletExtPubs(_ string) error {
+func (m *tStakepooldManager) CrossCheckColdWalletExtPubs(_ context.Context, _ string) error {
 	item := m.qItem()
 	return item.err
 }
@@ -430,10 +431,12 @@ func TestNewMainController(t *testing.T) {
 		}},
 		wantErr: true,
 	}}
+
+	ctx := context.Background()
 	for _, test := range tests {
 		sm := tManagerWithQueue(test.stakepooldQueue)
 		cfg := &Config{StakepooldServers: sm, NetParams: chaincfg.TestNet3Params()}
-		_, err := NewMainController(cfg)
+		_, err := NewMainController(ctx, cfg)
 		if test.wantErr {
 			if err == nil {
 				t.Fatalf("expected error for test \"%s\"", test.name)
