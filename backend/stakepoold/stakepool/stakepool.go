@@ -1,6 +1,8 @@
-// Copyright (c) 2019 The Decred developers
+// Copyright (c) 2019-2020 The Decred developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
 
-// Package stakepool holds the Stakepool struct and processes incomming commands
+// Package stakepool holds the Stakepool struct and processes incoming commands
 // and notifications.
 package stakepool
 
@@ -333,8 +335,6 @@ func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 
 // AddMissingTicket forcefully adds a ticket to be watched by dcrwallet.
 func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
-	log.Infof("AddMissingTicket: Adding ticket with hash %s", ticketHash)
-
 	hash, err := chainhash.NewHash(ticketHash)
 	if err != nil {
 		log.Errorf("AddMissingTicket: Failed to parse ticket hash: %v", err)
@@ -353,6 +353,7 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 		return err
 	}
 
+	log.Infof("AddMissingTicket: Added ticket with hash %s", hash)
 	return nil
 }
 
