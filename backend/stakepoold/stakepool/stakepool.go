@@ -509,6 +509,17 @@ func (spd *Stakepoold) GetTransaction(txHash string) ([]byte, error) {
 	return hex, nil
 }
 
+// GetNewAddress performs the getnewaddress rpc command.
+func (spd *Stakepoold) GetNewAddress(account string) (dcrutil.Address, error) {
+	response, err := spd.WalletConnection.RPCClient().GetNewAddress(account, spd.Params)
+	if err != nil {
+		log.Errorf("GetNewAddress failed: %v", err)
+		return nil, err
+	}
+
+	return response, nil
+}
+
 // UpdateUserData replaces the user voting config in memory with newUserVotingConfig.
 func (spd *Stakepoold) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
 	spd.Lock()

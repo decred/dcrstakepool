@@ -330,3 +330,14 @@ func (s *stakepooldServer) GetTransaction(ctx context.Context, req *pb.GetTransa
 		Hex: response,
 	}, nil
 }
+
+func (s *stakepooldServer) GetNewAddress(ctx context.Context, req *pb.GetNewAddressRequest) (*pb.GetNewAddressResponse, error) {
+	response, err := s.stakepoold.GetNewAddress(req.Account)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetNewAddressResponse{
+		Address: response.String(),
+	}, nil
+}

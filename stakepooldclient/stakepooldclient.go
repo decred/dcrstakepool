@@ -52,6 +52,7 @@ type Manager interface {
 	CrossCheckColdWalletExtPubs(ctx context.Context, dcrstakepoolColdWalletExtPub string) error
 	VerifyMessage(ctx context.Context, addr dcrutil.Address, signature, message string) (bool, error)
 	GetTransaction(ctx context.Context, txHash *chainhash.Hash) (*pb.GetTransactionResponse, error)
+	GetNewAddress(ctx context.Context, account string) (string, error)
 }
 
 // stakepooldManager coordinates the communication between dcrstakepool and
@@ -563,6 +564,35 @@ func (s *stakepooldManager) WalletInfo(ctx context.Context) ([]*pb.WalletInfoRes
 	}
 
 	return responses, nil
+}
+
+// GetNewAddress calls the getnewaddress rpc
+func (s *stakepooldManager) GetNewAddress(ctx context.Context, account string) (string, error) {
+	req := &pb.GetNewAddressRequest{
+		Account: account,
+	}
+
+	// Get a new address and verify all connections match
+	responses := make(map[int]string, len(s.grpcConnections))
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		resp, err := client.GetNewAddress(ctx, req)
+		if err != nil {
+			log.Errorf("GetNewAddress RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+			return "", err
+		}
+		responses[i] = resp.Address
+	}
+
+	address := responses[0]
+	for i, resp := range responses {
+		if address != resp {
+			return "", fmt.Errorf("wallets 0 and %d have different getnewaddress '%s' responses: %v != %v",
+				i, "fees", address, resp)
+		}
+	}
+
+	return address, nil
 }
 
 // GetTransaction calls the gettransaction rpc

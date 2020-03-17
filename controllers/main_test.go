@@ -383,6 +383,11 @@ func (m *tStakepooldManager) GetTransaction(_ context.Context, _ *chainhash.Hash
 	thing, _ := item.thing.(*pb.GetTransactionResponse)
 	return thing, item.err
 }
+func (m *tStakepooldManager) GetNewAddress(_ context.Context, _ string) (string, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(string)
+	return thing, item.err
+}
 
 type queueItem struct {
 	thing interface{}
