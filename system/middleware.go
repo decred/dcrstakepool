@@ -70,7 +70,7 @@ func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler 
 			if err != nil {
 				log.Warnf("api authorization failure: %v", err)
 				c.Env["AuthErrorMessage"] = err.Error()
-			} else {
+			} else if user != nil {
 				c.Env["APIUserID"] = user.ID
 				log.Infof("mapped api auth header %v to user %v", authHeader, user.ID)
 			}
