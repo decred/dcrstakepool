@@ -36,7 +36,7 @@ var (
 
 // Manager is satisfied by stakepooldManager.
 type Manager interface {
-	GetTicketInfo(hash string) (*pb.GetTicketInfoResponse, error)
+	GetTicketInfo(ctx context.Context, hash string) (*pb.GetTicketInfoResponse, error)
 	GetAddedLowFeeTickets(context.Context) (map[chainhash.Hash]string, error)
 	GetIgnoredLowFeeTickets(context.Context) (map[chainhash.Hash]string, error)
 	GetLiveTickets(context.Context) (map[chainhash.Hash]string, error)
@@ -138,10 +138,10 @@ func (s *stakepooldManager) connected(ctx context.Context) error {
 // GetTicketInfo performs gRPC GetTicketInfo requests against
 // all stakepoold instances and returns the first result fetched
 // without errors. Returns an error if all RPC requests fail.
-func (s *stakepooldManager) GetTicketInfo(hash string) (*pb.GetTicketInfoResponse, error) {
+func (s *stakepooldManager) GetTicketInfo(ctx context.Context, hash string) (*pb.GetTicketInfoResponse, error) {
 	for _, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
-		resp, err := client.GetTicketInfo(context.Background(), &pb.GetTicketInfoRequest{Hash: hash})
+		resp, err := client.GetTicketInfo(ctx, &pb.GetTicketInfoRequest{Hash: hash})
 		if err != nil {
 			log.Warnf("GetTicketInfo RPC failed on stakepoold instance %s: %v", conn.Target(), err)
 			continue

@@ -61,7 +61,7 @@ func (application *Application) ApplyAPI(c *web.C, h http.Handler) http.Handler 
 				}
 			} else if strings.HasPrefix(authHeader, "TicketAuth ") {
 				var userMsa string
-				userMsa, err = application.validateTicketOwnership(authHeader)
+				userMsa, err = application.validateTicketOwnership(r.Context(), authHeader)
 				if err == nil {
 					user, err = models.GetUserByMSA(dbMap, userMsa)
 				}

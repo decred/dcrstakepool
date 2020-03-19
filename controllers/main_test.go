@@ -307,7 +307,7 @@ type tStakepooldManager struct {
 	qItem func() queueItem
 }
 
-func (m *tStakepooldManager) GetTicketInfo(hash string) (*pb.GetTicketInfoResponse, error) {
+func (m *tStakepooldManager) GetTicketInfo(_ context.Context, hash string) (*pb.GetTicketInfoResponse, error) {
 	item := m.qItem()
 	thing, _ := item.thing.(*pb.GetTicketInfoResponse)
 	return thing, item.err

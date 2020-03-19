@@ -5,6 +5,7 @@
 package system
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"math"
@@ -41,7 +42,7 @@ func (application *Application) validateToken(authHeader string) (int64, error) 
 	}
 }
 
-func (application *Application) validateTicketOwnership(authHeader string) (string, error) {
+func (application *Application) validateTicketOwnership(ctx context.Context, authHeader string) (string, error) {
 	timestamp, timestampSignature, ticketHash := extractTicketAuthParams(strings.TrimPrefix(authHeader, "TicketAuth "))
 	if timestamp == "" || timestampSignature == "" || ticketHash == "" {
 		return "", fmt.Errorf("invalid ticket auth header value %s", authHeader)
@@ -75,7 +76,7 @@ func (application *Application) validateTicketOwnership(authHeader string) (stri
 
 	// Get ticket info using ticket hash, also checks if the ticket is watched by this vsp.
 	// todo: may be better to maintain a memory map of tickets-userWalletAddresses
-	ticketInfo, err := application.stakepooldManager.GetTicketInfo(ticketHash)
+	ticketInfo, err := application.stakepooldManager.GetTicketInfo(ctx, ticketHash)
 	if err != nil {
 		return "", fmt.Errorf("ticket auth, get ticket info failed: %v", err)
 	}
