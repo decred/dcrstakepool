@@ -34,10 +34,10 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "9.0.0"
+	semverString       = "9.0.1"
 	semverMajor        = 9
 	semverMinor        = 0
-	semverPatch        = 0
+	semverPatch        = 1
 )
 
 // versionServer provides RPC clients with the ability to query the RPC server
