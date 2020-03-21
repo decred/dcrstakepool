@@ -10,20 +10,8 @@
 
 set -ex
 
-dir=$(pwd)
-# list of all modules to test
-modules=". backend/stakepoold/rpc/client/dcrwallet"
-
-# Test each module separately.
-for m in $modules
-do
-	cd $dir/$m
-	# run tests
-	env GORACE="halt_on_error=1" go test -tags live -race -short ./...
-done
-
-# Return to initial directory.
-cd $dir
+# run tests
+env GORACE="halt_on_error=1" go test -tags live -race -short ./...
 
 # golangci-lint (github.com/golangci/golangci-lint) is used to run each each
 # static checker.

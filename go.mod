@@ -13,10 +13,10 @@ require (
 	github.com/decred/dcrd/dcrec v1.0.0
 	github.com/decred/dcrd/dcrutil/v2 v2.0.1
 	github.com/decred/dcrd/hdkeychain/v2 v2.1.0
+	github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.0.0
 	github.com/decred/dcrd/rpcclient/v4 v4.0.0
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v4 v4.0.4
-	github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet v0.0.0-00010101000000-000000000000
 	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.4.0
 	github.com/decred/dcrwallet/wallet/v3 v3.1.0
 	github.com/decred/slog v1.0.0
@@ -39,5 +39,3 @@ require (
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	google.golang.org/grpc v1.27.1
 )
-
-replace github.com/decred/dcrstakepool/backend/stakepoold/rpc/client/dcrwallet => ./backend/stakepoold/rpc/client/dcrwallet
