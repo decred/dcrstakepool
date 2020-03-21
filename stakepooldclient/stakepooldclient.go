@@ -22,7 +22,7 @@ import (
 var (
 	// Ensure that stakepooldManager satisfies the Manager interface.
 	_                     Manager = (*stakepooldManager)(nil)
-	requiredStakepooldAPI         = semver{major: 9, minor: 0, patch: 0}
+	requiredStakepooldAPI         = semver{major: 9, minor: 1, patch: 0}
 
 	// cacheTimerStakeInfo is the duration of time after which to
 	// access the wallet and update the stake information instead
