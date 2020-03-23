@@ -34,8 +34,8 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "9.0.0"
-	semverMajor        = 9
+	semverString       = "10.0.0"
+	semverMajor        = 10
 	semverMinor        = 0
 	semverPatch        = 0
 )
@@ -134,13 +134,15 @@ func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.Se
 
 func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUserVotingPrefsRequest) (*pb.SetUserVotingPrefsResponse, error) {
 
-	userVotingPrefs := make(map[string]userdata.UserVotingConfig)
+	userVotingPrefs := make(map[string]*userdata.UserVotingConfig)
 	for _, data := range req.UserVotingConfig {
-		userVotingPrefs[data.MultiSigAddress] = userdata.UserVotingConfig{
-			Userid:          data.UserId,
-			MultiSigAddress: data.MultiSigAddress,
-			VoteBits:        uint16(data.VoteBits),
-			VoteBitsVersion: uint32(data.VoteBitsVersion),
+		userVotingPrefs[data.MultiSigAddress] = &userdata.UserVotingConfig{
+			Userid:           data.UserId,
+			MultiSigAddress:  data.MultiSigAddress,
+			RedeemScript:     data.RedeemScript,
+			HeightRegistered: data.HeightRegistered,
+			VoteBits:         uint16(data.VoteBits),
+			VoteBitsVersion:  uint32(data.VoteBitsVersion),
 		}
 	}
 
@@ -156,24 +158,6 @@ func (s *stakepooldServer) ImportNewScript(ctx context.Context, req *pb.ImportNe
 	return &pb.ImportNewScriptResponse{
 		HeightImported: heightImported,
 	}, nil
-}
-
-func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.ImportMissingScriptsRequest) (*pb.ImportMissingScriptsResponse, error) {
-	err := s.stakepoold.ImportMissingScripts(req.Scripts, int(req.RescanHeight))
-	if err != nil {
-		return nil, err
-	}
-	return &pb.ImportMissingScriptsResponse{}, nil
-}
-
-func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsRequest) (*pb.ListScriptsResponse, error) {
-
-	scripts, err := s.stakepoold.ListScripts()
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.ListScriptsResponse{Scripts: scripts}, nil
 }
 
 func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.AccountSyncAddressIndexRequest) (*pb.AccountSyncAddressIndexResponse, error) {

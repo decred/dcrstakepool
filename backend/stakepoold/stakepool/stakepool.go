@@ -28,6 +28,9 @@ import (
 	"github.com/decred/dcrwallet/wallet/v3/txrules"
 )
 
+// IMPORTED_ACCOUNT is the name of dcrwallet's imported account.
+const IMPORTED_ACCOUNT = "imported"
+
 var (
 	errSuccess            = errors.New("success")
 	errNoTxInfo           = "-5: no information for transaction"
@@ -41,10 +44,10 @@ type Stakepoold struct {
 	sync.RWMutex
 
 	// locking required
-	AddedLowFeeTicketsMSA   map[chainhash.Hash]string            // [ticket]multisigaddr
-	IgnoredLowFeeTicketsMSA map[chainhash.Hash]string            // [ticket]multisigaddr
-	LiveTicketsMSA          map[chainhash.Hash]string            // [ticket]multisigaddr
-	UserVotingConfig        map[string]userdata.UserVotingConfig // [multisigaddr]
+	AddedLowFeeTicketsMSA   map[chainhash.Hash]string             // [ticket]multisigaddr
+	IgnoredLowFeeTicketsMSA map[chainhash.Hash]string             // [ticket]multisigaddr
+	LiveTicketsMSA          map[chainhash.Hash]string             // [ticket]multisigaddr
+	UserVotingConfig        map[string]*userdata.UserVotingConfig // [multisigaddr]
 
 	// no locking required
 	DataPath               string
@@ -95,18 +98,18 @@ type WinningTicketsForBlock struct {
 type ticketMetadata struct {
 	blockHash    *chainhash.Hash
 	blockHeight  int64
-	msa          string                    // multisig
-	ticket       *chainhash.Hash           // ticket
-	spent        bool                      // spent (true) or missed (false)
-	config       userdata.UserVotingConfig // voting config
-	duration     time.Duration             // overall vote duration
-	getDuration  time.Duration             // time to gettransaction
-	hex          string                    // hex encoded tx data
-	txid         *chainhash.Hash           // transaction id
-	ticketType   string                    // new or spentmissed
-	signDuration time.Duration             // time to generatevote
-	sendDuration time.Duration             // time to sendrawtransaction
-	err          error                     // log errors along the way
+	msa          string                     // multisig
+	ticket       *chainhash.Hash            // ticket
+	spent        bool                       // spent (true) or missed (false)
+	config       *userdata.UserVotingConfig // voting config
+	duration     time.Duration              // overall vote duration
+	getDuration  time.Duration              // time to gettransaction
+	hex          string                     // hex encoded tx data
+	txid         *chainhash.Hash            // transaction id
+	ticketType   string                     // new or spentmissed
+	signDuration time.Duration              // time to generatevote
+	sendDuration time.Duration              // time to sendrawtransaction
+	err          error                      // log errors along the way
 }
 
 // EvaluateStakePoolTicket evaluates a voting service ticket to see if it's
@@ -305,30 +308,30 @@ func (spd *Stakepoold) ImportNewScript(script []byte) (int64, error) {
 	return bestBlockHeight, nil
 }
 
-// ImportMissingScripts accepts a list of redeem scripts and a rescan height. It
+// importMissingScripts accepts a list of redeem scripts and a rescan height. It
 // will import all but one of the scripts without triggering a wallet rescan,
 // and finally trigger a rescan from the provided height after importing the
 // last one.
-func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) error {
+func (spd *Stakepoold) importMissingScripts(scripts [][]byte, rescanHeight int64) error {
 	// Import n-1 scripts without a rescan.
 	allButOne := scripts[:len(scripts)-1]
 	for _, script := range allButOne {
 		err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
 		if err != nil {
-			log.Errorf("ImportMissingScripts: ImportScript rpc failed: %v", err)
+			log.Errorf("importMissingScripts: ImportScript rpc failed: %v", err)
 			return err
 		}
 	}
 
 	// Import the last script and trigger a rescan
 	lastOne := scripts[len(scripts)-1]
-	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(lastOne, true, rescanHeight)
+	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(lastOne, true, int(rescanHeight))
 	if err != nil {
-		log.Errorf("ImportMissingScripts: ImportScriptRescanFrom rpc failed: %v", err)
+		log.Errorf("importMissingScripts: ImportScriptRescanFrom rpc failed: %v", err)
 		return err
 	}
 
-	log.Infof("ImportMissingScripts: Imported %d scripts and triggered a rescan from height %d", len(scripts), rescanHeight)
+	log.Infof("importMissingScripts: Imported %d scripts and triggered a rescan from height %d", len(scripts), rescanHeight)
 
 	return nil
 }
@@ -357,15 +360,66 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 	return nil
 }
 
-// ListScripts performs the rpc command listscripts on dcrwallet.
-func (spd *Stakepoold) ListScripts() ([][]byte, error) {
-	scripts, err := spd.WalletConnection.RPCClient().ListScripts()
-	if err != nil {
-		log.Errorf("ListScripts: ListScripts rpc failed: %v", err)
-		return nil, err
+// SyncScripts checks wallet to see if it has all the redeem scripts found in
+// the database and imports any that are not found.
+func (spd *Stakepoold) SyncScripts() error {
+	const op = "ListScripts"
+	type info struct {
+		script           []byte
+		heightRegistered int64
 	}
-
-	return scripts, nil
+	addrs := make(map[string]info)
+	spd.Lock()
+	// UserVotingConfig should have multi sig addresses for all users.
+	for addr, uvc := range spd.UserVotingConfig {
+		if uvc.RedeemScript == nil {
+			log.Errorf("no redeem script for address %s", addr)
+			continue
+		}
+		addrs[addr] = info{
+			script:           uvc.RedeemScript,
+			heightRegistered: uvc.HeightRegistered,
+		}
+	}
+	spd.Unlock()
+	// Addresses will show up in dcrwallet's "imported" account if the wallet
+	// has the redeem script already.
+	walletAddrs, err := spd.WalletConnection.RPCClient().GetAddressesByAccount(IMPORTED_ACCOUNT, spd.Params)
+	if err != nil {
+		err = fmt.Errorf("%s: failed to get addresses for the dcrwallet imported account: %v", op, err)
+		log.Error(err)
+		return err
+	}
+	found := func(addr string, addrs []dcrutil.Address) bool {
+		for _, a := range addrs {
+			if addr == a.Address() {
+				return true
+			}
+		}
+		return false
+	}
+	notFound := make([][]byte, 0)
+	lowestHeight := int64(-1)
+	// Populate a list of addresses that are in the database but not the wallet.
+	for addr, info := range addrs {
+		if !found(addr, walletAddrs) {
+			notFound = append(notFound, info.script)
+			if info.heightRegistered < lowestHeight || lowestHeight == -1 {
+				lowestHeight = info.heightRegistered
+			}
+		}
+	}
+	// Import missing scripts.
+	if len(notFound) > 0 {
+		log.Infof("%d redeem scripts not found in dcrwallet, importing...", len(notFound))
+		err = spd.importMissingScripts(notFound, lowestHeight)
+		if err != nil {
+			err = fmt.Errorf("%s: failed to import redeem scripts to wallet: %v", op, err)
+			log.Error(err)
+			return err
+		}
+	}
+	return nil
 }
 
 // CreateMultisig decodes the provided array of addresses, and then
@@ -474,7 +528,7 @@ func (spd *Stakepoold) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
 }
 
 // UpdateUserData replaces the user voting config in memory with newUserVotingConfig.
-func (spd *Stakepoold) UpdateUserData(newUserVotingConfig map[string]userdata.UserVotingConfig) {
+func (spd *Stakepoold) UpdateUserData(newUserVotingConfig map[string]*userdata.UserVotingConfig) {
 	spd.Lock()
 	spd.UserVotingConfig = newUserVotingConfig
 	spd.Unlock()
@@ -745,7 +799,7 @@ func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
 			// Use defaults if not found.
 			log.Warnf("ProcessWinningTickets: vote config not found for %v using defaults",
 				msa)
-			voteCfg = userdata.UserVotingConfig{
+			voteCfg = &userdata.UserVotingConfig{
 				Userid:          0,
 				MultiSigAddress: msa,
 				VoteBits:        spd.VotingConfig.VoteBits,

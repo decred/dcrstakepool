@@ -2,6 +2,7 @@ package userdata
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"sync"
 
@@ -26,10 +27,12 @@ type UserData struct {
 
 // UserVotingConfig contains per-user voting preferences.
 type UserVotingConfig struct {
-	Userid          int64
-	MultiSigAddress string
-	VoteBits        uint16
-	VoteBitsVersion uint32
+	Userid           int64
+	MultiSigAddress  string
+	RedeemScript     []byte
+	HeightRegistered int64
+	VoteBits         uint16
+	VoteBitsVersion  uint32
 }
 
 // MySQLFetchAddedLowFeeTickets fetches any low fee tickets that were
@@ -87,20 +90,22 @@ func (u *UserData) MySQLFetchAddedLowFeeTickets() (map[chainhash.Hash]string, er
 // MySQLFetchUserVotingConfig fetches the voting preferences of all users
 // who have completed registration of the pool by submitting an address
 // and generating a multisig ticket address.
-func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, error) {
+func (u *UserData) MySQLFetchUserVotingConfig() (map[string]*UserVotingConfig, error) {
 	var (
-		userid          int64
-		multiSigAddress string
-		voteBits        int64
-		voteBitsVersion int64
+		userid           int64
+		multiSigAddress  string
+		redeemScript     string
+		heightRegistered int64
+		voteBits         int64
+		voteBitsVersion  int64
 	)
 
-	userInfo := map[string]UserVotingConfig{}
+	userInfo := make(map[string]*UserVotingConfig)
 
 	db, err := sql.Open("mysql", fmt.Sprint(u.DBConfig.DBUser, ":", u.DBConfig.DBPassword, "@(", u.DBConfig.DBHost, ":", u.DBConfig.DBPort, ")/", u.DBConfig.DBName, "?charset=utf8mb4"))
 	if err != nil {
 		log.Errorf("Unable to open db: %v", err)
-		return userInfo, err
+		return nil, err
 	}
 
 	// sql.Open just validates its arguments without creating a connection
@@ -108,28 +113,35 @@ func (u *UserData) MySQLFetchUserVotingConfig() (map[string]UserVotingConfig, er
 	if err = db.Ping(); err != nil {
 		log.Errorf("Unable to establish connection to db: %v", err)
 		db.Close()
-		return userInfo, err
+		return nil, err
 	}
 
-	rows, err := db.Query("SELECT UserId, MultiSigAddress, VoteBits, VoteBitsVersion FROM Users WHERE MultiSigAddress <> ''")
+	rows, err := db.Query("SELECT UserId, MultiSigAddress, MultiSigScript, HeightRegistered, VoteBits, VoteBitsVersion FROM Users WHERE MultiSigAddress <> ''")
 	if err != nil {
-		log.Errorf("Unable to query db: %v", err)
+		log.Errorf("unable to query db: %v", err)
 		db.Close()
-		return userInfo, err
+		return nil, err
 	}
 
 	defer rows.Close()
 	for rows.Next() {
-		err := rows.Scan(&userid, &multiSigAddress, &voteBits, &voteBitsVersion)
+		err := rows.Scan(&userid, &multiSigAddress, &redeemScript, &heightRegistered, &voteBits, &voteBitsVersion)
 		if err != nil {
-			log.Errorf("Unable to scan row %v", err)
+			log.Errorf("unable to scan row %v", err)
 			continue
 		}
-		userInfo[multiSigAddress] = UserVotingConfig{
-			Userid:          userid,
-			MultiSigAddress: multiSigAddress,
-			VoteBits:        uint16(voteBits),
-			VoteBitsVersion: uint32(voteBitsVersion),
+		script, err := hex.DecodeString(redeemScript)
+		if err != nil {
+			log.Errorf("unable to decode redeem script %s: %v", redeemScript, err)
+			continue
+		}
+		userInfo[multiSigAddress] = &UserVotingConfig{
+			Userid:           userid,
+			MultiSigAddress:  multiSigAddress,
+			RedeemScript:     script,
+			HeightRegistered: heightRegistered,
+			VoteBits:         uint16(voteBits),
+			VoteBitsVersion:  uint32(voteBitsVersion),
 		}
 	}
 	if err = rows.Err(); err != nil {

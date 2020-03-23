@@ -165,10 +165,9 @@ func runMain(ctx context.Context) error {
 		return fmt.Errorf("StakepooldGetLiveTickets failed: %v", err)
 	}
 
-	err = controller.RPCSync(ctx, application.DbMap)
+	err = controller.RPCSync(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to sync the wallets: %v",
-			err)
+		return fmt.Errorf("failed to sync the wallets: %v", err)
 	}
 
 	// Set up web server routes

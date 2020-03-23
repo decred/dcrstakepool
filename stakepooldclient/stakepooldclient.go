@@ -22,7 +22,7 @@ import (
 var (
 	// Ensure that stakepooldManager satisfies the Manager interface.
 	_                     Manager = (*stakepooldManager)(nil)
-	requiredStakepooldAPI         = semver{major: 9, minor: 0, patch: 0}
+	requiredStakepooldAPI         = semver{major: 10, minor: 0, patch: 0}
 
 	// cacheTimerStakeInfo is the duration of time after which to
 	// access the wallet and update the stake information instead
@@ -41,7 +41,7 @@ type Manager interface {
 	GetLiveTickets(context.Context) (map[chainhash.Hash]string, error)
 	SetAddedLowFeeTickets(context.Context, []models.LowFeeTicket) error
 	CreateMultisig(context.Context, []string) (*pb.CreateMultisigResponse, error)
-	SyncAll(ctx context.Context, multiSigScripts []models.User, maxUsers int64) error
+	SyncAll(ctx context.Context, maxUsers int64) error
 	StakePoolUserInfo(ctx context.Context, multiSigAddress string) (*pb.StakePoolUserInfoResponse, error)
 	SetUserVotingPrefs(ctx context.Context, dbUsers map[int64]*models.User) error
 	WalletInfo(context.Context) ([]*pb.WalletInfoResponse, error)
@@ -288,7 +288,7 @@ func (s *stakepooldManager) CreateMultisig(ctx context.Context, address []string
 
 // SyncAll ensures that the wallet servers are all in sync with each
 // other in terms of tickets, redeem scripts and address indexes.
-func (s *stakepooldManager) SyncAll(ctx context.Context, multiSigScripts []models.User, maxUsers int64) error {
+func (s *stakepooldManager) SyncAll(ctx context.Context, maxUsers int64) error {
 	if err := s.connected(ctx); err != nil {
 		log.Errorf("SyncAll: stakepoold failed connectivity check: %v", err)
 		return err
@@ -297,13 +297,6 @@ func (s *stakepooldManager) SyncAll(ctx context.Context, multiSigScripts []model
 	// Set watched address indexes to maxUsers so all generated ticket
 	// addresses show as 'ismine'.
 	err := s.syncWatchedAddresses(ctx, defaultAccountName, helpers.ExternalBranch, maxUsers)
-	if err != nil {
-		return err
-	}
-
-	// Synchronize the redeem scripts so all of our voting wallets can
-	// vote on all known tickets.
-	err = s.syncScripts(ctx, multiSigScripts)
 	if err != nil {
 		return err
 	}
@@ -339,95 +332,6 @@ func (s *stakepooldManager) syncWatchedAddresses(ctx context.Context, accountNam
 	}
 
 	log.Infof("syncWatchedAddresses: Complete")
-
-	return nil
-}
-
-// syncScripts collates all known redeem scripts from the database and from
-// each stakepoold instance. It then iterates over each stakepoold instance
-// and imports any missing scripts. Returns an error immediately if any RPC
-// call fails.
-func (s *stakepooldManager) syncScripts(ctx context.Context, multiSigScripts []models.User) error {
-	type ScriptHeight struct {
-		Script []byte
-		Height int
-	}
-
-	log.Info("syncScripts: Attempting to synchronise redeem scripts across voting wallets")
-
-	// Get all scripts from db
-	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
-
-	for _, v := range multiSigScripts {
-		byteScript, err := hex.DecodeString(v.MultiSigScript)
-		if err != nil {
-			log.Errorf("syncScripts: Failed to decode script %s due to err: %v", v.MultiSigScript, err)
-			return err
-		}
-		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
-	}
-
-	log.Infof("syncScripts: %d scripts found in the db", len(allRedeemScripts))
-
-	// Fetch the scripts from each server.
-	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
-		len(s.grpcConnections))
-
-	for i, conn := range s.grpcConnections {
-		client := pb.NewStakepooldServiceClient(conn)
-
-		resp, err := client.ListScripts(ctx, &pb.ListScriptsRequest{})
-		if err != nil {
-			return err
-		}
-
-		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
-		for _, script := range resp.Scripts {
-			redeemScriptsPerServer[i][chainhash.HashH(script)] = &ScriptHeight{script, 0}
-			_, ok := allRedeemScripts[chainhash.HashH(script)]
-			if !ok {
-				allRedeemScripts[chainhash.HashH(script)] = &ScriptHeight{script, 0}
-			}
-		}
-
-		log.Infof("syncScripts: stakepoold %s reports %d scripts", conn.Target(), len(redeemScriptsPerServer[i]))
-	}
-
-	// Check each server has every script
-	for i, conn := range s.grpcConnections {
-		// Because we are adding historic scripts, we need to perform a rescan.
-		// Need to find the earliest imported script height so we know where scan from.
-		missingScripts := make([][]byte, 0)
-		earliestHeight := -1
-		for k, v := range allRedeemScripts {
-			_, ok := redeemScriptsPerServer[i][k]
-			if !ok {
-				// Script is missing from server
-				missingScripts = append(missingScripts, v.Script)
-				if earliestHeight == -1 || earliestHeight > v.Height {
-					earliestHeight = v.Height
-				}
-			}
-		}
-
-		// Add missing scripts to the server if there are any
-		if len(missingScripts) > 0 {
-			log.Infof("syncScripts: stakepoold %s was missing %d redeem scripts. Importing now...", conn.Target(), len(missingScripts))
-			client := pb.NewStakepooldServiceClient(conn)
-
-			request := &pb.ImportMissingScriptsRequest{
-				Scripts:      missingScripts,
-				RescanHeight: int64(earliestHeight),
-			}
-
-			_, err := client.ImportMissingScripts(ctx, request)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	log.Infof("syncScripts: Complete")
 
 	return nil
 }
@@ -510,8 +414,8 @@ func (s *stakepooldManager) StakePoolUserInfo(ctx context.Context, multiSigAddre
 	return nil, errors.New("StakePoolUserInfo RPC failed on all stakepoold instances")
 }
 
-// SetUserVotingPrefs performs gRPC SetUserVotingPrefs. It stops
-// executing and returns an error if any RPC call fails
+// SetUserVotingPrefs performs gRPC SetUserVotingPrefs. It stops executing and
+// returns an error if any RPC call fails
 func (s *stakepooldManager) SetUserVotingPrefs(ctx context.Context, dbUsers map[int64]*models.User) error {
 	if err := s.connected(ctx); err != nil {
 		log.Errorf("SetUserVotingPrefs: stakepoold failed connectivity check: %v", err)
@@ -520,11 +424,18 @@ func (s *stakepooldManager) SetUserVotingPrefs(ctx context.Context, dbUsers map[
 
 	users := make([]*pb.UserVotingConfigEntry, 0, len(dbUsers))
 	for userid, data := range dbUsers {
+		script, err := hex.DecodeString(data.MultiSigScript)
+		if err != nil {
+			log.Errorf("unable to decode redeem script %s: %v", data.MultiSigScript, err)
+			continue
+		}
 		users = append(users, &pb.UserVotingConfigEntry{
-			UserId:          userid,
-			MultiSigAddress: data.MultiSigAddress,
-			VoteBits:        data.VoteBits,
-			VoteBitsVersion: data.VoteBitsVersion,
+			UserId:           userid,
+			MultiSigAddress:  data.MultiSigAddress,
+			RedeemScript:     script,
+			HeightRegistered: data.HeightRegistered,
+			VoteBits:         data.VoteBits,
+			VoteBitsVersion:  data.VoteBitsVersion,
 		})
 	}
 

@@ -600,14 +600,8 @@ func (controller *MainController) TicketAddressForUserID(uid int) (dcrutil.Addre
 }
 
 // RPCSync checks to ensure that the wallets are synced on startup.
-func (controller *MainController) RPCSync(ctx context.Context, dbMap *gorp.DbMap) error {
-	multisigScripts, err := models.GetAllCurrentMultiSigScripts(dbMap)
-	if err != nil {
-		return err
-	}
-
-	err = controller.Cfg.StakepooldServers.SyncAll(ctx, multisigScripts, MaxUsers)
-	return err
+func (controller *MainController) RPCSync(ctx context.Context) error {
+	return controller.Cfg.StakepooldServers.SyncAll(ctx, MaxUsers)
 }
 
 // CheckAndResetUserVoteBits reset users VoteBits if the VoteVersion has

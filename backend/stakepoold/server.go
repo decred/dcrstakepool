@@ -50,12 +50,10 @@ var (
 	saveFileSchema                = struct {
 		AddedLowFeeTickets string
 		LiveTickets        string
-		UserVotingConfig   string
 		Version            string
 	}{
 		AddedLowFeeTickets: dataVersionAddedLowFeeTickets,
 		LiveTickets:        dataVersionLiveTickets,
-		UserVotingConfig:   dataVersionUserVotingConfig,
 		Version:            dataVersionCommon,
 	}
 )
@@ -196,12 +194,15 @@ func runMain(ctx context.Context) error {
 		log.Infof("loaded low fee tickets for %d users from MySQL", len(addedLowFeeTicketsMSA))
 	}
 
-	userVotingConfig, errMySQLFetchUserVotingConfig := userData.MySQLFetchUserVotingConfig()
-	if errMySQLFetchUserVotingConfig != nil {
-		log.Errorf("could not obtain voting config from MySQL: %v", err)
-	} else {
-		log.Infof("loaded prefs for %d users from MySQL", len(userVotingConfig))
+	userVotingConfig, err := userData.MySQLFetchUserVotingConfig()
+	if err != nil {
+		return fmt.Errorf("could not obtain voting config from MySQL: %v", err)
 	}
+	if len(userVotingConfig) == 0 {
+		log.Warn("0 active users")
+	}
+
+	log.Infof("loaded prefs for %d users from MySQL", len(userVotingConfig))
 
 	if !txrules.ValidPoolFeeRate(cfg.PoolFees) {
 		err = fmt.Errorf("poolfees '%v' is invalid", cfg.PoolFees)
@@ -243,6 +244,13 @@ func runMain(ctx context.Context) error {
 	log.Infof("Connected to dcrd (JSON-RPC API v%s) on %v",
 		nodeVer.String(), curnet.String())
 
+	// Sync wallet redeem scripts with those in the database.
+	if err := spd.SyncScripts(); err != nil {
+		err = fmt.Errorf("unable to sync scripts: %v", err)
+		log.Error(err)
+		return err
+	}
+
 	// prune save data
 	err = pruneData(spd)
 	if err != nil {
@@ -260,25 +268,6 @@ func runMain(ctx context.Context) error {
 			log.Infof("Loaded %v AddedLowFeeTickets from disk cache",
 				len(spd.AddedLowFeeTicketsMSA))
 		}
-	}
-
-	// load userVotingConfig from disk cache if necessary
-	if len(spd.UserVotingConfig) == 0 && errMySQLFetchUserVotingConfig != nil {
-		err = loadData(spd, "UserVotingConfig")
-		if err != nil {
-			// we could possibly die out here but it's probably better
-			// to let stakepoold vote with default preferences rather than
-			// not vote at all
-			log.Warnf("unable to load user voting preferences from disk "+
-				"cache: %v", err)
-		} else {
-			log.Infof("Loaded UserVotingConfig for %d users from disk cache",
-				len(spd.UserVotingConfig))
-		}
-	}
-
-	if len(spd.UserVotingConfig) == 0 {
-		log.Warn("0 active users")
 	}
 
 	// refresh the ticket list and make sure a block didn't come in
@@ -501,8 +490,6 @@ func loadData(spd *stakepool.Stakepoold, dataKind string) error {
 		err = dec.Decode(&spd.AddedLowFeeTicketsMSA)
 	case "LiveTickets":
 		err = dec.Decode(&spd.LiveTicketsMSA)
-	case "UserVotingConfig":
-		err = dec.Decode(&spd.UserVotingConfig)
 	}
 	if err != nil {
 		return err
@@ -539,11 +526,6 @@ func saveData(spd *stakepool.Stakepoold) {
 				log.Warn("saveData: liveTicketsMSA is empty; skipping save")
 				continue
 			}
-		case "UserVotingConfig":
-			if len(spd.UserVotingConfig) == 0 {
-				log.Warn("saveData: UserVotingConfig is empty; skipping save")
-				continue
-			}
 		default:
 			log.Warnf("saveData: passed unhandled data name %s", filenameprefix)
 			continue
@@ -566,12 +548,6 @@ func saveData(spd *stakepool.Stakepoold) {
 		case "LiveTickets":
 			enc := gob.NewEncoder(w)
 			if err := enc.Encode(&spd.LiveTicketsMSA); err != nil {
-				log.Errorf("Failed to encode file %s: %v", spd.DataPath, err)
-				continue
-			}
-		case "UserVotingConfig":
-			enc := gob.NewEncoder(w)
-			if err := enc.Encode(&spd.UserVotingConfig); err != nil {
 				log.Errorf("Failed to encode file %s: %v", spd.DataPath, err)
 				continue
 			}

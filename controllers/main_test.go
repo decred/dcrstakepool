@@ -331,7 +331,7 @@ func (m *tStakepooldManager) CreateMultisig(_ context.Context, _ []string) (*pb.
 	thing, _ := item.thing.(*pb.CreateMultisigResponse)
 	return thing, item.err
 }
-func (m *tStakepooldManager) SyncAll(_ context.Context, _ []models.User, _ int64) error {
+func (m *tStakepooldManager) SyncAll(_ context.Context, _ int64) error {
 	item := m.qItem()
 	return item.err
 }

@@ -124,7 +124,7 @@ func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map
 	userVotingConfig := make(map[string]userdata.UserVotingConfig)
 	spd.RLock()
 	for k, v := range spd.UserVotingConfig {
-		userVotingConfig[k] = v
+		userVotingConfig[k] = *v
 	}
 	spd.RUnlock()
 

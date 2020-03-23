@@ -99,7 +99,7 @@ func init() {
 			VoteBitsExtended: "05000000",
 			VoteVersion:      5,
 		},
-		UserVotingConfig: make(map[string]userdata.UserVotingConfig),
+		UserVotingConfig: make(map[string]*userdata.UserVotingConfig),
 		Testing:          true,
 	}
 
@@ -108,7 +108,7 @@ func init() {
 	// leave out last 5, as they will be inserted when tickets are generated
 	for i := 0; i < userCount-5; i++ {
 		msa := "Tc" + randString(33)
-		spd.UserVotingConfig[msa] = userdata.UserVotingConfig{
+		spd.UserVotingConfig[msa] = &userdata.UserVotingConfig{
 			Userid:          int64(i),
 			MultiSigAddress: msa,
 			VoteBits:        spd.VotingConfig.VoteBits,
@@ -130,7 +130,7 @@ func init() {
 		// last 5 tickets win
 		if i > ticketCount-6 {
 			wt.WinningTickets = append(wt.WinningTickets, ticket)
-			spd.UserVotingConfig[msa] = userdata.UserVotingConfig{}
+			spd.UserVotingConfig[msa] = &userdata.UserVotingConfig{}
 		}
 	}
 }

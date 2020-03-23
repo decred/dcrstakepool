@@ -257,7 +257,7 @@ using the script `./backend/stakepoold/rpc/regen.sh`.
 The following tools are required to run the script:
 
 - [libprotoc](https://github.com/protocolbuffers/protobuf) 3.11.4 or later
-- [protoc-gen-go](https://github.com/golang/protobuf) 1.3.4 or later
+- [protoc-gen-go](https://github.com/golang/protobuf) 1.3.5 or later
 
 ## Operations
 

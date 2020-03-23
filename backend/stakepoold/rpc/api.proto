@@ -9,13 +9,11 @@ service StakepooldService {
 	rpc SetAddedLowFeeTickets (SetAddedLowFeeTicketsRequest) returns (SetAddedLowFeeTicketsResponse);
 	rpc SetUserVotingPrefs (SetUserVotingPrefsRequest) returns (SetUserVotingPrefsResponse);
 	rpc ImportNewScript (ImportNewScriptRequest) returns (ImportNewScriptResponse);
-	rpc ImportMissingScripts (ImportMissingScriptsRequest) returns (ImportMissingScriptsResponse);
 	rpc StakePoolUserInfo (StakePoolUserInfoRequest) returns (StakePoolUserInfoResponse);
 	rpc WalletInfo (WalletInfoRequest) returns (WalletInfoResponse);
 	rpc ValidateAddress (ValidateAddressRequest) returns (ValidateAddressResponse);
 	rpc AddMissingTicket (AddMissingTicketRequest) returns (AddMissingTicketResponse);
 	rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
-	rpc ListScripts (ListScriptsRequest) returns (ListScriptsResponse);
 	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
 	rpc CreateMultisig (CreateMultisigRequest) returns (CreateMultisigResponse);
 	rpc GetStakeInfo (GetStakeInfoRequest) returns (GetStakeInfoResponse);
@@ -66,25 +64,12 @@ message GetTicketsResponse {
 	repeated bytes Tickets = 1;
 }
 
-message ListScriptsRequest {
-}
-message ListScriptsResponse {
-	repeated bytes Scripts = 1;
-}
-
 message AccountSyncAddressIndexRequest {
 	string Account = 1;
 	uint32 Branch = 2;
 	int64 Index = 3;
 }
 message AccountSyncAddressIndexResponse {
-}
-
-message ImportMissingScriptsRequest {
-	repeated bytes Scripts = 1;
-	int64 RescanHeight = 2;
-}
-message ImportMissingScriptsResponse {
 }
 
 message ImportNewScriptRequest {
@@ -143,8 +128,10 @@ message Ticket {
 message UserVotingConfigEntry {
   int64 UserId = 1;
   string MultiSigAddress = 2;
-  int64 VoteBits = 3;
-  int64 VoteBitsVersion = 4;
+  bytes RedeemScript = 3;
+  int64 HeightRegistered = 4;
+  int64 VoteBits = 5;
+  int64 VoteBitsVersion = 6;
 }
 
 message VersionRequest {}
