@@ -292,7 +292,7 @@ func UpdateUserByID(dbMap *gorp.DbMap, id int64, multiSigAddr string,
 // GetAllCurrentMultiSigScripts returns all tracked multisig scripts.
 func GetAllCurrentMultiSigScripts(dbMap *gorp.DbMap) ([]User, error) {
 	var multiSigs []User
-	_, err := dbMap.Select(&multiSigs, "SELECT MultiSigScript, HeightRegistered FROM Users WHERE MultiSigAddress <> ''")
+	_, err := dbMap.Select(&multiSigs, "SELECT MultiSigAddress, MultiSigScript, HeightRegistered FROM Users WHERE MultiSigAddress <> ''")
 	if err != nil {
 		return nil, err
 	}

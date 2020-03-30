@@ -15,7 +15,7 @@ service StakepooldService {
 	rpc ValidateAddress (ValidateAddressRequest) returns (ValidateAddressResponse);
 	rpc AddMissingTicket (AddMissingTicketRequest) returns (AddMissingTicketResponse);
 	rpc GetTickets (GetTicketsRequest) returns (GetTicketsResponse);
-	rpc ListScripts (ListScriptsRequest) returns (ListScriptsResponse);
+	rpc ListImportedAddresses (ListImportedAddressesRequest) returns (ListImportedAddressesResponse);
 	rpc AccountSyncAddressIndex (AccountSyncAddressIndexRequest) returns (AccountSyncAddressIndexResponse);
 	rpc CreateMultisig (CreateMultisigRequest) returns (CreateMultisigResponse);
 	rpc GetStakeInfo (GetStakeInfoRequest) returns (GetStakeInfoResponse);
@@ -66,10 +66,10 @@ message GetTicketsResponse {
 	repeated bytes Tickets = 1;
 }
 
-message ListScriptsRequest {
+message ListImportedAddressesRequest {
 }
-message ListScriptsResponse {
-	repeated bytes Scripts = 1;
+message ListImportedAddressesResponse {
+	repeated string Addresses = 1;
 }
 
 message AccountSyncAddressIndexRequest {
