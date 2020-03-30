@@ -357,15 +357,21 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 	return nil
 }
 
-// ListScripts performs the rpc command listscripts on dcrwallet.
-func (spd *Stakepoold) ListScripts() ([][]byte, error) {
-	scripts, err := spd.WalletConnection.RPCClient().ListScripts()
+// ListImportedAddresses performs the dcrwallet rpc command getaddressesbyaccount
+// on the 'imported' account.
+func (spd *Stakepoold) ListImportedAddresses() ([]string, error) {
+	addresses, err := spd.WalletConnection.RPCClient().GetAddressesByAccount("imported", spd.Params)
 	if err != nil {
-		log.Errorf("ListScripts: ListScripts rpc failed: %v", err)
+		log.Errorf("ListImportedAddresses: GetAddressesByAccount rpc failed: %v", err)
 		return nil, err
 	}
 
-	return scripts, nil
+	addrStrings := make([]string, len(addresses))
+	for i, address := range addresses {
+		addrStrings[i] = address.String()
+	}
+
+	return addrStrings, nil
 }
 
 // CreateMultisig decodes the provided array of addresses, and then

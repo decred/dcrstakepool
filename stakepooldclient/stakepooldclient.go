@@ -22,7 +22,7 @@ import (
 var (
 	// Ensure that stakepooldManager satisfies the Manager interface.
 	_                     Manager = (*stakepooldManager)(nil)
-	requiredStakepooldAPI         = semver{major: 9, minor: 0, patch: 0}
+	requiredStakepooldAPI         = semver{major: 10, minor: 0, patch: 0}
 
 	// cacheTimerStakeInfo is the duration of time after which to
 	// access the wallet and update the stake information instead
@@ -356,7 +356,7 @@ func (s *stakepooldManager) syncScripts(ctx context.Context, multiSigScripts []m
 	log.Info("syncScripts: Attempting to synchronise redeem scripts across voting wallets")
 
 	// Get all scripts from db
-	allRedeemScripts := make(map[chainhash.Hash]*ScriptHeight)
+	allRedeemScripts := make(map[string]*ScriptHeight)
 
 	for _, v := range multiSigScripts {
 		byteScript, err := hex.DecodeString(v.MultiSigScript)
@@ -364,29 +364,26 @@ func (s *stakepooldManager) syncScripts(ctx context.Context, multiSigScripts []m
 			log.Errorf("syncScripts: Failed to decode script %s due to err: %v", v.MultiSigScript, err)
 			return err
 		}
-		allRedeemScripts[chainhash.HashH(byteScript)] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
+		allRedeemScripts[v.MultiSigAddress] = &ScriptHeight{byteScript, int(v.HeightRegistered)}
 	}
 
 	log.Infof("syncScripts: %d scripts found in the db", len(allRedeemScripts))
 
 	// Fetch the scripts from each server.
-	redeemScriptsPerServer := make([]map[chainhash.Hash]*ScriptHeight,
-		len(s.grpcConnections))
+	redeemScriptsPerServer := make([]map[string]*ScriptHeight, len(s.grpcConnections))
 
 	for i, conn := range s.grpcConnections {
 		client := pb.NewStakepooldServiceClient(conn)
 
-		resp, err := client.ListScripts(ctx, &pb.ListScriptsRequest{})
+		resp, err := client.ListImportedAddresses(ctx, &pb.ListImportedAddressesRequest{})
 		if err != nil {
 			return err
 		}
 
-		redeemScriptsPerServer[i] = make(map[chainhash.Hash]*ScriptHeight)
-		for _, script := range resp.Scripts {
-			redeemScriptsPerServer[i][chainhash.HashH(script)] = &ScriptHeight{script, 0}
-			_, ok := allRedeemScripts[chainhash.HashH(script)]
-			if !ok {
-				allRedeemScripts[chainhash.HashH(script)] = &ScriptHeight{script, 0}
+		redeemScriptsPerServer[i] = make(map[string]*ScriptHeight)
+		for _, address := range resp.Addresses {
+			if script, ok := allRedeemScripts[address]; ok {
+				redeemScriptsPerServer[i][address] = script
 			}
 		}
 

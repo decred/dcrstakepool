@@ -34,8 +34,8 @@ const (
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
 	GRPCCommandTimeout = time.Millisecond * 100
-	semverString       = "9.0.0"
-	semverMajor        = 9
+	semverString       = "10.0.0"
+	semverMajor        = 10
 	semverMinor        = 0
 	semverPatch        = 0
 )
@@ -166,14 +166,13 @@ func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.Imp
 	return &pb.ImportMissingScriptsResponse{}, nil
 }
 
-func (s *stakepooldServer) ListScripts(ctx context.Context, req *pb.ListScriptsRequest) (*pb.ListScriptsResponse, error) {
-
-	scripts, err := s.stakepoold.ListScripts()
+func (s *stakepooldServer) ListImportedAddresses(ctx context.Context, req *pb.ListImportedAddressesRequest) (*pb.ListImportedAddressesResponse, error) {
+	addresses, err := s.stakepoold.ListImportedAddresses()
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.ListScriptsResponse{Scripts: scripts}, nil
+	return &pb.ListImportedAddressesResponse{Addresses: addresses}, nil
 }
 
 func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.AccountSyncAddressIndexRequest) (*pb.AccountSyncAddressIndexResponse, error) {
