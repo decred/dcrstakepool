@@ -789,6 +789,14 @@ func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
 
 	wg.Wait()
 
+	// Revoke any expired tickets
+	go func() {
+		err := spd.WalletConnection.RPCClient().RevokeTickets()
+		if err != nil {
+			log.Errorf("Failed to revoke tickets: %v", err)
+		}
+	}()
+
 	// Log ticket information outside of the handler.
 	go func() {
 		var dupeCount, errorCount, votedCount int
