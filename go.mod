@@ -22,7 +22,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-gorp/gorp v2.2.0+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/golang/protobuf v1.3.4
+	github.com/golang/protobuf v1.3.5
 	github.com/gorilla/csrf v1.6.2
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.0
