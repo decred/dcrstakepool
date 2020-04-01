@@ -1779,7 +1779,9 @@ func init() {
 	proto.RegisterType((*GetColdWalletExtPubResponse)(nil), "stakepoolrpc.GetColdWalletExtPubResponse")
 }
 
-func init() { proto.RegisterFile("api.proto", fileDescriptor_00212fb1f9d3bf1c) }
+func init() {
+	proto.RegisterFile("api.proto", fileDescriptor_00212fb1f9d3bf1c)
+}
 
 var fileDescriptor_00212fb1f9d3bf1c = []byte{
 	// 1536 bytes of a gzipped FileDescriptorProto
@@ -1883,11 +1885,11 @@ var fileDescriptor_00212fb1f9d3bf1c = []byte{
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
-var _ grpc.ClientConn
+var _ grpc.ClientConnInterface
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
+const _ = grpc.SupportPackageIsVersion6
 
 // StakepooldServiceClient is the client API for StakepooldService service.
 //
@@ -1913,10 +1915,10 @@ type StakepooldServiceClient interface {
 }
 
 type stakepooldServiceClient struct {
-	cc *grpc.ClientConn
+	cc grpc.ClientConnInterface
 }
 
-func NewStakepooldServiceClient(cc *grpc.ClientConn) StakepooldServiceClient {
+func NewStakepooldServiceClient(cc grpc.ClientConnInterface) StakepooldServiceClient {
 	return &stakepooldServiceClient{cc}
 }
 
@@ -2545,10 +2547,10 @@ type VersionServiceClient interface {
 }
 
 type versionServiceClient struct {
-	cc *grpc.ClientConn
+	cc grpc.ClientConnInterface
 }
 
-func NewVersionServiceClient(cc *grpc.ClientConn) VersionServiceClient {
+func NewVersionServiceClient(cc grpc.ClientConnInterface) VersionServiceClient {
 	return &versionServiceClient{cc}
 }
 
