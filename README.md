@@ -102,7 +102,7 @@ $ dcrctl --wallet getmasterpubkey stakepoolfees
   UserId 2 to address 2, and so on.
 
 ```bash
-$ dcrctl --wallet accountsyncaddressindex teststakepoolfees 0 10000
+$ dcrctl --wallet accountsyncaddressindex stakepoolfees 0 10000
 ```
 
 ### Voting service voting wallets
