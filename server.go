@@ -16,7 +16,6 @@ import (
 
 	"github.com/gorilla/csrf"
 
-	"github.com/decred/dcrd/rpcclient/v4"
 	"github.com/decred/dcrstakepool/controllers"
 	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/signal"
@@ -81,8 +80,6 @@ func runMain(ctx context.Context) error {
 	// Set up signal handler
 	// SIGUSR1 = Reload html templates (On nix systems)
 	system.ReloadTemplatesSig(application)
-
-	rpcclient.UseLogger(log)
 
 	// Supported API versions are advertised in the API stats result
 	APIVersionsSupported := []int{1, 2}
