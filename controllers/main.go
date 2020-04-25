@@ -250,6 +250,8 @@ func (controller *MainController) APIv3(c web.C, r *http.Request) interface{} {
 	switch r.Method {
 	case http.MethodGet:
 		switch command {
+		case "getfee":
+			return controller.APIv3GetFee(c, r)
 		case "getpubkey":
 			return controller.APIv3GetPubKey(c, r)
 		}
@@ -2140,6 +2142,13 @@ func (controller *MainController) APIv3GetPubKey(c web.C, r *http.Request) *pool
 	return &poolapi.GetPubKeyResponse{
 		Timestamp: time.Now().Unix(),
 		PubKey:    controller.Cfg.PubKey,
+	}
+}
+
+func (controller *MainController) APIv3GetFee(c web.C, r *http.Request) *poolapi.GetFeeResponse {
+	return &poolapi.GetFeeResponse{
+		Timestamp: time.Now().Unix(),
+		Fee:       controller.Cfg.PoolFees,
 	}
 }
 
