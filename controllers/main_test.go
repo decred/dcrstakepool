@@ -290,6 +290,11 @@ func (m *tStakepooldManager) CrossCheckColdWalletExtPubs(_ context.Context, _ st
 	item := m.qItem()
 	return item.err
 }
+func (m *tStakepooldManager) GetFeeAddress(_ context.Context, _ *chainhash.Hash, _ string) (*pb.GetFeeAddressResponse, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(*pb.GetFeeAddressResponse)
+	return thing, item.err
+}
 
 type queueItem struct {
 	thing interface{}

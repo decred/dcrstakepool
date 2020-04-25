@@ -50,6 +50,7 @@ type Manager interface {
 	BackendStatus(context.Context) []BackendStatus
 	GetStakeInfo(context.Context) (*pb.GetStakeInfoResponse, error)
 	CrossCheckColdWalletExtPubs(ctx context.Context, dcrstakepoolColdWalletExtPub string) error
+	GetFeeAddress(ctx context.Context, txHash *chainhash.Hash, signature string) (*pb.GetFeeAddressResponse, error)
 }
 
 // stakepooldManager coordinates the communication between dcrstakepool and
@@ -730,4 +731,20 @@ func (s *stakepooldManager) CrossCheckColdWalletExtPubs(ctx context.Context, dcr
 		}
 	}
 	return nil
+}
+
+func (s *stakepooldManager) GetFeeAddress(ctx context.Context, txHash *chainhash.Hash, signature string) (*pb.GetFeeAddressResponse, error) {
+	var err error
+	responses := make([]*pb.GetFeeAddressResponse, len(s.grpcConnections))
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		responses[i], err = client.GetFeeAddress(ctx, &pb.GetFeeAddressRequest{
+			Hash:      txHash.String(),
+			Signature: signature,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("GetFeeAddress RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+		}
+	}
+	return responses[0], nil
 }

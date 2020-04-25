@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 The Decred developers
+// Copyright (c) 2016-2020 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,7 +14,6 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/go-gorp/gorp"
-	// register database driver
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -343,6 +342,15 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	dbMap.AddTableWithName(Session{}, "Session").SetKeys(true, "ID")
 	usersTableName := "Users"
 	dbMap.AddTableWithName(User{}, usersTableName).SetKeys(true, "ID")
+
+	// Add Fees table
+	feeTableMap := dbMap.AddTableWithName(Fees{}, "Fees")
+	feeTableMap.ColMap("TicketHash").SetNotNull(true)
+	feeTableMap.ColMap("CommitmentSignature").SetNotNull(true)
+	feeTableMap.ColMap("FeeAddress").SetNotNull(true)
+	feeTableMap.ColMap("Address").SetNotNull(true)
+	feeTableMap.ColMap("SDiff").SetNotNull(true)
+	feeTableMap.ColMap("BlockHeight").SetNotNull(true)
 
 	// Create the table.
 	err = dbMap.CreateTablesIfNotExists()

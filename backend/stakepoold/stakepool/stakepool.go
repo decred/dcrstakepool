@@ -455,7 +455,7 @@ func (spd *Stakepoold) WalletInfo(ctx context.Context) (*wallettypes.WalletInfoR
 func (spd *Stakepoold) ValidateAddress(ctx context.Context, address string) (*wallettypes.ValidateAddressWalletResult, error) {
 	addr, err := dcrutil.DecodeAddress(address, spd.Params)
 	if err != nil {
-		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
+		log.Errorf("ValidateAddress: DecodeAddress failed: %v", err)
 		return nil, err
 	}
 
@@ -466,6 +466,124 @@ func (spd *Stakepoold) ValidateAddress(ctx context.Context, address string) (*wa
 	}
 
 	return response, nil
+}
+
+func (spd *Stakepoold) GetFeeAddress(ctx context.Context, txhash, signature string) (dcrutil.Address, dcrutil.Address, int64, int64, error) {
+	txHash, err := chainhash.NewHashFromStr(txhash)
+	if err != nil {
+		return nil, nil, 0, 0, err
+	}
+	resp, err := spd.NodeConnection.GetRawTransactionVerbose(ctx, txHash)
+	if err != nil {
+		return nil, nil, 0, 0, err
+	}
+	if resp.Confirmations < 2 || resp.BlockHeight < 0 {
+		return nil, nil, 0, 0, errors.New("ticket does not enough confirmations")
+	}
+	if resp.Confirmations > int64(uint32(spd.Params.TicketMaturity)+spd.Params.TicketExpiry) {
+		return nil, nil, 0, 0, errors.New("ticket has already expired")
+	}
+
+	msgHex, err := hex.DecodeString(resp.Hex)
+	if err != nil {
+		return nil, nil, 0, 0, err
+	}
+
+	msgTx := wire.NewMsgTx()
+	if err = msgTx.FromBytes(msgHex); err != nil {
+		return nil, nil, 0, 0, errors.New("failed to deserialize tx")
+	}
+	if !stake.IsSStx(msgTx) {
+		return nil, nil, 0, 0, errors.New("tx not a ticket")
+	}
+	if len(msgTx.TxOut) != 3 {
+		return nil, nil, 0, 0, errors.New("ticket invalid")
+	}
+
+	// Get commitment address
+	addr, err := stake.AddrFromSStxPkScrCommitment(msgTx.TxOut[1].PkScript, spd.Params)
+	if err != nil {
+		return nil, nil, 0, 0, errors.New("invalid commitment address")
+	}
+
+	// verify message
+	message := fmt.Sprintf("vsp v3 getfeeaddress %s", msgTx.TxHash())
+	valid, err := spd.WalletConnection.RPCClient().VerifyMessage(ctx, addr, signature, message)
+	if err != nil {
+		return nil, nil, 0, 0, errors.New("RPC server error")
+	}
+	if !valid {
+		return nil, nil, 0, 0, errors.New("invalid signature")
+	}
+
+	// get stake difficulty
+	blockHash, err := chainhash.NewHashFromStr(resp.BlockHash)
+	if err != nil {
+		return nil, nil, 0, 0, err
+	}
+	blockHeader, err := spd.NodeConnection.GetBlockHeader(ctx, blockHash)
+	if err != nil {
+		return nil, nil, 0, 0, err
+	}
+	sDiff := blockHeader.SBits
+
+	// get fee address
+	feeAddress, err := spd.WalletConnection.RPCClient().GetNewAddress(ctx, "fees")
+	if err != nil {
+		log.Errorf("VerifyMessage: getnewaddress failed: %v", err)
+		return nil, nil, 0, 0, errors.New("RPC server error")
+	}
+
+	return addr, feeAddress, resp.BlockHeight, sDiff, nil
+}
+
+func (spd *Stakepoold) PayFee(ctx context.Context, feeTxBytes []byte, txHash, wif string, voteBits uint16) (*chainhash.Hash, error) {
+	ticketHash, err := chainhash.NewHashFromStr(txHash)
+	if err != nil {
+		return nil, err
+	}
+	votingWIF, err := dcrutil.DecodeWIF(wif, spd.Params.PrivateKeyID)
+	if err != nil {
+		return nil, err
+	}
+	feeTx := wire.NewMsgTx()
+	err = feeTx.FromBytes(feeTxBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := spd.GetRawTransaction(ctx, ticketHash)
+	if err != nil {
+		log.Errorf("PayFee: getrawtransaction: %v", err)
+		return nil, errors.New("RPC server error")
+	}
+	msgHex, err := hex.DecodeString(resp.Hex)
+	if err != nil {
+		return nil, err
+	}
+	msgTx := wire.NewMsgTx()
+	if err = msgTx.FromBytes(msgHex); err != nil {
+		return nil, errors.New("failed to deserialize tx")
+	}
+
+	err = spd.AddTicket(ctx, dcrutil.NewTx(msgTx))
+	if err != nil {
+		log.Errorf("PayFee: addticket: %v", err)
+		return nil, errors.New("RPC server error")
+	}
+
+	err = spd.ImportPrivKey(ctx, votingWIF)
+	if err != nil {
+		log.Errorf("PayFee: importprivkey: %v", err)
+		return nil, errors.New("RPC server error")
+	}
+
+	res, err := spd.SendRawTransaction(ctx, feeTx)
+	if err != nil {
+		log.Errorf("PayFee: sendrawtransaction: %v", err)
+		return nil, errors.New("transaction failed to send")
+	}
+	return res, nil
 }
 
 // GetStakeInfo performs the rpc command GetStakeInfo.

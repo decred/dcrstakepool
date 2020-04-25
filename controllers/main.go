@@ -7,6 +7,8 @@ package controllers
 import (
 	"context"
 	"crypto/ed25519"
+	"database/sql"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -252,6 +254,12 @@ func (controller *MainController) APIv3(c web.C, r *http.Request) interface{} {
 		switch command {
 		case "getfee":
 			return controller.APIv3GetFee(c, r)
+		case "getfeeaddress":
+			response, err := controller.APIv3GetFeeAddress(c, r)
+			if err != nil {
+				return err.Error()
+			}
+			return response
 		case "getpubkey":
 			return controller.APIv3GetPubKey(c, r)
 		}
@@ -2150,6 +2158,79 @@ func (controller *MainController) APIv3GetFee(c web.C, r *http.Request) *poolapi
 		Timestamp: time.Now().Unix(),
 		Fee:       controller.Cfg.PoolFees,
 	}
+}
+
+func (controller *MainController) APIv3GetFeeAddress(c web.C, r *http.Request) (*poolapi.GetFeeAddressResponse, error) {
+	// HTTP GET Params required
+	// ticketHash - hash of ticket
+	// signature - signmessage signature using the ticket commitment address
+	//	     - message = "vsp v3 getfeeaddress ticketHash"
+
+	// ticketHash
+	ticketHashStr := r.URL.Query().Get("ticketHash")
+	if len(ticketHashStr) != chainhash.MaxHashStringSize {
+		log.Infof("invalid ticket hash")
+		return nil, errors.New("invalid ticket hash")
+	}
+	txHash, err := chainhash.NewHashFromStr(ticketHashStr)
+	if err != nil {
+		log.Infof("NewHashFromStr: %v", err)
+		return nil, err
+	}
+
+	// signature
+	signature := r.URL.Query().Get("signature")
+	if _, err = base64.StdEncoding.DecodeString(signature); err != nil {
+		log.Infof("invalid signature: %v", err)
+		return nil, errors.New("invalid signature")
+	}
+	dbMap := controller.GetDbMap(c)
+	fee, err := models.GetFeeAddressByTicketHash(dbMap, txHash.String())
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Errorf("GetFeeAddressByTicketHash failed: %v", err)
+		return nil, fmt.Errorf("internal database error")
+	}
+	if err == nil {
+		// return cached response
+		return &poolapi.GetFeeAddressResponse{
+			Timestamp:           time.Now().Unix(),
+			TicketHash:          fee.TicketHash,
+			CommitmentSignature: fee.CommitmentSignature,
+			FeeAddress:          fee.FeeAddress,
+		}, nil
+	}
+
+	// Get transaction requested
+	resp, err := controller.Cfg.StakepooldServers.GetFeeAddress(r.Context(),
+		txHash, signature)
+	if err != nil {
+		log.Errorf("GetFeeAddress: '%v' failed: %v", txHash, err)
+		return nil, errors.New("RPC server error")
+	}
+
+	fee = &models.Fees{
+		TicketHash:          txHash.String(),
+		CommitmentSignature: signature,
+		FeeAddress:          resp.FeeAddress,
+		Address:             resp.Address,
+		SDiff:               resp.SDiff,
+		BlockHeight:         resp.BlockHeight,
+	}
+	err = models.InsertFeeAddress(dbMap, fee)
+	if err != nil {
+		log.Errorf("InsertFeeAddress failed: %v", err)
+		return nil, errors.New("database error")
+	}
+
+	response := poolapi.GetFeeAddressResponse{
+		Timestamp:           time.Now().Unix(),
+		TicketHash:          txHash.String(),
+		CommitmentSignature: signature,
+		FeeAddress:          resp.FeeAddress,
+	}
+
+	log.Infof("GetFeeAddress done")
+	return &response, nil
 }
 
 func stringSliceContains(s []string, e string) bool {

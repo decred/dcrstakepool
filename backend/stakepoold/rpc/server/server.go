@@ -1,5 +1,5 @@
 // Copyright (c) 2015-2016 The btcsuite developers
-// Copyright (c) 2016-2017 The Decred developers
+// Copyright (c) 2016-2020 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,11 +14,14 @@ package server
 
 import (
 	"context"
+	"encoding/hex"
+	"errors"
 	"time"
 
 	"google.golang.org/grpc"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
+	"github.com/decred/dcrd/wire"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
@@ -292,5 +295,18 @@ func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInf
 func (s *stakepooldServer) GetColdWalletExtPub(ctx context.Context, req *pb.GetColdWalletExtPubRequest) (*pb.GetColdWalletExtPubResponse, error) {
 	return &pb.GetColdWalletExtPubResponse{
 		ColdWalletExtPub: s.stakepoold.ColdWalletExtPub,
+	}, nil
+}
+
+func (s *stakepooldServer) GetFeeAddress(ctx context.Context, req *pb.GetFeeAddressRequest) (*pb.GetFeeAddressResponse, error) {
+	address, feeAddress, blockHeight, sDiff, err := s.stakepoold.GetFeeAddress(ctx, req.Hash, req.Signature)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetFeeAddressResponse{
+		Address: address.Address(),
+		FeeAddress: feeAddress.Address(),
+		BlockHeight: blockHeight,
+		SDiff: sDiff,
 	}, nil
 }

@@ -20,6 +20,7 @@ service StakepooldService {
 	rpc CreateMultisig (CreateMultisigRequest) returns (CreateMultisigResponse);
 	rpc GetStakeInfo (GetStakeInfoRequest) returns (GetStakeInfoResponse);
 	rpc GetColdWalletExtPub (GetColdWalletExtPubRequest) returns (GetColdWalletExtPubResponse);
+	rpc GetFeeAddress (GetFeeAddressRequest) returns (GetFeeAddressResponse);
 }
 
 service VersionService {
@@ -180,4 +181,15 @@ message GetStakeInfoResponse {
 message GetColdWalletExtPubRequest {}
 message GetColdWalletExtPubResponse {
 	string ColdWalletExtPub = 1;
+}
+
+message GetFeeAddressRequest {
+	string Hash = 1;
+	string Signature = 2;
+}
+message GetFeeAddressResponse {
+	string Address = 1;
+	string FeeAddress = 2;
+	int64 BlockHeight = 3;
+	int64 SDiff = 4;
 }
