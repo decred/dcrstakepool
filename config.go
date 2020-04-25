@@ -6,6 +6,8 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -106,6 +108,8 @@ type config struct {
 	MaxVotedTickets    int      `long:"maxvotedtickets" description:"Maximum number of voted tickets to show on tickets page."`
 	Description        string   `long:"description" description:"Operators own description of their VSP"`
 	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
+
+	signKey ed25519.PrivateKey
 }
 
 // serviceOptions defines the configuration options for the daemon as a service
@@ -591,6 +595,27 @@ func loadConfig() (*config, []string, error) {
 		if cfg.SMTPSkipVerify {
 			log.Warnf("SMTPCert has been set so SMTPSkipVerify is being disregarded.")
 		}
+	}
+
+	seedPath := filepath.Join(dcrstakepoolHomeDir, "sign.seed")
+	seed, err := ioutil.ReadFile(seedPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, nil, err
+		}
+
+		_, cfg.signKey, err = ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to generate "+
+				"signing key: %v", err)
+		}
+		err = ioutil.WriteFile(seedPath, cfg.signKey.Seed(), 0400)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to save "+
+				"signing seed: %v", err)
+		}
+	} else {
+		cfg.signKey = ed25519.NewKeyFromSeed(seed)
 	}
 
 	return &cfg, remainingArgs, nil
