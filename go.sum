@@ -30,7 +30,6 @@ github.com/decred/dcrd/addrmgr v1.1.0/go.mod h1:exghL+0+QeVvO4MXezWJ1C2tcpBn3ngf
 github.com/decred/dcrd/blockchain/stake/v2 v2.0.2 h1:tRrJTywABGsUpf6qrTrtdIOKXyZflA51b0sqWf7p5gk=
 github.com/decred/dcrd/blockchain/stake/v2 v2.0.2/go.mod h1:o2TT/l/YFdrt15waUdlZ3g90zfSwlA0WgQqHV9UGJF4=
 github.com/decred/dcrd/blockchain/stake/v3 v3.0.0-20200215031403-6b2ce76f0986/go.mod h1:aDL94kcVJfaaJP+acWUJrlK7g7xEOqTSiFe6bSN3yRQ=
-github.com/decred/dcrd/blockchain/stake/v3 v3.0.0-20200311044114-143c1884e4c8 h1:6oEo1yQYyfnT9qCERrLWMi9BlDzVBeyl011ssIAVQ3w=
 github.com/decred/dcrd/blockchain/stake/v3 v3.0.0-20200311044114-143c1884e4c8/go.mod h1:4zE60yDWlfCDtmqnyP5o1k1K0oyhNn3Tvqo6F93/+RU=
 github.com/decred/dcrd/blockchain/stake/v3 v3.0.0-20200506205109-c8e3fec516f6 h1:z82qIKGCfYYj7YhtUUXY9E8N6sC0pzMBhtKjvEJvd6c=
 github.com/decred/dcrd/blockchain/stake/v3 v3.0.0-20200506205109-c8e3fec516f6/go.mod h1:4zE60yDWlfCDtmqnyP5o1k1K0oyhNn3Tvqo6F93/+RU=
@@ -47,7 +46,6 @@ github.com/decred/dcrd/chaincfg/v3 v3.0.0-20200214194519-928737b3e580/go.mod h1:
 github.com/decred/dcrd/chaincfg/v3 v3.0.0-20200215015031-3283587e6add/go.mod h1:v4oyBPQ/ZstYCV7+B0y6HogFByW76xTjr+72fOm66Y8=
 github.com/decred/dcrd/chaincfg/v3 v3.0.0-20200215023918-6247af01d5e3/go.mod h1:v4oyBPQ/ZstYCV7+B0y6HogFByW76xTjr+72fOm66Y8=
 github.com/decred/dcrd/chaincfg/v3 v3.0.0-20200215031403-6b2ce76f0986/go.mod h1:v4oyBPQ/ZstYCV7+B0y6HogFByW76xTjr+72fOm66Y8=
-github.com/decred/dcrd/chaincfg/v3 v3.0.0-20200311044114-143c1884e4c8 h1:UweAZ771bCDNxumIVk7b0y2EJ8JUqeWhXbPpdXKsClc=
 github.com/decred/dcrd/chaincfg/v3 v3.0.0-20200311044114-143c1884e4c8/go.mod h1:v4oyBPQ/ZstYCV7+B0y6HogFByW76xTjr+72fOm66Y8=
 github.com/decred/dcrd/chaincfg/v3 v3.0.0-20200506205109-c8e3fec516f6 h1:CvIkIKs9M3+Ab4WTrcPG/0dDonWYoXoij6VmF95fcWg=
 github.com/decred/dcrd/chaincfg/v3 v3.0.0-20200506205109-c8e3fec516f6/go.mod h1:OHbKBa6UZZOXCU1Y8f9Ta3O+GShto7nB1O0nuEutKq4=
@@ -78,7 +76,6 @@ github.com/decred/dcrd/dcrutil/v3 v3.0.0-20200215015031-3283587e6add/go.mod h1:C
 github.com/decred/dcrd/dcrutil/v3 v3.0.0-20200215023918-6247af01d5e3/go.mod h1:48ZLpNNrRIYfqYxmvzMgOZrnTZUU3aTJveWtamCkOxo=
 github.com/decred/dcrd/dcrutil/v3 v3.0.0-20200215031403-6b2ce76f0986/go.mod h1:jFxEd2LWDLvrWlrIiyx9ZGTQjvoFHZ0OVfBdyIX7jSw=
 github.com/decred/dcrd/dcrutil/v3 v3.0.0-20200311044114-143c1884e4c8/go.mod h1:/CDBC1SOXKrmihavgXviaTr6eVZSAWKQqEbRmacDxgg=
-github.com/decred/dcrd/dcrutil/v3 v3.0.0-20200503044000-76f6906e50e5 h1:t5t7YPgzoFBx8fWVVL338v+Ubj6mim+A3WcFvpC7988=
 github.com/decred/dcrd/dcrutil/v3 v3.0.0-20200503044000-76f6906e50e5/go.mod h1:85NtF/fmqL2UDf0/gLhTHG/m/0HQHwG+erQKkwWW27A=
 github.com/decred/dcrd/dcrutil/v3 v3.0.0-20200506205109-c8e3fec516f6 h1:AZfr26c0exKP/SX0bBt5h2f91aoEVadnOsCbQ1eIY8Y=
 github.com/decred/dcrd/dcrutil/v3 v3.0.0-20200506205109-c8e3fec516f6/go.mod h1:85NtF/fmqL2UDf0/gLhTHG/m/0HQHwG+erQKkwWW27A=
@@ -88,14 +85,12 @@ github.com/decred/dcrd/gcs/v2 v2.0.2-0.20200312171759-0a8cc56a776e h1:tBOk2P8F9J
 github.com/decred/dcrd/gcs/v2 v2.0.2-0.20200312171759-0a8cc56a776e/go.mod h1:JJGd1m0DrFgV4J2J8HKNB9YVkM06ewQHT6iINis39Z4=
 github.com/decred/dcrd/hdkeychain/v2 v2.1.0 h1:NVNIz36HPukOnaysBDsLO+2kWqijLM4tvLUsLLyLfME=
 github.com/decred/dcrd/hdkeychain/v2 v2.1.0/go.mod h1:DR+lD4uV8G0i3c9qnUJwjiGaaEWK+nSrbWCz1BRHBL8=
-github.com/decred/dcrd/hdkeychain/v3 v3.0.0-20200421213827-b60c60ffe98b h1:pfhggbZaR/h4mjHwMMgCl4+UnstAssVA7FEezvMKCQo=
 github.com/decred/dcrd/hdkeychain/v3 v3.0.0-20200421213827-b60c60ffe98b/go.mod h1:qKN0WzeSEEZ4fUBsTwKzOPkLP7GqSM6jBUm5Auq9mrM=
 github.com/decred/dcrd/hdkeychain/v3 v3.0.0-20200506205109-c8e3fec516f6 h1:d0fq02pG6hXiglWaNKH+YIUKn783fiMhEhx3i/jdxTc=
 github.com/decred/dcrd/hdkeychain/v3 v3.0.0-20200506205109-c8e3fec516f6/go.mod h1:qKN0WzeSEEZ4fUBsTwKzOPkLP7GqSM6jBUm5Auq9mrM=
 github.com/decred/dcrd/rpc/jsonrpc/types v1.0.1 h1:sWsGtWzdmrna6aysDCHwjANTJh+Lxt2xp6S10ahP79Y=
 github.com/decred/dcrd/rpc/jsonrpc/types v1.0.1/go.mod h1:dJUp9PoyFYklzmlImpVkVLOr6j4zKuUv66YgemP2sd8=
 github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.0.0/go.mod h1:c5S+PtQWNIA2aUakgrLhrlopkMadcOv51dWhCEdo49c=
-github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.0.1-0.20200503044000-76f6906e50e5 h1:O8kpj3huIKO6N+KiyndTPTJwoo/Q0Jq+92Do511CGoE=
 github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.0.1-0.20200503044000-76f6906e50e5/go.mod h1:c5S+PtQWNIA2aUakgrLhrlopkMadcOv51dWhCEdo49c=
 github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.0.1-0.20200506205109-c8e3fec516f6 h1:cf+yjZSegIwhI58FkYp94de/x/B+Cy9YDMoRYnlPlQk=
 github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.0.1-0.20200506205109-c8e3fec516f6/go.mod h1:c5S+PtQWNIA2aUakgrLhrlopkMadcOv51dWhCEdo49c=
@@ -109,6 +104,8 @@ github.com/decred/dcrd/txscript/v3 v3.0.0-20200215023918-6247af01d5e3/go.mod h1:
 github.com/decred/dcrd/txscript/v3 v3.0.0-20200215031403-6b2ce76f0986/go.mod h1:KsDS7McU1yFaCYR9LCIwk6YnE15YN3wJUDxhKdFqlsc=
 github.com/decred/dcrd/txscript/v3 v3.0.0-20200421213827-b60c60ffe98b h1:HqIl8oViATdNtoYDFbHzGhHe4q9irezWXF16fhKy8/4=
 github.com/decred/dcrd/txscript/v3 v3.0.0-20200421213827-b60c60ffe98b/go.mod h1:vrm3R/AesmA9slTf0rFcwhD0SduAJAWxocyaWVi8dM0=
+github.com/decred/dcrd/txscript/v3 v3.0.0-20200506205109-c8e3fec516f6 h1:0z+g2VwBWw2LpM8J8ApDz9IAl7QK1Pb7ZopDm4MGkXg=
+github.com/decred/dcrd/txscript/v3 v3.0.0-20200506205109-c8e3fec516f6/go.mod h1:vrm3R/AesmA9slTf0rFcwhD0SduAJAWxocyaWVi8dM0=
 github.com/decred/dcrd/wire v1.3.0 h1:X76I2/a8esUmxXmFpJpAvXEi014IA4twgwcOBeIS8lE=
 github.com/decred/dcrd/wire v1.3.0/go.mod h1:fnKGlUY2IBuqnpxx5dYRU5Oiq392OBqAuVjRVSkIoXM=
 github.com/decred/dcrdata/api/types/v5 v5.0.1 h1:7L1CAmv1jttCi4ogt+1iq/2PaI8GULm7TQO1GVPVwd4=
@@ -163,6 +160,11 @@ github.com/jrick/logrotate v1.0.0 h1:lQ1bL/n9mBNeIXoTUoYRlK4dHuNJVofX9oWqBtPnSzI
 github.com/jrick/logrotate v1.0.0/go.mod h1:LNinyqDIJnpAur+b8yyulnQw/wDuN1+BYKlTRt3OuAQ=
 github.com/jrick/wsrpc/v2 v2.3.2/go.mod h1:XPYs8BnRWl99lCvXRM5SLpZmTPqWpSOPkDIqYTwDPfU=
 github.com/jrick/wsrpc/v2 v2.3.3/go.mod h1:XPYs8BnRWl99lCvXRM5SLpZmTPqWpSOPkDIqYTwDPfU=
+github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
+github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
+github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
+github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
+github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/lib/pq v1.3.0 h1:/qkRGz8zljWiDcFvgpwUpwIAPu3r07TDvs3Rws+o/pU=
 github.com/lib/pq v1.3.0/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
 github.com/mattn/go-sqlite3 v2.0.3+incompatible h1:gXHsfypPkaMZrKbD5209QV9jbUTJKjyR5WD3HYQSd+U=
@@ -239,8 +241,9 @@ google.golang.org/grpc v1.23.0/go.mod h1:Y5yQAOtifL1yxbo5wqy6BxZv8vAUGQwXBOALyac
 google.golang.org/grpc v1.25.1/go.mod h1:c3i+UQWmh7LiEpx4sFZnkU36qjEYZ0imhYfXVyQciAY=
 google.golang.org/grpc v1.29.1 h1:EC2SB8S04d2r73uptxphDSUG+kTKVgjRPF+N3xpxRB4=
 google.golang.org/grpc v1.29.1/go.mod h1:itym6AZVZYACWQqET3MqgPpjcuV5QH3BxFS3IjizoKk=
-gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=
+gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=
 gopkg.in/fsnotify.v1 v1.4.7/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=

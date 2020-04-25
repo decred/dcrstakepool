@@ -21,6 +21,7 @@ service StakepooldService {
 	rpc GetStakeInfo (GetStakeInfoRequest) returns (GetStakeInfoResponse);
 	rpc GetColdWalletExtPub (GetColdWalletExtPubRequest) returns (GetColdWalletExtPubResponse);
 	rpc GetFeeAddress (GetFeeAddressRequest) returns (GetFeeAddressResponse);
+	rpc PayFee (PayFeeRequest) returns (PayFeeResponse);
 }
 
 service VersionService {
@@ -192,4 +193,13 @@ message GetFeeAddressResponse {
 	string FeeAddress = 2;
 	int64 BlockHeight = 3;
 	int64 SDiff = 4;
+}
+
+message PayFeeRequest {
+	string VotingWIF = 1;
+	string TicketHash = 2;
+	bytes FeeTx = 3;
+}
+message PayFeeResponse {
+	string Hash = 1;
 }

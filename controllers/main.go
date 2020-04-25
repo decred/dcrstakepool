@@ -9,6 +9,7 @@ import (
 	"crypto/ed25519"
 	"database/sql"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -23,11 +24,15 @@ import (
 	"sync"
 	"time"
 
+	"decred.org/dcrwallet/wallet/txrules"
 	"github.com/dchest/captcha"
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/chaincfg/v3"
+	"github.com/decred/dcrd/dcrec"
 	"github.com/decred/dcrd/dcrutil/v3"
 	"github.com/decred/dcrd/hdkeychain/v3"
+	"github.com/decred/dcrd/txscript/v3"
+	"github.com/decred/dcrd/wire"
 	dcrdatatypes "github.com/decred/dcrdata/api/types/v5"
 	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/helpers"
@@ -262,6 +267,15 @@ func (controller *MainController) APIv3(c web.C, r *http.Request) interface{} {
 			return response
 		case "getpubkey":
 			return controller.APIv3GetPubKey(c, r)
+		}
+	case http.MethodPost:
+		switch command {
+		case "payfee":
+			response, err := controller.APIv3PayFee(c, r)
+			if err != nil {
+				return err.Error()
+			}
+			return response
 		}
 	}
 
@@ -2231,6 +2245,133 @@ func (controller *MainController) APIv3GetFeeAddress(c web.C, r *http.Request) (
 
 	log.Infof("GetFeeAddress done")
 	return &response, nil
+}
+
+// APIv3PayFee
+func (controller *MainController) APIv3PayFee(c web.C, r *http.Request) (*poolapi.PayFeeResponse, error) {
+	// HTTP GET Params required
+	// feeTx - serialized wire.MsgTx
+	// votingKey - WIF private key for ticket stakesubmission address
+	// voteBits - voting preferences in little endian
+
+	votingKey := r.FormValue("votingKey")
+	votingWIF, err := dcrutil.DecodeWIF(votingKey, controller.Cfg.NetParams.PrivateKeyID)
+	if err != nil {
+		return nil, err
+	}
+
+	feeTxStr := r.FormValue("feeTx")
+	feeTxBytes, err := hex.DecodeString(feeTxStr)
+	if err != nil {
+		return nil, errors.New("invalid transaction")
+	}
+
+	voteBitsStr := r.FormValue("voteBits")
+	voteBitsBytes, err := hex.DecodeString(voteBitsStr)
+	if err != nil || len(voteBitsBytes) != 2 {
+		return nil, errors.New("invalid votebits")
+	}
+	voteBits := binary.LittleEndian.Uint16(voteBitsBytes)
+	if !controller.IsValidVoteBits(voteBits) {
+		return nil, errors.New("invalid voteBits")
+	}
+
+	feeTx := wire.NewMsgTx()
+	err = feeTx.FromBytes(feeTxBytes)
+	if err != nil {
+		return nil, errors.New("unable to deserialize transaction")
+	}
+
+	dbMap := controller.GetDbMap(c)
+	validFeeAddrs, err := models.GetInactiveFeeAddresses(dbMap)
+	if err != nil {
+		log.Infof("database error: %v", err)
+		return nil, errors.New("database error")
+	}
+
+	var feeAddr string
+	var feeAmount dcrutil.Amount
+	const scriptVersion = 0
+findAddress:
+	for _, txOut := range feeTx.TxOut {
+		_, addresses, _, err := txscript.ExtractPkScriptAddrs(scriptVersion,
+			txOut.PkScript, controller.Cfg.NetParams)
+		if err != nil {
+			log.Infof("Extract: %v", err)
+			return nil, err
+		}
+		for _, addr := range addresses {
+			addrStr := addr.Address()
+			for _, validFeeAddr := range validFeeAddrs {
+				if addrStr == validFeeAddr {
+					feeAddr = validFeeAddr
+					feeAmount = dcrutil.Amount(txOut.Value)
+					break findAddress
+				}
+			}
+		}
+	}
+	if feeAddr == "" {
+		log.Infof("feeTx did not invalid any payments")
+		return nil, errors.New("feeTx did not include any payments")
+	}
+
+	feeEntry, err := models.GetFeesByFeeAddress(dbMap, feeAddr)
+	if err != nil {
+		log.Infof("GetFeeByAddress: %v", err)
+		return nil, errors.New("database error")
+	}
+	voteAddr, err := dcrutil.DecodeAddress(feeEntry.Address, controller.Cfg.NetParams)
+	if err != nil {
+		log.Errorf("PayFee: DecodeAddress: %v", err)
+		return nil, errors.New("database error")
+	}
+	_, err = dcrutil.NewAddressPubKeyHash(dcrutil.Hash160(votingWIF.PubKey()), controller.Cfg.NetParams,
+		dcrec.STEcdsaSecp256k1)
+	if err != nil {
+		log.Errorf("PayFee: NewAddressPubKeyHash: %v", err)
+		return nil, errors.New("failed to deserialize voting wif")
+	}
+	// TODO: validate votingkey against ticket submission address
+
+	sDiff := dcrutil.Amount(feeEntry.SDiff)
+	// TODO - wallet relayfee
+	relayFee, err := dcrutil.NewAmount(0.0001)
+	if err != nil {
+		log.Errorf("PayFee: failed to NewAmount: %v", err)
+		return nil, errors.New("internal error")
+	}
+
+	minFee := txrules.StakePoolTicketFee(sDiff, relayFee, int32(feeEntry.BlockHeight), controller.Cfg.PoolFees, controller.Cfg.NetParams)
+	if feeAmount < minFee {
+		log.Infof("too cheap: %v %v", feeAmount, minFee)
+		return nil, fmt.Errorf("dont get cheap on me, dodgson (sent:%v required:%v)", feeAmount, minFee)
+	}
+
+	// Get vote tx to give to wallet
+	ticketHash, err := chainhash.NewHashFromStr(feeEntry.TicketHash)
+	if err != nil {
+		log.Errorf("PayFee: NewHashFromStr: %v", err)
+		return nil, errors.New("internal error")
+	}
+
+	now := time.Now()
+	resp, err := controller.Cfg.StakepooldServers.PayFee(r.Context(), ticketHash, votingWIF, dcrutil.NewTx(feeTx))
+	if err != nil {
+		log.Errorf("PayFee: %v", err)
+		return nil, errors.New("RPC server error")
+	}
+
+	err = models.InsertFeeAddressVotingKey(dbMap, voteAddr.Address(), votingWIF.String(), voteBits)
+	if err != nil {
+		log.Errorf("PayFee: InsertVotingKey failed: %v", err)
+		return nil, errors.New("internal error")
+	}
+
+	return &poolapi.PayFeeResponse{
+		Timestamp: now.Unix(),
+		TxHash:    resp.Hash,
+	}, nil
 }
 
 func stringSliceContains(s []string, e string) bool {

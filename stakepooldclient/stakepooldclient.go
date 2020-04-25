@@ -1,6 +1,7 @@
 package stakepooldclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -51,6 +52,7 @@ type Manager interface {
 	GetStakeInfo(context.Context) (*pb.GetStakeInfoResponse, error)
 	CrossCheckColdWalletExtPubs(ctx context.Context, dcrstakepoolColdWalletExtPub string) error
 	GetFeeAddress(ctx context.Context, txHash *chainhash.Hash, signature string) (*pb.GetFeeAddressResponse, error)
+	PayFee(ctx context.Context, txHash *chainhash.Hash, votingWIF *dcrutil.WIF, feeTx *dcrutil.Tx) (*pb.PayFeeResponse, error)
 }
 
 // stakepooldManager coordinates the communication between dcrstakepool and
@@ -741,6 +743,28 @@ func (s *stakepooldManager) GetFeeAddress(ctx context.Context, txHash *chainhash
 		responses[i], err = client.GetFeeAddress(ctx, &pb.GetFeeAddressRequest{
 			Hash:      txHash.String(),
 			Signature: signature,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("GetFeeAddress RPC failed on stakepoold instance %s: %v", conn.Target(), err)
+		}
+	}
+	return responses[0], nil
+}
+
+func (s *stakepooldManager) PayFee(ctx context.Context, txHash *chainhash.Hash, votingWIF *dcrutil.WIF, feeTx *dcrutil.Tx) (*pb.PayFeeResponse, error) {
+	feeTxBuffer := new(bytes.Buffer)
+	feeTxBuffer.Grow(feeTx.MsgTx().SerializeSize())
+	err := feeTx.MsgTx().Serialize(feeTxBuffer)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]*pb.PayFeeResponse, len(s.grpcConnections))
+	for i, conn := range s.grpcConnections {
+		client := pb.NewStakepooldServiceClient(conn)
+		responses[i], err = client.PayFee(ctx, &pb.PayFeeRequest{
+			TicketHash: txHash.String(),
+			VotingWIF:  votingWIF.String(),
+			FeeTx:      feeTxBuffer.Bytes(),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("GetFeeAddress RPC failed on stakepoold instance %s: %v", conn.Target(), err)

@@ -14,14 +14,11 @@ package server
 
 import (
 	"context"
-	"encoding/hex"
-	"errors"
 	"time"
 
 	"google.golang.org/grpc"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/wire"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
@@ -304,9 +301,21 @@ func (s *stakepooldServer) GetFeeAddress(ctx context.Context, req *pb.GetFeeAddr
 		return nil, err
 	}
 	return &pb.GetFeeAddressResponse{
-		Address: address.Address(),
-		FeeAddress: feeAddress.Address(),
+		Address:     address.Address(),
+		FeeAddress:  feeAddress.Address(),
 		BlockHeight: blockHeight,
-		SDiff: sDiff,
+		SDiff:       sDiff,
+	}, nil
+}
+
+func (s *stakepooldServer) PayFee(ctx context.Context, req *pb.PayFeeRequest) (*pb.PayFeeResponse, error) {
+	// TODO: voteBits
+	voteBits := uint16(1)
+	hash, err := s.stakepoold.PayFee(ctx, req.FeeTx, req.TicketHash, req.VotingWIF, voteBits)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.PayFeeResponse{
+		Hash: hash.String(),
 	}, nil
 }

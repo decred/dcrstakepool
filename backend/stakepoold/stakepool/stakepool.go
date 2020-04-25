@@ -552,7 +552,7 @@ func (spd *Stakepoold) PayFee(ctx context.Context, feeTxBytes []byte, txHash, wi
 		return nil, err
 	}
 
-	resp, err := spd.GetRawTransaction(ctx, ticketHash)
+	resp, err := spd.NodeConnection.GetRawTransactionVerbose(ctx, ticketHash)
 	if err != nil {
 		log.Errorf("PayFee: getrawtransaction: %v", err)
 		return nil, errors.New("RPC server error")
@@ -566,19 +566,19 @@ func (spd *Stakepoold) PayFee(ctx context.Context, feeTxBytes []byte, txHash, wi
 		return nil, errors.New("failed to deserialize tx")
 	}
 
-	err = spd.AddTicket(ctx, dcrutil.NewTx(msgTx))
+	err = spd.WalletConnection.RPCClient().AddTicket(ctx, dcrutil.NewTx(msgTx))
 	if err != nil {
 		log.Errorf("PayFee: addticket: %v", err)
 		return nil, errors.New("RPC server error")
 	}
 
-	err = spd.ImportPrivKey(ctx, votingWIF)
+	err = spd.WalletConnection.RPCClient().ImportPrivKeyRescanFrom(ctx, votingWIF, "", false, 0)
 	if err != nil {
 		log.Errorf("PayFee: importprivkey: %v", err)
 		return nil, errors.New("RPC server error")
 	}
 
-	res, err := spd.SendRawTransaction(ctx, feeTx)
+	res, err := spd.NodeConnection.SendRawTransaction(ctx, feeTx, false)
 	if err != nil {
 		log.Errorf("PayFee: sendrawtransaction: %v", err)
 		return nil, errors.New("transaction failed to send")

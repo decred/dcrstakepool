@@ -16,3 +16,8 @@ type GetFeeAddressResponse struct {
 	CommitmentSignature string `json:"commitmentSignature"`
 	FeeAddress          string `json:"feeAddress"`
 }
+
+type PayFeeResponse struct {
+	Timestamp int64  `json:"timestamp"`
+	TxHash    string `json:"txHash"`
+}

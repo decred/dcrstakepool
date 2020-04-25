@@ -295,6 +295,11 @@ func (m *tStakepooldManager) GetFeeAddress(_ context.Context, _ *chainhash.Hash,
 	thing, _ := item.thing.(*pb.GetFeeAddressResponse)
 	return thing, item.err
 }
+func (m *tStakepooldManager) PayFee(_ context.Context, _ *chainhash.Hash, _ *dcrutil.WIF, _ *dcrutil.Tx) (*pb.PayFeeResponse, error) {
+	item := m.qItem()
+	thing, _ := item.thing.(*pb.PayFeeResponse)
+	return thing, item.err
+}
 
 type queueItem struct {
 	thing interface{}
