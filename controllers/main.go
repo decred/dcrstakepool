@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -72,6 +73,7 @@ type Config struct {
 	VotingXpub           *hdkeychain.ExtendedKey
 
 	NetParams *chaincfg.Params
+	PubKey    ed25519.PublicKey
 }
 
 // MainController is the wallet RPC controller type.  Its methods include the
@@ -239,6 +241,21 @@ func dcrDataAgendas(url string) ([]*dcrdatatypes.AgendasInfo, error) {
 		return nil, err
 	}
 	return a, nil
+}
+
+// APIv3 is the frontend that handles /api/v3
+func (controller *MainController) APIv3(c web.C, r *http.Request) interface{} {
+	command := c.URLParams["command"]
+
+	switch r.Method {
+	case http.MethodGet:
+		switch command {
+		case "getpubkey":
+			return controller.APIv3GetPubKey(c, r)
+		}
+	}
+
+	return system.NewAPIResponse("error", 404, "", "")
 }
 
 // API is the main frontend that handles all API requests.
@@ -2117,6 +2134,13 @@ func (controller *MainController) IsValidVoteBits(userVoteBits uint16) bool {
 	}
 
 	return userVoteBits&^usedBits == 0
+}
+
+func (controller *MainController) APIv3GetPubKey(c web.C, r *http.Request) *poolapi.GetPubKeyResponse {
+	return &poolapi.GetPubKeyResponse{
+		Timestamp: time.Now().Unix(),
+		PubKey:    controller.Cfg.PubKey,
+	}
 }
 
 func stringSliceContains(s []string, e string) bool {

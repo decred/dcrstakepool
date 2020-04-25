@@ -2,7 +2,9 @@ package system
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -30,6 +32,7 @@ type Application struct {
 	TemplatesPath string
 	Store         *SQLStore
 	DbMap         *gorp.DbMap
+	signKey       ed25519.PrivateKey
 }
 
 // GojiWebHandlerFunc is an adaptor that allows an http.HanderFunc where a
@@ -43,7 +46,7 @@ func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
 // Init initiates an Application with the passed variables.
 func (application *Application) Init(ctx context.Context, wg *sync.WaitGroup,
 	APISecret, baseURL, cookieSecret string, cookieSecure bool, DBHost,
-	DBName, DBPassword, DBPort, DBUser string) {
+	DBName, DBPassword, DBPort, DBUser string, signKey ed25519.PrivateKey) {
 
 	application.DbMap = models.GetDbMap(
 		APISecret,
@@ -144,6 +147,39 @@ func saveSession(c web.C, w http.ResponseWriter, r *http.Request) error {
 		return session.(*sessions.Session).Save(r, w)
 	}
 	return errors.New("session not available")
+}
+
+// APIv3Handler executes an API processing function that provides an *APIv3Response
+// required by WriteAPIv3Response.  It returns an web.HandlerFunc so it can be
+// used with a goji router.
+func (application *Application) APIv3Handler(apiFunc func(web.C, *http.Request) interface{}) web.HandlerFunc {
+	return func(c web.C, w http.ResponseWriter, r *http.Request) {
+		apiResp := apiFunc(c, r)
+		if apiResp == nil {
+			APIInvalidHandler(w, r)
+			return
+		}
+		WriteAPIv3Response(application.signKey, apiResp, http.StatusOK, w)
+	}
+}
+
+// WriteAPIv3Response marshals the given poolapi.Response into the
+// http.ResponseWriter and sets HTTP status code.
+func WriteAPIv3Response(privKey ed25519.PrivateKey, resp interface{}, code int, w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	dec, err := json.Marshal(resp)
+	if err != nil {
+		log.Warnf("JSON marshal error: %v", err)
+		code = http.StatusInternalServerError
+	} else {
+		sig := ed25519.Sign(privKey, dec)
+		w.Header().Set("VSP-Signature", hex.EncodeToString(sig))
+	}
+	w.WriteHeader(code)
+	if _, err = w.Write(dec); err != nil {
+		log.Warnf("failed to write v3 response: %v", err)
+	}
 }
 
 // APIHandler executes an API processing function that provides an *APIResponse

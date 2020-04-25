@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"errors"
 	"fmt"
 	"net"
@@ -69,7 +70,7 @@ func runMain(ctx context.Context) error {
 
 	application.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
 		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
-		cfg.DBUser)
+		cfg.DBUser, cfg.signKey)
 	if application.DbMap == nil {
 		return fmt.Errorf("failed to open database")
 	}
@@ -98,6 +99,11 @@ func runMain(ctx context.Context) error {
 			return fmt.Errorf("failed to initialize the smtp server: %v", err)
 		}
 	}
+	public := cfg.signKey.Public()
+	pubKey, ok := public.(ed25519.PublicKey)
+	if !ok {
+		return fmt.Errorf("failed to cast signing key: %T", public)
+	}
 
 	controllerCfg := controllers.Config{
 		AdminIPs:        cfg.AdminIPs,
@@ -120,10 +126,10 @@ func runMain(ctx context.Context) error {
 		EmailSender:          sender,
 		VotingXpub:           votingWalletVoteKey,
 		NetParams:            activeNetParams.Params,
+		PubKey:               pubKey,
 	}
 
 	controller, err := controllers.NewMainController(ctx, &controllerCfg)
-
 	if err != nil {
 		return fmt.Errorf("failed to initialize the main controller: %v", err)
 	}
@@ -184,6 +190,7 @@ func runMain(ctx context.Context) error {
 
 	api.Handle("/api/v1/:command", application.APIHandler(controller.API))
 	api.Handle("/api/v2/:command", application.APIHandler(controller.API))
+	api.Handle("/api/v3/:command", application.APIv3Handler(controller.APIv3))
 	api.Handle("/api/*", gojify(system.APIInvalidHandler))
 
 	// HTML routes
