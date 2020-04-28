@@ -25,7 +25,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/v2"
 	"github.com/decred/dcrd/dcrutil/v2"
 	"github.com/decred/dcrd/hdkeychain/v2"
-	dcrdatatypes "github.com/decred/dcrdata/api/types/v4"
+	dcrdatatypes "github.com/decred/dcrdata/api/types/v5"
 	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/helpers"
 	"github.com/decred/dcrstakepool/internal/version"
