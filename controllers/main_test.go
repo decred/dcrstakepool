@@ -16,7 +16,7 @@ import (
 	"github.com/decred/dcrd/chaincfg/chainhash"
 	"github.com/decred/dcrd/chaincfg/v2"
 	"github.com/decred/dcrd/dcrutil/v2"
-	dcrdatatypes "github.com/decred/dcrdata/api/types/v4"
+	dcrdatatypes "github.com/decred/dcrdata/api/types/v5"
 	"github.com/decred/dcrdata/db/dbtypes/v2"
 	pb "github.com/decred/dcrstakepool/backend/stakepoold/rpc/stakepoolrpc"
 	"github.com/decred/dcrstakepool/models"

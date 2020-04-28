@@ -22,7 +22,7 @@ import (
 	"github.com/decred/dcrd/dcrutil/v2"
 	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
 
-	"github.com/decred/dcrd/rpcclient/v4"
+	"github.com/decred/dcrd/rpcclient/v5"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrwallet/wallet/v3/txrules"
