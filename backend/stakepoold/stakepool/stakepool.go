@@ -16,16 +16,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/decred/dcrd/blockchain/stake/v2"
+	wallettypes "decred.org/dcrwallet/rpc/jsonrpc/types"
+	"decred.org/dcrwallet/wallet/txrules"
+	"github.com/decred/dcrd/blockchain/stake/v3"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/chaincfg/v2"
-	"github.com/decred/dcrd/dcrutil/v2"
-	wallettypes "github.com/decred/dcrwallet/rpc/jsonrpc/types"
-
-	"github.com/decred/dcrd/rpcclient/v5"
+	"github.com/decred/dcrd/chaincfg/v3"
+	"github.com/decred/dcrd/dcrutil/v3"
+	"github.com/decred/dcrd/rpcclient/v6"
 	"github.com/decred/dcrd/wire"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
-	"github.com/decred/dcrwallet/wallet/v3/txrules"
 )
 
 var (
@@ -196,7 +195,7 @@ func MsgTxFromHex(txhex string) (*wire.MsgTx, error) {
 }
 
 // getticket pulls the transaction information for a ticket from dcrwallet. This is a go routine!
-func (spd *Stakepoold) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
+func (spd *Stakepoold) getticket(ctx context.Context, wg *sync.WaitGroup, nt *ticketMetadata) {
 	start := time.Now()
 
 	defer func() {
@@ -207,7 +206,7 @@ func (spd *Stakepoold) getticket(wg *sync.WaitGroup, nt *ticketMetadata) {
 	// Ask wallet to look up vote transaction to see if it belongs to us
 	log.Debugf("calling GetTransaction for %v ticket %v",
 		strings.ToLower(nt.ticketType), nt.ticket)
-	res, err := spd.WalletConnection.RPCClient().GetTransaction(nt.ticket)
+	res, err := spd.WalletConnection.RPCClient().GetTransaction(ctx, nt.ticket)
 	nt.getDuration = time.Since(start)
 	if err != nil {
 		// suppress "No information for transaction ..." errors
@@ -290,14 +289,14 @@ func (spd *Stakepoold) UpdateTicketDataFromMySQL() error {
 // performed because we are importing a brand new script, it shouldn't have any
 // associated history. Current block height is returned to indicate which height
 // the new user has registered.
-func (spd *Stakepoold) ImportNewScript(script []byte) (int64, error) {
-	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
+func (spd *Stakepoold) ImportNewScript(ctx context.Context, script []byte) (int64, error) {
+	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(ctx, script, false, 0)
 	if err != nil {
 		log.Errorf("ImportNewScript: ImportScriptRescanFrom rpc failed: %v", err)
 		return -1, err
 	}
 
-	_, bestBlockHeight, err := spd.WalletConnection.RPCClient().GetBestBlock()
+	_, bestBlockHeight, err := spd.NodeConnection.GetBestBlock(ctx)
 	if err != nil {
 		log.Errorf("ImportNewScript: GetBestBlock rpc failed: %v", err)
 		return -1, err
@@ -309,11 +308,11 @@ func (spd *Stakepoold) ImportNewScript(script []byte) (int64, error) {
 // will import all but one of the scripts without triggering a wallet rescan,
 // and finally trigger a rescan from the provided height after importing the
 // last one.
-func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) error {
+func (spd *Stakepoold) ImportMissingScripts(ctx context.Context, scripts [][]byte, rescanHeight int) error {
 	// Import n-1 scripts without a rescan.
 	allButOne := scripts[:len(scripts)-1]
 	for _, script := range allButOne {
-		err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(script, false, 0)
+		err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(ctx, script, false, 0)
 		if err != nil {
 			log.Errorf("ImportMissingScripts: ImportScript rpc failed: %v", err)
 			return err
@@ -322,7 +321,7 @@ func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 
 	// Import the last script and trigger a rescan
 	lastOne := scripts[len(scripts)-1]
-	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(lastOne, true, rescanHeight)
+	err := spd.WalletConnection.RPCClient().ImportScriptRescanFrom(ctx, lastOne, true, rescanHeight)
 	if err != nil {
 		log.Errorf("ImportMissingScripts: ImportScriptRescanFrom rpc failed: %v", err)
 		return err
@@ -334,20 +333,20 @@ func (spd *Stakepoold) ImportMissingScripts(scripts [][]byte, rescanHeight int) 
 }
 
 // AddMissingTicket forcefully adds a ticket to be watched by dcrwallet.
-func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
+func (spd *Stakepoold) AddMissingTicket(ctx context.Context, ticketHash []byte) error {
 	hash, err := chainhash.NewHash(ticketHash)
 	if err != nil {
 		log.Errorf("AddMissingTicket: Failed to parse ticket hash: %v", err)
 		return err
 	}
 
-	tx, err := spd.WalletConnection.RPCClient().GetRawTransaction(hash)
+	tx, err := spd.NodeConnection.GetRawTransaction(ctx, hash)
 	if err != nil {
 		log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
 		return err
 	}
 
-	err = spd.WalletConnection.RPCClient().AddTicket(tx)
+	err = spd.WalletConnection.RPCClient().AddTicket(ctx, tx)
 	if err != nil {
 		log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
 		return err
@@ -359,8 +358,8 @@ func (spd *Stakepoold) AddMissingTicket(ticketHash []byte) error {
 
 // ListImportedAddresses performs the dcrwallet rpc command getaddressesbyaccount
 // on the 'imported' account.
-func (spd *Stakepoold) ListImportedAddresses() ([]string, error) {
-	addresses, err := spd.WalletConnection.RPCClient().GetAddressesByAccount("imported", spd.Params)
+func (spd *Stakepoold) ListImportedAddresses(ctx context.Context) ([]string, error) {
+	addresses, err := spd.WalletConnection.RPCClient().GetAddressesByAccount(ctx, "imported")
 	if err != nil {
 		log.Errorf("ListImportedAddresses: GetAddressesByAccount rpc failed: %v", err)
 		return nil, err
@@ -376,7 +375,7 @@ func (spd *Stakepoold) ListImportedAddresses() ([]string, error) {
 
 // CreateMultisig decodes the provided array of addresses, and then
 // passes them to dcrwallet to create a 1-of-N multisig address.
-func (spd *Stakepoold) CreateMultisig(addresses []string) (*wallettypes.CreateMultiSigResult, error) {
+func (spd *Stakepoold) CreateMultisig(ctx context.Context, addresses []string) (*wallettypes.CreateMultiSigResult, error) {
 	decodedAddresses := make([]dcrutil.Address, len(addresses))
 
 	for i, addr := range addresses {
@@ -388,7 +387,7 @@ func (spd *Stakepoold) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 		decodedAddresses[i] = decodedAddress
 	}
 
-	result, err := spd.WalletConnection.RPCClient().CreateMultisig(1, decodedAddresses)
+	result, err := spd.WalletConnection.RPCClient().CreateMultisig(ctx, 1, decodedAddresses)
 	if err != nil {
 		log.Errorf("CreateMultisig: CreateMultisig rpc failed: %v", err)
 		return nil, err
@@ -399,8 +398,8 @@ func (spd *Stakepoold) CreateMultisig(addresses []string) (*wallettypes.CreateMu
 
 // AccountSyncAddressIndex performs the accountsyncaddressindex command on
 // dcrwallet and returns the result.
-func (spd *Stakepoold) AccountSyncAddressIndex(account string, branch uint32, index int) error {
-	err := spd.WalletConnection.RPCClient().AccountSyncAddressIndex(account, branch, index)
+func (spd *Stakepoold) AccountSyncAddressIndex(ctx context.Context, account string, branch uint32, index int) error {
+	err := spd.WalletConnection.RPCClient().AccountSyncAddressIndex(ctx, account, branch, index)
 	if err != nil {
 		log.Errorf("AccountSyncAddressIndex: AccountSyncAddressIndex rpc failed: %v", err)
 		return err
@@ -410,8 +409,8 @@ func (spd *Stakepoold) AccountSyncAddressIndex(account string, branch uint32, in
 }
 
 // GetTickets performs the gettickets command on dcrwallet and returns the result.
-func (spd *Stakepoold) GetTickets(includeImmature bool) ([]*chainhash.Hash, error) {
-	tickets, err := spd.WalletConnection.RPCClient().GetTickets(includeImmature)
+func (spd *Stakepoold) GetTickets(ctx context.Context, includeImmature bool) ([]*chainhash.Hash, error) {
+	tickets, err := spd.WalletConnection.RPCClient().GetTickets(ctx, includeImmature)
 	if err != nil {
 		log.Errorf("GetTickets: GetTickets rpc failed: %v", err)
 		return nil, err
@@ -422,26 +421,27 @@ func (spd *Stakepoold) GetTickets(includeImmature bool) ([]*chainhash.Hash, erro
 
 // StakePoolUserInfo performs the rpc command stakepooluserinfo on dcrwallet and
 // returns the result.
-func (spd *Stakepoold) StakePoolUserInfo(multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
+func (spd *Stakepoold) StakePoolUserInfo(ctx context.Context, multisigAddress string) (*wallettypes.StakePoolUserInfoResult, error) {
 	decodedMultisig, err := dcrutil.DecodeAddress(multisigAddress, spd.Params)
 	if err != nil {
 		log.Errorf("StakePoolUserInfo: Address could not be decoded %v: %v", multisigAddress, err)
 		return nil, err
 	}
 
-	response, err := spd.WalletConnection.RPCClient().StakePoolUserInfo(decodedMultisig)
+	var response wallettypes.StakePoolUserInfoResult
+	err = spd.WalletConnection.RPCClient().Call(ctx, "stakepooluserinfo", &response, decodedMultisig.Address())
 	if err != nil {
 		log.Errorf("StakePoolUserInfo: StakePoolUserInfo rpc failed: %v", err)
 		return nil, err
 	}
 
-	return response, nil
+	return &response, nil
 }
 
 // WalletInfo performs the rpc command walletinfo on dcrwallet and returns the
 // result.
-func (spd *Stakepoold) WalletInfo() (*wallettypes.WalletInfoResult, error) {
-	response, err := spd.WalletConnection.RPCClient().WalletInfo()
+func (spd *Stakepoold) WalletInfo(ctx context.Context) (*wallettypes.WalletInfoResult, error) {
+	response, err := spd.WalletConnection.RPCClient().WalletInfo(ctx)
 	if err != nil {
 		log.Errorf("WalletInfo: WalletInfo rpc failed: %v", err)
 		return nil, err
@@ -452,14 +452,14 @@ func (spd *Stakepoold) WalletInfo() (*wallettypes.WalletInfoResult, error) {
 
 // ValidateAddress performs the validateaddress command on dcrwallet and returns
 // the result.
-func (spd *Stakepoold) ValidateAddress(address string) (*wallettypes.ValidateAddressWalletResult, error) {
+func (spd *Stakepoold) ValidateAddress(ctx context.Context, address string) (*wallettypes.ValidateAddressWalletResult, error) {
 	addr, err := dcrutil.DecodeAddress(address, spd.Params)
 	if err != nil {
 		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
 		return nil, err
 	}
 
-	response, err := spd.WalletConnection.RPCClient().ValidateAddress(addr)
+	response, err := spd.WalletConnection.RPCClient().ValidateAddress(ctx, addr)
 	if err != nil {
 		log.Errorf("ValidateAddress: ValidateAddress rpc failed: %v", err)
 		return nil, err
@@ -469,8 +469,8 @@ func (spd *Stakepoold) ValidateAddress(address string) (*wallettypes.ValidateAdd
 }
 
 // GetStakeInfo performs the rpc command GetStakeInfo.
-func (spd *Stakepoold) GetStakeInfo() (*wallettypes.GetStakeInfoResult, error) {
-	response, err := spd.WalletConnection.RPCClient().GetStakeInfo()
+func (spd *Stakepoold) GetStakeInfo(ctx context.Context) (*wallettypes.GetStakeInfoResult, error) {
+	response, err := spd.WalletConnection.RPCClient().GetStakeInfo(ctx)
 	if err != nil {
 		log.Errorf("GetStakeInfo: GetStakeInfo rpc failed: %v", err)
 		return nil, err
@@ -501,7 +501,7 @@ func (spd *Stakepoold) UpdateUserDataFromMySQL() error {
 }
 
 // vote Generates a vote and send it off to the network.  This is a go routine!
-func (spd *Stakepoold) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, blockHeight int64, w *ticketMetadata) {
+func (spd *Stakepoold) vote(ctx context.Context, wg *sync.WaitGroup, blockHash *chainhash.Hash, blockHeight int64, w *ticketMetadata) {
 	start := time.Now()
 
 	defer func() {
@@ -511,7 +511,7 @@ func (spd *Stakepoold) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 	// Ask wallet to generate vote result.
 	var res *wallettypes.GenerateVoteResult
-	res, w.err = spd.WalletConnection.RPCClient().GenerateVote(blockHash, blockHeight,
+	res, w.err = spd.WalletConnection.RPCClient().GenerateVote(ctx, blockHash, blockHeight,
 		w.ticket, w.config.VoteBits, spd.VotingConfig.VoteBitsExtended)
 	if w.err != nil || res.Hex == "" {
 		return
@@ -532,7 +532,7 @@ func (spd *Stakepoold) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 	// Ask node to transmit raw transaction.
 	startSend := time.Now()
-	tx, err := spd.NodeConnection.SendRawTransaction(newTx, false)
+	tx, err := spd.NodeConnection.SendRawTransaction(ctx, newTx, false)
 	if err != nil {
 		log.Infof("vote err %v", err)
 		w.err = err
@@ -544,7 +544,7 @@ func (spd *Stakepoold) vote(wg *sync.WaitGroup, blockHash *chainhash.Hash, block
 
 // processNewTickets is invoked every time a new block is created. Any tickets
 // which matured in this block will be included in the parameter.
-func (spd *Stakepoold) processNewTickets(nt NewTicketsForBlock) {
+func (spd *Stakepoold) processNewTickets(ctx context.Context, nt NewTicketsForBlock) {
 	start := time.Now()
 
 	log.Debugf("processNewTickets: Block %d contains %d newly matured tickets",
@@ -566,7 +566,7 @@ func (spd *Stakepoold) processNewTickets(nt NewTicketsForBlock) {
 		newtickets = append(newtickets, n)
 
 		wg.Add(1)
-		go spd.getticket(&wg, n)
+		go spd.getticket(ctx, &wg, n)
 	}
 	spd.RUnlock()
 
@@ -643,7 +643,7 @@ func (spd *Stakepoold) processNewTickets(nt NewTicketsForBlock) {
 // processSpentMissedTickets is invoked every time a new block is created. Any
 // tickets which are either spent or missed in this block will be included in
 // the parameter.
-func (spd *Stakepoold) processSpentMissedTickets(smt SpentMissedTicketsForBlock) {
+func (spd *Stakepoold) processSpentMissedTickets(ctx context.Context, smt SpentMissedTicketsForBlock) {
 	start := time.Now()
 
 	// We use pointer because it is the fastest accessor.
@@ -663,7 +663,7 @@ func (spd *Stakepoold) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 		smtickets = append(smtickets, sm)
 
 		wg.Add(1)
-		go spd.getticket(&wg, sm)
+		go spd.getticket(ctx, &wg, sm)
 	}
 	spd.RUnlock()
 
@@ -724,7 +724,7 @@ func (spd *Stakepoold) processSpentMissedTickets(smt SpentMissedTicketsForBlock)
 // voting.  The function requires ASAP processing for each vote and therefore
 // it is not sequential and hard to read.  This is unfortunate but a reality of
 // speeding up code.
-func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
+func (spd *Stakepoold) ProcessWinningTickets(ctx context.Context, wt WinningTicketsForBlock) {
 	start := time.Now()
 
 	log.Debugf("ProcessWinningTickets: Block %d contains %d winning tickets", wt.BlockHeight, len(wt.WinningTickets))
@@ -789,7 +789,7 @@ func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
 			"ticket %v VoteBits %v VoteBitsExtended %v ",
 			wt.BlockHash, wt.BlockHeight, w.ticket, w.config.VoteBits,
 			spd.VotingConfig.VoteBitsExtended)
-		go spd.vote(&wg, wt.BlockHash, wt.BlockHeight, w)
+		go spd.vote(ctx, &wg, wt.BlockHash, wt.BlockHeight, w)
 	}
 	spd.RUnlock()
 
@@ -797,7 +797,7 @@ func (spd *Stakepoold) ProcessWinningTickets(wt WinningTicketsForBlock) {
 
 	// Revoke any expired tickets
 	go func() {
-		err := spd.WalletConnection.RPCClient().RevokeTickets()
+		err := spd.WalletConnection.RPCClient().RevokeTickets(ctx)
 		if err != nil {
 			log.Errorf("Failed to revoke tickets: %v", err)
 		}
@@ -843,7 +843,7 @@ func (spd *Stakepoold) NewTicketHandler(ctx context.Context, wg *sync.WaitGroup)
 	for {
 		select {
 		case nt := <-spd.NewTicketsChan:
-			go spd.processNewTickets(nt)
+			go spd.processNewTickets(ctx, nt)
 		case <-ctx.Done():
 			return
 		}
@@ -859,7 +859,7 @@ func (spd *Stakepoold) SpentmissedTicketHandler(ctx context.Context, wg *sync.Wa
 	for {
 		select {
 		case smt := <-spd.SpentmissedTicketsChan:
-			go spd.processSpentMissedTickets(smt)
+			go spd.processSpentMissedTickets(ctx, smt)
 		case <-ctx.Done():
 			return
 		}
@@ -875,7 +875,7 @@ func (spd *Stakepoold) WinningTicketHandler(ctx context.Context, wg *sync.WaitGr
 	for {
 		select {
 		case wt := <-spd.WinningTicketsChan:
-			go spd.ProcessWinningTickets(wt)
+			go spd.ProcessWinningTickets(ctx, wt)
 		case <-ctx.Done():
 			return
 		}

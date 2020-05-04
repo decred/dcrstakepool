@@ -3,22 +3,22 @@ module github.com/decred/dcrstakepool
 go 1.13
 
 require (
+	decred.org/dcrwallet v1.2.3-0.20200507155221-397dd551e317
 	github.com/DATA-DOG/go-sqlmock v1.4.1
 	github.com/dajohi/goemail v1.0.1
 	github.com/dchest/captcha v0.0.0-20170622155422-6a29415a8364
-	github.com/decred/dcrd/blockchain/stake/v2 v2.0.2
+	github.com/decred/dcrd/blockchain/stake/v3 v3.0.0-20200506205109-c8e3fec516f6
 	github.com/decred/dcrd/certgen v1.1.0
 	github.com/decred/dcrd/chaincfg/chainhash v1.0.2
-	github.com/decred/dcrd/chaincfg/v2 v2.3.0
+	github.com/decred/dcrd/chaincfg/v3 v3.0.0-20200506205109-c8e3fec516f6
 	github.com/decred/dcrd/dcrec v1.0.0
-	github.com/decred/dcrd/dcrutil/v2 v2.0.1
-	github.com/decred/dcrd/hdkeychain/v2 v2.1.0
-	github.com/decred/dcrd/rpcclient/v5 v5.0.0
+	github.com/decred/dcrd/dcrutil/v3 v3.0.0-20200506205109-c8e3fec516f6
+	github.com/decred/dcrd/hdkeychain/v3 v3.0.0-20200506205109-c8e3fec516f6
+	github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.0.1-0.20200506205109-c8e3fec516f6
+	github.com/decred/dcrd/rpcclient/v6 v6.0.0-20200506205109-c8e3fec516f6
 	github.com/decred/dcrd/wire v1.3.0
 	github.com/decred/dcrdata/api/types/v5 v5.0.1
 	github.com/decred/dcrdata/db/dbtypes/v2 v2.2.1
-	github.com/decred/dcrwallet/rpc/jsonrpc/types v1.4.0
-	github.com/decred/dcrwallet/wallet/v3 v3.2.1
 	github.com/decred/slog v1.0.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-gorp/gorp v2.2.0+incompatible

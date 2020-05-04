@@ -22,9 +22,9 @@ import (
 
 	"github.com/dchest/captcha"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/chaincfg/v2"
-	"github.com/decred/dcrd/dcrutil/v2"
-	"github.com/decred/dcrd/hdkeychain/v2"
+	"github.com/decred/dcrd/chaincfg/v3"
+	"github.com/decred/dcrd/dcrutil/v3"
+	"github.com/decred/dcrd/hdkeychain/v3"
 	dcrdatatypes "github.com/decred/dcrdata/api/types/v5"
 	"github.com/decred/dcrstakepool/email"
 	"github.com/decred/dcrstakepool/helpers"
@@ -561,12 +561,7 @@ func (controller *MainController) FeeAddressForUserID(uid int) (dcrutil.Address,
 		return nil, err
 	}
 
-	addr, err := helpers.DCRUtilAddressFromExtendedKey(key, controller.Cfg.NetParams)
-	if err != nil {
-		return nil, err
-	}
-
-	return addr, nil
+	return helpers.DCRUtilAddressFromExtendedKey(key, controller.Cfg.NetParams)
 }
 
 // TicketAddressForUserID generates a unique ticket address per used ID for

@@ -5,10 +5,10 @@
 package helpers
 
 import (
-	"github.com/decred/dcrd/chaincfg/v2"
+	"github.com/decred/dcrd/chaincfg/v3"
 	"github.com/decred/dcrd/dcrec"
-	"github.com/decred/dcrd/dcrutil/v2"
-	"github.com/decred/dcrd/hdkeychain/v2"
+	"github.com/decred/dcrd/dcrutil/v3"
+	"github.com/decred/dcrd/hdkeychain/v3"
 )
 
 const (
@@ -23,9 +23,5 @@ const (
 // obtain its human readable formats. Returns an error upon a parsing error or
 // if key is for the wrong network.
 func DCRUtilAddressFromExtendedKey(key *hdkeychain.ExtendedKey, params *chaincfg.Params) (*dcrutil.AddressPubKeyHash, error) {
-	ecPubKey, err := key.ECPubKey()
-	if err != nil {
-		return nil, err
-	}
-	return dcrutil.NewAddressPubKeyHash(dcrutil.Hash160(ecPubKey.Serialize()), params, dcrec.STEcdsaSecp256k1)
+	return dcrutil.NewAddressPubKeyHash(dcrutil.Hash160(key.SerializedPubKey()), params, dcrec.STEcdsaSecp256k1)
 }
