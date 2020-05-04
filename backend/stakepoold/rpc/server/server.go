@@ -86,7 +86,6 @@ func processTickets(ticketsMSA map[chainhash.Hash]string) []*pb.Ticket {
 }
 
 func (s *stakepooldServer) GetAddedLowFeeTickets(c context.Context, req *pb.GetAddedLowFeeTicketsRequest) (*pb.GetAddedLowFeeTicketsResponse, error) {
-
 	s.stakepoold.RLock()
 	ticketsMSA := s.stakepoold.AddedLowFeeTicketsMSA
 	s.stakepoold.RUnlock()
@@ -96,7 +95,6 @@ func (s *stakepooldServer) GetAddedLowFeeTickets(c context.Context, req *pb.GetA
 }
 
 func (s *stakepooldServer) GetIgnoredLowFeeTickets(c context.Context, req *pb.GetIgnoredLowFeeTicketsRequest) (*pb.GetIgnoredLowFeeTicketsResponse, error) {
-
 	s.stakepoold.RLock()
 	ticketsMSA := s.stakepoold.IgnoredLowFeeTicketsMSA
 	s.stakepoold.RUnlock()
@@ -106,7 +104,6 @@ func (s *stakepooldServer) GetIgnoredLowFeeTickets(c context.Context, req *pb.Ge
 }
 
 func (s *stakepooldServer) GetLiveTickets(c context.Context, req *pb.GetLiveTicketsRequest) (*pb.GetLiveTicketsResponse, error) {
-
 	s.stakepoold.RLock()
 	ticketsMSA := s.stakepoold.LiveTicketsMSA
 	s.stakepoold.RUnlock()
@@ -116,7 +113,6 @@ func (s *stakepooldServer) GetLiveTickets(c context.Context, req *pb.GetLiveTick
 }
 
 func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.SetAddedLowFeeTicketsRequest) (*pb.SetAddedLowFeeTicketsResponse, error) {
-
 	addedLowFeeTickets := make(map[chainhash.Hash]string)
 
 	for _, ticket := range req.Tickets {
@@ -133,7 +129,6 @@ func (s *stakepooldServer) SetAddedLowFeeTickets(ctx context.Context, req *pb.Se
 }
 
 func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUserVotingPrefsRequest) (*pb.SetUserVotingPrefsResponse, error) {
-
 	userVotingPrefs := make(map[string]userdata.UserVotingConfig)
 	for _, data := range req.UserVotingConfig {
 		userVotingPrefs[data.MultiSigAddress] = userdata.UserVotingConfig{
@@ -149,7 +144,7 @@ func (s *stakepooldServer) SetUserVotingPrefs(ctx context.Context, req *pb.SetUs
 }
 
 func (s *stakepooldServer) ImportNewScript(ctx context.Context, req *pb.ImportNewScriptRequest) (*pb.ImportNewScriptResponse, error) {
-	heightImported, err := s.stakepoold.ImportNewScript(req.Script)
+	heightImported, err := s.stakepoold.ImportNewScript(ctx, req.Script)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +154,7 @@ func (s *stakepooldServer) ImportNewScript(ctx context.Context, req *pb.ImportNe
 }
 
 func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.ImportMissingScriptsRequest) (*pb.ImportMissingScriptsResponse, error) {
-	err := s.stakepoold.ImportMissingScripts(req.Scripts, int(req.RescanHeight))
+	err := s.stakepoold.ImportMissingScripts(ctx, req.Scripts, int(req.RescanHeight))
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +162,7 @@ func (s *stakepooldServer) ImportMissingScripts(ctx context.Context, req *pb.Imp
 }
 
 func (s *stakepooldServer) ListImportedAddresses(ctx context.Context, req *pb.ListImportedAddressesRequest) (*pb.ListImportedAddressesResponse, error) {
-	addresses, err := s.stakepoold.ListImportedAddresses()
+	addresses, err := s.stakepoold.ListImportedAddresses(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -176,8 +171,7 @@ func (s *stakepooldServer) ListImportedAddresses(ctx context.Context, req *pb.Li
 }
 
 func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.AccountSyncAddressIndexRequest) (*pb.AccountSyncAddressIndexResponse, error) {
-
-	err := s.stakepoold.AccountSyncAddressIndex(req.Account, req.Branch, int(req.Index))
+	err := s.stakepoold.AccountSyncAddressIndex(ctx, req.Account, req.Branch, int(req.Index))
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +180,7 @@ func (s *stakepooldServer) AccountSyncAddressIndex(ctx context.Context, req *pb.
 }
 
 func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsRequest) (*pb.GetTicketsResponse, error) {
-
-	tickets, err := s.stakepoold.GetTickets(req.IncludeImmature)
+	tickets, err := s.stakepoold.GetTickets(ctx, req.IncludeImmature)
 	if err != nil {
 		return nil, err
 	}
@@ -203,8 +196,7 @@ func (s *stakepooldServer) GetTickets(ctx context.Context, req *pb.GetTicketsReq
 }
 
 func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMissingTicketRequest) (*pb.AddMissingTicketResponse, error) {
-
-	err := s.stakepoold.AddMissingTicket(req.Hash)
+	err := s.stakepoold.AddMissingTicket(ctx, req.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -212,8 +204,7 @@ func (s *stakepooldServer) AddMissingTicket(ctx context.Context, req *pb.AddMiss
 }
 
 func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakePoolUserInfoRequest) (*pb.StakePoolUserInfoResponse, error) {
-
-	response, err := s.stakepoold.StakePoolUserInfo(req.MultiSigAddress)
+	response, err := s.stakepoold.StakePoolUserInfo(ctx, req.MultiSigAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -236,8 +227,7 @@ func (s *stakepooldServer) StakePoolUserInfo(ctx context.Context, req *pb.StakeP
 }
 
 func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoRequest) (*pb.WalletInfoResponse, error) {
-
-	response, err := s.stakepoold.WalletInfo()
+	response, err := s.stakepoold.WalletInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -251,8 +241,7 @@ func (s *stakepooldServer) WalletInfo(ctx context.Context, req *pb.WalletInfoReq
 }
 
 func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.ValidateAddressRequest) (*pb.ValidateAddressResponse, error) {
-
-	response, err := s.stakepoold.ValidateAddress(req.Address)
+	response, err := s.stakepoold.ValidateAddress(ctx, req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -264,8 +253,7 @@ func (s *stakepooldServer) ValidateAddress(ctx context.Context, req *pb.Validate
 }
 
 func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMultisigRequest) (*pb.CreateMultisigResponse, error) {
-
-	response, err := s.stakepoold.CreateMultisig(req.Address)
+	response, err := s.stakepoold.CreateMultisig(ctx, req.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -277,8 +265,7 @@ func (s *stakepooldServer) CreateMultisig(ctx context.Context, req *pb.CreateMul
 }
 
 func (s *stakepooldServer) GetStakeInfo(ctx context.Context, req *pb.GetStakeInfoRequest) (*pb.GetStakeInfoResponse, error) {
-
-	response, err := s.stakepoold.GetStakeInfo()
+	response, err := s.stakepoold.GetStakeInfo(ctx)
 	if err != nil {
 		return nil, err
 	}

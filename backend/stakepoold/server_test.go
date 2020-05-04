@@ -1,9 +1,10 @@
-// Copyright (c) 2017 The Decred developers
+// Copyright (c) 2017-2020 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/binary"
 	mrand "math/rand"
@@ -11,8 +12,8 @@ import (
 	"testing"
 
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/chaincfg/v2"
-	"github.com/decred/dcrd/hdkeychain/v2"
+	"github.com/decred/dcrd/chaincfg/v3"
+	"github.com/decred/dcrd/hdkeychain/v3"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 	"github.com/decred/dcrstakepool/helpers"
@@ -136,8 +137,9 @@ func init() {
 }
 
 func BenchmarkProcessWinningTickets(b *testing.B) {
+	ctx := context.Background()
 	for n := 0; n < b.N; n++ {
-		spd.ProcessWinningTickets(wt)
+		spd.ProcessWinningTickets(ctx, wt)
 	}
 }
 

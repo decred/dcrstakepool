@@ -15,7 +15,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/decred/dcrd/dcrutil/v2"
+	"github.com/decred/dcrd/dcrutil/v3"
 	"github.com/decred/dcrstakepool/internal/version"
 	flags "github.com/jessevdk/go-flags"
 )

@@ -5,7 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/decred/dcrd/rpcclient/v5"
+	"decred.org/dcrwallet/rpc/client/dcrwallet"
+	"github.com/decred/dcrd/chaincfg/v3"
+	"github.com/decred/dcrd/rpcclient/v6"
 )
 
 const (
@@ -35,6 +37,8 @@ type Client struct {
 
 	connected    chan struct{}
 	connectedMux sync.Mutex
+
+	params *chaincfg.Params
 }
 
 // Connected returns a receiving copy of the current connected channel. If
@@ -43,7 +47,7 @@ type Client struct {
 func (c *Client) Connected() <-chan struct{} {
 	c.connectedMux.Lock()
 	defer c.connectedMux.Unlock()
-	if c.RPCClient().Disconnected() {
+	if c.client.Disconnected() {
 		// Start blocking on connected chan if not already.
 		select {
 		case <-c.connected:
@@ -66,15 +70,16 @@ func (c *Client) IsConnected() bool {
 
 // RPCClient allows access to the underlying rpcclient by providing a copy of
 // its address.
-func (c *Client) RPCClient() *rpcclient.Client {
+func (c *Client) RPCClient() *dcrwallet.Client {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	return c.client
+	raw := dcrwallet.RawRequestCaller(c.client)
+	return dcrwallet.NewClient(raw, c.params)
 }
 
 // NewClient creates a new Client and starts the automatic reconnection handler.
 // Returns an error if unable to construct a new rpcclient.
-func NewClient(ctx context.Context, wg *sync.WaitGroup, cfg *rpcclient.ConnConfig, ntfnHandlers *rpcclient.NotificationHandlers) (*Client, error) {
+func NewClient(ctx context.Context, wg *sync.WaitGroup, cfg *rpcclient.ConnConfig, ntfnHandlers *rpcclient.NotificationHandlers, params *chaincfg.Params) (*Client, error) {
 	client, err := rpcclient.New(cfg, ntfnHandlers)
 	if err != nil {
 		return nil, err
@@ -84,6 +89,7 @@ func NewClient(ctx context.Context, wg *sync.WaitGroup, cfg *rpcclient.ConnConfi
 		cfg:          cfg,
 		ntfnHandlers: ntfnHandlers,
 		connected:    make(chan struct{}),
+		params:       params,
 	}
 	// A closed connected channel indcates successfully connected.
 	close(c.connected)

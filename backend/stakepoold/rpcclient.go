@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	wallettypes "decred.org/dcrwallet/rpc/jsonrpc/types"
 	"github.com/decred/dcrd/chaincfg/chainhash"
-	"github.com/decred/dcrd/rpcclient/v5"
+	dcrdtypes "github.com/decred/dcrd/rpc/jsonrpc/types/v2"
+	"github.com/decred/dcrd/rpcclient/v6"
 	"github.com/decred/dcrstakepool/backend/stakepoold/stakepool"
 	"github.com/decred/dcrstakepool/backend/stakepoold/userdata"
 )
@@ -16,7 +18,7 @@ import (
 var requiredChainServerAPI = semver{major: 6, minor: 1, patch: 1}
 var requiredWalletAPI = semver{major: 7, minor: 0, patch: 0}
 
-func connectNodeRPC(spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, semver, error) {
+func connectNodeRPC(ctx context.Context, spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, semver, error) {
 	var nodeVer semver
 
 	dcrdCert, err := ioutil.ReadFile(cfg.DcrdCert)
@@ -46,7 +48,7 @@ func connectNodeRPC(spd *stakepool.Stakepoold, cfg *config) (*rpcclient.Client, 
 	}
 
 	// Ensure the RPC server has a compatible API version.
-	ver, err := dcrdClient.Version()
+	ver, err := dcrdClient.Version(ctx)
 	if err != nil {
 		log.Error("Unable to get RPC version: ", err)
 		return nil, nodeVer, fmt.Errorf("Unable to get node RPC version")
@@ -90,7 +92,7 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*st
 	ntfnHandlers := getWalletNtfnHandlers()
 
 	// New also starts an autoreconnect function.
-	dcrwClient, err := stakepool.NewClient(ctx, wg, connCfgWallet, ntfnHandlers)
+	dcrwClient, err := stakepool.NewClient(ctx, wg, connCfgWallet, ntfnHandlers, activeNetParams.Params)
 	if err != nil {
 		log.Errorf("Verify that username and password is correct and that "+
 			"rpc.cert is for your wallet: %v", cfg.WalletCert)
@@ -98,7 +100,8 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*st
 	}
 
 	// Ensure the wallet RPC server has a compatible API version.
-	ver, err := dcrwClient.RPCClient().Version()
+	var ver map[string]dcrdtypes.VersionResult
+	err = dcrwClient.RPCClient().Call(ctx, "version", &ver)
 	if err != nil {
 		log.Error("Unable to get RPC version: ", err)
 		return nil, walletVer, fmt.Errorf("Unable to get node RPC version")
@@ -117,7 +120,7 @@ func connectWalletRPC(ctx context.Context, wg *sync.WaitGroup, cfg *config) (*st
 	return dcrwClient, walletVer, nil
 }
 
-func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
+func walletGetTickets(ctx context.Context, spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map[chainhash.Hash]string, error) {
 	blockHashToHeightCache := make(map[chainhash.Hash]int32)
 
 	// This is suboptimal to copy and needs fixing.
@@ -134,7 +137,7 @@ func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map
 
 	log.Info("Calling GetTickets...")
 	timenow := time.Now()
-	tickets, err := spd.WalletConnection.RPCClient().GetTickets(false)
+	tickets, err := spd.WalletConnection.RPCClient().GetTickets(ctx, false)
 	log.Infof("GetTickets: took %v", time.Since(timenow))
 
 	if err != nil {
@@ -142,25 +145,41 @@ func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map
 		return ignoredLowFeeTickets, liveTickets, err
 	}
 
-	type promise struct {
-		rpcclient.FutureGetTransactionResult
-	}
-	promises := make([]promise, 0, len(tickets))
-
 	log.Debugf("setting up GetTransactionAsync for %v tickets", len(tickets))
-	for _, ticket := range tickets {
-		// lookup ownership of each ticket
-		promises = append(promises, promise{spd.WalletConnection.RPCClient().GetTransactionAsync(ticket)})
-	}
+
+	txChan := make(chan *wallettypes.GetTransactionResult, len(tickets))
+	go func() {
+		numGC := 32
+		numTickets := len(tickets)
+		for numTickets > 0 {
+			if numTickets < numGC {
+				numGC = numTickets
+			}
+			var wg sync.WaitGroup
+			for i := 0; i < numGC; i++ {
+				i := i
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					// fetch ticket
+					tx, err := spd.WalletConnection.RPCClient().GetTransaction(ctx, tickets[numTickets-i])
+					if err != nil {
+						log.Warnf("GetTransaction error: %v", err)
+					}
+					txChan <- tx
+				}()
+			}
+			wg.Wait()
+			numTickets -= numGC
+		}
+	}()
 
 	var counter int
-	for _, p := range promises {
+	for counter < len(tickets) {
 		counter++
 		log.Debugf("Receiving GetTransaction result for ticket %v/%v", counter, len(tickets))
-		gt, err := p.Receive()
-		if err != nil {
-			// All tickets should exist and be able to be looked up
-			log.Warnf("GetTransaction error: %v", err)
+		gt := <-txChan
+		if gt == nil {
 			continue
 		}
 		for i := range gt.Details {
@@ -202,7 +221,7 @@ func walletGetTickets(spd *stakepool.Stakepoold) (map[chainhash.Hash]string, map
 				if inCache {
 					ticketBlockHeight = height
 				} else {
-					gbh, err := spd.NodeConnection.GetBlockHeader(ticketBlockHash)
+					gbh, err := spd.NodeConnection.GetBlockHeader(ctx, ticketBlockHash)
 					if err != nil {
 						log.Warnf("GetBlockHeader failed for %v: %v", ticketBlockHash, err)
 						continue
