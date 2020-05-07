@@ -618,6 +618,38 @@ func (spd *Stakepoold) UpdateUserDataFromMySQL() error {
 	return nil
 }
 
+// voteV3 generates a vote and sends it to dcrd.
+func (spd *Stakepoold) voteV3(ctx context.Context, wg *sync.WaitGroup, ticketHash, blockHash *chainhash.Hash, blockHeight int64, voteBits uint16, voteBitsExtended string) (*chainhash.Hash, error) {
+	defer wg.Done()
+
+	// Ask wallet to generate vote result.
+	res, err := spd.WalletConnection.RPCClient().GenerateVote(ctx, blockHash, blockHeight, ticketHash, voteBits, voteBitsExtended)
+	if err != nil {
+		return nil, err
+	}
+	if res.Hex == "" {
+		return nil, fmt.Errorf("voteV3: GenerateVote returned empty Hex for %v", ticketHash)
+	}
+
+	// Create raw transaction.
+	buf, err := hex.DecodeString(res.Hex)
+	if err != nil {
+		return nil, err
+	}
+	newTx := wire.NewMsgTx()
+	err = newTx.FromBytes(buf)
+	if err != nil {
+		return nil, err
+	}
+	// Ask node to transmit raw transaction.
+	tx, err := spd.NodeConnection.SendRawTransaction(ctx, newTx, false)
+	if err != nil {
+		log.Infof("dcrd rejected vote: %v", err)
+		return nil, err
+	}
+	return tx, nil
+}
+
 // vote Generates a vote and send it off to the network.  This is a go routine!
 func (spd *Stakepoold) vote(ctx context.Context, wg *sync.WaitGroup, blockHash *chainhash.Hash, blockHeight int64, w *ticketMetadata) {
 	start := time.Now()
@@ -853,6 +885,25 @@ func (spd *Stakepoold) ProcessWinningTickets(ctx context.Context, wt WinningTick
 	var wg sync.WaitGroup // wait group for go routine exits
 
 	spd.RLock()
+	// V3
+	for _, ticket := range wt.WinningTickets {
+		// TODO: use user votebits
+		voteBits := uint16(1)
+		voteBitsExtended := spd.VotingConfig.VoteBitsExtended
+
+		ticket := ticket
+		wg.Add(1)
+		go func() {
+			hash, err := spd.voteV3(ctx, &wg, ticket, wt.BlockHash, wt.BlockHeight, voteBits, voteBitsExtended)
+			if err != nil {
+				log.Errorf("voteV3 failed ticket '%v': %v", ticket, err)
+				return
+			}
+			log.Infof("voteV3: successfully voted for %v with %v", ticket, hash)
+		}()
+	}
+
+	// V2
 	for _, ticket := range wt.WinningTickets {
 		// Look up multi sig address.
 		msa, ok := spd.LiveTicketsMSA[*ticket]
