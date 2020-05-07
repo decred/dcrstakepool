@@ -145,7 +145,7 @@ func walletGetTickets(ctx context.Context, spd *stakepool.Stakepoold) (map[chain
 		return ignoredLowFeeTickets, liveTickets, err
 	}
 
-	log.Debugf("setting up GetTransactionAsync for %v tickets", len(tickets))
+	log.Debugf("setting up GetTransaction for %v tickets", len(tickets))
 
 	txChan := make(chan *wallettypes.GetTransactionResult, len(tickets))
 	go func() {
@@ -155,6 +155,9 @@ func walletGetTickets(ctx context.Context, spd *stakepool.Stakepoold) (map[chain
 			if numTickets < numGC {
 				numGC = numTickets
 			}
+
+			// Run a batch of gettransaction calls and wait for them
+			// to complete before running the next batch.
 			var wg sync.WaitGroup
 			for i := 0; i < numGC; i++ {
 				i := i
@@ -162,10 +165,11 @@ func walletGetTickets(ctx context.Context, spd *stakepool.Stakepoold) (map[chain
 				go func() {
 					defer wg.Done()
 					// fetch ticket
-					tx, err := spd.WalletConnection.RPCClient().GetTransaction(ctx, tickets[numTickets-i])
+					tx, err := spd.WalletConnection.RPCClient().GetTransaction(ctx, tickets[numTickets-1-i])
 					if err != nil {
 						log.Warnf("GetTransaction error: %v", err)
 					}
+					// send tx for processing
 					txChan <- tx
 				}()
 			}
