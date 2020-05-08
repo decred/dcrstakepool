@@ -41,11 +41,13 @@ func GojiWebHandlerFunc(h http.HandlerFunc) web.HandlerFunc {
 }
 
 // Init initiates an Application with the passed variables.
-func (application *Application) Init(ctx context.Context, wg *sync.WaitGroup,
+func Init(ctx context.Context, wg *sync.WaitGroup,
 	APISecret, baseURL, cookieSecret string, cookieSecure bool, DBHost,
-	DBName, DBPassword, DBPort, DBUser string) {
+	DBName, DBPassword, DBPort, DBUser string) (*Application, error) {
 
-	application.DbMap = models.GetDbMap(
+	var application Application
+	var err error
+	application.DbMap, err = models.GetDbMap(
 		APISecret,
 		baseURL,
 		DBUser,
@@ -53,6 +55,9 @@ func (application *Application) Init(ctx context.Context, wg *sync.WaitGroup,
 		DBHost,
 		DBPort,
 		DBName)
+	if err != nil {
+		return nil, err
+	}
 
 	hash := sha256.New()
 	io.WriteString(hash, cookieSecret)
@@ -66,6 +71,7 @@ func (application *Application) Init(ctx context.Context, wg *sync.WaitGroup,
 	}
 
 	application.APISecret = APISecret
+	return &application, nil
 }
 
 var funcMap = template.FuncMap{
