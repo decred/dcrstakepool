@@ -65,13 +65,11 @@ func runMain(ctx context.Context) error {
 		}
 	}()
 
-	var application = &system.Application{}
-
-	application.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
+	application, err := system.Init(ctx, wg, cfg.APISecret, cfg.BaseURL, cfg.CookieSecret,
 		cfg.CookieSecure, cfg.DBHost, cfg.DBName, cfg.DBPassword, cfg.DBPort,
 		cfg.DBUser)
-	if application.DbMap == nil {
-		return fmt.Errorf("failed to open database")
+	if err != nil {
+		return err
 	}
 	if err = application.LoadTemplates(cfg.TemplatePath); err != nil {
 		return fmt.Errorf("failed to load templates: %v", err)
@@ -123,7 +121,6 @@ func runMain(ctx context.Context) error {
 	}
 
 	controller, err := controllers.NewMainController(ctx, &controllerCfg)
-
 	if err != nil {
 		return fmt.Errorf("failed to initialize the main controller: %v", err)
 	}

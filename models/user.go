@@ -311,21 +311,20 @@ func GetVotableLowFeeTickets(dbMap *gorp.DbMap) ([]LowFeeTicket, error) {
 
 // GetDbMap returns the entire gorp DbMap. It creates tables where none are
 // found and updates values when needed.
-func GetDbMap(APISecret, baseURL, user, password, hostname, port, database string) *gorp.DbMap {
+func GetDbMap(APISecret, baseURL, user, password, hostname, port, database string) (*gorp.DbMap, error) {
 	// Connect to db using standard Go database/sql API.
 	dataSource := fmt.Sprintf("%s:%s@(%s:%s)/%s?charset=utf8mb4",
 		user, password, hostname, port, database)
 	db, err := sql.Open("mysql", dataSource)
 	if err != nil {
-		log.Critical("sql.Open failed: ", err)
-		return nil
+		return nil, fmt.Errorf("failed to connect to database: %v", err)
 	}
 
 	// sql.Open just validates its arguments without creating a connection, so
 	// verify that the data source name is valid with Ping.
 	if err = db.Ping(); err != nil {
-		log.Critical("Unable to establish connection to database: ", err)
-		return nil
+		db.Close()
+		return nil, fmt.Errorf("failed to ping database server: %v", err)
 	}
 
 	// Construct a gorp DbMap.
@@ -347,9 +346,8 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// Create the table.
 	err = dbMap.CreateTablesIfNotExists()
 	if err != nil {
-		log.Critical("Create tables failed: ", err)
-		// There is no point proceeding, so return with nil.
-		return nil
+		db.Close()
+		return nil, fmt.Errorf("failed to create tables: %v", err)
 	}
 
 	// The ORM, Gorp, doesn't support migrations so we just add new columns
@@ -400,9 +398,8 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	var users []User
 	_, err = dbMap.Select(&users, "SELECT * FROM Users WHERE APIToken = '' AND EmailVerified > 0")
 	if err != nil {
-		log.Critical("Select verified users failed: ", err)
-		// With out a Valid []Users, we cannot proceed
-		return dbMap
+		db.Close()
+		return nil, fmt.Errorf("failed to select verified users: %v", err)
 	}
 
 	for _, u := range users {
@@ -423,7 +420,7 @@ func GetDbMap(APISecret, baseURL, user, password, hostname, port, database strin
 	// and it will be upgraded when talking to stakepoold
 	AddColumn(dbMap, database, usersTableName, "VoteBitsVersion", "bigint(20) NULL", "VoteBits", "UPDATE Users SET VoteBitsVersion = 3")
 
-	return dbMap
+	return dbMap, nil
 }
 
 // AddColumn checks if a column exists and adds it if it doesn't
