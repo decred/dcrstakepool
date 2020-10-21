@@ -121,11 +121,13 @@ EOF
 
     echo "Starting dcrwallet-${i}"
     tmux new-window -t $SESSION -n "dcrwallet-${i}"
-    tmux send-keys "dcrwallet -C ${NODES_ROOT}/dcrwallet-${i}/dcrwallet.conf --create" C-m
+    tmux send-keys "dcrwallet -C ${NODES_ROOT}/dcrwallet-${i}/dcrwallet.conf --create <<EOF
+y
+n
+y
+${VOTING_WALLET_SEED}
+EOF" C-m
     sleep 2
-    tmux send-keys "${WALLET_PASS}" C-m "${WALLET_PASS}" C-m "n" C-m "y" C-m
-    sleep 2
-    tmux send-keys "${VOTING_WALLET_SEED}" C-m C-m
     tmux send-keys "dcrwallet -C ${NODES_ROOT}/dcrwallet-${i}/dcrwallet.conf " C-m
     sleep 12 # Give dcrwallet time to start
 
