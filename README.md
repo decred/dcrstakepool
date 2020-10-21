@@ -38,7 +38,7 @@ suitable for use on testnet. Further documentation can be found in `./harness.sh
 
 ## Requirements
 
-- [Go](https://golang.org) 1.13 or newer.
+- [Go](https://golang.org) 1.15 or newer.
 - MySQL.
 - A web server, such as nginx, to proxy to dcrstakepool.
 
@@ -48,7 +48,7 @@ suitable for use on testnet. Further documentation can be found in `./harness.sh
 
 Building or updating from source requires the following build dependencies:
 
-- **Go 1.13 or newer**
+- **Go 1.15 or newer**
 
 Building or updating from source requires only an installation of Go
 ([instructions](https://golang.org/doc/install)). It is recommended to add
