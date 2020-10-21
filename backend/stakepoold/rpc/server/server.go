@@ -33,7 +33,7 @@ const (
 	// within one millisecond.  It is possible for an abnormally long garbage
 	// collection cycle to also trigger a timeout but the current allocation
 	// pattern of stakepoold is not known to cause such conditions at this time.
-	GRPCCommandTimeout = time.Millisecond * 100
+	GRPCCommandTimeout = time.Millisecond * 1200
 	semverString       = "10.0.0"
 	semverMajor        = 10
 	semverMinor        = 0
