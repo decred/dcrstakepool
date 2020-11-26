@@ -3,7 +3,7 @@ module github.com/decred/dcrstakepool
 go 1.13
 
 require (
-	decred.org/dcrwallet v1.6.0-rc1
+	decred.org/dcrwallet v1.6.0-rc4
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/dajohi/goemail v1.0.1
 	github.com/dchest/captcha v0.0.0-20200903113550-03f5f0333e1f
@@ -14,8 +14,8 @@ require (
 	github.com/decred/dcrd/dcrec v1.0.0
 	github.com/decred/dcrd/dcrutil/v3 v3.0.0
 	github.com/decred/dcrd/hdkeychain/v3 v3.0.0
-	github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.1.0
-	github.com/decred/dcrd/rpcclient/v6 v6.0.0
+	github.com/decred/dcrd/rpc/jsonrpc/types/v2 v2.3.0
+	github.com/decred/dcrd/rpcclient/v6 v6.0.2
 	github.com/decred/dcrd/wire v1.4.0
 	github.com/decred/dcrdata/api/types/v5 v5.0.1
 	github.com/decred/dcrdata/db/dbtypes/v2 v2.2.1
@@ -35,6 +35,6 @@ require (
 	github.com/stretchr/testify v1.6.1 // indirect
 	github.com/zenazn/goji v1.0.1
 	github.com/ziutek/mymysql v1.5.4 // indirect
-	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
-	google.golang.org/grpc v1.33.1
+	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
+	google.golang.org/grpc v1.33.2
 )
