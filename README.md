@@ -5,6 +5,14 @@ dcrstakepool
 [![Go Report Card](https://goreportcard.com/badge/github.com/decred/dcrstakepool)](https://goreportcard.com/report/github.com/decred/dcrstakepool)
 [![Doc](https://img.shields.io/badge/doc-reference-blue.svg)](https://pkg.go.dev/github.com/decred/dcrstakepool)
 
+## :warning: Deprecation Notice :warning:
+
+**dcrstakepool is a deprecated project and support will soon be removed from
+wallets. All VSP operators should switch to
+[vspd](https://github.com/decred/vspd). Visit the [Decred
+Blog](https://blog.decred.org/2020/06/02/A-More-Private-Way-to-Stake/) to find
+out more about this change.**
+
 ## Overview
 
 dcrstakepool is a web application which coordinates generating 1-of-2 multisig
