@@ -340,15 +340,17 @@ func (spd *Stakepoold) AddMissingTicket(ctx context.Context, ticketHash []byte) 
 		return err
 	}
 
-	tx, err := spd.NodeConnection.GetRawTransaction(ctx, hash)
+	txVerbose, err := spd.NodeConnection.GetRawTransactionVerbose(ctx, hash)
 	if err != nil {
 		log.Errorf("AddMissingTicket: GetRawTransaction rpc failed: %v", err)
 		return err
 	}
 
-	err = spd.WalletConnection.RPCClient().AddTicket(ctx, tx)
+	txBlockHash := txVerbose.BlockHash
+	txHex := txVerbose.Hex
+	err = spd.WalletConnection.RPCClient().Call(ctx, "addtransaction", nil, txBlockHash, txHex)
 	if err != nil {
-		log.Errorf("AddMissingTicket: AddTicket rpc failed: %v", err)
+		log.Errorf("AddMissingTicket: addtransaction rpc failed: %v", err)
 		return err
 	}
 
