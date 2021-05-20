@@ -187,7 +187,7 @@ func runMain(ctx context.Context) error {
 		votingConfig.VoteBits)
 
 	var userData = &userdata.UserData{}
-	userData.DBSetConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	userData.DBSetConfig(cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBTLS)
 
 	addedLowFeeTicketsMSA, errMySQLFetchAddedLowFeeTickets := userData.MySQLFetchAddedLowFeeTickets()
 	if errMySQLFetchAddedLowFeeTickets != nil {
