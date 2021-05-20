@@ -113,10 +113,10 @@ func runMain(ctx context.Context) error {
 		Designation:     cfg.Designation,
 
 		APIVersionsSupported: APIVersionsSupported,
-		FeeXpub:              coldWalletFeeKey,
+		FeeXpub:              cfg.coldWalletFeeKey,
 		StakepooldServers:    stakepooldConnMan,
 		EmailSender:          sender,
-		VotingXpub:           votingWalletVoteKey,
+		VotingXpub:           cfg.votingWalletVoteKey,
 		NetParams:            activeNetParams.Params,
 	}
 

@@ -53,8 +53,6 @@ var (
 	dcrstakepoolHomeDir = dcrutil.AppDataDir("dcrstakepool", false)
 	defaultConfigFile   = filepath.Join(dcrstakepoolHomeDir, defaultConfigFilename)
 	defaultLogDir       = filepath.Join(dcrstakepoolHomeDir, defaultLogDirname)
-	coldWalletFeeKey    *hdkeychain.ExtendedKey
-	votingWalletVoteKey *hdkeychain.ExtendedKey
 )
 
 // runServiceCommand is only set to a real function on Windows.  It is used
@@ -106,6 +104,9 @@ type config struct {
 	MaxVotedTickets    int      `long:"maxvotedtickets" description:"Maximum number of voted tickets to show on tickets page."`
 	Description        string   `long:"description" description:"Operators own description of their VSP"`
 	Designation        string   `long:"designation" description:"VSP designation (eg. Alpha, Bravo, etc)"`
+
+	coldWalletFeeKey    *hdkeychain.ExtendedKey
+	votingWalletVoteKey *hdkeychain.ExtendedKey
 }
 
 // serviceOptions defines the configuration options for the daemon as a service
@@ -260,12 +261,12 @@ func fileExists(name string) bool {
 func (c *config) parsePubKeys(params *chaincfg.Params) error {
 	// Parse the extended public key and the pool fees.
 	var err error
-	coldWalletFeeKey, err = hdkeychain.NewKeyFromString(c.ColdWalletExtPub, params)
+	c.coldWalletFeeKey, err = hdkeychain.NewKeyFromString(c.ColdWalletExtPub, params)
 	if err != nil {
 		return fmt.Errorf("cold wallet extended public key: %v", err)
 	}
 	// Parse the extended public key for the voting addresses.
-	votingWalletVoteKey, err = hdkeychain.NewKeyFromString(c.VotingWalletExtPub, params)
+	c.votingWalletVoteKey, err = hdkeychain.NewKeyFromString(c.VotingWalletExtPub, params)
 	if err != nil {
 		return fmt.Errorf("voting wallet extended public key: %v", err)
 	}

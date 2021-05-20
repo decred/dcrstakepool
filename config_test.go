@@ -78,8 +78,8 @@ func TestParsePubKeys(t *testing.T) {
 		//testing func
 		err := cfg.parsePubKeys(test.params)
 		//err if expected output key strings and real output key strings don't match or expected error status is different
-		if strFromHd(test.keysOut.coldFeeWallet) != strFromHd(coldWalletFeeKey) || strFromHd(test.keysOut.voteWallet) != strFromHd(votingWalletVoteKey) || (err != nil) != test.isError {
-			t.Error("for", test.keysIn, "expected", strFromHd(test.keysOut.coldFeeWallet), strFromHd(test.keysOut.voteWallet), "and is error=", test.isError, "got", strFromHd(coldWalletFeeKey), strFromHd(votingWalletVoteKey), "and is error=", err != nil)
+		if strFromHd(test.keysOut.coldFeeWallet) != strFromHd(cfg.coldWalletFeeKey) || strFromHd(test.keysOut.voteWallet) != strFromHd(cfg.votingWalletVoteKey) || (err != nil) != test.isError {
+			t.Error("for", test.keysIn, "expected", strFromHd(test.keysOut.coldFeeWallet), strFromHd(test.keysOut.voteWallet), "and is error=", test.isError, "got", strFromHd(cfg.coldWalletFeeKey), strFromHd(cfg.votingWalletVoteKey), "and is error=", err != nil)
 		}
 	}
 }
