@@ -59,6 +59,10 @@ func runMain(ctx context.Context) error {
 	cfg = loadedCfg
 	log.Infof("Network: %s", activeNetParams.Params.Name)
 
+	if cfg.ClosePool && cfg.NewVspLink == "" {
+		log.Warn("Config Warning: New vsp link is not set")
+	}
+
 	defer func() {
 		if logRotator != nil {
 			logRotator.Close()
@@ -107,6 +111,7 @@ func runMain(ctx context.Context) error {
 		PoolEmail:       cfg.PoolEmail,
 		PoolFees:        cfg.PoolFees,
 		PoolLink:        cfg.PoolLink,
+		NewVspLink:      cfg.NewVspLink,
 		RealIPHeader:    cfg.RealIPHeader,
 		MaxVotedTickets: cfg.MaxVotedTickets,
 		Description:     cfg.Description,
@@ -161,8 +166,7 @@ func runMain(ctx context.Context) error {
 
 	err = controller.RPCSync(ctx, application.DbMap)
 	if err != nil {
-		return fmt.Errorf("failed to sync the wallets: %v",
-			err)
+		return fmt.Errorf("failed to sync the wallets: %v", err)
 	}
 
 	// Set up web server routes

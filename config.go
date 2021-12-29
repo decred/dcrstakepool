@@ -89,6 +89,7 @@ type config struct {
 	PoolEmail          string  `long:"poolemail" description:"Email address to for support inquiries"`
 	PoolFees           float64 `long:"poolfees" description:"The per-ticket fees the user must send to the pool with their tickets"`
 	PoolLink           string  `long:"poollink" description:"URL for support inquiries such as forum, IRC, etc"`
+	NewVspLink         string  `long:"newvsplink" description:"URL to new vspd"`
 	RealIPHeader       string  `long:"realipheader" description:"The name of an HTTP request header containing the actual remote client IP address, typically set by a reverse proxy. An empty string (default) indicates to use net/Request.RemodeAddr."`
 	SMTPFrom           string  `long:"smtpfrom" description:"From address to use on outbound mail"`
 	SMTPHost           string  `long:"smtphost" description:"SMTP hostname/ip and port, e.g. mail.example.com:25"`
