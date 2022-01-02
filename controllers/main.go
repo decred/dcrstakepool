@@ -61,6 +61,7 @@ type Config struct {
 	PoolEmail            string
 	PoolFees             float64
 	PoolLink             string
+	NewVspLink           string
 	RealIPHeader         string
 	MaxVotedTickets      int
 	Description          string
@@ -1195,6 +1196,8 @@ func (controller *MainController) Index(c web.C, r *http.Request) (string, int) 
 	if controller.Cfg.ClosePool {
 		c.Env["IsClosed"] = true
 		c.Env["ClosePoolMsg"] = controller.Cfg.ClosePoolMsg
+		c.Env["NewVspLink"] = controller.Cfg.NewVspLink
+		c.Env["Designation"] = controller.Cfg.Designation
 	}
 	c.Env["Network"] = controller.Cfg.NetParams.Name
 	c.Env["PoolEmail"] = controller.Cfg.PoolEmail

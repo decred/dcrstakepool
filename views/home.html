@@ -4,6 +4,25 @@
   <div class="row mx-3">
     <div class="col-md-6 col-12">
       <div class="row">
+         {{ if .IsClosed}}
+            <div class="alert alert-danger">
+                <h4 class="alert-heading mb-3">
+                    This Voting Service Provider is closed
+                </h4>
+                <p>
+                    {{ .ClosePoolMsg }}
+                </p>
+                <p>
+                    {{if not .NewVspLink}}
+                    Visit <a href="https://decred.org/vsp/" class="alert-link" target="_blank" rel="noopener noreferrer">decred.org</a> to find a new VSP.
+                    {{else}}
+                    Visit the new <a href={{.NewVspLink}} class="alert-link" target="_blank" rel="noopener noreferrer">{{.Designation}}</a> to vote.
+                    {{end}}
+                    <br>
+                    Visit <a href="https://blog.decred.org/2020/06/02/A-More-Private-Way-to-Stake/" class="alert-link" target="_blank" rel="noopener noreferrer">Decred’s Blog</a> to find out more about the migration to a new VSP implementation.
+                </p>
+            </div>
+        {{ end }}
         <section class="block">
           <div class="col-12 block__title">
             <h1><span>Voting Service Provider Overview</span></h1>
