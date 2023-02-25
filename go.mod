@@ -35,6 +35,6 @@ require (
 	github.com/stretchr/testify v1.6.1 // indirect
 	github.com/zenazn/goji v1.0.1
 	github.com/ziutek/mymysql v1.5.4 // indirect
-	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
+	golang.org/x/crypto v0.1.0
 	google.golang.org/grpc v1.33.2
 )
