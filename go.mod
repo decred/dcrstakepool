@@ -23,7 +23,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-gorp/gorp v2.2.0+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/golang/protobuf v1.4.3
+	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/csrf v1.7.0
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.1
@@ -32,9 +32,8 @@ require (
 	github.com/lib/pq v1.8.0 // indirect
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/poy/onpar v1.0.1 // indirect
-	github.com/stretchr/testify v1.6.1 // indirect
 	github.com/zenazn/goji v1.0.1
 	github.com/ziutek/mymysql v1.5.4 // indirect
-	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
-	google.golang.org/grpc v1.33.2
+	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
+	google.golang.org/grpc v1.53.0
 )
